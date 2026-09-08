@@ -75,7 +75,9 @@ fn checkout_refuses_when_uncommitted_changes_would_be_lost() {
         CheckoutOutcome::Blocked { conflicts } => {
             assert!(conflicts.iter().any(|entry| entry.path == "a.txt"));
         }
-        other => panic!("the checkout should have been refused, got {other:?}"),
+        other @ CheckoutOutcome::Switched { .. } => {
+            panic!("the checkout should have been refused, got {other:?}")
+        }
     }
     assert_eq!(
         fs::read(fixture.dir.path().join("a.txt")).unwrap(),

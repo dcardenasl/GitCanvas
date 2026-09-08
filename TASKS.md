@@ -622,6 +622,10 @@ no devuelve nada.
       divergieron devuelve `DivergedRequiresMerge { local, remote }` con los dos nombres
       para que la UI pueda explicarlo. Sin upstream configurado devuelve `NoUpstream`, que
       es un estado, no un error.
+      *Nota de proceso:* F5-1, F5-2 y F5-3 viven en `actions.rs` y aterrizaron en un
+      solo commit (`feat(core): add guarded branch checkout`). Los tres comparten el
+      callback de credenciales y los tipos de resultado, así que separarlos habría dejado
+      commits que no compilan. Se anota en vez de reescribir el historial.
       → `feat(core): add fast-forward only pull`
 
 - [x] **F5-3 — Push con credenciales del keychain.** Token del llavero para HTTPS y
