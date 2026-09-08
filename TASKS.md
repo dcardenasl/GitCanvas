@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 0 · 8/63 tareas · última actualización 2026-09-08
+**Estado:** Fase 0 · 9/63 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -93,12 +93,21 @@
       completo del workspace limpio en 43 s (Tauri 2.11.5, Rust 1.98.1).
       → `refactor(rust): extract the git domain into the gitcanvas-core crate`
 
-- [ ] **F0-3 — TypeScript estricto y frontera de imports.** `strict`,
+- [x] **F0-3 — TypeScript estricto y frontera de imports.** `strict`,
       `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`,
-      `verbatimModuleSyntax`; ESLint type-checked con `no-explicit-any: error` y
-      `no-restricted-imports` prohibiendo que `lib/graph-layout/**` importe de
-      `components/`, `state/`, `bindings.ts` o del DOM (delta D10). Activar strict
-      después de tener código escrito cuesta mucho más que empezar con él.
+      `noImplicitReturns`, `verbatimModuleSyntax`. ESLint plano con
+      `strictTypeChecked` + `stylisticTypeChecked`, `no-explicit-any: error`, y las
+      reglas de frontera de `lib/graph-layout/**` (delta D10). Prettier con
+      `eslint-config-prettier` al final para que no compitan.
+      *Endurecido respecto del plan:* la regla original listaba `components/`, `state/`
+      y `bindings.ts`, pero eso deja pasar cualquier archivo nuevo en la raíz de `src/`
+      —`../../App` entraba sin problema—. Se reemplazó por el invariante real:
+      graph-layout no importa **nada fuera de su propio directorio** (`..`, `../*`,
+      `../**`), más el bloqueo explícito de React, `@tauri-apps/*` y los globales del
+      DOM. Verificado con una sonda de 4 importaciones prohibidas: las 4 fallan.
+      *Hallazgo durante la ejecución:* Prettier reformateó `docs/` y todos los `.md` en
+      la primera pasada, incluido `mockup.html` (611 líneas alteradas). Revertido y
+      añadido a `.prettierignore`: son prosa y un artefacto de referencia, no código.
       → `chore(ts): enable strict typescript and the graph-layout import boundary`
 
 - [ ] **F0-4 — Lints de Rust.** `clippy::all` + `clippy::pedantic`, y
