@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **File-by-file diffs.** Selecting a commit lists the files it changed in the
+  inspector; choosing one opens its diff across the whole centre panel, where a
+  unified patch has room to read. Escape or the back control returns to the
+  graph.
+- **Sidebar navigation.** Branches and tags are now controls: choosing one
+  selects the commit it points at and scrolls the history there, loading more
+  pages if that commit has not been reached yet. A tag resolves to its commit
+  rather than to the tag object.
 - **Branch actions.** Check out a branch, pull, and push from the toolbar.
   Checkout refuses when uncommitted work would be lost and names the files at
   risk; discarding them takes a separate, explicit confirmation. Push always
