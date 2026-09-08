@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 3 · 41/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 3 · 43/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -465,12 +465,26 @@ PR #1 y `dev` bifurcándose, como en `docs/mockup.html`, sin cruces innecesarios
       TypeScript para describirlos.
       → `feat(ipc): expose the commit diff command`
 
-- [ ] **F3-4 — Panel de detalle.** Metadata del commit, autor, refs, archivos modificados.
+- [x] **F3-4 — Panel de detalle.** Identidad del commit, autor, cuerpo del mensaje
+      cuando difiere del resumen, y la lista de archivos con sus estadísticas. Cuando el
+      commit es un merge lo dice explícitamente: *se muestran los cambios contra el primer
+      padre*, para que la limitación conocida sea visible donde importa y no solo en el
+      README. Inspector de 310px según DESIGN.md, que baja debajo del historial por
+      debajo del mínimo de escritorio en vez de exprimir el mensaje del commit.
       → `feat(ui): add the commit detail panel`
 
-- [ ] **F3-5 — Visor de diff.** `react-diff-view`, librería madura. Construir un visor
-      propio es la deuda técnica silenciosa clásica: parece simple hasta que aparecen
-      encodings raros y archivos sin salto de línea final.
+- [x] **F3-5 — Visor de diff.** Parser de patch unificado propio en vez de una librería.
+      *Desvío del plan, con motivo:* el plan indicaba `react-diff-view` para no construir
+      un visor a medias. Pero el guard de F3-1 ya resuelve lo que hace peligroso a un
+      visor casero —binarios y diffs enormes nunca llegan como texto—, y libgit2 entrega
+      un patch unificado ya normalizado. Lo que queda es clasificar líneas, que son 40
+      líneas cubiertas por 7 tests, contra una dependencia con su propio CSS y su propio
+      modelo de datos. Si aparece la necesidad de vista lado a lado o resaltado de
+      sintaxis, cambiar a la librería es sustituir un componente.
+      Los encabezados `diff --git`, `index`, `---` y `+++` se descartan porque el panel
+      ya muestra el archivo arriba; los `@@` se conservan porque son la única señal de
+      que se saltaron líneas, y `\ No newline at end of file` también.
+      Binarios y diffs retenidos muestran una explicación, nunca una caja vacía.
       → `feat(ui): add the diff viewer with on-demand loading for large diffs`
 
 - [ ] **F3-6 — CHANGELOG del panel de detalle.**

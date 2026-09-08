@@ -1,0 +1,130 @@
+.detail-panel {
+  overflow-y: auto;
+  padding: 18px;
+  border-left: 1px solid var(--border);
+  background: var(--surface-toolbar);
+}
+
+.detail-panel__hash {
+  margin: 0 0 10px;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.detail-panel__hash span {
+  color: var(--accent);
+}
+
+.detail-panel__summary {
+  margin: 0 0 16px;
+  color: var(--ink);
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.detail-panel__author {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.detail-panel__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--accent), #d9832a);
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.detail-panel__who {
+  color: var(--ink);
+  font-size: 12.5px;
+}
+
+.detail-panel__when {
+  margin-top: 1px;
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.detail-panel__body {
+  margin: 0 0 14px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--surface-hover);
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  white-space: pre-wrap;
+}
+
+.detail-panel__note {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--ink-muted);
+  font-size: 11.5px;
+}
+
+.detail-panel__state {
+  margin: 12px 0;
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+
+.detail-panel__files-label {
+  margin: 14px 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.detail-panel__stat-add {
+  color: #7be3a1;
+}
+
+.detail-panel__stat-del {
+  color: #f0a3a1;
+}
+
+.detail-panel__file {
+  margin-bottom: 14px;
+}
+
+.detail-panel__file-head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.detail-panel__file-path {
+  overflow: hidden;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-panel__old-path {
+  color: var(--ink-faint);
+}
+
+.detail-panel__file-stat {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--ink-faint);
+  font-size: 10.5px;
+}

@@ -29,6 +29,23 @@
   min-height: 0;
 }
 
+.app-shell__body--inspecting {
+  grid-template-columns: 220px minmax(0, 1fr) 310px;
+}
+
+/* Below the desktop minimum the inspector moves under the history rather than
+   squeezing the commit message out of the row. */
+@media (width <= 1000px) {
+  .app-shell__body--inspecting {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .app-shell__body--inspecting .sidebar {
+    display: none;
+  }
+}
+
 .app-shell__history {
   min-width: 0;
   overflow: hidden;
