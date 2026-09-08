@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 0 · 11/63 tareas · última actualización 2026-09-08
+**Estado:** Fase 0 · 12/63 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -147,7 +147,20 @@
       *Verificado:* `tauri dev` levanta la ventana y la app arranca sin errores.
       → `feat(ipc): add the ping command and generate the typed bindings`
 
-- [ ] **F0-6 — Test del roundtrip IPC.**
+- [x] **F0-6 — Test del roundtrip IPC.** Test headless con `tauri::test`: construye una
+      app real, despacha un `InvokeRequest` de verdad y verifica que la respuesta
+      deserializa como `AppInfo` con los valores correctos. Registrar un comando y
+      olvidarse de exponerlo compila perfecto y falla solo en runtime; esto lo atrapa.
+      *Endurecido respecto del plan:* usa `app_context()` —el contexto real, con el
+      archivo de capabilities— en vez de `mock_context(noop_assets())`, así que un
+      comando que la ACL denegaría en la app publicada tampoco pasa acá.
+      *Hallazgos durante la ejecución:* (1) `generate_context!` solo puede expandirse una
+      vez por crate (duplica el símbolo `_EMBED_INFO_PLIST`); extraído a `app_context()`,
+      que comparten la app y el test. (2) `specta_builder()` se hizo genérico sobre el
+      runtime para que el test ejercite el mismo registro que la app, no una copia.
+      (3) El request fallaba con `ping not allowed. Plugin not found` usando
+      `http://tauri.localhost`, que es el esquema de Windows y Linux; en macOS el webview
+      sirve desde `tauri://localhost` y la ACL rechaza el otro como origen desconocido.
       → `test(ipc): cover the ping command roundtrip`
 
 - [ ] **F0-7 — Hook de pre-commit.** Agregar el hook `pre-commit` al instalador que ya

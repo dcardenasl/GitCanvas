@@ -31,5 +31,11 @@ specta.workspace = true
 specta-typescript.workspace = true
 tauri-specta.workspace = true
 
+[dev-dependencies]
+# The `test` feature unlocks tauri::test, which builds a headless app and
+# dispatches real IPC requests through it. That is what lets the round trip be
+# verified in CI instead of only by looking at a window.
+tauri = { version = "2", features = ["test"] }
+
 [lints]
 workspace = true

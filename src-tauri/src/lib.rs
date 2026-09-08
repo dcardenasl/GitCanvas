@@ -25,15 +25,25 @@ use tauri_specta::{collect_commands, collect_events};
 /// Both paths go through this one function on purpose: if the exported
 /// `bindings.ts` were built from a different list than the one the app
 /// actually serves, the types would be a lie that still compiles.
-fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
-    tauri_specta::Builder::<tauri::Wry>::new()
+fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
+    tauri_specta::Builder::<R>::new()
         .commands(collect_commands![commands::app::ping])
         .events(collect_events![])
 }
 
+/// The application context, generated from `tauri.conf.json` and the
+/// capability files.
+///
+/// `generate_context!` may only be expanded once per crate — a second
+/// expansion duplicates the embedded Info.plist symbol — so both the running
+/// application and the tests come through here.
+fn app_context<R: tauri::Runtime>() -> tauri::Context<R> {
+    tauri::generate_context!()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = specta_builder();
+    let builder = specta_builder::<tauri::Wry>();
 
     // Debug builds regenerate the bindings on every run, so the contract can
     // never silently drift while developing. Release builds do no file I/O.
@@ -54,7 +64,7 @@ pub fn run() {
             builder.mount_events(app);
             Ok(())
         })
-        .run(tauri::generate_context!())
+        .run(app_context())
     {
         eprintln!("fatal: could not start GitCanvas: {error}");
         std::process::exit(1);
@@ -63,7 +73,10 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
+    use tauri::test::{get_ipc_response, mock_builder, INVOKE_KEY};
+
     use super::specta_builder;
+    use crate::commands::app::AppInfo;
 
     /// Regenerates `src/bindings.ts` from the registered commands and events.
     ///
@@ -74,11 +87,58 @@ mod tests {
     /// quietly until something breaks at runtime.
     #[test]
     fn typescript_bindings_are_up_to_date() {
-        specta_builder()
+        specta_builder::<tauri::Wry>()
             .export(
                 specta_typescript::Typescript::default(),
                 "../src/bindings.ts",
             )
             .unwrap();
+    }
+
+    /// Dispatches a real IPC request through a headless application.
+    ///
+    /// This is the round trip the whole architecture rests on, so it is
+    /// verified by a test rather than by looking at a window: the command has
+    /// to be reachable by the name the generated bindings use, and its
+    /// response has to deserialize into the type they declare. Registering a
+    /// command and forgetting to expose it would compile perfectly and fail
+    /// only at runtime.
+    #[test]
+    fn ping_round_trips_through_the_ipc_boundary() {
+        let builder = specta_builder();
+        let app = mock_builder()
+            .invoke_handler(builder.invoke_handler())
+            // The real context, not a mock one: this exercises the actual
+            // capability file, so a command that works in a test but is denied
+            // by the ACL in the shipped app cannot pass here.
+            .build(super::app_context())
+            .unwrap();
+        let webview = tauri::WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::default())
+            .build()
+            .unwrap();
+
+        let response = get_ipc_response(
+            &webview,
+            tauri::webview::InvokeRequest {
+                cmd: "ping".into(),
+                callback: tauri::ipc::CallbackFn(0),
+                error: tauri::ipc::CallbackFn(1),
+                // Must match the scheme the capability resolves against.
+                // macOS webviews serve from `tauri://localhost`; the
+                // `http://tauri.localhost` form used on Windows and Linux is
+                // rejected here by the ACL as an unknown origin.
+                url: "tauri://localhost".parse().unwrap(),
+                body: tauri::ipc::InvokeBody::default(),
+                headers: tauri::http::HeaderMap::new(),
+                invoke_key: INVOKE_KEY.to_string(),
+            },
+        )
+        .expect("the ping command should be registered and succeed");
+
+        let info: AppInfo = response.deserialize().expect("AppInfo should deserialize");
+
+        assert_eq!(info.name, "GitCanvas");
+        assert_eq!(info.version, env!("CARGO_PKG_VERSION"));
+        assert_eq!(info.core_version, gitcanvas_core::version());
     }
 }
