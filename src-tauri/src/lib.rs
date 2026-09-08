@@ -35,6 +35,7 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::app::ping,
             commands::repository::open_repository,
             commands::repository::validate_repository,
+            commands::repository::get_startup_repository,
             commands::repository::get_commits,
             commands::repository::get_branches,
             commands::repository::get_tags,

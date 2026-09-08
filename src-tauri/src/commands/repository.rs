@@ -77,3 +77,26 @@ pub async fn get_tags(path: String) -> Result<Vec<TagInfo>, AppError> {
     })
     .await
 }
+
+/// The repository named on the command line, if the application was launched
+/// with one.
+///
+/// `gitcanvas /path/to/repo` is what a terminal user expects of a Git client,
+/// and it is also what lets the end-to-end suite open a repository without a
+/// native file dialog. Validated here, so an unusable argument surfaces as a
+/// normal error rather than a window that silently opens on nothing.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_startup_repository() -> Result<Option<RepositoryInfo>, AppError> {
+    blocking("get_startup_repository", || {
+        let Some(argument) = std::env::args().nth(1) else {
+            return Ok(None);
+        };
+        // Anything that looks like a flag belongs to the runtime, not to us.
+        if argument.starts_with('-') {
+            return Ok(None);
+        }
+        ActiveRepo::validate(argument)?.info().map(Some)
+    })
+    .await
+}

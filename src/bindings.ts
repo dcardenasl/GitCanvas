@@ -17,6 +17,19 @@ export const commands = {
 	openRepository: (path: string) => typedError<RepositoryInfo, AppError>(__TAURI_INVOKE("open_repository", { path })),
 	/**  Checks a candidate working-tree root without changing application selection. */
 	validateRepository: (path: string) => typedError<RepositoryInfo, AppError>(__TAURI_INVOKE("validate_repository", { path })),
+	/**
+	 *  The repository named on the command line, if the application was launched
+	 *  with one.
+	 * 
+	 *  `gitcanvas /path/to/repo` is what a terminal user expects of a Git client,
+	 *  and it is also what lets the end-to-end suite open a repository without a
+	 *  native file dialog. Validated here, so an unusable argument surfaces as a
+	 *  normal error rather than a window that silently opens on nothing.
+	 */
+	getStartupRepository: () => typedError<{
+	path: string,
+	name: string,
+} | null, AppError>(__TAURI_INVOKE("get_startup_repository")),
 	/**  Reads a bounded history page using the selected repository's canonical path. */
 	getCommits: (path: string, request: HistoryRequest) => typedError<HistoryPage, AppError>(__TAURI_INVOKE("get_commits", { path, request })),
 	/**  Lists local and remote branches and identifies the current branch. */

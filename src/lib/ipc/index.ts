@@ -54,6 +54,9 @@ export const ping = commands.ping;
 /** Opens a validated repository and returns its canonical identity. */
 export const openRepository = (path: string) =>
   result(commands.openRepository(path));
+/** The repository named on the command line, if there was one. */
+export const getStartupRepository = () =>
+  result(commands.getStartupRepository());
 /** Validates a repository candidate without changing the UI selection. */
 export const validateRepository = (path: string) =>
   result(commands.validateRepository(path));

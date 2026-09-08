@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import { getStartupRepository } from "../../lib/ipc";
 
 import { CommitDetailPanel } from "../CommitDetailPanel";
 import { GitHubPicker } from "../GitHubPicker";
@@ -18,6 +20,18 @@ export function AppShell() {
   const selectedCommitId = useSession((state) => state.selectedCommitId);
   const history = useHistory(repository?.path ?? null);
   const [showGitHub, setShowGitHub] = useState(false);
+  const setRepository = useSession((state) => state.openRepository);
+
+  useEffect(() => {
+    // `gitcanvas /path/to/repo` opens straight into that repository. Failure is
+    // deliberately quiet: the window still opens and the picker is right there,
+    // which beats a startup error over an argument the user may have mistyped.
+    void getStartupRepository()
+      .then((startup) => {
+        if (startup !== null) setRepository(startup);
+      })
+      .catch(() => undefined);
+  }, [setRepository]);
   const selected =
     history.commits.find((commit) => commit.id === selectedCommitId) ?? null;
 
