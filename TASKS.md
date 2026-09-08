@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 2 · 30/66 tareas · última actualización 2026-09-08
+**Estado:** Fase 2 · 31/66 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -324,7 +324,7 @@ aserción de tiempo en un runner compartido es flaky por diseño) · cero `unwra
       inicial sin padres, y padres fuera de la página actual (indicador "continúa").
       → `feat(graph): add the resumable lane layout algorithm`
 
-- [ ] **F2-2 — Tests del layout.** Carril y color **exactos** por commit, no "que no
+- [x] **F2-2 — Tests del layout.** Carril y color **exactos** por commit, no "que no
       explote". Incluye el test de dos páginas que afirma que los carriles de la primera
       no cambian al cargar la segunda.
       → `test(graph): cover linear, merge, octopus and page boundary layouts`
