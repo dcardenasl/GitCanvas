@@ -149,10 +149,12 @@ fn binary_content_is_flagged_and_never_rendered_as_text() {
 #[test]
 fn an_oversized_diff_is_withheld_until_it_is_asked_for() {
     let fixture = Fixture::new();
-    let big: Vec<u8> = (0..=LARGE_DIFF_LINE_LIMIT + 100)
-        .map(|line| format!("line {line}\n"))
-        .collect::<String>()
-        .into_bytes();
+    let mut big = String::new();
+    for line in 0..=LARGE_DIFF_LINE_LIMIT + 100 {
+        use std::fmt::Write as _;
+        writeln!(big, "line {line}").unwrap();
+    }
+    let big = big.into_bytes();
 
     let first = fixture.commit_files("refs/heads/main", "first", &[], 1_000, &[("a.txt", b"a\n")]);
     let second = fixture.commit_files(
