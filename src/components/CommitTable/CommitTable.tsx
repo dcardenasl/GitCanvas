@@ -2,6 +2,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
 import type { CommitInfo } from "../../bindings";
+import type { RefBadge } from "../../state/refs";
 
 import { authorInitials, formatCommitTime, shortId } from "./format";
 import { OVERSCAN, ROW_HEIGHT, graphWidth } from "./geometry";
@@ -37,6 +38,13 @@ export interface CommitTableProps {
   readonly revealCommitId?: string | null;
   /** Called once a reveal has been carried out, so it is not repeated. */
   readonly onRevealed?: () => void;
+  /**
+   * Branch and tag badges, keyed by the commit they point at.
+   *
+   * Shown on the row rather than only in the sidebar: the whole point of a
+   * graph is to see where the branches are without cross-referencing a list.
+   */
+  readonly refsByCommit?: ReadonlyMap<string, readonly RefBadge[]>;
 }
 
 /** Inclusive row range currently mounted, plus the total scrolled height. */
@@ -61,6 +69,7 @@ export function CommitTable({
   onReachEnd,
   revealCommitId = null,
   onRevealed,
+  refsByCommit,
 }: CommitTableProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -170,8 +179,23 @@ export function CommitTable({
                   transform: `translateY(${String(item.start)}px)`,
                 }}
               >
-                <span className="commit-row__summary" title={commit.summary}>
-                  {commit.summary}
+                <span className="commit-row__message">
+                  {(refsByCommit?.get(commit.id) ?? []).map((ref) => (
+                    <span
+                      key={`${ref.kind}/${ref.name}`}
+                      className={`ref-pill ref-pill--${ref.kind}${
+                        ref.isHead ? " ref-pill--head" : ""
+                      }`}
+                      title={
+                        ref.isHead ? `${ref.name} (rama activa)` : ref.name
+                      }
+                    >
+                      {ref.name}
+                    </span>
+                  ))}
+                  <span className="commit-row__summary" title={commit.summary}>
+                    {commit.summary}
+                  </span>
                 </span>
                 <span className="commit-row__author">
                   <span className="commit-row__avatar" aria-hidden="true">

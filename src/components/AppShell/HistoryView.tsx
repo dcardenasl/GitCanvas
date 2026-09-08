@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { CommitTable } from "../CommitTable";
 import { GraphCanvas } from "../GraphCanvas";
 import { useHistory } from "../../state/history";
+import { useRefsByCommit } from "../../state/refs";
 import { useSession } from "../../state/session";
 
 /** The history pane: the virtualized table with the graph drawn over it. */
@@ -14,6 +15,7 @@ export function HistoryView() {
   const clearReveal = useSession((state) => state.clearReveal);
 
   const history = useHistory(repository?.path ?? null);
+  const refsByCommit = useRefsByCommit(repository?.path ?? null);
 
   const { commits, hasNextPage, isFetchingNextPage, fetchNextPage } = history;
   const loaded =
@@ -62,6 +64,7 @@ export function HistoryView() {
       onReachEnd={fetchNextPage}
       revealCommitId={revealCommitId}
       onRevealed={clearReveal}
+      refsByCommit={refsByCommit}
       renderGraph={(window) => (
         <GraphCanvas
           rows={history.rows}
