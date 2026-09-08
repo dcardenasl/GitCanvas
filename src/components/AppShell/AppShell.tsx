@@ -26,6 +26,7 @@ export function AppShell() {
   const selectedFilePath = useSession((state) => state.selectedFilePath);
   const [showGitHub, setShowGitHub] = useState(false);
   const layout = useLayout();
+  const [sidebarPinned, setSidebarPinned] = useState(false);
   const revealCommit = useSession((state) => state.revealCommit);
   const setRepository = useSession((state) => state.openRepository);
 
@@ -48,6 +49,8 @@ export function AppShell() {
   }, [setRepository]);
   const selected =
     history.commits.find((commit) => commit.id === selectedCommitId) ?? null;
+  const readingFile = selected !== null && selectedFilePath !== null;
+  const collapseSidebar = readingFile && !sidebarPinned;
 
   return (
     <div className="app-shell">
@@ -55,7 +58,20 @@ export function AppShell() {
         <span className="toolbar__repository">
           {repository?.name ?? "Ningún repositorio abierto"}
         </span>
-        {repository !== null && (
+        {readingFile && (
+          <button
+            type="button"
+            className="button"
+            aria-pressed={sidebarPinned}
+            title="Mostrar las ramas mientras se lee un archivo"
+            onClick={() => {
+              setSidebarPinned((pinned) => !pinned);
+            }}
+          >
+            Ramas
+          </button>
+        )}
+        {repository !== null && !readingFile && (
           <CommitSearch commits={history.commits} onGo={revealCommit} />
         )}
         <div className="toolbar__spacer" />
@@ -96,20 +112,27 @@ export function AppShell() {
           className="app-shell__body"
           style={
             {
-              "--sidebar-width": `${String(layout.sidebar)}px`,
+              // Reading a file gets the sidebar's width back: branches are
+              // navigation between commits, and a file is not one of them.
+              // Pinning overrides that for anyone who wants it anyway.
+              "--sidebar-width": collapseSidebar
+                ? "0px"
+                : `${String(layout.sidebar)}px`,
               "--inspector-width": `${String(layout.inspector)}px`,
             } as React.CSSProperties
           }
         >
-          <Sidebar />
-          <Resizer
-            label="Ancho de la barra lateral"
-            width={layout.sidebar}
-            min={SIDEBAR.min}
-            max={layout.sidebarMax}
-            grows="right"
-            onResize={layout.setSidebar}
-          />
+          {!collapseSidebar && <Sidebar />}
+          {!collapseSidebar && (
+            <Resizer
+              label="Ancho de la barra lateral"
+              width={layout.sidebar}
+              min={SIDEBAR.min}
+              max={layout.sidebarMax}
+              grows="right"
+              onResize={layout.setSidebar}
+            />
+          )}
           <main className="app-shell__history" aria-label="Historial">
             {selected !== null && selectedFilePath !== null ? (
               <FileDiffView

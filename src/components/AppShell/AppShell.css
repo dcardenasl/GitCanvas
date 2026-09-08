@@ -39,6 +39,12 @@
   min-height: 0;
 }
 
+/* A collapsed sidebar has no width and no divider, so the columns simply
+   close up rather than leaving an empty gutter. */
+.app-shell__body > .sidebar {
+  min-width: 0;
+}
+
 .app-shell__history {
   min-width: 0;
   overflow: hidden;
