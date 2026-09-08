@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 1 · 20/64 tareas · última actualización 2026-09-08
+**Estado:** Fase 1 · 21/64 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -260,7 +260,7 @@ Rust → TypeScript.
       cambian las refs. No hay offsets ni handles compartidos.
       → `feat(core): add the cursor-paginated commit history walk`
 
-- [ ] **F1-4 — Tests de historial.** Lineal, un merge, branches divergentes, octopus,
+- [x] **F1-4 — Tests de historial.** Lineal, un merge, branches divergentes, octopus,
       HEAD desprendido, repo vacío y el límite exacto de página.
       → `test(core): cover linear, merge, diverged and detached head histories`
 
