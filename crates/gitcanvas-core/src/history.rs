@@ -11,7 +11,7 @@ use crate::{error::AppError, repository::ActiveRepo};
 /// Maximum number of commits returned by one request.
 pub const MAX_PAGE_SIZE: u16 = 500;
 
-/// One commit in the graph. Times are Unix seconds, represented exactly by JSON.
+/// One commit in the graph. Times are decimal Unix seconds, preserving Git's full integer range.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct CommitInfo {
     pub id: String,
@@ -20,8 +20,8 @@ pub struct CommitInfo {
     pub message: String,
     pub author_name: String,
     pub author_email: String,
-    pub author_time: f64,
-    pub commit_time: f64,
+    pub author_time: String,
+    pub commit_time: String,
 }
 
 /// Request for a page. Continuations carry the prior page's immutable walk roots.
@@ -150,7 +150,6 @@ fn history_roots(repo: &Repository) -> Result<Vec<Oid>, AppError> {
     Ok(roots.into_iter().collect())
 }
 
-#[allow(clippy::cast_precision_loss)] // Unix seconds fit exactly within JSON's 53-bit integer range.
 pub(crate) fn commit_info(commit: &git2::Commit<'_>) -> CommitInfo {
     let author = commit.author();
     CommitInfo {
@@ -160,7 +159,7 @@ pub(crate) fn commit_info(commit: &git2::Commit<'_>) -> CommitInfo {
         message: String::from_utf8_lossy(commit.message_bytes()).into_owned(),
         author_name: String::from_utf8_lossy(author.name_bytes()).into_owned(),
         author_email: String::from_utf8_lossy(author.email_bytes()).into_owned(),
-        author_time: author.when().seconds() as f64,
-        commit_time: commit.time().seconds() as f64,
+        author_time: author.when().seconds().to_string(),
+        commit_time: commit.time().seconds().to_string(),
     }
 }

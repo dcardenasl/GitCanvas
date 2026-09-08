@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 1 · 23/64 tareas · última actualización 2026-09-08
+**Estado:** Fase 1 · 24/64 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -270,9 +270,13 @@ Rust → TypeScript.
 - [x] **F1-6 — Tests de refs.**
       → `test(core): cover ref resolution against the fixture repositories`
 
-- [ ] **F1-7 — Comandos IPC.** `open_repository`, `validate_repository`, `get_commits`,
+- [x] **F1-7 — Comandos IPC.** `open_repository`, `validate_repository`, `get_commits`,
       `get_branches`, `get_tags`. **Todos dentro de `spawn_blocking`**: `git2` es
       bloqueante y sin eso un repo grande congela la UI entera.
+      *Hallazgo durante la ejecución:* cada petición lleva la identidad canónica del
+      repo para que cambiar la selección durante una lectura no mezcle resultados.
+      No hay estado global mutable ni handles Git compartidos. Los timestamps viajan
+      como segundos decimales en String para preservar todo el rango i64 de Git.
       → `feat(ipc): expose the repository, history and refs commands`
 
 - [ ] **F1-8 — Tests de la capa de comandos.**

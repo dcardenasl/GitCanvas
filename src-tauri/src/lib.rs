@@ -27,7 +27,14 @@ use tauri_specta::{collect_commands, collect_events};
 /// actually serves, the types would be a lie that still compiles.
 fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
     tauri_specta::Builder::<R>::new()
-        .commands(collect_commands![commands::app::ping])
+        .commands(collect_commands![
+            commands::app::ping,
+            commands::repository::open_repository,
+            commands::repository::validate_repository,
+            commands::repository::get_commits,
+            commands::repository::get_branches,
+            commands::repository::get_tags,
+        ])
         .events(collect_events![])
 }
 

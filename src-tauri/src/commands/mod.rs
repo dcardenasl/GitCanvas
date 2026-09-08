@@ -9,3 +9,5 @@
 //! leave those behind.
 
 pub mod app;
+
+pub mod repository;

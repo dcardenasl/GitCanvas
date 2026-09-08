@@ -12,9 +12,34 @@ export const commands = {
 	 *  depends on it.
 	 */
 	ping: () => __TAURI_INVOKE<AppInfo>("ping"),
+	/**  Validates and opens a local repository, returning its canonical identity. */
+	openRepository: (path: string) => typedError<RepositoryInfo, AppError>(__TAURI_INVOKE("open_repository", { path })),
+	/**  Checks a candidate working-tree root without changing application selection. */
+	validateRepository: (path: string) => typedError<RepositoryInfo, AppError>(__TAURI_INVOKE("validate_repository", { path })),
+	/**  Reads a bounded history page using the selected repository's canonical path. */
+	getCommits: (path: string, request: HistoryRequest) => typedError<HistoryPage, AppError>(__TAURI_INVOKE("get_commits", { path, request })),
+	/**  Lists local and remote branches and identifies the current branch. */
+	getBranches: (path: string) => typedError<BranchInfo[], AppError>(__TAURI_INVOKE("get_branches", { path })),
+	/**  Lists tags, peeling annotated tags to commits when applicable. */
+	getTags: (path: string) => typedError<TagInfo[], AppError>(__TAURI_INVOKE("get_tags", { path })),
 };
 
 /* Types */
+/**  A domain failure, never a raw library error or a panic. */
+export type AppError = 
+/**  The supplied path does not identify a supported working repository. */
+{ kind: "InvalidRepository"; message: string } | 
+/**  A filesystem operation failed. */
+{ kind: "Io"; message: string } | 
+/**  libgit2 could not complete an operation. */
+{ kind: "Git"; message: string } | 
+/**  A request violates the public contract. */
+{ kind: "InvalidInput"; message: string } | 
+/**  The history represented by a pagination cursor is no longer available. */
+{ kind: "StaleCursor"; message: string } | 
+/**  Background work could not complete. */
+{ kind: "Internal"; message: string };
+
 /**
  *  What the application reports about itself.
  * 
@@ -29,4 +54,64 @@ export type AppInfo = {
 	/**  Version of the git engine crate backing it. */
 	core_version: string,
 };
+
+/**  A branch uses its full ref name as identity; short names are display only. */
+export type BranchInfo = {
+	name: string,
+	full_name: string,
+	target: string,
+	is_remote: boolean,
+	is_head: boolean,
+	is_symbolic: boolean,
+};
+
+/**  One commit in the graph. Times are decimal Unix seconds, preserving Git's full integer range. */
+export type CommitInfo = {
+	id: string,
+	parents: string[],
+	summary: string,
+	message: string,
+	author_name: string,
+	author_email: string,
+	author_time: string,
+	commit_time: string,
+};
+
+/**  A bounded page and the information needed to resume its exact traversal. */
+export type HistoryPage = {
+	commits: CommitInfo[],
+	next_cursor: string | null,
+	roots: string[],
+};
+
+/**  Request for a page. Continuations carry the prior page's immutable walk roots. */
+export type HistoryRequest = {
+	limit: number,
+	cursor: string | null,
+	roots: string[] | null,
+};
+
+/**  Displayable repository identity, safe to send across IPC. */
+export type RepositoryInfo = {
+	path: string,
+	name: string,
+};
+
+/**  A tag may refer to any Git object, so a commit target is explicitly optional. */
+export type TagInfo = {
+	name: string,
+	target: string,
+	commit_id: string | null,
+	is_annotated: boolean,
+};
+
+/* Tauri Specta runtime */
+async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {
+    try {
+        return { status: "ok", data: await result };
+    } catch (e) {
+        if (e instanceof Error) throw e;
+        return { status: "error", error: e as any };
+    }
+}
 
