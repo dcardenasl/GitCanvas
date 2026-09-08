@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 0 · 14/63 tareas · última actualización 2026-09-08
+**Estado:** Fase 0 · 15/63 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -196,8 +196,20 @@
       de type information. Habría roto el CI en el primer PR.
       → `ci: add the dev push check and the pull request quality matrix`
 
-- [ ] **F0-9 — Workflow de release.** Adaptación del `release.yml` de `ci4-website-suite`:
-      tag `v*.*.*` → extrae la sección del CHANGELOG → crea el GitHub Release.
+- [x] **F0-9 — Workflow de release.** Tag `v*.*.*` → extrae la sección del CHANGELOG →
+      crea el Release. La extracción es el mismo `awk` de `ci4-website-suite`, que ya
+      está probado en producción, y las notas se escriben a un archivo antes de pasarlas
+      a `gh` para que el contenido del CHANGELOG no pueda inyectar shell.
+      *Ampliado respecto de la referencia:* tres jobs en vez de uno. `create-release`
+      publica en **borrador**, `bundle` construye instaladores en macOS (arm64 e Intel),
+      Linux y Windows con `tauri-action` y los adjunta, y `publish` recién entonces lo
+      saca de borrador — así nadie descarga un release al que le falta su plataforma.
+      La firma de código queda fuera del MVP, pero el job `bundle` es exactamente donde
+      va: agregar los secretos ahí es todo el cambio, sin reestructurar nada.
+      *Verificado:* la extracción del CHANGELOG probada en los 4 casos —una versión del
+      medio, la primera de la lista, una inexistente y `[Unreleased]` vacío—. Los dos
+      últimos devuelven vacío, que es lo que hace abortar el workflow en vez de publicar
+      un release sin notas.
       → `ci: add the changelog-driven release workflow`
 
 - [ ] **F0-10 — Nota de arquitectura.** `ARCHITECTURE.md` con la frontera core/tauri/ui y

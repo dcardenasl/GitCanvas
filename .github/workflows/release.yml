@@ -1,0 +1,157 @@
+name: release
+
+# On a `v*.*.*` tag push, extract the matching section from CHANGELOG.md,
+# create a GitHub Release with those notes, and attach an installer for each
+# operating system.
+#
+# The version in the tag must already exist as a `## [<version>]` heading in
+# CHANGELOG.md, so `chore: release vX.Y.Z` is the last commit on `dev` before
+# the merge to `main`.
+#
+# Code signing is deliberately out of scope for now. The bundle step is where
+# it will go: adding the signing secrets to that job is the whole change, with
+# no restructuring of this workflow.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create.outputs.release_id }}
+      version: ${{ steps.notes.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract release notes from CHANGELOG.md
+        id: notes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+          if [ ! -f CHANGELOG.md ]; then
+            echo "::error::CHANGELOG.md not found in repo root."
+            exit 1
+          fi
+
+          # Pull the body between `## [VERSION]` and the next `## [`,
+          # excluding the heading line itself.
+          NOTES=$(awk -v ver="${VERSION}" '
+            BEGIN { capture = 0 }
+            /^## \[/ {
+              if (capture) { exit }
+              if ($0 ~ "^## \\[" ver "\\]") { capture = 1; next }
+            }
+            capture { print }
+          ' CHANGELOG.md)
+
+          if [ -z "${NOTES}" ]; then
+            echo "::error::No CHANGELOG section found for version ${VERSION}. Did you forget to rename [Unreleased] before tagging?"
+            exit 1
+          fi
+
+          {
+            echo 'notes<<EOF_RELEASE_NOTES'
+            echo "${NOTES}"
+            echo 'EOF_RELEASE_NOTES'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create the draft release
+        id: create
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: ${{ steps.notes.outputs.notes }}
+        run: |
+          # Write notes to a file to avoid shell injection from CHANGELOG content.
+          printf '%s' "${RELEASE_NOTES}" > /tmp/release_notes.md
+
+          # Draft until every installer has been attached, so nobody downloads
+          # a release that is missing their platform.
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "Release ${GITHUB_REF_NAME} already exists; updating notes."
+            gh release edit "${GITHUB_REF_NAME}" --notes-file /tmp/release_notes.md --draft
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "${GITHUB_REF_NAME}" \
+              --notes-file /tmp/release_notes.md \
+              --draft
+          fi
+
+          RELEASE_ID=$(gh release view "${GITHUB_REF_NAME}" --json databaseId --jq .databaseId)
+          echo "release_id=${RELEASE_ID}" >> "$GITHUB_OUTPUT"
+
+  bundle:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            args: "--target aarch64-apple-darwin"
+          - os: macos-latest
+            args: "--target x86_64-apple-darwin"
+          - os: ubuntu-latest
+            args: ""
+          - os: windows-latest
+            args: ""
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install the Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: release-${{ matrix.os }}-${{ matrix.args }}
+
+      - name: Install the Linux webview dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libxdo-dev
+
+      - run: npm ci
+
+      - name: Build and attach the installer
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          args: ${{ matrix.args }}
+
+  publish:
+    needs: [create-release, bundle]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${GITHUB_REF_NAME}" --draft=false
