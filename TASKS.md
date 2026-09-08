@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 1 · 24/64 tareas · última actualización 2026-09-08
+**Estado:** Fase 1 · 25/64 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -279,7 +279,7 @@ Rust → TypeScript.
       como segundos decimales en String para preservar todo el rango i64 de Git.
       → `feat(ipc): expose the repository, history and refs commands`
 
-- [ ] **F1-8 — Tests de la capa de comandos.**
+- [x] **F1-8 — Tests de la capa de comandos.**
       → `test(ipc): cover the command layer against a temporary repository`
 
 - [ ] **F1-9 — Logging estructurado.** `tracing` a archivo rotativo en el directorio de

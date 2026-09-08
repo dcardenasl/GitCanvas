@@ -17,6 +17,9 @@
 
 mod commands;
 
+#[cfg(test)]
+mod repository_tests;
+
 use tauri_specta::{collect_commands, collect_events};
 
 /// Builds the typed command registry shared by the application and by the
