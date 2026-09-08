@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 2 · 36/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 2 · 37/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -404,7 +404,22 @@ aserción de tiempo en un runner compartido es flaky por diseño) · cero `unwra
       cae en la página siguiente aterriza en el carril exacto que le reservaron.
       → `feat(ui): load commit history through cursor-based infinite queries`
 
-- [ ] **F2-7 — Tests de render.**
+- [x] **F2-7 — Tests de render.** Test de integración de `HistoryView` con el IPC
+      simulado: la tabla y el graph compuestos sobre un historial con la forma del
+      mockup —`dev` mergeada a `main`—, verificando que dibuja un nodo por commit, que el
+      merge sale como curva, que los resúmenes aparecen junto al graph, que un fallo se
+      reporta en vez de mostrar un graph vacío, y que pide la página siguiente con el
+      cursor correcto.
+      *Verificación contra el repositorio real* (`GITCANVAS_REFERENCE_REPO`
+      = ci4-website-suite): los 50 primeros commits coinciden **hash por hash** con
+      `git log --all --topo-order`.
+      *Presupuesto de performance, medido:* con 10.000 commits y páginas de 500, sobre 50
+      muestras — empaquetado **p95 = 47,9 ms**, empaquetado con caché **p95 = 3,7 ms**.
+      El objetivo del plan era 300 ms, así que se cumple con holgura en el estado normal
+      de un repositorio. **Pero con 10.000 objetos sueltos el p95 sube a 450 ms y no se
+      cumple.** Queda anotado en vez de disimulado: es un caso poco común porque git
+      compacta solo, y la caché lo baja a 31 ms, pero la primera lectura de un repo sin
+      compactar excede el presupuesto.
       → `test(ui): cover graph rendering for the fixture histories`
 
 - [ ] **F2-8 — CHANGELOG del graph.**
