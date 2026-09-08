@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 2 · 29/66 tareas · última actualización 2026-09-08
+**Estado:** Fase 2 · 30/66 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -316,7 +316,7 @@ aserción de tiempo en un runner compartido es flaky por diseño) · cero `unwra
 > El núcleo de valor del proyecto. Es la pieza que más cuidado necesita y la más difícil
 > de verificar solo mirando la pantalla.
 
-- [ ] **F2-1 — Algoritmo de carriles reanudable.**
+- [x] **F2-1 — Algoritmo de carriles reanudable.**
       `layout(commits, prev?) -> { rows, state }`, TypeScript puro, sin React ni DOM.
       Reanudable (delta D4) porque recalcular desde cero al cargar la página 2 reordena
       los carriles de la página 1 y el graph "salta" bajo el cursor: es un bug
