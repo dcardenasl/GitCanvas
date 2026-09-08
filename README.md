@@ -28,6 +28,49 @@ for the governing plan.
 | Render | SVG over row virtualization (`@tanstack/react-virtual`) |
 | Frontend | React + TypeScript + Vite |
 
+## Install
+
+There are no published installers yet — the first release is still an open pull
+request. Until then, build it yourself:
+
+```bash
+npm install
+npm run tauri build -- --bundles app
+cp -R target/release/bundle/macos/GitCanvas.app /Applications/
+```
+
+The first launch is blocked by Gatekeeper, because the build is unsigned. Right
+click the app and choose Open, or clear the quarantine flag:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/GitCanvas.app
+```
+
+Code signing is out of scope for this release; the release workflow is
+structured so it can be added without restructuring anything.
+
+## Use
+
+Open a repository in either of two ways:
+
+```bash
+# from a terminal, the way a Git client should behave
+open -a GitCanvas --args /path/to/repo
+```
+
+or launch the app and press **Abrir repositorio**.
+
+| Action | What happens |
+|---|---|
+| Scroll | Loads more history as you reach the end, 500 commits at a time |
+| Click a commit | Opens the inspector with its author, message and diff |
+| ↑ / ↓ | Moves the selection without leaving the keyboard |
+| **Pull** | Fetches and fast-forwards. Anything needing a merge is reported, not resolved |
+| **Push** | Asks for confirmation first, and never forces |
+| **GitHub** | Stores a token in the OS keychain, lists your repositories, clones one |
+
+Logs are written to `~/Library/Application Support/gitcanvas/logs` on macOS.
+
 ## Requirements
 
 - Node >= 22
