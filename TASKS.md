@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 0 · 16/63 tareas · última actualización 2026-09-08
+**Estado:** Fase 1 · 16/63 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -57,7 +57,7 @@
 
 ---
 
-## 🔴 En progreso — Fase 0: Cimientos
+## ✅ Fase 0 — Cimientos (10/10)
 
 > Que build, lint, tipos, tests, hooks, CI y generación de bindings funcionen **antes**
 > de la primera línea de lógica de negocio.
@@ -224,7 +224,7 @@ Rust → TypeScript.
 
 ---
 
-## ⏳ Fase 1 — Motor de datos Git (Rust)
+## 🔴 En progreso — Fase 1: Motor de datos Git (Rust)
 
 > Dado un path local, obtener commits, branches y tags de forma correcta y predecible,
 > sin bloquear la UI, sin importar el tamaño del repositorio.
@@ -475,3 +475,13 @@ intentar resolverlo.
 - **Fase G — Bootstrap del repositorio** (6/6). Repositorio creado con `main` como punto
   de partida y `dev` como rama de trabajo, remoto privado en GitHub, y el guard local que
   impide pushear a `main`.
+
+- **Fase 0 — Cimientos** (10/10). El esqueleto completo funciona antes de la primera línea
+  de lógica de negocio: workspace Rust con la frontera del dominio aplicada por el
+  compilador, TypeScript estricto con la frontera del graph-layout aplicada por ESLint,
+  lints que deniegan `unwrap`/`expect`/`panic`, el pipeline de contratos tipados con su
+  chequeo de drift, hook de pre-commit de 2 s, y los tres workflows de CI.
+  **Cada frontera se verificó rompiéndola a propósito una vez.**
+  *Verificación de cierre:* `cargo fmt --check` limpio · `cargo clippy --all-targets
+  --all-features -- -D warnings` limpio · `cargo test --workspace` 3 tests en verde ·
+  `bindings.ts` sin drift · typecheck, lint y format del frontend limpios.
