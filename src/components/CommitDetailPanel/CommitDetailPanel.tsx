@@ -40,10 +40,10 @@ function fileName(path: string): string {
   return path.slice(path.lastIndexOf("/") + 1);
 }
 
-/** Everything before the file name, or empty for a root-level file. */
+/** Everything before the file name, without the trailing slash. */
 function directory(path: string): string {
   const cut = path.lastIndexOf("/");
-  return cut < 0 ? "" : path.slice(0, cut + 1);
+  return cut < 0 ? "" : path.slice(0, cut);
 }
 
 /**
@@ -161,9 +161,19 @@ function FileRow({ file, selected, onOpen }: FileRowProps) {
         >
           {CHANGE_MARK[file.change]}
         </span>
+        {/*
+          Name first, directory after it.
+
+          A path truncated from the left cuts the directory mid-token and runs
+          it straight into the file name, which reads as one nonsense word.
+          Leading with the name keeps the thing being looked for at a stable
+          position and lets the directory truncate the ordinary way.
+        */}
         <span className="file-row__path" title={file.path}>
-          <span className="file-row__dir">{directory(file.path)}</span>
           <span className="file-row__name">{fileName(file.path)}</span>
+          {directory(file.path) !== "" && (
+            <span className="file-row__dir">{directory(file.path)}</span>
+          )}
         </span>
         <span className="file-row__stat">
           {file.omitted === null ? (

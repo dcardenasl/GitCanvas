@@ -142,6 +142,24 @@ describe("CommitDetailPanel", () => {
     expect(screen.getByText("grande")).toBeDefined();
   });
 
+  it("leads with the file name and follows with its directory", async () => {
+    // A path truncated from the left cuts the directory mid-token and runs it
+    // into the name; leading with the name keeps it readable at any width.
+    getCommitDiff.mockResolvedValue(
+      diff({ files: [file({ path: "src/components/CommitTable/index.ts" })] }),
+    );
+    renderPanel();
+
+    const row = await screen.findByRole("button");
+    const text = row.textContent;
+
+    expect(text.indexOf("index.ts")).toBeLessThan(
+      text.indexOf("src/components/CommitTable"),
+    );
+    // The directory carries no trailing slash now that it follows the name.
+    expect(text).not.toContain("CommitTable/index.ts");
+  });
+
   it("labels each change kind for assistive technology", async () => {
     getCommitDiff.mockResolvedValue(
       diff({ files: [file({ change: "Deleted", path: "gone.txt" })] }),
