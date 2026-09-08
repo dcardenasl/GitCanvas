@@ -1,0 +1,24 @@
+/*
+ * Absolutely positioned inside the table's scrolled content, so it moves with
+ * the rows without any scroll synchronization.
+ */
+.graph-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.graph-canvas__edge {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.graph-canvas__node {
+  stroke-width: 1.5;
+}
+
+.graph-canvas__node--selected {
+  stroke-width: 2.5;
+}

@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 2 · 34/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 2 · 35/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -365,11 +365,19 @@ aserción de tiempo en un runner compartido es flaky por diseño) · cero `unwra
       → `feat(ui): add the virtualized commit table`
       → `feat(ui): add the virtualized commit table`
 
-- [ ] **F2-5 — Render SVG del graph.** Capa absoluta dentro del **mismo** contenedor de
-      scroll virtualizado (delta D5): dos contenedores sincronizados por JS producen
-      jitter de un frame en cada scroll; con uno solo el código de sincronización no
-      existe y por lo tanto no puede fallar. Bézier en cambios de carril, rectas en el
-      mismo carril.
+- [x] **F2-5 — Render SVG del graph.** Capa absoluta dentro del mismo contenedor de
+      scroll de F2-4, dimensionada a la altura total del historial pero emitiendo
+      geometría solo para las filas montadas más una a cada lado (delta D5). Rectas
+      cuando el carril no cambia, Bézier cuando sí, con los puntos de control sobre la
+      vertical para que la curva salga y llegue viajando hacia abajo y se lea como una
+      línea continua, no como una diagonal. `aria-hidden`: la semántica la lleva la
+      tabla, el SVG es decorativo.
+      *Por qué una fila de margen alcanza:* el layout resuelve **todos** los cambios de
+      carril en la mitad inferior de cada fila, así que ninguna arista cruza más de una
+      fila. Dibujar la ventana visible ±1 es exacto, no una aproximación. Hay un test
+      que lo afirma directamente: donde termina la arista de una fila empieza el tramo
+      entrante de la siguiente, coordenada por coordenada.
+      *Verificado:* con 5.000 commits y una ventana de 21 filas emite 23 nodos, no 5.000.
       → `feat(ui): render the commit graph as an svg layer over the virtual rows`
 
 - [ ] **F2-6 — Paginación infinita.** React Query `useInfiniteQuery` sobre el cursor de
