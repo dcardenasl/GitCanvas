@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -143,6 +143,71 @@ describe("CommitTable", () => {
 
     expect(list?.style.getPropertyValue("--graph-width")).toBe(expected);
     expect(list?.style.paddingLeft).toBe("");
+  });
+
+  it("names each row for a listener instead of running fields together", () => {
+    // The DOM concatenates to "…2e53be608-sept, 04:56 p.m.", reading the hash
+    // straight into the date.
+    withViewport(ROW_HEIGHT * 10);
+    render(
+      <CommitTable
+        commits={makeCommits(3)}
+        selectedId={null}
+        onSelect={() => undefined}
+        maxLanes={1}
+      />,
+    );
+
+    const label = screen.getAllByRole("option")[0]?.getAttribute("aria-label");
+    expect(label).toContain("commit 0. por David Cardenas");
+    expect(label).toMatch(/commit [0-9a-f]{7}$/);
+  });
+
+  it("offers copying the commit from a context menu", async () => {
+    withViewport(ROW_HEIGHT * 10);
+    const commits = makeCommits(3);
+    render(
+      <CommitTable
+        commits={commits}
+        selectedId={null}
+        onSelect={() => undefined}
+        maxLanes={1}
+      />,
+    );
+
+    const row = screen.getAllByRole("option")[0];
+    if (row === undefined) throw new Error("no rows rendered");
+    fireEvent.contextMenu(row);
+
+    expect(await screen.findByRole("menu")).toBeDefined();
+    expect(
+      screen.getByRole("menuitem", { name: /Copiar hash completo/ }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("menuitem", { name: "Copiar mensaje" }),
+    ).toBeDefined();
+  });
+
+  it("selects the row the context menu was opened on", () => {
+    withViewport(ROW_HEIGHT * 10);
+    const onSelect = vi.fn();
+    const commits = makeCommits(3);
+    render(
+      <CommitTable
+        commits={commits}
+        selectedId={null}
+        onSelect={onSelect}
+        maxLanes={1}
+      />,
+    );
+
+    const row = screen.getAllByRole("option")[1];
+    if (row === undefined) throw new Error("no rows rendered");
+    fireEvent.contextMenu(row);
+
+    // Acting on a menu for a row you did not select is how the wrong hash ends
+    // up on the clipboard.
+    expect(onSelect).toHaveBeenCalledWith(commits[1]?.id);
   });
 
   it("scrolls to a commit it is asked to reveal", () => {

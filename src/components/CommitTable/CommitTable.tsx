@@ -1,8 +1,16 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import type { CommitInfo } from "../../bindings";
 import type { RefBadge } from "../../state/refs";
+import { copyText } from "../../lib/clipboard";
+import { ContextMenu } from "../ContextMenu";
 
 import { authorInitials, formatCommitTime, shortId } from "./format";
 import { OVERSCAN, ROW_HEIGHT, graphWidth } from "./geometry";
@@ -60,6 +68,21 @@ export interface VisibleWindow {
  * Only the rows in view plus an overscan margin are mounted, so a repository
  * with a hundred thousand commits costs the same as one with fifty.
  */
+/** A spoken description of a row: what it is, who wrote it, and when. */
+function rowLabel(
+  commit: CommitInfo,
+  refs: readonly RefBadge[] | undefined,
+): string {
+  const parts = [commit.summary];
+  if (refs !== undefined && refs.length > 0) {
+    parts.push(`en ${refs.map((ref) => ref.name).join(", ")}`);
+  }
+  parts.push(`por ${commit.author_name}`);
+  parts.push(formatCommitTime(commit.commit_time));
+  parts.push(`commit ${shortId(commit.id)}`);
+  return parts.join(". ");
+}
+
 export function CommitTable({
   commits,
   selectedId,
@@ -72,6 +95,16 @@ export function CommitTable({
   refsByCommit,
 }: CommitTableProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [menu, setMenu] = useState<{
+    x: number;
+    y: number;
+    commit: CommitInfo;
+  } | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const closeMenu = useCallback(() => {
+    setMenu(null);
+  }, []);
 
   // The virtualizer keeps mutable internal state that the React Compiler
   // cannot reason about, so it flags the call. That is inherent to how the
@@ -96,6 +129,15 @@ export function CommitTable({
     virtualizer.scrollToIndex(index, { align: "center" });
     onRevealed?.();
   }, [revealCommitId, commits, virtualizer, onRevealed]);
+
+  const copy = useCallback(async (value: string, what: string) => {
+    const ok = await copyText(value);
+    setCopied(ok ? `${what} copiado` : `no se pudo copiar el ${what}`);
+    // Cleared so the same copy announced twice in a row is announced twice.
+    window.setTimeout(() => {
+      setCopied(null);
+    }, 2500);
+  }, []);
 
   const items = virtualizer.getVirtualItems();
   const totalHeight = virtualizer.getTotalSize();
@@ -167,12 +209,24 @@ export function CommitTable({
                 }
                 role="option"
                 aria-selected={selected}
+                /*
+                 * Without this the accessible name is whatever the DOM
+                 * concatenates — "…2e53be608-sept, 04:56 p.m." — which reads
+                 * the hash straight into the date. Naming the row explicitly
+                 * puts the separators a listener needs.
+                 */
+                aria-label={rowLabel(commit, refsByCommit?.get(commit.id))}
                 tabIndex={selected ? 0 : -1}
                 onClick={() => {
                   onSelect(commit.id);
                 }}
                 onKeyDown={(event) => {
                   handleKeyDown(event, item.index);
+                }}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  onSelect(commit.id);
+                  setMenu({ x: event.clientX, y: event.clientY, commit });
                 }}
                 style={{
                   height: `${String(ROW_HEIGHT)}px`,
@@ -212,6 +266,50 @@ export function CommitTable({
           })}
         </div>
       </div>
+
+      {menu !== null && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          onClose={closeMenu}
+          items={[
+            {
+              label: `Copiar hash (${shortId(menu.commit.id)})`,
+              onSelect: () => {
+                void copy(menu.commit.id, "hash");
+              },
+            },
+            {
+              label: "Copiar hash completo",
+              onSelect: () => {
+                void copy(menu.commit.id, "hash completo");
+              },
+            },
+            {
+              label: "Copiar mensaje",
+              onSelect: () => {
+                void copy(menu.commit.message, "mensaje");
+              },
+            },
+            {
+              label: "Copiar autor",
+              onSelect: () => {
+                void copy(
+                  `${menu.commit.author_name} <${menu.commit.author_email}>`,
+                  "autor",
+                );
+              },
+            },
+          ]}
+        />
+      )}
+
+      {/* Announced rather than shown as a toast: the confirmation matters to
+          anyone who cannot see the clipboard change, and a visual flash in the
+          corner would be missed by everyone else anyway. */}
+      <span className="commit-table__announcement" role="status">
+        {copied}
+      </span>
     </div>
   );
 }
