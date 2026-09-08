@@ -40,6 +40,7 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::repository::get_branches,
             commands::repository::get_tags,
             commands::diff::get_commit_diff,
+            commands::diff::get_file_content,
             commands::github::store_github_token,
             commands::github::has_github_token,
             commands::github::forget_github_token,

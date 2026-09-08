@@ -1,6 +1,11 @@
 /** Typed application boundary over the generated Rust contract. */
 import { commands, events } from "../../bindings";
-import type { AppError, DiffRequest, HistoryRequest } from "../../bindings";
+import type {
+  AppError,
+  DiffRequest,
+  FileContentRequest,
+  HistoryRequest,
+} from "../../bindings";
 
 export type {
   AppInfo,
@@ -18,6 +23,8 @@ export type {
   DiffOmission,
   DiffRequest,
   FileChange,
+  FileContent,
+  FileContentRequest,
   FileDiff,
   AppError,
   BranchInfo,
@@ -99,3 +106,7 @@ export const pullFastForward = (path: string) =>
 /** Pushes the current branch to its remote. */
 export const pushCurrentBranch = (path: string) =>
   result(commands.pushCurrentBranch(path));
+
+/** Reads a file's full contents as it stands at a commit. */
+export const getFileContent = (path: string, request: FileContentRequest) =>
+  result(commands.getFileContent(path, request));

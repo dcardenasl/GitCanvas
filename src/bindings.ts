@@ -51,6 +51,13 @@ export const commands = {
 	 *  interface loads a large diff only when the user asks for it.
 	 */
 	getCommitDiff: (path: string, request: DiffRequest) => typedError<CommitDiff, AppError>(__TAURI_INVOKE("get_commit_diff", { path, request })),
+	/**
+	 *  Reads a file's full contents as it stands at a commit.
+	 * 
+	 *  Complements the diff: a change only shows what moved, and reading the file
+	 *  around it is often what answers the question.
+	 */
+	getFileContent: (path: string, request: FileContentRequest) => typedError<FileContent, AppError>(__TAURI_INVOKE("get_file_content", { path, request })),
 	/**  Stores a personal access token in the OS keychain. */
 	storeGithubToken: (token: string) => typedError<GitHubAccount, AppError>(__TAURI_INVOKE("store_github_token", { token })),
 	/**  Reports whether a token is stored, without revealing it. */
@@ -218,6 +225,30 @@ export type DirtyPath = {
 
 /**  How a path changed between two trees. */
 export type FileChange = "Added" | "Modified" | "Deleted" | "Renamed" | "Copied" | "TypeChanged" | "Other";
+
+/**  A file as it stands at one commit. */
+export type FileContent = {
+	path: string,
+	commit_id: string,
+	/**  Total lines, available even when the text itself is withheld. */
+	lines: number,
+	/**
+	 *  Size in bytes, as a decimal string; a blob can exceed a JavaScript
+	 *  integer, and specta refuses to export 64-bit numbers.
+	 */
+	bytes: string,
+	omitted: DiffOmission | null,
+	/**  The text, or `None` whenever `omitted` is set. */
+	text: string | null,
+};
+
+/**  What the caller wants read. */
+export type FileContentRequest = {
+	commit_id: string,
+	path: string,
+	/**  Return the text even if it exceeds the line budget. */
+	expand: boolean,
+};
 
 /**
  *  One file in a commit's diff.
