@@ -1,3 +1,3 @@
-export { DiffViewer } from "./DiffViewer";
-export { parseHunks } from "./parse";
+export { DiffViewer, LineTable } from "./DiffViewer";
+export { parseHunks, parseWholeFile } from "./parse";
 export type { DiffLine } from "./parse";

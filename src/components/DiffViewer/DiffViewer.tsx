@@ -11,14 +11,9 @@ export interface DiffViewerProps {
   /** Requests the full patch for a file held back by the size guard. */
   readonly onExpand: (path: string) => void;
   readonly expanding: boolean;
+  /** Wrap long lines instead of scrolling them horizontally. */
+  readonly wrap: boolean;
 }
-
-const LINE_CLASS: Record<DiffLine["kind"], string> = {
-  add: "diff-line diff-line--add",
-  del: "diff-line diff-line--del",
-  context: "diff-line",
-  meta: "diff-line diff-line--meta",
-};
 
 /**
  * Renders one file's unified patch.
@@ -27,7 +22,12 @@ const LINE_CLASS: Record<DiffLine["kind"], string> = {
  * — render an explanation instead of an empty box, so the interface never
  * looks like it silently failed.
  */
-export function DiffViewer({ file, onExpand, expanding }: DiffViewerProps) {
+export function DiffViewer({
+  file,
+  onExpand,
+  expanding,
+  wrap,
+}: DiffViewerProps) {
   const lines = useMemo(
     () => (file.patch === null ? [] : parseHunks(file.patch)),
     [file.patch],
@@ -66,15 +66,61 @@ export function DiffViewer({ file, onExpand, expanding }: DiffViewerProps) {
     return <p className="diff-viewer__notice">Sin cambios de contenido.</p>;
   }
 
+  return <LineTable lines={lines} wrap={wrap} showOldColumn />;
+}
+
+export interface LineTableProps {
+  readonly lines: readonly DiffLine[];
+  readonly wrap: boolean;
+  /** Whether to show the parent-revision numbers; a whole file has only one side. */
+  readonly showOldColumn?: boolean;
+}
+
+const LINE_CLASS: Record<DiffLine["kind"], string> = {
+  add: "diff-line diff-line--add",
+  del: "diff-line diff-line--del",
+  context: "diff-line",
+  meta: "diff-line diff-line--meta",
+};
+
+/**
+ * The numbered line grid, shared by the patch and whole-file views.
+ *
+ * Line numbers are real cells rather than generated content, so they can be
+ * selected and copied — and so that selecting the code does not drag the
+ * numbers along with it, which is what makes a copied snippet unusable.
+ */
+export function LineTable({
+  lines,
+  wrap,
+  showOldColumn = false,
+}: LineTableProps) {
   return (
-    <div className="diff-viewer">
+    <div
+      className={[
+        "diff-viewer",
+        wrap ? "diff-viewer--wrap" : "",
+        showOldColumn ? "diff-viewer--two-sided" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       {lines.map((line, index) => (
         <div
           // Patch lines have no identity of their own; position is the only key.
           key={`${String(index)}-${line.text.slice(0, 12)}`}
           className={LINE_CLASS[line.kind]}
         >
-          {line.text}
+          {showOldColumn && (
+            <span className="diff-line__number" aria-hidden="true">
+              {line.oldLine ?? ""}
+            </span>
+          )}
+          <span className="diff-line__number" aria-hidden="true">
+            {line.newLine ?? ""}
+          </span>
+          <span className="diff-line__marker" aria-hidden="true" />
+          <span className="diff-line__text">{line.text}</span>
         </div>
       ))}
     </div>
