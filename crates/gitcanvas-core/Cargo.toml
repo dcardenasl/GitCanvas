@@ -8,11 +8,18 @@ authors.workspace = true
 publish.workspace = true
 
 [dependencies]
+git2.workspace = true
 serde.workspace = true
+specta.workspace = true
+thiserror.workspace = true
 
 # Deliberately absent: `tauri`. This crate must stay usable, and testable,
 # without starting an application. Adding it here would silently undo the
 # boundary the workspace exists to enforce.
+
+[dev-dependencies]
+tempfile = "3"
+serde_json.workspace = true
 
 [lints]
 workspace = true

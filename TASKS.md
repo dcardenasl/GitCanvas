@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 1 · 17/64 tareas · última actualización 2026-09-08
+**Estado:** Fase 1 · 18/64 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -239,7 +239,7 @@ Rust → TypeScript.
 > Dado un path local, obtener commits, branches y tags de forma correcta y predecible,
 > sin bloquear la UI, sin importar el tamaño del repositorio.
 
-- [ ] **F1-1 — `AppError` y validación de repositorio.** Enum único con `thiserror` +
+- [x] **F1-1 — `AppError` y validación de repositorio.** Enum único con `thiserror` +
       `serde` + `specta::Type`, y `From<git2::Error>` que convierte el mensaje a String
       (nunca serializa el objeto crudo). `ActiveRepo` solo se construye a través de la
       validación —canonicalizar, existe, contiene `.git`—, así que un path inválido es
@@ -278,7 +278,7 @@ Rust → TypeScript.
       datos de la app, para diagnosticar sin reproducir el bug en vivo.
       → `feat(app): add structured tracing to a rotating log file`
 
-- [ ] **F1-10 — CHANGELOG del motor de datos.**
+- [x] **F1-10 — CHANGELOG del motor de datos.**
       → `docs(changelog): record the git data engine`
 
 **Hecho cuando:** la primera página de `ci4-website-suite` coincide commit por commit con

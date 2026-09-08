@@ -53,7 +53,19 @@ serde_json = "1"
 #
 # Pinned to exact versions on purpose: these are release candidates, and a
 # caret range over an RC series is not predictable.
-specta = "=2.0.0-rc.25"
+# libgit2, compiled from source rather than linked against whatever version
+# happens to be installed. Vendoring both libgit2 and OpenSSL is what makes the
+# build identical on this machine, on CI and on any machine that ships the app,
+# instead of depending on system libraries that differ per platform.
+git2 = { version = "0.21", default-features = false, features = [
+    "vendored-libgit2",
+    "vendored-openssl",
+    "ssh",
+    "https",
+] }
+thiserror = "2"
+
+specta = { version = "=2.0.0-rc.25", features = ["derive"] }
 specta-typescript = "=0.0.12"
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
 

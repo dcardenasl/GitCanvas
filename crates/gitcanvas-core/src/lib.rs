@@ -19,6 +19,9 @@
 //! are responsible for moving that work off the UI thread; in the Tauri layer
 //! that means `tauri::async_runtime::spawn_blocking`.
 
+pub mod error;
+pub mod repository;
+
 /// The crate version, so the application can report what engine it is running.
 #[must_use]
 pub fn version() -> &'static str {
