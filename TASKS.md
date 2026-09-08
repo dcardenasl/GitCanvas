@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 0 · 13/63 tareas · última actualización 2026-09-08
+**Estado:** Fase 0 · 14/63 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -174,10 +174,26 @@
       rápido.
       → `chore(hooks): add the pre-commit style hook`
 
-- [ ] **F0-8 — Workflows de CI.** `dev-check.yml` (push a `dev`: typecheck, lint, vitest,
-      `cargo test -p gitcanvas-core`, solo ubuntu) y `quality.yml` (PR a `main`: matriz
-      ubuntu/macos/windows con fmt, clippy `-D warnings`, tests, cobertura contra
-      umbrales, **drift de `bindings.ts`** y `tauri build`) (deltas D6 y D9).
+- [x] **F0-8 — Workflows de CI.** `dev-check.yml` (push a `dev`: typecheck, lint,
+      format, vitest y `cargo test -p gitcanvas-core`, solo ubuntu, sin instalar las
+      librerías de sistema de Tauri porque el motor git no las necesita) y `quality.yml`
+      (PR a `main`: matriz ubuntu/macos/windows con fmt, clippy `-D warnings`, tests,
+      cobertura, drift de bindings y `tauri build`). Deltas D6 y D9.
+      *Ampliación de alcance:* se configuró vitest en esta misma tarea. El CI llama a
+      `npm run test` y ese script no existía; un workflow que referencia un script
+      inexistente es un workflow roto. Entorno `node` por defecto —así el graph-layout
+      no puede tocar el DOM ni por accidente— y los umbrales de cobertura del 90% ya
+      declarados como glob sobre `src/lib/graph-layout/**`.
+      *Verificado:* ambos workflows parsean con un parser YAML real. Y el chequeo de
+      drift se probó de verdad: se agregó un campo al struct en Rust, `cargo test`
+      regeneró `bindings.ts` y `git diff --exit-code` falló. El delta D6 deja de ser una
+      casilla que alguien tilda.
+      *Hallazgos durante la ejecución:* (1) Se comprobó que `generate_context!` **no**
+      exige que exista `dist/` al compilar, así que los pasos de cargo no dependen del
+      build del frontend. Solo `tauri build` lo necesita. (2) El hook de F0-7 detuvo
+      este mismo commit: `coverage/` estaba en `.gitignore` pero no en los ignores de
+      ESLint ni de Prettier, y lintear el reporte HTML generado reventaba con un error
+      de type information. Habría roto el CI en el primer PR.
       → `ci: add the dev push check and the pull request quality matrix`
 
 - [ ] **F0-9 — Workflow de release.** Adaptación del `release.yml` de `ci4-website-suite`:

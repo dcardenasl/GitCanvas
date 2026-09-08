@@ -1,0 +1,48 @@
+name: dev-check
+
+# Fast feedback on `dev`, and nothing more.
+#
+# `dev` is where work lands quickly, so this job only runs what finishes in
+# about a minute: types, lint, the frontend tests and the git engine tests, on
+# one operating system. Everything expensive — the three-OS matrix, clippy with
+# -D warnings, the bindings drift check and the release build — lives in
+# quality.yml and runs once, when a pull request into `main` is proposed.
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+concurrency:
+  group: dev-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install the Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # The git engine builds without any of Tauri's system libraries, so
+          # this job never installs them and never pays for them.
+          workspaces: ". -> target"
+
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run test
+
+      - name: Test the git engine
+        run: cargo test -p gitcanvas-core

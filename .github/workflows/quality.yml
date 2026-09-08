@@ -1,0 +1,90 @@
+name: quality
+
+# The gate is the pull request into main, and nowhere else.
+#
+# `dev` is where work lands quickly, so nothing heavy runs on a push there —
+# not here and not locally. Everything that takes real time lives in this
+# workflow: clippy with -D warnings, the full test suite on three operating
+# systems, the coverage thresholds, the check that the generated bindings still
+# match the Rust types, and a real bundle build. That is the wait you accept
+# once, when you propose a merge into main, instead of on every commit.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install the Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: ${{ matrix.os }}
+
+      # Tauri links against the system webview. Only Linux needs it installed;
+      # macOS ships WebKit and Windows ships WebView2.
+      - name: Install the Linux webview dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libxdo-dev
+
+      - run: npm ci
+
+      # --- Frontend ---
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run test:coverage
+
+      # --- Rust ---
+      - run: cargo fmt --all --check
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo test --workspace
+
+      # --- The contract ---
+      #
+      # `cargo test` regenerates src/bindings.ts from the registered commands.
+      # If the checked-in file differs from what the Rust types produce right
+      # now, the contract has drifted and the build stops here. This is what
+      # makes "no type is ever written by hand on both sides" a fact rather
+      # than an intention.
+      - name: Check that the generated bindings are current
+        shell: bash
+        run: |
+          if ! git diff --exit-code -- src/bindings.ts; then
+            echo "::error file=src/bindings.ts::bindings.ts is out of date. Run 'cargo test' and commit the result."
+            exit 1
+          fi
+
+      # --- The bundle ---
+      - name: Build the application bundle
+        run: npm run tauri build -- --ci
