@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 1 · 26/64 tareas · última actualización 2026-09-08
+**Estado:** Fase 1 · 27/65 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -231,6 +231,14 @@ Rust → TypeScript.
       correr sobre Node 24. Subidas a `@v7` en los tres workflows antes de que la
       deprecación se convierta en una falla.
       → `ci: bump the deprecated node 20 actions to v7`
+
+---
+
+- [x] **F0-12 — Alinear deployment target de macOS.** Fijar macOS 11.0 para Rust y
+      las dependencias C vendorizadas. La primera compilación con libgit2/OpenSSL
+      mostró objetos compilados para 13.1 enlazados contra el target 11.0 de Tauri.
+      Se elimina la divergencia de toolchains en lugar de silenciar el linker.
+      → `fix(build): align the macos deployment target for vendored libraries`
 
 ---
 
