@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 4 · 45/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 4 · 47/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -516,12 +516,27 @@ diff gigante no bloquea ni ralentiza perceptiblemente la UI.
       contraseña del usuario o un lugar donde guardar su propia clave de cifrado.
       → `feat(core): add the github token store backed by the os keychain`
 
-- [ ] **F4-2 — Cliente REST de GitHub.** Se usa **solo** para dos cosas: validar el token
-      y listar repos accesibles. Toda la data del graph sale siempre del clone local vía
-      `git2`. Un solo camino de datos, no dos.
+- [x] **F4-2 — Cliente REST de GitHub.** `ureq` con `rustls` en vez del TLS del sistema,
+      por la misma razón por la que libgit2 va vendorizado: comportamiento idéntico en las
+      tres plataformas. Solo dos endpoints — `/user` para validar el token y
+      `/user/repos` para el selector. Todo lo que el graph muestra sigue saliendo del
+      clone local. Un 401 o 403 se reporta como `InvalidInput`, no como error interno:
+      un token vencido es algo que el usuario arregla, no una falla de la app.
+      Paginación acotada a 10 páginas para que una cuenta enorme no cuelgue el selector.
       → `feat(core): add the github rest client for token and repository listing`
 
-- [ ] **F4-3 — Tests del cliente.** Contra un transporte simulado, sin red real.
+- [x] **F4-3 — Tests del cliente.** Siete casos contra un servidor HTTP local levantado
+      en el propio test: sin red, sin token real, sin límite de tasa, y con cada camino
+      de error realmente provocable. Cubre token válido, 401, 403, payload malformado,
+      un repo sin `default_branch`, y que la paginación se detenga en la primera página
+      corta.
+      *El test que más importa:* que el token viaje **solo** en el header `Authorization`
+      y nunca en la URL — un token en la query string termina en los logs del servidor y
+      en el historial del proxy.
+      *Hallazgo durante la ejecución:* el test fallaba comparando `Authorization:` con
+      mayúscula. `ureq` v3 normaliza los nombres de header a minúsculas, como exige
+      HTTP/2. El bug era del test: los nombres de header son case-insensitive por RFC
+      9110.
       → `test(core): cover the github client against a mocked transport`
 
 - [ ] **F4-4 — Clone completo con progreso.** **Nunca shallow**: un historial truncado
