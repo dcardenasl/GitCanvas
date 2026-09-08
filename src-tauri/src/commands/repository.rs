@@ -83,20 +83,32 @@ pub async fn get_tags(path: String) -> Result<Vec<TagInfo>, AppError> {
 ///
 /// `gitcanvas /path/to/repo` is what a terminal user expects of a Git client,
 /// and it is also what lets the end-to-end suite open a repository without a
-/// native file dialog. Validated here, so an unusable argument surfaces as a
-/// normal error rather than a window that silently opens on nothing.
+/// native file dialog.
+///
+/// Every argument is scanned rather than only the first: a launcher may put its
+/// own flags ahead of the user's path, which is exactly what the WebDriver
+/// harness does. The first argument that both looks like a path and validates
+/// as a repository wins; an argument that is not one is skipped rather than
+/// reported, because it probably belongs to the runtime.
+///
+/// `GITCANVAS_REPOSITORY` does the same thing for environments where passing
+/// arguments is awkward.
 #[tauri::command]
 #[specta::specta]
 pub async fn get_startup_repository() -> Result<Option<RepositoryInfo>, AppError> {
     blocking("get_startup_repository", || {
-        let Some(argument) = std::env::args().nth(1) else {
-            return Ok(None);
-        };
-        // Anything that looks like a flag belongs to the runtime, not to us.
-        if argument.starts_with('-') {
-            return Ok(None);
+        let from_env = std::env::var("GITCANVAS_REPOSITORY").ok();
+        let candidates = from_env
+            .into_iter()
+            .chain(std::env::args().skip(1))
+            .filter(|argument| !argument.starts_with('-'));
+
+        for candidate in candidates {
+            if let Ok(repo) = ActiveRepo::validate(&candidate) {
+                return repo.info().map(Some);
+            }
         }
-        ActiveRepo::validate(argument)?.info().map(Some)
+        Ok(None)
     })
     .await
 }

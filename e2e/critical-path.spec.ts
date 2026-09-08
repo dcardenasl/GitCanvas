@@ -1,4 +1,4 @@
-import { $, $$, expect } from "@wdio/globals";
+import { $, $$, browser, expect } from "@wdio/globals";
 
 /**
  * The path the whole application exists to serve: open a repository, read the
@@ -35,6 +35,9 @@ describe("open a repository and read a commit", () => {
 
     const panel = await $('[aria-label="Detalle del commit"]');
     await expect(panel).toBeDisplayed();
-    await expect(panel).toHaveTextContaining("merge side into main");
+    // `toHaveTextContaining` was removed in WebdriverIO v9.
+    await expect(panel).toHaveText(
+      expect.stringContaining("merge side into main"),
+    );
   });
 });

@@ -23,8 +23,16 @@ export const commands = {
 	 * 
 	 *  `gitcanvas /path/to/repo` is what a terminal user expects of a Git client,
 	 *  and it is also what lets the end-to-end suite open a repository without a
-	 *  native file dialog. Validated here, so an unusable argument surfaces as a
-	 *  normal error rather than a window that silently opens on nothing.
+	 *  native file dialog.
+	 * 
+	 *  Every argument is scanned rather than only the first: a launcher may put its
+	 *  own flags ahead of the user's path, which is exactly what the WebDriver
+	 *  harness does. The first argument that both looks like a path and validates
+	 *  as a repository wins; an argument that is not one is skipped rather than
+	 *  reported, because it probably belongs to the runtime.
+	 * 
+	 *  `GITCANVAS_REPOSITORY` does the same thing for environments where passing
+	 *  arguments is awkward.
 	 */
 	getStartupRepository: () => typedError<{
 	path: string,

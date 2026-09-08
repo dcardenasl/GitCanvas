@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 5 · 60/67 tareas · última actualización 2026-09-08
+**Estado:** Release · 61/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -610,7 +610,7 @@ no devuelve nada.
 
 ---
 
-## 🔴 En progreso — Fase 5: Acciones básicas
+## ✅ Fase 5 — Acciones básicas (8/8)
 
 - [x] **F5-1 — Checkout con guard.** Devuelve `Blocked { conflicts }` con las rutas
       concretas que se perderían, en vez de un booleano. Los archivos sin trackear no
@@ -672,9 +672,36 @@ no devuelve nada.
       un rechazo no se reintenta con force.
       → `feat(ui): add toolbar actions with destructive action confirmations`
 
-- [ ] **F5-7 — E2E del camino crítico.** WebdriverIO + `@wdio/tauri-service` (delta D7:
-      Apple no provee WebDriver para WKWebView, así que `tauri-driver` no corre en macOS).
-      Abrir repo → ver graph → click en commit → ver diff.
+- [x] **F5-7 — E2E del camino crítico.** WebdriverIO + `@wdio/tauri-service` (delta D7),
+      contra el **binario de release real**, no un dev server. Tres tests en verde: el
+      graph se dibuja sobre las filas, el merge sale como curva, y seleccionar un commit
+      muestra su diff.
+      *El WebDriver no llega al binario publicado.* El servicio exige
+      `tauri-plugin-wdio-webdriver` registrado, y distribuir una app manejable
+      remotamente es un pasivo. Aislado tras el feature `e2e` de Cargo, verificado con
+      `cargo tree` (0 referencias por defecto, 1 con el feature) y con un paso de CI que
+      **falla** si alguna vez entra al build por defecto.
+
+      *Esta tarea encontró un bug que se habría publicado.* Al intentar correr el E2E de
+      verdad apareció que **ningún plugin de Tauri estaba registrado** — tampoco el de
+      diálogo. El crate estaba en `Cargo.toml`, así que linkeaba, salía en `cargo tree` y
+      hasta en `strings` del binario. Compilaba, clippy pasaba, los 7 tests pasaban. Pero
+      el botón "Abrir repositorio" habría fallado en runtime con un error de plugin
+      faltante. Declarar una dependencia y registrarla son cosas distintas, y ningún type
+      check ve la diferencia. Corregido, con un test de regresión que falla por
+      exactamente ese motivo.
+
+      *Otros cuatro hallazgos:* (1) `tauri build` en macOS se cuelga creando el DMG —
+      `bundle_dmg.sh` posiciona iconos vía AppleScript y espera a Finder—, así que el E2E
+      apunta al binario plano; el bundling no aporta nada a lo que este test verifica.
+      (2) Sin `tauri/custom-protocol` el binario busca el dev server y la ventana arranca
+      en blanco. (3) La opción del servicio se llama `appArgs`, no `args`, y va en las
+      opciones del servicio, no en la capability — por eso el repositorio nunca llegaba.
+      (4) `toHaveTextContaining` se eliminó en WebdriverIO v9.
+
+      *Endurecido:* `get_startup_repository` escanea **todos** los argumentos en vez de
+      asumir `argv[1]`, porque un lanzador puede anteponer los suyos —que es justo lo que
+      hace este harness—, con `GITCANVAS_REPOSITORY` como alternativa.
       → `test(e2e): cover the open repository to diff critical path`
 
 - [x] **F5-8 — CHANGELOG de acciones.** Checkout guardado, pull fast-forward, push con
@@ -688,7 +715,7 @@ intentar resolverlo.
 
 ---
 
-## ⏳ Release v0.1.0
+## 🔴 En progreso — Release v0.1.0
 
 > Ejecutado con el skill `/release`. Ver `CLAUDE.md` para el procedimiento completo.
 

@@ -78,13 +78,24 @@ export const config: WebdriverIO.Config = {
       browserName: "tauri",
       "tauri:options": {
         application: applicationPath(),
-        // The repository to open, passed the same way a terminal user would.
-        args: [fixture],
       },
     } as WebdriverIO.Capabilities,
   ],
 
-  services: ["@wdio/tauri-service"],
+  services: [
+    [
+      "@wdio/tauri-service",
+      {
+        // The repository to open, passed the way a terminal user would. These
+        // are service options, not capabilities: the launcher reads `appArgs`
+        // and `env` from here and spawns the binary with them.
+        appArgs: [fixture],
+        // The harness puts its own flags ahead of `appArgs`, and an environment
+        // variable cannot be reordered.
+        env: { GITCANVAS_REPOSITORY: fixture },
+      },
+    ],
+  ],
   framework: "mocha",
   reporters: ["spec"],
   logLevel: "warn",
