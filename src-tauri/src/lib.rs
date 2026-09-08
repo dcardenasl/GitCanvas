@@ -16,6 +16,7 @@
 //! depend on Tauri.
 
 mod commands;
+mod logging;
 
 #[cfg(test)]
 mod repository_tests;
@@ -71,6 +72,10 @@ pub fn run() {
     if let Err(error) = tauri::Builder::default()
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
+            use tauri::Manager;
+            let guard = logging::initialize(&app.path().app_data_dir()?.join("logs"))?;
+            app.manage(guard);
+            tracing::info!(version = env!("CARGO_PKG_VERSION"), "GitCanvas started");
             builder.mount_events(app);
             Ok(())
         })

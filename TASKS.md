@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 1 · 25/64 tareas · última actualización 2026-09-08
+**Estado:** Fase 1 · 26/64 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -282,7 +282,7 @@ Rust → TypeScript.
 - [x] **F1-8 — Tests de la capa de comandos.**
       → `test(ipc): cover the command layer against a temporary repository`
 
-- [ ] **F1-9 — Logging estructurado.** `tracing` a archivo rotativo en el directorio de
+- [x] **F1-9 — Logging estructurado.** `tracing` a archivo rotativo en el directorio de
       datos de la app, para diagnosticar sin reproducir el bug en vivo.
       → `feat(app): add structured tracing to a rotating log file`
 
