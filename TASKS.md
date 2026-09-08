@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 1 · 28/66 tareas · última actualización 2026-09-08
+**Estado:** Fase 2 · 29/66 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -242,7 +242,7 @@ Rust → TypeScript.
 
 ---
 
-## 🔴 En progreso — Fase 1: Motor de datos Git (Rust)
+## ✅ Fase 1 — Motor de datos Git (11/11)
 
 > Dado un path local, obtener commits, branches y tags de forma correcta y predecible,
 > sin bloquear la UI, sin importar el tamaño del repositorio.
@@ -301,7 +301,7 @@ Rust → TypeScript.
       commits totales. Nunca conservar handles Git ni resultados de repos distintos.
       → `perf(core): cache immutable history walks with bounded lru retention`
 
-- [ ] **F1-10 — CHANGELOG del motor de datos.**
+- [x] **F1-10 — CHANGELOG del motor de datos.**
       → `docs(changelog): record the git data engine`
 
 **Hecho cuando:** la primera página de `ci4-website-suite` coincide commit por commit con
@@ -311,7 +311,7 @@ aserción de tiempo en un runner compartido es flaky por diseño) · cero `unwra
 
 ---
 
-## ⏳ Fase 2 — Layout del graph y render
+## 🔴 En progreso — Fase 2: Layout del graph y render
 
 > El núcleo de valor del proyecto. Es la pieza que más cuidado necesita y la más difícil
 > de verificar solo mirando la pantalla.
@@ -518,3 +518,10 @@ intentar resolverlo.
   *Verificación de cierre:* `cargo fmt --check` limpio · `cargo clippy --all-targets
   --all-features -- -D warnings` limpio · `cargo test --workspace` 3 tests en verde ·
   `bindings.ts` sin drift · typecheck, lint y format del frontend limpios.
+
+- **Fase 1 — Motor de datos Git** (11/11, una de rendimiento). Validación canónica,
+  historial paginado, refs, IPC y logging implementados y probados. Comparación real
+  de 50 commits con `git log` sin diferencias. p95 del lector IPC de 19 ms con
+  10.000 objetos sueltos y 2 ms empaquetados; primera lectura en frío de objetos
+  sueltos de 376 ms, documentada sin confundirla con el p95.
+  Evidencia y reproducción: [`docs/verification/phase-1.md`](docs/verification/phase-1.md).

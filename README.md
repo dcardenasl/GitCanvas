@@ -50,6 +50,8 @@ Documented on purpose rather than discovered later:
   commits are out of scope for the MVP.
 - `pull` is **fast-forward only**. Anything that needs a merge is reported, not
   resolved automatically.
+- Cold topological reads of histories with many loose objects may exceed 300 ms;
+  subsequent pages reuse a bounded SHA cache. Git reads run off the UI thread.
 - Graph layout is optimised for the common case, not for histories with a very large
   number of simultaneously active branches.
 
