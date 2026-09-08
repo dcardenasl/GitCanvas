@@ -104,7 +104,7 @@ export function AppShell() {
         <div className="app-shell__empty">
           <p className="app-shell__empty-title">GitCanvas</p>
           <p className="app-shell__empty-hint">
-            Abrí un repositorio para ver su historial de ramas y commits.
+            Abre un repositorio para ver su historial de ramas y commits.
           </p>
         </div>
       ) : (

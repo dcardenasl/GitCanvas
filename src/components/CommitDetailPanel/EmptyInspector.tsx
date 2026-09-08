@@ -12,7 +12,7 @@ export function EmptyInspector() {
       aria-label="Detalle del commit"
     >
       <p className="detail-panel__empty-text">
-        Elegí un commit para ver quién lo hizo y qué cambió.
+        Selecciona un commit para ver quién lo hizo y qué cambió.
       </p>
     </aside>
   );

@@ -127,7 +127,7 @@
 }
 
 /* A spinner rather than only a label change: the wait is long enough that a
-   static "Elegí una carpeta…" reads as a stuck button rather than a busy one. */
+   static "Elige una carpeta…" reads as a stuck button rather than a busy one. */
 .button__spinner {
   display: inline-block;
   width: 10px;

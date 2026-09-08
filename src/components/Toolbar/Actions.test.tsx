@@ -81,7 +81,7 @@ describe("Actions", () => {
     );
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("Traelos con pull");
+    expect(alert.textContent).toContain("Tráelos con pull");
     expect(pushCurrentBranch).toHaveBeenCalledTimes(1);
   });
 

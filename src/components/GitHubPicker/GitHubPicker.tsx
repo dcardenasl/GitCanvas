@@ -88,7 +88,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
       <div className="github-picker">
         <h2 className="github-picker__title">Conectar con GitHub</h2>
         <p className="github-picker__hint">
-          Pegá un Personal Access Token con permiso <code>repo</code>. Se guarda
+          Pega un Personal Access Token con permiso <code>repo</code>. Se guarda
           en el llavero del sistema y nunca sale del backend.
         </p>
         <form

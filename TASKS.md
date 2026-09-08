@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Release · 78/81 tareas · última actualización 2026-09-08
+**Estado:** Release · 80/83 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -909,6 +909,29 @@ intentar resolverlo.
       doble click— y que la opción `defaultPath` se **omita** en vez de pasar `undefined`,
       que con `exactOptionalPropertyTypes` no es lo mismo.
       → `fix(ui): show the repository picker working while the native panel opens`
+
+- [x] **UX-14 — Por qué el indicador no se veía, y el precalentamiento.** El arreglo
+      anterior era correcto pero seguía sin verse nada. La causa real: el plugin
+      construye el panel con `run_on_main_thread`, y en macOS **el WebView pinta en ese
+      mismo hilo**. Marcar el estado ocupado y llamar al diálogo en el mismo frame
+      significa que el hilo queda tomado antes de que el navegador llegue a dibujar el
+      spinner. Resuelto cediendo un repintado (`afterPaint`, dos `requestAnimationFrame`)
+      antes de la llamada bloqueante.
+      *Precalentamiento, como pidió David:* al arrancar se construye y descarta un
+      `NSOpenPanel`, lo que fuerza a AppKit a cargar el framework e inicializar la clase
+      —el grueso del costo de la primera apertura— mientras nadie está esperando. El
+      binding `openPanel` de `objc2-app-kit` es una función **segura**, así que el
+      `unsafe_code = "forbid"` del workspace sigue intacto.
+      *Diagnóstico previo, descartado:* se verificó que el código sí estaba instalado
+      (dist 19:28, bundle 19:30). `strings` sobre el binario no lo encontraba porque
+      Tauri comprime los assets, no porque faltara.
+      → `perf(app): pre-initialise the system folder panel at startup`
+
+- [x] **UX-15 — Español neutro en toda la interfaz.** David lo pidió varias veces: nada
+      de voseo. Corregidos "Elegí una carpeta", "Abrí un repositorio", "Volvé a abrir el
+      repositorio", "Pegá un Personal Access Token", "Traelos con pull" y "Elegí un
+      commit". Queda un grep de verificación anotado en la memoria del proyecto.
+      → `fix(ui): use neutral spanish across the interface`
 
 ---
 

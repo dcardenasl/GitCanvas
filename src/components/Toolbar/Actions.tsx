@@ -91,7 +91,7 @@ export function Actions({ repositoryPath, currentBranch }: ActionsProps) {
       if (outcome.kind === "RejectedNonFastForward") {
         setNotice({
           tone: "error",
-          text: `El remoto rechazó el push de ${outcome.branch}: tiene commits que no están acá. Traelos con pull antes de pushear.`,
+          text: `El remoto rechazó el push de ${outcome.branch}: tiene commits que no están acá. Tráelos con pull antes de hacer push.`,
         });
         return;
       }
