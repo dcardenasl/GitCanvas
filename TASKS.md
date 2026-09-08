@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 1 · 22/64 tareas · última actualización 2026-09-08
+**Estado:** Fase 1 · 23/64 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -267,7 +267,7 @@ Rust → TypeScript.
 - [x] **F1-5 — Resolución de refs.** Branches locales, remotas y tags, con `is_head`.
       → `feat(core): resolve local branches, remote branches and tags`
 
-- [ ] **F1-6 — Tests de refs.**
+- [x] **F1-6 — Tests de refs.**
       → `test(core): cover ref resolution against the fixture repositories`
 
 - [ ] **F1-7 — Comandos IPC.** `open_repository`, `validate_repository`, `get_commits`,
