@@ -47,6 +47,16 @@ indexing_slicing = "deny"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
+# Type contracts. Rust is the single source of truth for every type that
+# crosses the IPC boundary; `src/bindings.ts` is generated from these and CI
+# fails if the checked-in file drifts from what the code produces.
+#
+# Pinned to exact versions on purpose: these are release candidates, and a
+# caret range over an RC series is not predictable.
+specta = "=2.0.0-rc.25"
+specta-typescript = "=0.0.12"
+tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
+
 # Profiles live at the workspace root; cargo ignores them in member manifests.
 # See https://tauri.app/concept/size/#cargo-configuration
 [profile.release]

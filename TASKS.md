@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 0 · 10/63 tareas · última actualización 2026-09-08
+**Estado:** Fase 0 · 11/63 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -124,10 +124,27 @@
       `build.rs` y `main.rs` sin punto y coma final. Corregidos, no silenciados.
       → `chore(rust): enable clippy pedantic and deny unwrap, expect and panic`
 
-- [ ] **F0-5 — Comando `ping` y bindings tipados.** `tauri-specta` pineado a
-      `2.0.0-rc.21` (delta D10), export de `src/bindings.ts` bajo
-      `#[cfg(debug_assertions)]`. Valida el pipeline de generación de tipos de punta a
-      punta **antes** de que todo lo demás dependa de él.
+- [x] **F0-5 — Comando `ping` y bindings tipados.** `tauri-specta`, `specta` y
+      `specta-typescript` pineados a versión exacta (delta D10). `ping` devuelve un
+      struct `AppInfo`, no un string, para ejercitar la generación de structs que es la
+      forma que van a tener todos los payloads reales. Frontend conectado a través de
+      `src/lib/ipc/`, no importando `bindings.ts` directo: cuando cambie una firma se
+      rompe un archivo, no todos los llamadores.
+      *Desvío del plan:* el plan fijaba `2.0.0-rc.21`; la versión publicada actual es
+      **rc.25**. Se usa la actual, igual pineada con `=`.
+      *Endurecido respecto del plan:* el plan exportaba los bindings solo bajo
+      `cfg(debug_assertions)` al **ejecutar** la app, lo que exige una ventana y por lo
+      tanto no sirve en CI. Se agregó un test que llama al mismo `specta_builder()` y
+      exporta: `cargo test` regenera el contrato de forma headless, y el chequeo de
+      drift del delta D6 se vuelve un `git diff --exit-code`. Ambos caminos usan el
+      mismo builder, así que no pueden divergir.
+      *Hallazgos durante la ejecución:* (1) `collect_commands!` no resuelve si el
+      comando se re-exporta con un `pub use` puntual — genera items ocultos junto a la
+      función, así que el módulo se deja público y se referencia por ruta completa.
+      (2) `tauri_specta::Builder` necesita su parámetro de runtime explícito.
+      (3) El `unwrap()` del test de bindings fue rechazado por el lint de F0-4, que era
+      exactamente su trabajo; resuelto con la misma exención de tests que usa core.
+      *Verificado:* `tauri dev` levanta la ventana y la app arranca sin errores.
       → `feat(ipc): add the ping command and generate the typed bindings`
 
 - [ ] **F0-6 — Test del roundtrip IPC.**

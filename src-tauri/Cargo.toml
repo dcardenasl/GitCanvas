@@ -27,5 +27,9 @@ serde_json.workspace = true
 # The git domain. This layer only translates between IPC and core.
 gitcanvas-core = { path = "../crates/gitcanvas-core" }
 
+specta.workspace = true
+specta-typescript.workspace = true
+tauri-specta.workspace = true
+
 [lints]
 workspace = true
