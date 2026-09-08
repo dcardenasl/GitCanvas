@@ -11,8 +11,10 @@ publish.workspace = true
 git2.workspace = true
 keyring.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 specta.workspace = true
 thiserror.workspace = true
+ureq.workspace = true
 
 # Deliberately absent: `tauri`. This crate must stay usable, and testable,
 # without starting an application. Adding it here would silently undo the
