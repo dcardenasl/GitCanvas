@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 2 · 37/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 3 · 38/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -422,7 +422,9 @@ aserción de tiempo en un runner compartido es flaky por diseño) · cero `unwra
       compactar excede el presupuesto.
       → `test(ui): cover graph rendering for the fixture histories`
 
-- [ ] **F2-8 — CHANGELOG del graph.**
+- [x] **F2-8 — CHANGELOG del graph.** Entradas de la Fase 2 bajo `[Unreleased]`: el
+      graph, el layout reanudable, la paginación por cursor y la navegación del
+      repositorio.
       → `docs(changelog): record the commit graph`
 
 **Hecho cuando:** el historial real de `ci4-website-suite` se dibuja con el merge de la
