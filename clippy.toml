@@ -9,4 +9,7 @@ doc-valid-idents = [
     "JavaScript",
     "WebDriver",
     "WebKit",
+    "WebView",
+    "AppKit",
+    "NSOpenPanel",
 ]
