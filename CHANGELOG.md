@@ -31,3 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checked-out branch.
 - **Git data engine** — Open canonical working repositories, including linked worktrees, and browse topological history with stable cursor pagination, local/remote branches and annotated tags.
 - **Repository diagnostics** — Structured errors and rotating JSON logs report failures while Git operations run outside the UI thread.
+
+### Known limitations
+
+- **Merge diffs cover the first parent only.** A combined diff is a materially
+  harder problem and is out of scope for this release; the inspector says so
+  explicitly whenever it is showing one.
+- **Pull is fast-forward only.** Anything that needs a real merge is reported,
+  not resolved automatically.
