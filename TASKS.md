@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 0 · 12/63 tareas · última actualización 2026-09-08
+**Estado:** Fase 0 · 13/63 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -163,10 +163,15 @@
       sirve desde `tauri://localhost` y la ACL rechaza el otro como origen desconocido.
       → `test(ipc): cover the ping command roundtrip`
 
-- [ ] **F0-7 — Hook de pre-commit.** Agregar el hook `pre-commit` al instalador que ya
-      existe desde G-5, y engancharlo al `prepare` de npm. Corre **solo lo instantáneo**:
-      `cargo fmt --check`, `eslint`, `prettier --check`. Clippy y los tests viven en CI,
-      porque `dev` tiene que seguir siendo rápido.
+- [x] **F0-7 — Hook de pre-commit.** `cargo fmt --check`, `eslint` y `prettier --check`,
+      enganchado al `prepare` de npm para que se instale solo con `npm install`. Cada
+      fallo imprime el comando exacto que lo arregla, en vez de un volcado de errores.
+      Los hooks no corren en shell interactiva, así que el PATH de cargo y Homebrew se
+      arma explícitamente en vez de confiar en que se cargue un perfil.
+      *Verificado:* sonda en los tres frentes —Rust mal formateado, un `any` de
+      TypeScript, y formato de Prettier—; los tres detienen el commit. Con el árbol
+      limpio pasa en **2,05 s**, que es el presupuesto que hace que `dev` siga siendo
+      rápido.
       → `chore(hooks): add the pre-commit style hook`
 
 - [ ] **F0-8 — Workflows de CI.** `dev-check.yml` (push a `dev`: typecheck, lint, vitest,
