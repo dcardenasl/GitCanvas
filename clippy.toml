@@ -1,0 +1,12 @@
+# Product and technology names that are not code and must not be wrapped in
+# backticks. `".."` keeps clippy's own default list and extends it.
+doc-valid-idents = [
+    "..",
+    "GitCanvas",
+    "GitHub",
+    "GitKraken",
+    "TypeScript",
+    "JavaScript",
+    "WebDriver",
+    "WebKit",
+]

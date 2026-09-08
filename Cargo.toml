@@ -19,6 +19,30 @@ rust-version = "1.98"
 authors = ["David Cardenas Lorca"]
 publish = false
 
+# Lints, defined once and inherited by every member through `[lints] workspace = true`.
+#
+# `unwrap_used`, `expect_used` and `panic` are DENY, not warn: a panic inside a
+# Tauri command takes down the whole application, which is not acceptable in a
+# tool that is supposed to be dependable. Every failure is modelled as a typed
+# error and propagated as a `Result`.
+#
+# `indexing_slicing` is here for the same reason — `v[i]` panics out of range.
+# The graph layout indexes lane arrays constantly, so this is not theoretical.
+#
+# Tests opt out through `#![cfg_attr(test, allow(...))]` in each crate root, and
+# integration tests through an explicit `#![allow(...)]` header: a panicking
+# assertion IS the point there.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+indexing_slicing = "deny"
+
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

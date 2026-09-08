@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 0 · 9/63 tareas · última actualización 2026-09-08
+**Estado:** Fase 0 · 10/63 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -110,10 +110,18 @@
       añadido a `.prettierignore`: son prosa y un artefacto de referencia, no código.
       → `chore(ts): enable strict typescript and the graph-layout import boundary`
 
-- [ ] **F0-4 — Lints de Rust.** `clippy::all` + `clippy::pedantic`, y
-      `deny(clippy::unwrap_used, expect_used, panic, indexing_slicing)` a nivel de crate
-      con `allow` en tests (delta D3). El principio "cero panics" pasa de aspiración a
-      error de compilación.
+- [x] **F0-4 — Lints de Rust.** `clippy::all` + `clippy::pedantic` como warning y
+      `unwrap_used`, `expect_used`, `panic`, `indexing_slicing` como **deny**, definidos
+      una sola vez en `[workspace.lints]` y heredados con `[lints] workspace = true`.
+      Más `unsafe_code = "forbid"`. Los tests se eximen con `cfg_attr(test, allow(...))`
+      en la raíz del crate: ahí un assert que revienta *es* el punto.
+      *Verificado uno por uno:* sonda de `unwrap()`, `expect()`, `panic!()` e indexación
+      cruda — los cuatro lints disparan. El delta D3 deja de ser una aspiración.
+      *Hallazgos durante la ejecución:* (1) pedantic exigía backticks alrededor de
+      "GitCanvas" en los doc comments; resuelto con `doc-valid-idents` en `clippy.toml`,
+      que le enseña el vocabulario del proyecto una vez en lugar de deformar cada
+      comentario. (2) Dos errores reales de pedantic en el código del scaffold —
+      `build.rs` y `main.rs` sin punto y coma final. Corregidos, no silenciados.
       → `chore(rust): enable clippy pedantic and deny unwrap, expect and panic`
 
 - [ ] **F0-5 — Comando `ping` y bindings tipados.** `tauri-specta` pineado a
