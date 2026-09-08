@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 1 · 18/64 tareas · última actualización 2026-09-08
+**Estado:** Fase 1 · 19/64 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -246,7 +246,7 @@ Rust → TypeScript.
       irrepresentable en vez de "validado en algún lado".
       → `feat(core): add the app error type and canonical repository validation`
 
-- [ ] **F1-2 — Tests de validación.** Fixtures en directorios temporales creados con la
+- [x] **F1-2 — Tests de validación.** Fixtures en directorios temporales creados con la
       API de `git2`, nunca repos `.git` versionados en el proyecto.
       → `test(core): cover repository validation with temporary fixtures`
 
