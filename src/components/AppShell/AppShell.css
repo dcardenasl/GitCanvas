@@ -126,6 +126,33 @@
   opacity: 0.55;
 }
 
+/* A spinner rather than only a label change: the wait is long enough that a
+   static "Elegí una carpeta…" reads as a stuck button rather than a busy one. */
+.button__spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 7px;
+  border: 2px solid currentcolor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  vertical-align: -1px;
+  animation: button-spin 700ms linear infinite;
+}
+
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Respect a system-wide preference for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .button__spinner {
+    animation-duration: 2.4s;
+  }
+}
+
 .button--primary {
   border-color: transparent;
   background: var(--accent);

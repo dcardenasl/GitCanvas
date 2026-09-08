@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Release · 77/80 tareas · última actualización 2026-09-08
+**Estado:** Release · 78/81 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -882,6 +882,33 @@ intentar resolverlo.
       Y cada fila lleva `aria-label` explícito: el DOM concatenaba
       `…2e53be608-sept, 04:56 p.m.`, leyendo el hash pegado a la fecha.
       → `feat(ui): copy a commit's hash, message or author from a context menu`
+
+---
+
+### Ola UX-4 — La espera del selector de carpetas
+
+- [x] **UX-13 — El botón dice que está trabajando.** David reportó una espera larga sin
+      señal alguna al pulsar *Abrir repositorio*.
+      *Diagnóstico:* no es la librería. `tauri-plugin-dialog` usa `rfd 0.16` sobre
+      `objc2-app-kit`, o sea **`NSOpenPanel` directo, sin subproceso** — el camino más
+      rápido disponible en macOS. El costo es la inicialización del panel del sistema,
+      que macOS paga la primera vez y que la app no puede eliminar.
+      *Lo que sí era culpa nuestra:* `setBusy(true)` estaba **después** del `await`, así
+      que durante toda la espera el botón no mostraba nada. Ahora el estado se marca
+      antes, con spinner y texto que distingue las dos fases —*Elegí una carpeta…*
+      mientras el panel está arriba, *Abriendo…* mientras se valida el repositorio— y
+      `aria-busy` para quien no ve el spinner.
+      *Doble apertura, evitada:* un segundo click durante la espera apilaba un segundo
+      panel detrás del primero, algo de lo que no se sale desde la interfaz. Guardado con
+      un ref, porque la protección tiene que valer dentro del mismo tick del click.
+      *Cancelar libera el botón:* el reset va en `finally`, así descartar el panel no deja
+      el botón deshabilitado para siempre.
+      *Y de paso:* recuerda el directorio de la última apertura y arranca ahí, que además
+      de ser mejor de usar le ahorra al panel resolver la ubicación por defecto.
+      *Verificado:* 6 tests, incluidos los dos que suelen romperse —cancelar y hacer
+      doble click— y que la opción `defaultPath` se **omita** en vez de pasar `undefined`,
+      que con `exactOptionalPropertyTypes` no es lo mismo.
+      → `fix(ui): show the repository picker working while the native panel opens`
 
 ---
 

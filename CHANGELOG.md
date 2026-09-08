@@ -79,6 +79,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Opening a repository shows it is working.** The button now reports the wait
+  while the system's folder panel comes up, cannot be clicked into opening a
+  second one, and starts in the directory it last opened.
+
 - **The history no longer reflows when a commit is selected.** The inspector
   column is reserved from the start, so choosing a commit stops shrinking the
   list by 310px and redrawing the graph under the cursor that just clicked.
