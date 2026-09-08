@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 
 import { getStartupRepository } from "../../lib/ipc";
 
-import { CommitDetailPanel } from "../CommitDetailPanel";
+import { CommitDetailPanel, EmptyInspector } from "../CommitDetailPanel";
+import { CommitSearch } from "../CommitSearch";
 import { FileDiffView } from "../FileDiffView";
 import { GitHubPicker } from "../GitHubPicker";
+import { Resizer } from "../Resizer";
 import { Actions } from "../Toolbar";
+import { INSPECTOR, SIDEBAR, useLayout } from "../../state/layout";
 import { Sidebar } from "../Sidebar";
 import { useHistory } from "../../state/history";
 import { useSession } from "../../state/session";
@@ -22,7 +25,16 @@ export function AppShell() {
   const history = useHistory(repository?.path ?? null);
   const selectedFilePath = useSession((state) => state.selectedFilePath);
   const [showGitHub, setShowGitHub] = useState(false);
+  const layout = useLayout();
+  const revealCommit = useSession((state) => state.revealCommit);
   const setRepository = useSession((state) => state.openRepository);
+
+  useEffect(() => {
+    // The window says which repository it is showing, so two of them are
+    // tellable apart in the dock and in the window switcher.
+    document.title =
+      repository === null ? "GitCanvas" : `${repository.name} — GitCanvas`;
+  }, [repository]);
 
   useEffect(() => {
     // `gitcanvas /path/to/repo` opens straight into that repository. Failure is
@@ -43,6 +55,9 @@ export function AppShell() {
         <span className="toolbar__repository">
           {repository?.name ?? "Ningún repositorio abierto"}
         </span>
+        {repository !== null && (
+          <CommitSearch commits={history.commits} onGo={revealCommit} />
+        )}
         <div className="toolbar__spacer" />
         {repository !== null && (
           <Actions
@@ -78,13 +93,23 @@ export function AppShell() {
         </div>
       ) : (
         <div
-          className={
-            selected === null
-              ? "app-shell__body"
-              : "app-shell__body app-shell__body--inspecting"
+          className="app-shell__body"
+          style={
+            {
+              "--sidebar-width": `${String(layout.sidebar)}px`,
+              "--inspector-width": `${String(layout.inspector)}px`,
+            } as React.CSSProperties
           }
         >
           <Sidebar />
+          <Resizer
+            label="Ancho de la barra lateral"
+            width={layout.sidebar}
+            min={SIDEBAR.min}
+            max={layout.sidebarMax}
+            grows="right"
+            onResize={layout.setSidebar}
+          />
           <main className="app-shell__history" aria-label="Historial">
             {selected !== null && selectedFilePath !== null ? (
               <FileDiffView
@@ -96,7 +121,17 @@ export function AppShell() {
               <HistoryView />
             )}
           </main>
-          {selected !== null && (
+          <Resizer
+            label="Ancho del panel de detalle"
+            width={layout.inspector}
+            min={INSPECTOR.min}
+            max={layout.inspectorMax}
+            grows="left"
+            onResize={layout.setInspector}
+          />
+          {selected === null ? (
+            <EmptyInspector />
+          ) : (
             <CommitDetailPanel
               repositoryPath={repository.path}
               commit={selected}

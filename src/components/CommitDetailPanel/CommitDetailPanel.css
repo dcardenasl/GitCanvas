@@ -1,3 +1,18 @@
+.detail-panel--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detail-panel__empty-text {
+  margin: 0;
+  max-width: 24ch;
+  color: var(--ink-faint);
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .detail-panel {
   overflow-y: auto;
   padding: 18px;
@@ -171,38 +186,34 @@
   color: #4fd1c5;
 }
 
-/* The directory is context and the file name is what is being looked for, so
-   the path truncates from the left and the name always survives.
-   The `rtl` direction is confined to the directory span: putting it on the row
-   would right-align the whole path, which reads as if the column were somehow
-   reversed. */
+/* The file name leads and the directory follows as dimmed context, so the
+   thing being looked for is always at the same place and fully readable. */
 .file-row__path {
   display: flex;
+  gap: 7px;
+  align-items: baseline;
   min-width: 0;
   font-family: var(--font-mono);
   font-size: 11.5px;
   white-space: nowrap;
 }
 
-.file-row__dir {
-  /* Absorbs essentially all of the shrinking, so the directory collapses to an
-     ellipsis before the file name gives up a single character. */
-  flex-shrink: 99999;
-  min-width: 0;
-  overflow: hidden;
-  direction: rtl;
-  color: var(--ink-faint);
-  text-overflow: ellipsis;
-  unicode-bidi: plaintext;
-}
-
 .file-row__name {
-  /* Shrinks only once the directory is gone: a file name long enough to fill
-     the column on its own has to truncate rather than run over the stats. */
+  /* Gives up characters only once the directory has gone entirely. */
   flex-shrink: 1;
   min-width: 0;
   overflow: hidden;
   color: var(--ink);
+  text-overflow: ellipsis;
+}
+
+.file-row__dir {
+  /* Absorbs essentially all of the shrinking. */
+  flex-shrink: 99999;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-faint);
+  font-size: 10.5px;
   text-overflow: ellipsis;
 }
 

@@ -25,25 +25,18 @@
 
 .app-shell__body {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+
+  /* Fixed shape whether or not a commit is selected. The inspector column is
+     reserved from the start so choosing a commit does not shrink the history
+     by 310px, reflowing every row and redrawing the graph under the cursor
+     that just clicked. */
+  grid-template-columns:
+    var(--sidebar-width, 220px)
+    auto
+    minmax(0, 1fr)
+    auto
+    var(--inspector-width, 310px);
   min-height: 0;
-}
-
-.app-shell__body--inspecting {
-  grid-template-columns: 220px minmax(0, 1fr) 310px;
-}
-
-/* Below the desktop minimum the inspector moves under the history rather than
-   squeezing the commit message out of the row. */
-@media (width <= 1000px) {
-  .app-shell__body--inspecting {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
-  }
-
-  .app-shell__body--inspecting .sidebar {
-    display: none;
-  }
 }
 
 .app-shell__history {
