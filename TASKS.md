@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 4 · 51/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 4 · 52/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -583,7 +583,17 @@ diff gigante no bloquea ni ralentiza perceptiblemente la UI.
       quedaría después de `"10"`.
       → `feat(ipc): expose the github commands and the clone progress event`
 
-- [ ] **F4-8 — Selector de repos y progreso en la UI.**
+- [x] **F4-8 — Selector de repos y progreso en la UI.** Alta de token, listado de
+      repositorios accesibles, clone con progreso y apertura automática del clone. El
+      campo del token es `type="password"` y el texto explica dónde se guarda. Mientras
+      GitHub sigue contando objetos el progreso dice *Preparando…* con los MB recibidos en
+      vez de inventar un porcentaje: `total_objects` es 0 hasta que el servidor termina de
+      contar, y un 0% que no avanza parece que se colgó.
+      La suscripción al evento de progreso se desmonta en el cleanup del efecto, así que
+      no se acumula una por re-render.
+      *Verificado:* 7 tests, incluido que el campo sea de contraseña, que un token vacío
+      no se pueda enviar, que un token rechazado se reporte, y que el listener de progreso
+      se dé de baja al desmontar.
       → `feat(ui): add the github repository picker and clone progress`
 
 - [ ] **F4-9 — CHANGELOG de GitHub.**

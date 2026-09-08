@@ -1,4 +1,7 @@
+import { useState } from "react";
+
 import { CommitDetailPanel } from "../CommitDetailPanel";
+import { GitHubPicker } from "../GitHubPicker";
 import { Sidebar } from "../Sidebar";
 import { useHistory } from "../../state/history";
 import { useSession } from "../../state/session";
@@ -13,6 +16,7 @@ export function AppShell() {
   const repository = useSession((state) => state.repository);
   const selectedCommitId = useSession((state) => state.selectedCommitId);
   const history = useHistory(repository?.path ?? null);
+  const [showGitHub, setShowGitHub] = useState(false);
   const selected =
     history.commits.find((commit) => commit.id === selectedCommitId) ?? null;
 
@@ -23,10 +27,26 @@ export function AppShell() {
           {repository?.name ?? "Ningún repositorio abierto"}
         </span>
         <div className="toolbar__spacer" />
+        <button
+          type="button"
+          className="button"
+          aria-pressed={showGitHub}
+          onClick={() => {
+            setShowGitHub((open) => !open);
+          }}
+        >
+          GitHub
+        </button>
         <RepositoryPicker />
       </header>
 
-      {repository === null ? (
+      {showGitHub ? (
+        <GitHubPicker
+          onClose={() => {
+            setShowGitHub(false);
+          }}
+        />
+      ) : repository === null ? (
         <div className="app-shell__empty">
           <p className="app-shell__empty-title">GitCanvas</p>
           <p className="app-shell__empty-hint">

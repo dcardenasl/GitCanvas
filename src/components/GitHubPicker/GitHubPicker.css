@@ -1,0 +1,108 @@
+.github-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.github-picker__header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.github-picker__title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.github-picker__hint {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.github-picker__hint code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--control);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.github-picker__form {
+  display: flex;
+  gap: 8px;
+  max-width: 520px;
+}
+
+.github-picker__input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--control);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.github-picker__input:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.github-picker__error {
+  margin: 0;
+  color: #f0a3a1;
+  font-size: 12.5px;
+}
+
+.github-picker__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.github-picker__item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--divider);
+}
+
+.github-picker__item-main {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.github-picker__name {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.github-picker__badge {
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--ink-faint);
+  font-size: 10px;
+}
+
+.github-picker__description {
+  overflow: hidden;
+  color: var(--ink-faint);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

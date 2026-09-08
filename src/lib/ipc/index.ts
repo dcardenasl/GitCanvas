@@ -1,9 +1,15 @@
 /** Typed application boundary over the generated Rust contract. */
-import { commands } from "../../bindings";
+import { commands, events } from "../../bindings";
 import type { AppError, DiffRequest, HistoryRequest } from "../../bindings";
 
 export type {
   AppInfo,
+  CacheEntry,
+  CacheStatus,
+  ClonedRepository,
+  CloneProgressEvent,
+  GitHubAccount,
+  GitHubRepository,
   CommitDiff,
   DiffOmission,
   DiffRequest,
@@ -57,3 +63,22 @@ export const getTags = (path: string) => result(commands.getTags(path));
 /** Reads a commit's changes against its first parent. */
 export const getCommitDiff = (path: string, request: DiffRequest) =>
   result(commands.getCommitDiff(path, request));
+
+/** Verifies a personal access token and stores it in the OS keychain. */
+export const storeGithubToken = (token: string) =>
+  result(commands.storeGithubToken(token));
+/** Reports whether a token is stored. Never returns the token itself. */
+export const hasGithubToken = () => result(commands.hasGithubToken());
+/** Removes the stored token. */
+export const forgetGithubToken = () => result(commands.forgetGithubToken());
+/** Lists the repositories the stored token can reach. */
+export const listGithubRepositories = () =>
+  result(commands.listGithubRepositories());
+/** Clones a repository into the application cache. */
+export const cloneGithubRepository = (cloneUrl: string, fullName: string) =>
+  result(commands.cloneGithubRepository(cloneUrl, fullName));
+/** Reports what the clone cache holds and the limits it is held to. */
+export const getCloneCacheStatus = () => result(commands.getCloneCacheStatus());
+
+/** Subscribes to clone progress. Returns the unsubscribe function. */
+export const onCloneProgress = events.cloneProgressEvent.listen;
