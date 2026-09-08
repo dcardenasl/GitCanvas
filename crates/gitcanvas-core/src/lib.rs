@@ -20,6 +20,7 @@
 //! that means `tauri::async_runtime::spawn_blocking`.
 
 pub mod error;
+pub mod history;
 pub mod repository;
 
 /// The crate version, so the application can report what engine it is running.

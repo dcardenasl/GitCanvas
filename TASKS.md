@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 1 · 19/64 tareas · última actualización 2026-09-08
+**Estado:** Fase 1 · 20/64 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -250,10 +250,14 @@ Rust → TypeScript.
       API de `git2`, nunca repos `.git` versionados en el proyecto.
       → `test(core): cover repository validation with temporary fixtures`
 
-- [ ] **F1-3 — Historial paginado por cursor.** Revwalk con
+- [x] **F1-3 — Historial paginado por cursor.** Revwalk con
       `Sort::TOPOLOGICAL | Sort::TIME`, máximo 500 commits por página, cursor = SHA del
       último commit visto. Por cursor y no por offset: un offset produce bugs
       intermitentes si el historial cambia entre llamadas.
+      *Hallazgo durante la ejecución:* un SHA no representa la frontera de ramas de
+      un recorrido topológico. Cada página devuelve también sus raíces originales;
+      las siguientes las reutilizan para no perder ramas ni duplicar commits cuando
+      cambian las refs. No hay offsets ni handles compartidos.
       → `feat(core): add the cursor-paginated commit history walk`
 
 - [ ] **F1-4 — Tests de historial.** Lineal, un merge, branches divergentes, octopus,
