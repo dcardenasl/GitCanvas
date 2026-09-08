@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 2 · 31/66 tareas · última actualización 2026-09-08
+**Estado:** Fase 2 · 32/66 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -329,7 +329,7 @@ aserción de tiempo en un runner compartido es flaky por diseño) · cero `unwra
       no cambian al cargar la segunda.
       → `test(graph): cover linear, merge, octopus and page boundary layouts`
 
-- [ ] **F2-3 — Paleta determinística.** Color como función del índice de carril, ciclando
+- [x] **F2-3 — Paleta determinística.** Color como función del índice de carril, ciclando
       sobre una paleta fija accesible. Nunca aleatorio: los colores no pueden parpadear
       entre renders o se rompe la sensación de predictibilidad del graph.
       → `feat(graph): add the deterministic accessible lane palette`
