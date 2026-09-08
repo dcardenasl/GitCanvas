@@ -1,0 +1,15 @@
+[package]
+name = "gitcanvas-core"
+description = "Git domain logic for GitCanvas: history, refs, diffs and remotes"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+
+# Deliberately absent: `tauri`. This crate must stay usable, and testable,
+# without starting an application. Adding it here would silently undo the
+# boundary the workspace exists to enforce.

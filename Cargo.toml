@@ -1,0 +1,33 @@
+# Workspace root.
+#
+# The split is the point: `gitcanvas-core` holds every piece of git domain
+# logic and does NOT depend on `tauri`. A `use tauri::…` inside it does not
+# compile, so the boundary is enforced by the dependency graph rather than by
+# remembering to respect a folder convention.
+#
+# `src-tauri` is the IPC layer: it registers commands, owns application state,
+# and translates core results into responses. Nothing else.
+
+[workspace]
+resolver = "2"
+members = ["src-tauri", "crates/gitcanvas-core"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.98"
+authors = ["David Cardenas Lorca"]
+publish = false
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Profiles live at the workspace root; cargo ignores them in member manifests.
+# See https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 0 · 7/63 tareas · última actualización 2026-09-08
+**Estado:** Fase 0 · 8/63 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -83,10 +83,14 @@
       libres de 460 GB). Resuelto por David liberando caché.
       → `chore(scaffold): add the tauri v2 app with react and typescript`
 
-- [ ] **F0-2 — Workspace Rust.** Mover el dominio git a `crates/gitcanvas-core`, sin
-      `tauri` entre sus dependencias, y dejar `src-tauri` como capa delgada. Motivo:
-      convierte "el dominio no sabe que existe Tauri" de convención de carpetas en error
-      de compilación (delta D1).
+- [x] **F0-2 — Workspace Rust.** `crates/gitcanvas-core` sin `tauri` entre sus
+      dependencias; `src-tauri` pasa a depender de él y queda como capa de IPC. Versiones
+      y perfiles centralizados en `[workspace.package]` y `[workspace.dependencies]`, así
+      que no hay dos sitios donde una versión pueda divergir.
+      *Verificado:* se agregó temporalmente `tauri::Wry` dentro del crate core y el
+      compilador lo rechazó — `use of unresolved module or unlinked crate 'tauri'`. La
+      frontera del delta D1 la aplica el grafo de dependencias, no la revisión. Build
+      completo del workspace limpio en 43 s (Tauri 2.11.5, Rust 1.98.1).
       → `refactor(rust): extract the git domain into the gitcanvas-core crate`
 
 - [ ] **F0-3 — TypeScript estricto y frontera de imports.** `strict`,
