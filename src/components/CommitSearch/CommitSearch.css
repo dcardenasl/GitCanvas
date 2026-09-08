@@ -1,0 +1,38 @@
+.commit-search {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.commit-search__input {
+  width: 220px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--control);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.commit-search__input::placeholder {
+  color: var(--ink-faint);
+}
+
+.commit-search__input:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.commit-search__status {
+  flex-shrink: 0;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.commit-search__status--empty {
+  color: #f0a3a1;
+}
