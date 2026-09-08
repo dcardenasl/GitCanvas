@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 0 · 6/63 tareas · última actualización 2026-09-08
+**Estado:** Fase 0 · 7/63 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -65,8 +65,22 @@
 > **Prerrequisito:** Rust no está instalado en esta máquina. Lo corre David:
 > `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source "$HOME/.cargo/env" && rustup component add clippy rustfmt`
 
-- [ ] **F0-1 — Scaffold Tauri v2.** `npm create tauri-app@latest` (React + TS + Vite) en
-      un directorio temporal y fusionado en la raíz, para no pisar `docs/`.
+- [x] **F0-1 — Scaffold Tauri v2.** `npm create tauri-app@latest` (React 19 + TS 6 +
+      Vite 8) en un directorio temporal y fusionado en la raíz, para no pisar `docs/`.
+      Del scaffold se retiró todo el demo antes del primer commit —comando `greet`,
+      plugin `opener` y su permiso, logos, y el `@ts-expect-error` de `vite.config.ts`
+      (reemplazado por `@types/node`, que es la dependencia que faltaba de verdad)— para
+      que el árbol no arranque con código muerto. Identidad puesta: `productName`
+      `GitCanvas`, ventana 1280×800 con mínimos, y arranque que reporta el error y sale
+      en vez de `expect()`.
+      *Hallazgo durante la ejecución:* `npm` está aliaseado a `pnpm` en el zsh de David,
+      así que el primer install generó `pnpm-lock.yaml`. Los 10 proyectos JS del
+      workspace usan `package-lock.json` y el CI de `ci4-website-suite` cachea npm, así
+      que el alias es accidental. Resuelto declarando `"packageManager": "npm@10.9.8"` en
+      `package.json`: el gestor queda fijado en el repo y deja de depender de cómo esté
+      configurado el shell de quien buildea.
+      *Segundo hallazgo:* el install falló con `ENOSPC` — el disco estaba al 100% (127 MB
+      libres de 460 GB). Resuelto por David liberando caché.
       → `chore(scaffold): add the tauri v2 app with react and typescript`
 
 - [ ] **F0-2 — Workspace Rust.** Mover el dominio git a `crates/gitcanvas-core`, sin
