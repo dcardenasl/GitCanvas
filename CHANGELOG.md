@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - **Commit graph.** The history view draws branch lanes and merge curves in SVG
   over a virtualized commit table, sharing one scroll container so the graph can
   never drift out of step with its rows. Lane colours are a deterministic
@@ -22,12 +23,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Repository navigation.** A native folder picker opens a local repository,
   and the sidebar lists local branches, remote branches and tags, marking the
   checked-out branch.
-
-### Added
-
 - **Git data engine** — Open canonical working repositories, including linked worktrees, and browse topological history with stable cursor pagination, local/remote branches and annotated tags.
 - **Repository diagnostics** — Structured errors and rotating JSON logs report failures while Git operations run outside the UI thread.
-
-### Performance
-
-- **HistoryReader** — Reuse immutable traversal snapshots within a bounded LRU cache to avoid rewalking the entire history on each page.
