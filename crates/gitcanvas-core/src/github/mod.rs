@@ -5,4 +5,6 @@
 //! comes from a local clone read through libgit2 — one data path, not two.
 
 pub mod api;
+pub mod cache;
+pub mod clone;
 pub mod credentials;
