@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 1 · 16/63 tareas · última actualización 2026-09-08
+**Estado:** Fase 1 · 17/64 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -221,6 +221,16 @@
 **Hecho cuando:** `cargo clippy --all-targets -- -D warnings` limpio · `npm run typecheck`
 y `npm run lint` limpios · CI verde en los 3 SO · la ventana abre y `ping` hace roundtrip
 Rust → TypeScript.
+
+---
+
+### Mantenimiento posterior a la fase
+
+- [x] **F0-11 — Actions al día.** La primera corrida verde de `dev-check` anotó que
+      `actions/checkout@v4` y `setup-node@v4` apuntan a Node 20, deprecado y forzado a
+      correr sobre Node 24. Subidas a `@v7` en los tres workflows antes de que la
+      deprecación se convierta en una falla.
+      → `ci: bump the deprecated node 20 actions to v7`
 
 ---
 
@@ -476,7 +486,7 @@ intentar resolverlo.
   de partida y `dev` como rama de trabajo, remoto privado en GitHub, y el guard local que
   impide pushear a `main`.
 
-- **Fase 0 — Cimientos** (10/10). El esqueleto completo funciona antes de la primera línea
+- **Fase 0 — Cimientos** (11/11, una de mantenimiento posterior). El esqueleto completo funciona antes de la primera línea
   de lógica de negocio: workspace Rust con la frontera del dominio aplicada por el
   compilador, TypeScript estricto con la frontera del graph-layout aplicada por ESLint,
   lints que deniegan `unwrap`/`expect`/`panic`, el pipeline de contratos tipados con su
