@@ -39,8 +39,14 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::repository::get_branches,
             commands::repository::get_tags,
             commands::diff::get_commit_diff,
+            commands::github::store_github_token,
+            commands::github::has_github_token,
+            commands::github::forget_github_token,
+            commands::github::list_github_repositories,
+            commands::github::clone_github_repository,
+            commands::github::get_clone_cache_status,
         ])
-        .events(collect_events![])
+        .events(collect_events![commands::github::CloneProgressEvent])
 }
 
 /// The application context, generated from `tauri.conf.json` and the
@@ -77,8 +83,24 @@ pub fn run() {
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             use tauri::Manager;
-            let guard = logging::initialize(&app.path().app_data_dir()?.join("logs"))?;
+            let data_dir = app.path().app_data_dir()?;
+            let guard = logging::initialize(&data_dir.join("logs"))?;
             app.manage(guard);
+
+            // Resolved once, here, where the concrete handle exists. The
+            // commands themselves stay free of `AppHandle`, which is what lets
+            // the typed builder collect them without a runtime parameter.
+            app.manage(commands::github::CacheRoot(data_dir.join("clones")));
+
+            let handle = app.handle().clone();
+            app.manage(commands::github::ProgressEmitter(std::sync::Arc::new(
+                move |event: commands::github::CloneProgressEvent| {
+                    use tauri_specta::Event as _;
+                    // Best-effort: a dropped progress frame must never fail a
+                    // clone that is otherwise succeeding.
+                    let _ = event.emit(&handle);
+                },
+            )));
             tracing::info!(version = env!("CARGO_PKG_VERSION"), "GitCanvas started");
             builder.mount_events(app);
             Ok(())

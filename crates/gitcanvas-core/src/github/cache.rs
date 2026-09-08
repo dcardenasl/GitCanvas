@@ -25,7 +25,13 @@ pub const MAX_TOTAL_BYTES: u64 = 5 * 1024 * 1024 * 1024;
 pub struct CacheEntry {
     pub path: String,
     pub name: String,
-    pub bytes: u64,
+    /// Size in bytes, as a decimal string.
+    ///
+    /// A directory can exceed what a JavaScript number represents exactly, and
+    /// specta refuses to export 64-bit integers for that reason. The same
+    /// convention as commit timestamps: cross the boundary as text, parse on
+    /// the far side.
+    pub bytes: String,
     /// Unix seconds of the most recent access, as a string for range safety.
     pub last_used: String,
 }
@@ -34,9 +40,11 @@ pub struct CacheEntry {
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct CacheStatus {
     pub entries: Vec<CacheEntry>,
-    pub total_bytes: u64,
+    /// Total size in bytes, as a decimal string. See [`CacheEntry::bytes`].
+    pub total_bytes: String,
     pub max_repositories: u32,
-    pub max_total_bytes: u64,
+    /// Limit in bytes, as a decimal string. See [`CacheEntry::bytes`].
+    pub max_total_bytes: String,
 }
 
 fn directory_size(path: &Path) -> u64 {
@@ -66,6 +74,11 @@ fn last_used(path: &Path) -> SystemTime {
         .unwrap_or(SystemTime::UNIX_EPOCH)
 }
 
+/// Parses a decimal string back to bytes, treating malformed input as zero.
+fn parse_bytes(value: &str) -> u64 {
+    value.parse().unwrap_or(0)
+}
+
 fn unix_seconds(time: SystemTime) -> i64 {
     time.duration_since(SystemTime::UNIX_EPOCH)
         .map_or(0, |elapsed| {
@@ -90,21 +103,22 @@ pub fn status(cache_root: &Path) -> Result<CacheStatus, AppError> {
             }
             entries.push(CacheEntry {
                 name: entry.file_name().to_string_lossy().into_owned(),
-                bytes: directory_size(&path),
+                bytes: directory_size(&path).to_string(),
                 last_used: unix_seconds(last_used(&path)).to_string(),
                 path: path.to_string_lossy().into_owned(),
             });
         }
     }
 
-    entries.sort_by(|a, b| b.last_used.cmp(&a.last_used));
-    let total_bytes = entries.iter().map(|entry| entry.bytes).sum();
+    // Numeric order, not lexicographic: "9" must not sort after "10".
+    entries.sort_by_key(|entry| std::cmp::Reverse(parse_bytes(&entry.last_used)));
+    let total_bytes: u64 = entries.iter().map(|entry| parse_bytes(&entry.bytes)).sum();
 
     Ok(CacheStatus {
         entries,
-        total_bytes,
+        total_bytes: total_bytes.to_string(),
         max_repositories: u32::try_from(MAX_REPOSITORIES).unwrap_or(u32::MAX),
-        max_total_bytes: MAX_TOTAL_BYTES,
+        max_total_bytes: MAX_TOTAL_BYTES.to_string(),
     })
 }
 
@@ -125,10 +139,10 @@ pub fn enforce_retention(cache_root: &Path, keep: Option<&str>) -> Result<Vec<St
         .iter()
         .filter(|entry| Some(entry.name.as_str()) != keep)
         .collect();
-    candidates.sort_by(|a, b| a.last_used.cmp(&b.last_used));
+    candidates.sort_by_key(|entry| parse_bytes(&entry.last_used));
 
     let mut count = status.entries.len();
-    let mut bytes = status.total_bytes;
+    let mut bytes = parse_bytes(&status.total_bytes);
     let mut evicted = Vec::new();
 
     for entry in candidates {
@@ -137,7 +151,7 @@ pub fn enforce_retention(cache_root: &Path, keep: Option<&str>) -> Result<Vec<St
         }
         std::fs::remove_dir_all(PathBuf::from(&entry.path))?;
         count -= 1;
-        bytes = bytes.saturating_sub(entry.bytes);
+        bytes = bytes.saturating_sub(parse_bytes(&entry.bytes));
         evicted.push(entry.name.clone());
     }
 

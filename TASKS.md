@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 4 · 50/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 4 · 51/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -563,7 +563,24 @@ diff gigante no bloquea ni ralentiza perceptiblemente la UI.
       de modo que `../../etc/passwd` no pueda escapar de la raíz de la caché.
       → `test(core): cover the clone cache retention policy`
 
-- [ ] **F4-7 — Comandos y evento IPC.**
+- [x] **F4-7 — Comandos y evento IPC.** Seis comandos y el evento tipado
+      `CloneProgressEvent`, generado por `collect_events!`. El token se guarda **después**
+      de verificarlo contra `/user`, así un token que no puede funcionar nunca queda
+      almacenado como causa invisible de un clone que falla más tarde. Ninguno de los
+      comandos devuelve el token: `has_github_token` responde sí o no.
+      *Rediseño durante la ejecución:* los comandos tomaban `AppHandle` para resolver el
+      directorio de caché y emitir progreso, y eso los ata al runtime concreto —
+      `collect_commands!` no puede ver el parámetro `R` de una función genérica y el build
+      fallaba. En vez de forzarlo, se sacó `AppHandle` de los comandos: la raíz de la
+      caché y el emisor de progreso pasan a ser estado inyectado, resuelto una sola vez en
+      el arranque donde el handle concreto sí existe. El emisor es un `Arc<dyn Fn>`, así
+      que la capa de comandos ni siquiera sabe cómo se entregan los eventos. Es el mismo
+      patrón que ya usaba `get_commits` con el `HistoryReader`.
+      *Hallazgo durante la ejecución:* specta **rechaza exportar `u64`** por pérdida de
+      precisión en JavaScript, así que los tamaños de la caché cruzan como string decimal
+      — la misma convención que ya usaban los timestamps de commit en la Fase 1. Al
+      cambiarlo hubo que ordenar numéricamente en vez de lexicográficamente, o `"9"`
+      quedaría después de `"10"`.
       → `feat(ipc): expose the github commands and the clone progress event`
 
 - [ ] **F4-8 — Selector de repos y progreso en la UI.**

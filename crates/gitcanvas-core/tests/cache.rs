@@ -34,7 +34,7 @@ fn an_absent_cache_reports_empty_rather_than_failing() {
     let status = status(&missing).unwrap();
 
     assert!(status.entries.is_empty());
-    assert_eq!(status.total_bytes, 0);
+    assert_eq!(status.total_bytes, "0");
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn entries_are_reported_newest_first_with_their_sizes() {
 
     assert_eq!(status.entries.len(), 2);
     assert_eq!(status.entries[0].name, "new", "most recent first");
-    assert!(status.total_bytes >= 3_000);
+    assert!(status.total_bytes.parse::<u64>().unwrap() >= 3_000);
 }
 
 #[test]
