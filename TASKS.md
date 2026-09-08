@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 0 · 15/63 tareas · última actualización 2026-09-08
+**Estado:** Fase 0 · 16/63 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -212,8 +212,10 @@
       un release sin notas.
       → `ci: add the changelog-driven release workflow`
 
-- [ ] **F0-10 — Nota de arquitectura.** `ARCHITECTURE.md` con la frontera core/tauri/ui y
-      por qué está donde está.
+- [x] **F0-10 — Nota de arquitectura.** `ARCHITECTURE.md`: el diagrama de capas, las
+      tres fronteras con el mecanismo exacto que hace fallar el build en cada una, las
+      reglas del código Rust, por qué el layout vive en TypeScript y no en Rust, y la
+      tabla de qué corre en cada momento. Escrito para quien abra el repo sin contexto.
       → `docs: add the architecture note`
 
 **Hecho cuando:** `cargo clippy --all-targets -- -D warnings` limpio · `npm run typecheck`
