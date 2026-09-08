@@ -1,37 +1,30 @@
-import { useEffect, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { ping, type AppInfo } from "./lib/ipc";
+import { AppShell } from "./components/AppShell";
 
 import "./App.css";
 
 /**
- * Application shell.
+ * One client for the whole application.
  *
- * Renders the engine it is talking to, which is the visible proof that the
- * Rust to TypeScript round trip works. The commit graph replaces this in
- * phase 2.
+ * Created outside the component so a re-render never discards the cache; a
+ * client rebuilt on render silently refetches every page of history.
  */
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Reading git is local and deterministic; retrying a failed read just
+      // delays showing the user what went wrong.
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
 export default function App() {
-  const [info, setInfo] = useState<AppInfo | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    ping()
-      .then(setInfo)
-      .catch((cause: unknown) => {
-        setError(cause instanceof Error ? cause.message : String(cause));
-      });
-  }, []);
-
   return (
-    <main className="app-shell">
-      <p className="app-shell__title">GitCanvas</p>
-      {error !== null && <p className="app-shell__error">{error}</p>}
-      {info !== null && (
-        <p className="app-shell__meta">
-          v{info.version} · engine {info.core_version}
-        </p>
-      )}
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <AppShell />
+    </QueryClientProvider>
   );
 }

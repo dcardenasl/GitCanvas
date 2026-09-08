@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 2 · 35/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 2 · 36/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -380,8 +380,28 @@ aserción de tiempo en un runner compartido es flaky por diseño) · cero `unwra
       *Verificado:* con 5.000 commits y una ventana de 21 filas emite 23 nodos, no 5.000.
       → `feat(ui): render the commit graph as an svg layer over the virtual rows`
 
-- [ ] **F2-6 — Paginación infinita.** React Query `useInfiniteQuery` sobre el cursor de
-      F1-3, alimentando el estado reanudable de F2-1.
+- [x] **F2-6 — Paginación infinita.** `useInfiniteQuery` sobre el cursor y los walk
+      roots de F1-3, alimentando el layout reanudable de F2-1: cada página se dispone a
+      partir del `state` de la anterior, nunca recalculando desde cero. Recalcular
+      reasignaría carriles a commits que ya están en pantalla y el graph saltaría bajo el
+      cursor mientras el usuario lee. `staleTime: Infinity` porque un historial ya
+      recorrido es inmutable, y `retry: false` porque reintentar una lectura local solo
+      demora mostrar el error.
+      *Separación de estados:* React Query es dueño de todo lo que viene de Rust; un
+      store de Zustand guarda solo lo que el usuario eligió —repo abierto y commit
+      seleccionado—. Mezclarlos es cómo una invalidación de caché termina borrando una
+      selección.
+      *Ampliación de alcance:* shell completo de la app (toolbar, sidebar de ramas y
+      etiquetas, estados de carga y error) y el plugin `tauri-plugin-dialog` para el
+      selector nativo de carpetas. Sin eso el graph no tiene forma de recibir un
+      repositorio y F2-6 no sería verificable.
+      *El contrato hizo su trabajo:* inventé los nombres de las variantes de `AppError` al
+      escribir los mensajes de la UI y el typecheck los rechazó contra `bindings.ts`. Los
+      reales son `InvalidRepository`, `Io`, `Git`, `InvalidInput`, `StaleCursor` e
+      `Internal`. Eso es exactamente lo que compra generar los tipos desde Rust.
+      *Verificado con tests:* la página 1 se dispone idéntica exista o no la página 2; el
+      resultado paginado es igual al de una sola pasada; y un merge cuyo segundo padre
+      cae en la página siguiente aterriza en el carril exacto que le reservaron.
       → `feat(ui): load commit history through cursor-based infinite queries`
 
 - [ ] **F2-7 — Tests de render.**
