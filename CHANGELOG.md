@@ -79,6 +79,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The system folder panel is pre-initialised at startup**, so the first
+  "open repository" no longer pays for AppKit loading its frameworks while the
+  interface cannot repaint.
 - **Opening a repository shows it is working.** The button now reports the wait
   while the system's folder panel comes up, cannot be clicked into opening a
   second one, and starts in the directory it last opened.
