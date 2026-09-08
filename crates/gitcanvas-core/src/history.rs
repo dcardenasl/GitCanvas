@@ -1,6 +1,10 @@
 //! Deterministic topological history with bounded pages and frozen walk roots.
 
-use std::collections::BTreeSet;
+use std::{
+    collections::{BTreeSet, VecDeque},
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
 use git2::{ErrorCode, Oid, Repository, Sort};
 use serde::{Deserialize, Serialize};
@@ -40,17 +44,97 @@ pub struct HistoryPage {
     pub roots: Vec<String>,
 }
 
-/// Reads commits reachable from HEAD, local/remote branches and commit tags.
+const MAX_CACHED_COMMITS: usize = 100_000;
+const MAX_CACHED_SNAPSHOTS: usize = 8;
+
+type WalkIds = Arc<[Oid]>;
+
+struct Snapshot {
+    path: PathBuf,
+    roots: Vec<Oid>,
+    ids: WalkIds,
+}
+
+/// Bounded LRU of immutable traversal IDs. Contains no live repository handles.
 ///
-/// A SHA alone cannot encode the outstanding branches of a topological walk.
-/// Frozen roots preserve that frontier across calls, including new commits or
-/// moved refs between requests. The cursor is always the last emitted SHA;
-/// restarting the walk from that SHA would silently drop divergent branches.
+/// Reusing a reader avoids walking every ancestor again for each page. Identity
+/// includes the canonical path and frozen roots; ref changes naturally miss the
+/// cache. At most 100,000 IDs and eight snapshots are retained across repositories.
+#[derive(Default)]
+pub struct HistoryReader {
+    snapshots: Mutex<VecDeque<Snapshot>>,
+}
+
+impl HistoryReader {
+    /// Reads a bounded page, reusing only immutable commit IDs from prior walks.
+    ///
+    /// # Errors
+    /// Rejects invalid limits/cursors and reports repository or object failures.
+    pub fn get_commits(
+        &self,
+        active: &ActiveRepo,
+        request: &HistoryRequest,
+    ) -> Result<HistoryPage, AppError> {
+        read_page(active, request, Some(self))
+    }
+
+    fn find(&self, active: &ActiveRepo, roots: &[Oid]) -> Result<Option<WalkIds>, AppError> {
+        let mut entries = self
+            .snapshots
+            .lock()
+            .map_err(|_| AppError::Internal("History cache is unavailable".into()))?;
+        let Some(index) = entries
+            .iter()
+            .position(|entry| entry.path == active.path() && entry.roots == roots)
+        else {
+            return Ok(None);
+        };
+        let Some(entry) = entries.remove(index) else {
+            return Ok(None);
+        };
+        let ids = Arc::clone(&entry.ids);
+        entries.push_back(entry);
+        Ok(Some(ids))
+    }
+
+    fn insert(&self, active: &ActiveRepo, roots: &[Oid], ids: WalkIds) -> Result<(), AppError> {
+        let mut entries = self
+            .snapshots
+            .lock()
+            .map_err(|_| AppError::Internal("History cache is unavailable".into()))?;
+        entries.retain(|entry| entry.path != active.path() || entry.roots != roots);
+        while entries.len() >= MAX_CACHED_SNAPSHOTS
+            || entries.iter().map(|entry| entry.ids.len()).sum::<usize>() + ids.len()
+                > MAX_CACHED_COMMITS
+        {
+            entries.pop_front();
+        }
+        entries.push_back(Snapshot {
+            path: active.path().into(),
+            roots: roots.to_vec(),
+            ids,
+        });
+        Ok(())
+    }
+}
+
+/// Reads commits reachable from HEAD, branches and commit tags without retaining a cache.
+/// Use a shared `HistoryReader` for repeated application requests.
+///
+/// A SHA alone cannot encode the frontier of a topological walk. Frozen roots
+/// preserve divergent branches even when refs move between pages.
 ///
 /// # Errors
 /// Rejects invalid limits, incomplete continuations and unreachable cursors.
-/// Missing snapshot objects (for example after garbage collection) require refresh.
 pub fn get_commits(active: &ActiveRepo, request: &HistoryRequest) -> Result<HistoryPage, AppError> {
+    read_page(active, request, None)
+}
+
+fn read_page(
+    active: &ActiveRepo,
+    request: &HistoryRequest,
+    reader: Option<&HistoryReader>,
+) -> Result<HistoryPage, AppError> {
     if request.limit == 0 || request.limit > MAX_PAGE_SIZE {
         return Err(AppError::InvalidInput(format!(
             "Page size must be between 1 and {MAX_PAGE_SIZE}"
@@ -64,7 +148,7 @@ pub fn get_commits(active: &ActiveRepo, request: &HistoryRequest) -> Result<Hist
     let repo = active.open()?;
     let roots = match &request.roots {
         Some(roots) => {
-            if roots.len() > 100_000 {
+            if roots.len() > MAX_CACHED_COMMITS {
                 return Err(AppError::InvalidInput("Too many history roots".into()));
             }
             roots
@@ -75,6 +159,19 @@ pub fn get_commits(active: &ActiveRepo, request: &HistoryRequest) -> Result<Hist
         None => history_roots(&repo)?,
     };
     let cursor = request.cursor.as_deref().map(parse_oid).transpose()?;
+    let cached = reader
+        .map(|reader| reader.find(active, &roots))
+        .transpose()?
+        .flatten();
+    if let Some(ids) = cached {
+        return page_from_walk(
+            &repo,
+            ids.iter().copied().map(Ok),
+            &roots,
+            cursor,
+            request.limit,
+        );
+    }
     let mut walk = repo.revwalk()?;
     walk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME)?;
     for root in &roots {
@@ -84,8 +181,43 @@ pub fn get_commits(active: &ActiveRepo, request: &HistoryRequest) -> Result<Hist
             )
         })?;
     }
+    if let Some(reader) = reader {
+        let prefix = walk
+            .by_ref()
+            .take(MAX_CACHED_COMMITS + 1)
+            .collect::<Result<Vec<_>, _>>()?;
+        if prefix.len() <= MAX_CACHED_COMMITS {
+            let ids: WalkIds = prefix.into();
+            reader.insert(active, &roots, Arc::clone(&ids))?;
+            return page_from_walk(
+                &repo,
+                ids.iter().copied().map(Ok),
+                &roots,
+                cursor,
+                request.limit,
+            );
+        }
+        // Huge walks remain bounded: retain no snapshot, and stream the rest.
+        return page_from_walk(
+            &repo,
+            prefix.into_iter().map(Ok).chain(walk),
+            &roots,
+            cursor,
+            request.limit,
+        );
+    }
+    page_from_walk(&repo, walk, &roots, cursor, request.limit)
+}
+
+fn page_from_walk(
+    repo: &Repository,
+    walk: impl Iterator<Item = Result<Oid, git2::Error>>,
+    roots: &[Oid],
+    cursor: Option<Oid>,
+    limit: u16,
+) -> Result<HistoryPage, AppError> {
     let mut found_cursor = cursor.is_none();
-    let mut commits = Vec::with_capacity(usize::from(request.limit));
+    let mut commits = Vec::with_capacity(usize::from(limit));
     let mut more = false;
     for id in walk {
         let id = id?;
@@ -93,7 +225,7 @@ pub fn get_commits(active: &ActiveRepo, request: &HistoryRequest) -> Result<Hist
             found_cursor = Some(id) == cursor;
             continue;
         }
-        if commits.len() == usize::from(request.limit) {
+        if commits.len() == usize::from(limit) {
             more = true;
             break;
         }
@@ -161,5 +293,64 @@ pub(crate) fn commit_info(commit: &git2::Commit<'_>) -> CommitInfo {
         author_email: String::from_utf8_lossy(author.email_bytes()).into_owned(),
         author_time: author.when().seconds().to_string(),
         commit_time: commit.time().seconds().to_string(),
+    }
+}
+
+#[cfg(test)]
+mod cache_tests {
+    use super::*;
+
+    #[test]
+    fn cache_evicts_old_snapshots_and_limits_total_ids() {
+        let dir = tempfile::tempdir().unwrap();
+        Repository::init(dir.path()).unwrap();
+        let active = ActiveRepo::validate(dir.path()).unwrap();
+        let reader = HistoryReader::default();
+        for value in 0..10 {
+            let id = Oid::from_str(&format!("{value:040x}")).unwrap();
+            reader
+                .insert(&active, &[id], vec![id; 20_000].into())
+                .unwrap();
+        }
+        let entries = reader.snapshots.lock().unwrap();
+        assert_eq!(entries.len(), 5);
+        assert_eq!(
+            entries.iter().map(|entry| entry.ids.len()).sum::<usize>(),
+            MAX_CACHED_COMMITS
+        );
+    }
+
+    #[test]
+    fn cache_reuses_ids_and_updates_lru_without_crossing_repository_boundaries() {
+        let first = tempfile::tempdir().unwrap();
+        let second = tempfile::tempdir().unwrap();
+        Repository::init(first.path()).unwrap();
+        Repository::init(second.path()).unwrap();
+        let active = ActiveRepo::validate(first.path()).unwrap();
+        let other = ActiveRepo::validate(second.path()).unwrap();
+        let reader = HistoryReader::default();
+        let first_id = Oid::ZERO_SHA1;
+        let ids: WalkIds = vec![first_id].into();
+        reader
+            .insert(&active, &[first_id], Arc::clone(&ids))
+            .unwrap();
+        assert!(Arc::ptr_eq(
+            &reader.find(&active, &[first_id]).unwrap().unwrap(),
+            &ids
+        ));
+        assert!(reader.find(&other, &[first_id]).unwrap().is_none());
+        for value in 1..8 {
+            let id = Oid::from_str(&format!("{value:040x}")).unwrap();
+            reader.insert(&active, &[id], vec![id].into()).unwrap();
+        }
+        reader.find(&active, &[first_id]).unwrap();
+        let newest = Oid::from_str(&format!("{:040x}", 8)).unwrap();
+        reader
+            .insert(&active, &[newest], vec![newest].into())
+            .unwrap();
+        assert_eq!(reader.snapshots.lock().unwrap().len(), MAX_CACHED_SNAPSHOTS);
+        assert!(reader.find(&active, &[first_id]).unwrap().is_some());
+        let evicted = Oid::from_str(&format!("{:040x}", 1)).unwrap();
+        assert!(reader.find(&active, &[evicted]).unwrap().is_none());
     }
 }

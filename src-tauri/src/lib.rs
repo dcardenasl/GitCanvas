@@ -70,6 +70,9 @@ pub fn run() {
     // return an error to, so the failure is reported and the process exits
     // rather than unwinding through a panic.
     if let Err(error) = tauri::Builder::default()
+        .manage(std::sync::Arc::new(
+            gitcanvas_core::history::HistoryReader::default(),
+        ))
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             use tauri::Manager;

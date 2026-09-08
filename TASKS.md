@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 1 · 27/65 tareas · última actualización 2026-09-08
+**Estado:** Fase 1 · 28/66 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -283,7 +283,8 @@ Rust → TypeScript.
       bloqueante y sin eso un repo grande congela la UI entera.
       *Hallazgo durante la ejecución:* cada petición lleva la identidad canónica del
       repo para que cambiar la selección durante una lectura no mezcle resultados.
-      No hay estado global mutable ni handles Git compartidos. Los timestamps viajan
+      No se comparte la selección ni handles Git. F1-11 añade solo una caché acotada
+      de SHAs. Los timestamps viajan
       como segundos decimales en String para preservar todo el rango i64 de Git.
       → `feat(ipc): expose the repository, history and refs commands`
 
@@ -294,7 +295,13 @@ Rust → TypeScript.
       datos de la app, para diagnosticar sin reproducir el bug en vivo.
       → `feat(app): add structured tracing to a rotating log file`
 
-- [x] **F1-10 — CHANGELOG del motor de datos.**
+- [x] **F1-11 — Caché acotada del recorrido.** Hallazgo de las mediciones: el
+      revwalk topológico vuelve a leer todos los ancestros en cada página. Conservar
+      solo SHAs inmutables, por path y raíces, con LRU de ocho snapshots y 100.000
+      commits totales. Nunca conservar handles Git ni resultados de repos distintos.
+      → `perf(core): cache immutable history walks with bounded lru retention`
+
+- [ ] **F1-10 — CHANGELOG del motor de datos.**
       → `docs(changelog): record the git data engine`
 
 **Hecho cuando:** la primera página de `ci4-website-suite` coincide commit por commit con

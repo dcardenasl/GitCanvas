@@ -3,7 +3,7 @@
 
 use gitcanvas_core::{
     error::AppError,
-    history::{self, HistoryPage, HistoryRequest},
+    history::{HistoryPage, HistoryReader, HistoryRequest},
     refs::{self, BranchInfo, TagInfo},
     repository::{ActiveRepo, RepositoryInfo},
 };
@@ -46,9 +46,14 @@ pub async fn validate_repository(path: String) -> Result<RepositoryInfo, AppErro
 /// Reads a bounded history page using the selected repository's canonical path.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_commits(path: String, request: HistoryRequest) -> Result<HistoryPage, AppError> {
+pub async fn get_commits(
+    path: String,
+    request: HistoryRequest,
+    reader: tauri::State<'_, std::sync::Arc<HistoryReader>>,
+) -> Result<HistoryPage, AppError> {
+    let reader = std::sync::Arc::clone(reader.inner());
     blocking("get_commits", move || {
-        history::get_commits(&ActiveRepo::validate(path)?, &request)
+        reader.get_commits(&ActiveRepo::validate(path)?, &request)
     })
     .await
 }

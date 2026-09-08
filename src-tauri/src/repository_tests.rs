@@ -6,6 +6,9 @@ use tauri::test::{get_ipc_response, mock_builder, MockRuntime, INVOKE_KEY};
 fn webview() -> tauri::WebviewWindow<MockRuntime> {
     let builder = super::specta_builder();
     let app = mock_builder()
+        .manage(std::sync::Arc::new(
+            gitcanvas_core::history::HistoryReader::default(),
+        ))
         .invoke_handler(builder.invoke_handler())
         .build(super::app_context())
         .unwrap();

@@ -217,3 +217,34 @@ fn tags_to_blobs_do_not_break_history() {
         1
     );
 }
+
+#[test]
+fn cached_walk_matches_uncached_pages_and_ref_updates() {
+    let fixture = Fixture::new();
+    let root = fixture.commit("HEAD", "root", &[], 1);
+    let side = fixture.commit("refs/heads/side", "side", &[root], 2);
+    let tip = fixture.commit("HEAD", "merge", &[root, side], 3);
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let reader = gitcanvas_core::history::HistoryReader::default();
+    let first = reader.get_commits(&active, &request(1)).unwrap();
+    let next = HistoryRequest {
+        limit: 500,
+        cursor: first.next_cursor,
+        roots: Some(first.roots),
+    };
+    let actual = reader.get_commits(&active, &next).unwrap();
+    let expected = get_commits(&active, &next).unwrap();
+    assert_eq!(
+        serde_json::to_value(actual).unwrap(),
+        serde_json::to_value(expected).unwrap()
+    );
+    let newest = fixture.commit("HEAD", "newest", &[tip], 4);
+    assert_eq!(
+        reader.get_commits(&active, &request(1)).unwrap().commits[0].id,
+        newest.to_string()
+    );
+    assert_eq!(
+        reader.get_commits(&active, &next).unwrap().commits[0].id,
+        side.to_string()
+    );
+}
