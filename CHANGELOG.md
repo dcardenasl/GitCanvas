@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **GitHub integration.** Sign in with a personal access token, browse the
+  repositories it can reach, and clone one into an application-owned cache with
+  live transfer progress. Clones are always complete: a truncated history would
+  make the graph convincing and wrong.
+- **Credentials stay in the operating system keychain.** The token is verified
+  before it is stored, is used only inside the Rust engine, and never crosses
+  the IPC boundary — the interface can ask whether one exists, never what it is.
+- **Bounded clone cache.** Ten repositories or five gigabytes, whichever comes
+  first, evicting the least recently used and never the one just opened.
 - **Commit inspector.** Selecting a commit shows its author, full message and
   changed files, with a line-by-line diff against the first parent.
 

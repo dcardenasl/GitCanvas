@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 4 · 52/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 5 · 53/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -500,7 +500,7 @@ diff gigante no bloquea ni ralentiza perceptiblemente la UI.
 
 ---
 
-## 🔴 En progreso — Fase 4: Integración con GitHub
+## ✅ Fase 4 — Integración con GitHub (9/9)
 
 - [x] **F4-1 — Token en el keychain del SO.** Crate `keyring` v3 con las tres features
       de plataforma explícitas (`apple-native`, `windows-native`,
@@ -596,7 +596,8 @@ diff gigante no bloquea ni ralentiza perceptiblemente la UI.
       se dé de baja al desmontar.
       → `feat(ui): add the github repository picker and clone progress`
 
-- [ ] **F4-9 — CHANGELOG de GitHub.**
+- [x] **F4-9 — CHANGELOG de GitHub.** Integración, custodia del token en el llavero y
+      límites de la caché, bajo `[Unreleased]`.
       → `docs(changelog): record the github integration`
 
 **Hecho cuando:** una URL pública se clona y muestra su graph completo · un repo privado se
@@ -609,7 +610,7 @@ no devuelve nada.
 
 ---
 
-## ⏳ Fase 5 — Acciones básicas
+## 🔴 En progreso — Fase 5: Acciones básicas
 
 - [ ] **F5-1 — Checkout con guard.** Si el working tree tiene cambios que se perderían, se
       bloquea y se informa el conflicto. Forzar exige confirmación explícita, nunca
