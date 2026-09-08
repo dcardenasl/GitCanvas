@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Commit inspector.** Selecting a commit shows its author, full message and
+  changed files, with a line-by-line diff against the first parent.
+
+- **Diff guards.** Binary files and diffs beyond 2000 lines are reported as
+  such instead of being rendered, and an oversized diff loads only when asked
+  for, so a generated bundle cannot stall the view.
 - **Commit graph.** The history view draws branch lanes and merge curves in SVG
   over a virtualized commit table, sharing one scroll container so the graph can
   never drift out of step with its rows. Lane colours are a deterministic

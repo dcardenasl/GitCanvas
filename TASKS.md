@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 3 · 43/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 4 · 44/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -433,7 +433,7 @@ PR #1 y `dev` bifurcándose, como en `docs/mockup.html`, sin cruces innecesarios
 
 ---
 
-## 🔴 En progreso — Fase 3: Detalle de commit y diff
+## ✅ Fase 3 — Detalle de commit y diff (6/6)
 
 - [x] **F3-1 — Diff contra el primer padre.** `get_commit_diff` con detección de renames
       sobre el diff ya generado —así un rename puro se lee como una entrada y no como un
@@ -485,9 +485,14 @@ PR #1 y `dev` bifurcándose, como en `docs/mockup.html`, sin cruces innecesarios
       ya muestra el archivo arriba; los `@@` se conservan porque son la única señal de
       que se saltaron líneas, y `\ No newline at end of file` también.
       Binarios y diffs retenidos muestran una explicación, nunca una caja vacía.
-      → `feat(ui): add the diff viewer with on-demand loading for large diffs`
+      *Nota de proceso:* F3-4 y F3-5 aterrizaron en **un solo commit**
+      (`feat(ui): add the commit detail panel`) en lugar de dos. El panel no renderiza
+      sin el visor y el visor no tiene dónde montarse sin el panel, así que en la
+      práctica son una sola razón para que cambie el historial. Se deja anotado en vez
+      de reescribir el historial para aparentar dos.
 
-- [ ] **F3-6 — CHANGELOG del panel de detalle.**
+- [x] **F3-6 — CHANGELOG del panel de detalle.** Entradas de la Fase 3 bajo
+      `[Unreleased]`, incluida la limitación conocida del diff de merges.
       → `docs(changelog): record the commit detail panel and diff viewer`
 
 **Hecho cuando:** el diff de cualquier commit coincide con `git show` · un binario o un
@@ -495,7 +500,7 @@ diff gigante no bloquea ni ralentiza perceptiblemente la UI.
 
 ---
 
-## ⏳ Fase 4 — Integración con GitHub
+## 🔴 En progreso — Fase 4: Integración con GitHub
 
 - [ ] **F4-1 — Token en el keychain del SO.** Crate `keyring` v3 con las features por
       plataforma explícitas (`apple-native`, `windows-native`, `sync-secret-service`; el
