@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 5 · 53/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 5 · 57/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -612,21 +612,34 @@ no devuelve nada.
 
 ## 🔴 En progreso — Fase 5: Acciones básicas
 
-- [ ] **F5-1 — Checkout con guard.** Si el working tree tiene cambios que se perderían, se
-      bloquea y se informa el conflicto. Forzar exige confirmación explícita, nunca
-      silenciosa.
+- [x] **F5-1 — Checkout con guard.** Devuelve `Blocked { conflicts }` con las rutas
+      concretas que se perderían, en vez de un booleano. Los archivos sin trackear no
+      cuentan como conflicto porque sobreviven al checkout. Dos líneas de defensa: el
+      chequeo de `statuses` primero, y `CheckoutBuilder::safe()` de libgit2 detrás.
       → `feat(core): add guarded branch checkout`
 
-- [ ] **F5-2 — Pull solo fast-forward.** Si no resuelve como ff, se informa y la decisión
-      queda en el usuario. Crear commits de merge desde la UI tiene implicancias de UX y
-      corrección que ameritan más cuidado del que el MVP justifica.
+- [x] **F5-2 — Pull solo fast-forward.** `merge_analysis` decide, y si las historias
+      divergieron devuelve `DivergedRequiresMerge { local, remote }` con los dos nombres
+      para que la UI pueda explicarlo. Sin upstream configurado devuelve `NoUpstream`, que
+      es un estado, no un error.
       → `feat(core): add fast-forward only pull`
 
-- [ ] **F5-3 — Push con credenciales del keychain.** Reutiliza F4-1. Fallos de auth con
-      mensaje claro, nunca un error genérico.
+- [x] **F5-3 — Push con credenciales del keychain.** Token del llavero para HTTPS y
+      agente SSH como alternativa. Un rechazo por no-fast-forward se reporta como
+      `RejectedNonFastForward`, **nunca se reintenta con force**: que el remoto tenga
+      commits que el local no tiene es exactamente el caso donde forzar destruye trabajo
+      ajeno. Un fallo de autenticación se distingue de un fallo de red.
       → `feat(core): add push with keychain-backed credentials`
 
-- [ ] **F5-4 — Tests de acciones.**
+- [x] **F5-4 — Tests de acciones.** Ocho casos sobre repositorios reales: checkout limpio,
+      checkout bloqueado, archivo sin trackear que no bloquea, force que sí descarta,
+      branch inexistente, pull sin upstream, push con HEAD desprendido y push sin remoto.
+      *Los dos que más importan:* tras un checkout rechazado, el archivo conserva su
+      contenido **y** HEAD sigue donde estaba —no basta con devolver el error, hay que no
+      haber tocado nada—; y un push sin `origin` configurado no puede reportar éxito.
+      *Hallazgo durante la ejecución:* en git2 0.21 `Reference::name`, `shorthand` y
+      `Buf::as_str` devuelven `Result`, no `Option`, y `Oid::zero()` está deprecado. Es
+      una mejora: el error se propaga con `?` en vez de tragarse con `unwrap_or_default`.
       → `test(core): cover checkout guards, fast-forward pull and push failures`
 
 - [ ] **F5-5 — Comandos IPC de acciones.**
