@@ -33,9 +33,13 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          # The git engine builds without any of Tauri's system libraries, so
-          # this job never installs them and never pays for them.
           workspaces: ". -> target"
+
+      # The git engine needs none of Tauri's webview libraries, so this job does
+      # not install them. It does need D-Bus: on Linux the keychain backend
+      # talks to the Secret Service over it.
+      - name: Install the keychain dependencies
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
 
       - run: npm ci
 

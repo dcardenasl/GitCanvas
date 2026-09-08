@@ -133,7 +133,9 @@ jobs:
             libappindicator3-dev \
             librsvg2-dev \
             patchelf \
-            libxdo-dev
+            libxdo-dev \
+            libdbus-1-dev \
+            pkg-config
 
       - run: npm ci
 

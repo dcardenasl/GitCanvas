@@ -44,8 +44,10 @@ jobs:
           workspaces: ". -> target"
           key: ${{ matrix.os }}
 
-      # Tauri links against the system webview. Only Linux needs it installed;
-      # macOS ships WebKit and Windows ships WebView2.
+      # Tauri links against the system webview, and the keychain backend talks
+      # to the Secret Service over D-Bus. Only Linux needs either installed;
+      # macOS ships WebKit and its own Keychain, Windows ships WebView2 and the
+      # Credential Manager.
       - name: Install the Linux webview dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -55,7 +57,9 @@ jobs:
             libappindicator3-dev \
             librsvg2-dev \
             patchelf \
-            libxdo-dev
+            libxdo-dev \
+            libdbus-1-dev \
+            pkg-config
 
       - run: npm ci
 
