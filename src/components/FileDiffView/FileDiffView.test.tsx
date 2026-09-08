@@ -4,14 +4,23 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { CommitDiff, CommitInfo, FileDiff } from "../../bindings";
+import type {
+  CommitDiff,
+  CommitInfo,
+  FileContent,
+  FileDiff,
+} from "../../bindings";
 
 const getCommitDiff =
   vi.fn<(path: string, request: unknown) => Promise<CommitDiff>>();
+const getFileContent =
+  vi.fn<(path: string, request: unknown) => Promise<FileContent>>();
 
 vi.mock("../../lib/ipc", () => ({
   getCommitDiff: (path: string, request: unknown) =>
     getCommitDiff(path, request),
+  getFileContent: (path: string, request: unknown) =>
+    getFileContent(path, request),
 }));
 
 const { FileDiffView } = await import("./FileDiffView");
@@ -56,15 +65,28 @@ function renderView(path = "src/app.ts") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  render(
+  return render(
     <QueryClientProvider client={client}>
       <FileDiffView repositoryPath="/tmp/repo" commit={COMMIT} path={path} />
     </QueryClientProvider>,
   );
 }
 
+function content(overrides: Partial<FileContent> = {}): FileContent {
+  return {
+    path: "src/app.ts",
+    commit_id: COMMIT.id,
+    lines: 3,
+    bytes: "42",
+    omitted: null,
+    text: "const a = 1;\nconst b = 3;\nexport {};\n",
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   getCommitDiff.mockReset();
+  getFileContent.mockReset();
   useSession.setState({
     selectedCommitId: COMMIT.id,
     selectedFilePath: "src/app.ts",
@@ -164,5 +186,76 @@ describe("FileDiffView", () => {
     renderView();
 
     expect(await screen.findByRole("alert")).toBeDefined();
+  });
+
+  it("numbers the lines of a patch on both sides", async () => {
+    getCommitDiff.mockResolvedValue(diff([file()]));
+    renderView();
+    await screen.findByText("const b = 3;");
+
+    // The numbers come from the hunk header, so they are the file's, not the
+    // row's position on screen.
+    expect(screen.getAllByText("1").length).toBeGreaterThan(0);
+  });
+
+  it("shows the whole file when asked, not only the change", async () => {
+    getCommitDiff.mockResolvedValue(diff([file()]));
+    getFileContent.mockResolvedValue(content());
+    renderView();
+    await screen.findByText("const b = 3;");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Archivo completo" }),
+    );
+
+    expect(await screen.findByText("export {};")).toBeDefined();
+    expect(getFileContent.mock.calls[0]?.[1]).toMatchObject({
+      path: "src/app.ts",
+      expand: false,
+    });
+  });
+
+  it("does not offer the whole file for one the commit deleted", async () => {
+    getCommitDiff.mockResolvedValue(diff([file({ change: "Deleted" })]));
+    renderView();
+    await screen.findByText("const b = 3;");
+
+    // There is nothing to read: offering it and then failing is worse than not
+    // offering it.
+    expect(
+      screen.queryByRole("button", { name: "Archivo completo" }),
+    ).toBeNull();
+  });
+
+  it("loads a large file only when asked", async () => {
+    getCommitDiff.mockResolvedValue(diff([file()]));
+    getFileContent.mockResolvedValue(
+      content({ omitted: "TooLarge", text: null, lines: 9000 }),
+    );
+    renderView();
+    await screen.findByText("const b = 3;");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Archivo completo" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Ver archivo completo" }),
+    );
+
+    expect(getFileContent.mock.calls.at(-1)?.[1]).toMatchObject({
+      expand: true,
+    });
+  });
+
+  it("toggles wrapping for long lines", async () => {
+    getCommitDiff.mockResolvedValue(diff([file()]));
+    const { container } = renderView();
+    await screen.findByText("const b = 3;");
+
+    expect(container.querySelector(".diff-viewer--wrap")).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ajustar líneas" }),
+    );
+    expect(container.querySelector(".diff-viewer--wrap")).not.toBeNull();
   });
 });
