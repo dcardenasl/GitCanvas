@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 2 · 32/66 tareas · última actualización 2026-09-08
+**Estado:** Fase 2 · 33/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -333,6 +333,13 @@ aserción de tiempo en un runner compartido es flaky por diseño) · cero `unwra
       sobre una paleta fija accesible. Nunca aleatorio: los colores no pueden parpadear
       entre renders o se rompe la sensación de predictibilidad del graph.
       → `feat(graph): add the deterministic accessible lane palette`
+
+- [x] **F2-0 — Referencia de diseño y producto.** `DESIGN.md` y `PRODUCT.md`, generados
+      con el skill `impeccable` en una sesión previa, quedaron sin commitear. Fijan los
+      tokens visuales, la jerarquía de superficie y las restricciones de producto que la
+      UI de la Fase 2 tiene que respetar; sin versionarlos, la próxima sesión rediseña
+      desde cero. Extienden `docs/mockup.html`, no lo reemplazan.
+      → `docs: add the design and product references`
 
 - [ ] **F2-4 — Tabla de commits virtualizada.** `@tanstack/react-virtual`.
       → `feat(ui): add the virtualized commit table`
