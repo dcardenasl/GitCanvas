@@ -21,6 +21,7 @@
 
 pub mod error;
 pub mod history;
+pub mod refs;
 pub mod repository;
 
 /// The crate version, so the application can report what engine it is running.
