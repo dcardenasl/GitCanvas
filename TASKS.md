@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 3 · 38/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 3 · 40/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -311,7 +311,7 @@ aserción de tiempo en un runner compartido es flaky por diseño) · cero `unwra
 
 ---
 
-## 🔴 En progreso — Fase 2: Layout del graph y render
+## ✅ Fase 2 — Layout del graph y render (9/9)
 
 > El núcleo de valor del proyecto. Es la pieza que más cuidado necesita y la más difícil
 > de verificar solo mirando la pantalla.
@@ -433,15 +433,29 @@ PR #1 y `dev` bifurcándose, como en `docs/mockup.html`, sin cruces innecesarios
 
 ---
 
-## ⏳ Fase 3 — Detalle de commit y diff
+## 🔴 En progreso — Fase 3: Detalle de commit y diff
 
-- [ ] **F3-1 — Diff contra el primer padre.** Con guards: binario detectado por `git2` →
-      placeholder (nunca se intenta diffear), y diffs de más de 2000 líneas marcados para
-      carga bajo demanda. El diff combinado de merges queda **documentado como limitación
-      conocida**, no intentado a medias.
+- [x] **F3-1 — Diff contra el primer padre.** `get_commit_diff` con detección de renames
+      sobre el diff ya generado —así un rename puro se lee como una entrada y no como un
+      alta y una baja sin relación—. Guards: binario detectado por libgit2 → sin texto de
+      patch; más de 2.000 líneas → retenido hasta que se pida por ruta. `patch` es `None`
+      siempre que `omitted` está puesto, así que los dos no pueden contradecirse sobre si
+      hay algo que renderizar. Los conteos de líneas quedan disponibles aunque el texto no.
+      El diff combinado de merges queda documentado como limitación conocida y el payload
+      trae `is_merge` para que la UI pueda decirlo.
       → `feat(core): add the first-parent commit diff with binary and size guards`
 
-- [ ] **F3-2 — Tests de diff.** Texto, binario, archivo sin newline final, y diff enorme.
+- [x] **F3-2 — Tests de diff.** Siete casos sobre repositorios temporales: commit raíz
+      contra el árbol vacío, altas/modificaciones/bajas, un merge diffeado contra su
+      primer padre, contenido binario, un diff de más de 2.000 líneas retenido y luego
+      expandido explícitamente, un archivo sin salto de línea final, y un commit
+      inexistente que da error en vez de un diff vacío.
+      *Ampliación:* el fixture de la Fase 1 solo construía árboles vacíos; se le agregó
+      `commit_files` para poder commitear contenido real, que es lo único con lo que un
+      test de diff puede afirmar algo.
+      *Hallazgo durante la ejecución:* clippy pedantic rechazó `patch` por ser demasiado
+      parecido a `path`. Renombrado a `hunks` — es un punto legítimo de legibilidad en un
+      módulo donde las dos cosas conviven en cada línea.
       → `test(core): cover diffs for text, binary and oversized files`
 
 - [ ] **F3-3 — Comando IPC de diff.**
@@ -591,6 +605,11 @@ intentar resolverlo.
   *Verificación de cierre:* `cargo fmt --check` limpio · `cargo clippy --all-targets
   --all-features -- -D warnings` limpio · `cargo test --workspace` 3 tests en verde ·
   `bindings.ts` sin drift · typecheck, lint y format del frontend limpios.
+
+- **Fase 2 — Layout del graph y render** (9/9). El núcleo de valor del proyecto: layout
+  reanudable, render SVG sobre filas virtualizadas en un único contenedor de scroll, y
+  paginación por cursor. Verificado contra ci4-website-suite hash por hash, y con
+  p95 = 47,9 ms sobre 10.000 commits empaquetados.
 
 - **Fase 1 — Motor de datos Git** (11/11, una de rendimiento). Validación canónica,
   historial paginado, refs, IPC y logging implementados y probados. Comparación real

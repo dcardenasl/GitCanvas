@@ -36,4 +36,42 @@ impl Fixture {
             )
             .unwrap()
     }
+
+    /// Commits a tree built from `files`, so diffs have real content to read.
+    ///
+    /// Paths are flat on purpose: nesting adds nothing a diff test can assert
+    /// that a flat tree cannot.
+    pub fn commit_files(
+        &self,
+        reference: &str,
+        message: &str,
+        parents: &[Oid],
+        time: i64,
+        files: &[(&str, &[u8])],
+    ) -> Oid {
+        let signature =
+            Signature::new("Test Author", "test@example.com", &Time::new(time, 0)).unwrap();
+        let mut builder = self.repo.treebuilder(None).unwrap();
+        for (path, contents) in files {
+            let blob = self.repo.blob(contents).unwrap();
+            builder.insert(path, blob, 0o100_644).unwrap();
+        }
+        let tree_id = builder.write().unwrap();
+        let tree = self.repo.find_tree(tree_id).unwrap();
+        let parents: Vec<_> = parents
+            .iter()
+            .map(|id| self.repo.find_commit(*id).unwrap())
+            .collect();
+        let refs: Vec<_> = parents.iter().collect();
+        self.repo
+            .commit(
+                Some(reference),
+                &signature,
+                &signature,
+                message,
+                &tree,
+                &refs,
+            )
+            .unwrap()
+    }
 }
