@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Release · 61/67 tareas · última actualización 2026-09-08
+**Estado:** Release · 64/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -719,13 +719,17 @@ intentar resolverlo.
 
 > Ejecutado con el skill `/release`. Ver `CLAUDE.md` para el procedimiento completo.
 
-- [ ] **R-1 — Auditar y decidir versión.** Último tag en `main`, `git log main..dev`,
-      estado del CHANGELOG. Confirmar `v0.1.0` con David.
+- [x] **R-1 — Auditar y decidir versión.** Sin tags previos en `main`; 61 commits en
+      `dev` (24 `feat`, 12 `test`, 11 `docs`, 5 `chore`, 4 `fix`, 3 `ci`, 1 `refactor`,
+      1 `perf`). Primera release, y la versión ya estaba fijada en el plan aprobado:
+      **v0.1.0**.
 
-- [ ] **R-2 — CHANGELOG a `0.1.0`.** Renombrar `[Unreleased]` a `## [0.1.0] — YYYY-MM-DD`
-      y abrir un `[Unreleased]` vacío arriba.
+- [x] **R-2 — CHANGELOG a `0.1.0`.** `[Unreleased]` renombrado a
+      `## [0.1.0] — 2026-09-08`, con un `[Unreleased]` vacío arriba. Verificado que el
+      `awk` de `release.yml` extrae las 16 viñetas de la sección.
 
-- [ ] **R-3 — Commit de release.** Último commit de `dev` antes del PR.
+- [x] **R-3 — Commit de release.** Último commit de `dev` antes del PR, con el
+      CHANGELOG y el estado del README.
       → `chore: release v0.1.0`
 
 - [ ] **R-4 — PR `dev → main`.** Abrir, esperar `quality` verde, **esperar aprobación de

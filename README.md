@@ -9,9 +9,13 @@ the most value — seeing the shape of the history — and solves it well.
 
 ## Status
 
-Pre-release. See [`TASKS.md`](TASKS.md) for what is built and what is next, and
+**v0.1.0** — the MVP is complete: local history with a resumable commit graph,
+commit diffs, GitHub cloning, and guarded checkout, pull and push.
+
+See [`CHANGELOG.md`](CHANGELOG.md) for what shipped, [`TASKS.md`](TASKS.md) for
+how it was built, and
 [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md)
-for the governing implementation plan.
+for the governing plan.
 
 ## Stack
 
