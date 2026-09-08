@@ -1,0 +1,33 @@
+/* A 1px line with a wider invisible grab area: the divider reads as a hairline
+   but is comfortable to hit, which a literal 1px target is not. */
+.resizer {
+  position: relative;
+  width: 1px;
+  background: var(--border);
+  cursor: col-resize;
+}
+
+.resizer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  right: -4px;
+}
+
+.resizer:hover,
+.resizer:focus-visible {
+  background: var(--accent);
+  outline: none;
+}
+
+.resizer:focus-visible::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -2px;
+  right: -2px;
+  border: 1px solid var(--accent);
+}
