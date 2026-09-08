@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { CommitDetailPanel } from "../CommitDetailPanel";
 import { GitHubPicker } from "../GitHubPicker";
+import { Actions } from "../Toolbar";
 import { Sidebar } from "../Sidebar";
 import { useHistory } from "../../state/history";
 import { useSession } from "../../state/session";
@@ -27,6 +28,12 @@ export function AppShell() {
           {repository?.name ?? "Ningún repositorio abierto"}
         </span>
         <div className="toolbar__spacer" />
+        {repository !== null && (
+          <Actions
+            repositoryPath={repository.path}
+            currentBranch={repository.name}
+          />
+        )}
         <button
           type="button"
           className="button"

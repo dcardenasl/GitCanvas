@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 5 · 57/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 5 · 59/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -646,11 +646,30 @@ no devuelve nada.
       una mejora: el error se propaga con `?` en vez de tragarse con `unwrap_or_default`.
       → `test(core): cover checkout guards, fast-forward pull and push failures`
 
-- [ ] **F5-5 — Comandos IPC de acciones.**
+- [x] **F5-5 — Comandos IPC de acciones.** `checkout_branch`, `pull_fast_forward` y
+      `push_current_branch`. `force` es un parámetro y no un comando aparte, así que el
+      camino confirmado y el no confirmado no pueden divergir.
+      *Endurecido durante la ejecución:* los tres enums de resultado se serializan con
+      `#[serde(tag = "kind")]`, la misma convención que ya usaba `AppError`. Sin eso
+      specta genera el formato externamente etiquetado —`{ Pushed: {...} } & { Rejected?:
+      never }`— que en TypeScript obliga a mirar qué clave existe antes de leer nada. Con
+      el tag interno queda una unión discriminada que se narrowea con un `switch`.
       → `feat(ipc): expose the checkout, pull and push commands`
 
-- [ ] **F5-6 — Toolbar con confirmaciones.** Toda acción destructiva pide confirmación
-      explícita en la UI, sin excepción.
+- [x] **F5-6 — Toolbar con confirmaciones.** Push y checkout forzado piden confirmación en
+      un `<dialog>` nativo: el foco queda atrapado, Escape cancela y el fondo es inerte
+      sin reimplementar nada de eso. **El foco inicial va a Cancelar**, porque la
+      respuesta segura tiene que ser la que da un Return distraído.
+      Cada resultado del backend se traduce a una frase que dice qué pasó y qué hacer:
+      un push rechazado explica que hay que traer los commits con pull, y un pull
+      divergente dice que el merge se resuelve desde la línea de comandos. El diálogo de
+      checkout forzado lista las rutas concretas que se van a perder.
+      *Hallazgo durante la ejecución:* el botón de confirmar decía "Push", igual que el de
+      la toolbar. Ambiguo para el test y para el usuario; ahora dice "Enviar".
+      *Código muerto eliminado:* se había exportado un hook `useCheckout` que nada usaba.
+      ESLint lo marcó por romper fast refresh, y se borró en vez de silenciar el aviso.
+      *Verificado:* 6 tests, incluido que un push **nunca** ocurre sin confirmación y que
+      un rechazo no se reintenta con force.
       → `feat(ui): add toolbar actions with destructive action confirmations`
 
 - [ ] **F5-7 — E2E del camino crítico.** WebdriverIO + `@wdio/tauri-service` (delta D7:
