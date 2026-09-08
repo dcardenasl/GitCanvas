@@ -1,0 +1,884 @@
+<title>GitCanvas</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --page-bg: #f2efe8;
+    --page-surface: #ffffff;
+    --page-ink: #1d1c19;
+    --page-muted: #6f6b62;
+    --page-border: #e2ddd0;
+    --page-accent: #a5691f;
+    --dot: rgba(29, 28, 25, 0.07);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page-bg: #0b0c0f;
+      --page-surface: #131419;
+      --page-ink: #ecebe7;
+      --page-muted: #8d897f;
+      --page-border: #262731;
+      --page-accent: #eea44b;
+      --dot: rgba(238, 164, 75, 0.08);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --page-bg: #0b0c0f;
+    --page-surface: #131419;
+    --page-ink: #ecebe7;
+    --page-muted: #8d897f;
+    --page-border: #262731;
+    --page-accent: #eea44b;
+    --dot: rgba(238, 164, 75, 0.08);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--page-ink);
+    font-family: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+    background-image: radial-gradient(var(--dot) 1.2px, transparent 1.2px);
+    background-size: 22px 22px;
+  }
+
+  .page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 64px 32px 96px;
+  }
+
+  .intro {
+    max-width: 620px;
+    margin-bottom: 44px;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--page-accent);
+    margin-bottom: 18px;
+  }
+
+  .eyebrow::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--page-accent);
+  }
+
+  h1 {
+    font-size: clamp(2.1rem, 4vw, 2.9rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+
+  .lede {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: var(--page-muted);
+    margin: 0;
+  }
+
+  .lede strong {
+    color: var(--page-ink);
+    font-weight: 600;
+  }
+
+  /* ---------- stage / window mockup ---------- */
+
+  .stage {
+    display: flex;
+    justify-content: center;
+  }
+
+  .window-wrap {
+    width: 100%;
+    max-width: 1080px;
+  }
+
+  .window {
+    border-radius: 14px;
+    overflow: hidden;
+    background: #10131a;
+    border: 1px solid #262b38;
+    box-shadow: 0 40px 80px -32px rgba(0, 0, 0, 0.55), 0 2px 0 rgba(255,255,255,0.02) inset;
+    font-family: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .titlebar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    height: 44px;
+    padding: 0 16px;
+    background: #0c0e13;
+    border-bottom: 1px solid #1c2029;
+  }
+
+  .traffic {
+    display: flex;
+    gap: 8px;
+  }
+  .traffic span {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    display: block;
+  }
+  .traffic span:nth-child(1) { background: #4b4d55; }
+  .traffic span:nth-child(2) { background: #4b4d55; }
+  .traffic span:nth-child(3) { background: #4b4d55; }
+
+  .repo-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #171a22;
+    border: 1px solid #262b38;
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    color: #c7cad4;
+    font-weight: 500;
+  }
+  .repo-selector .sep { color: #565e72; }
+  .repo-selector .active-branch {
+    color: #f0a63e;
+    font-weight: 600;
+  }
+  .repo-selector svg { width: 12px; height: 12px; color: #565e72; }
+
+  .titlebar-spacer { flex: 1; }
+
+  .user-chip {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #f0a63e, #d9832a);
+    color: #1a1206;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: -0.02em;
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: #12141b;
+    border-bottom: 1px solid #1c2029;
+  }
+
+  .tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    border-radius: 7px;
+    border: 1px solid #262b38;
+    background: #171a22;
+    color: #c7cad4;
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+  .tool-btn svg { width: 13px; height: 13px; }
+  .tool-btn.primary {
+    background: #f0a63e;
+    border-color: #f0a63e;
+    color: #1a1206;
+    font-weight: 700;
+  }
+  .tool-btn .badge {
+    background: #262b38;
+    color: #9299ac;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  .toolbar-spacer { flex: 1; }
+
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 7px;
+    border: 1px solid #262b38;
+    background: #0e1015;
+    color: #565e72;
+    font-size: 12px;
+    width: 170px;
+  }
+  .search-box svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+  /* ---------- body grid ---------- */
+
+  .app-body {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr) 310px;
+    min-height: 520px;
+  }
+
+  /* sidebar */
+
+  .sidebar {
+    background: #14161d;
+    border-right: 1px solid #1c2029;
+    padding: 16px 12px;
+  }
+
+  .side-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: #565e72;
+    padding: 0 6px;
+    margin: 14px 0 6px;
+  }
+  .side-label:first-child { margin-top: 0; }
+
+  .side-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 7px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #b9bdc9;
+    margin-bottom: 1px;
+  }
+  .side-item svg { width: 13px; height: 13px; color: #565e72; flex-shrink: 0; }
+  .side-item.active {
+    background: rgba(240, 166, 62, 0.13);
+    color: #f0a63e;
+    font-weight: 600;
+  }
+  .side-item.active svg { color: #f0a63e; }
+  .side-item .count {
+    margin-left: auto;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px;
+    color: #565e72;
+  }
+  .side-item.roadmap {
+    color: #565e72;
+    justify-content: space-between;
+  }
+  .side-item.roadmap .phase-tag {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9.5px;
+    background: #1c2029;
+    padding: 1px 6px;
+    border-radius: 10px;
+    color: #767d90;
+  }
+
+  /* graph / commit table */
+
+  .graph-panel {
+    background: #10131a;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 18px;
+    border-bottom: 1px solid #1c2029;
+  }
+  .panel-header .cols {
+    display: grid;
+    grid-template-columns: 64px minmax(0,1fr) 130px 110px;
+    flex: 1;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #565e72;
+  }
+  .mvp-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    font-weight: 600;
+    color: #f0a63e;
+    background: rgba(240,166,62,0.12);
+    border: 1px solid rgba(240,166,62,0.35);
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .mvp-pill .dot { width: 5px; height: 5px; border-radius: 50%; background: #f0a63e; }
+
+  .commit-rows {
+    position: relative;
+    flex: 1;
+  }
+
+  .graph-svg {
+    position: absolute;
+    top: 0;
+    left: 18px;
+    pointer-events: none;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 64px minmax(0,1fr) 130px 110px;
+    align-items: center;
+    height: 40px;
+    padding: 0 18px;
+    border-bottom: 1px solid #171a22;
+  }
+  .row.selected {
+    background: rgba(240, 166, 62, 0.07);
+    border-left: 2px solid #f0a63e;
+    padding-left: 16px;
+  }
+  .row .graph-cell { height: 40px; }
+
+  .graph-divider {
+    display: grid;
+    grid-template-columns: 64px minmax(0,1fr);
+    align-items: center;
+    height: 40px;
+    padding: 0 18px;
+    border-top: 1px dashed #232838;
+    border-bottom: 1px dashed #232838;
+  }
+  .divider-content {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: #838ba0;
+  }
+  .divider-content svg { width: 13px; height: 13px; color: #4fd1c5; flex-shrink: 0; }
+  .divider-content strong { color: #c7cad4; font-weight: 600; }
+
+  .commit-msg {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-size: 12.5px;
+    color: #d3d6e0;
+  }
+  .commit-msg .text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .row.selected .commit-msg .text { color: #f2f3f7; font-weight: 500; }
+
+  .ref-pill {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .ref-pill.dev { color: #4fd1c5; background: rgba(79,209,197,0.12); border: 1px solid rgba(79,209,197,0.35); }
+  .ref-pill.main { color: #f0a63e; background: rgba(240,166,62,0.12); border: 1px solid rgba(240,166,62,0.35); }
+  .ref-pill.tag { color: #d9c48a; background: rgba(217,196,138,0.1); border: 1px solid rgba(217,196,138,0.3); }
+
+  .author-cell {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11.5px;
+    color: #838ba0;
+  }
+  .author-cell .avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #262b38;
+    color: #9299ac;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 8.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .date-cell {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: #565e72;
+    text-align: right;
+  }
+
+  /* detail panel */
+
+  .detail-panel {
+    background: #12141b;
+    border-left: 1px solid #1c2029;
+    padding: 18px 18px 20px;
+    overflow: hidden;
+  }
+
+  .detail-hash {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: #565e72;
+    margin-bottom: 10px;
+  }
+  .detail-hash span { color: #f0a63e; }
+
+  .detail-msg {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #eceef4;
+    line-height: 1.4;
+    margin: 0 0 16px;
+  }
+
+  .detail-author {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .detail-author .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #f0a63e, #d9832a);
+    color: #1a1206;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .detail-author .who { font-size: 12.5px; color: #d3d6e0; font-weight: 500; }
+  .detail-author .when { font-size: 11px; color: #565e72; margin-top: 1px; }
+
+  .detail-meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    padding: 7px 0;
+    border-top: 1px solid #1c2029;
+    color: #838ba0;
+  }
+  .detail-meta-row .k { color: #565e72; }
+  .detail-meta-row .v { font-family: "JetBrains Mono", monospace; color: #b9bdc9; }
+
+  .files-changed {
+    margin: 14px 0 12px;
+    padding-top: 12px;
+    border-top: 1px solid #1c2029;
+  }
+  .files-changed .fc-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #565e72;
+    margin-bottom: 8px;
+  }
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11.5px;
+    color: #c7cad4;
+    padding: 4px 0;
+  }
+  .file-row .file-dot { width: 6px; height: 6px; border-radius: 2px; background: #f0a63e; flex-shrink: 0; }
+  .file-row .stat { margin-left: auto; color: #565e72; font-size: 10.5px; }
+
+  .diff-block {
+    border: 1px solid #1c2029;
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    margin-top: 10px;
+  }
+  .diff-file-head {
+    background: #171a22;
+    color: #9299ac;
+    padding: 6px 10px;
+    border-bottom: 1px solid #1c2029;
+  }
+  .diff-line {
+    padding: 2px 10px;
+    white-space: pre;
+    color: #838ba0;
+  }
+  .diff-line.add { background: rgba(74, 222, 128, 0.09); color: #7be3a1; }
+  .diff-line.add::before { content: "+ "; color: #4ade80; }
+  .diff-line.del { background: rgba(248, 113, 113, 0.09); color: #f0a3a1; }
+  .diff-line.del::before { content: "- "; color: #f87171; }
+  .diff-line.ctx::before { content: "  "; }
+
+  /* ---------- annotation strip ---------- */
+
+  .annotations {
+    display: grid;
+    grid-template-columns: 220px minmax(0,1fr) 310px;
+    gap: 0;
+    margin-top: 22px;
+    max-width: 1080px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .annotation {
+    padding: 0 18px;
+    position: relative;
+  }
+  .annotation::before {
+    content: "";
+    position: absolute;
+    top: -12px;
+    left: 18px;
+    width: 1px;
+    height: 12px;
+    background: var(--page-border);
+  }
+  .annotation .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--page-accent);
+    color: var(--page-bg);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .annotation h3 {
+    font-size: 13px;
+    margin: 0 0 4px;
+    font-weight: 700;
+  }
+  .annotation p {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--page-muted);
+    margin: 0;
+  }
+
+  footer.note {
+    max-width: 620px;
+    margin: 56px auto 0;
+    padding-top: 20px;
+    border-top: 1px solid var(--page-border);
+    font-size: 12.5px;
+    color: var(--page-muted);
+    line-height: 1.6;
+    text-align: center;
+  }
+  footer.note code {
+    font-family: "JetBrains Mono", monospace;
+    background: var(--page-surface);
+    border: 1px solid var(--page-border);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: var(--page-ink);
+  }
+
+  @media (max-width: 900px) {
+    .app-body { grid-template-columns: 1fr; }
+    .sidebar, .detail-panel { display: none; }
+    .annotations { grid-template-columns: 1fr; gap: 18px; }
+    .annotation::before { display: none; }
+  }
+</style>
+
+<div class="page">
+  <div class="intro">
+    <div class="eyebrow">VentureOS · Asset · Propuesta visual</div>
+    <h1>Así se vería GitCanvas</h1>
+    <p class="lede">
+      Mockup de la interfaz sobre datos reales del repositorio <strong>ci4-website-suite</strong>.
+      El graph de la columna izquierda es el foco: todo lo demás existe para sostenerlo, no para competir con él.
+    </p>
+  </div>
+
+  <div class="stage">
+    <div class="window-wrap">
+      <div class="window">
+
+        <div class="titlebar">
+          <div class="traffic"><span></span><span></span><span></span></div>
+          <div class="repo-selector">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v12a3 3 0 0 0 3 3h9"/><circle cx="6" cy="3" r="2.2"/><circle cx="18" cy="15" r="2.2"/></svg>
+            ci4-website-suite <span class="sep">›</span> <span class="active-branch">dev</span>
+          </div>
+          <div class="titlebar-spacer"></div>
+          <div class="user-chip">DC</div>
+        </div>
+
+        <div class="toolbar">
+          <div class="tool-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13m0 0-4-4m4 4 4-4M5 21h14"/></svg>
+            Fetch
+          </div>
+          <div class="tool-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V8m0 0-4 4m4-4 4 4M5 3h14"/></svg>
+            Pull <span class="badge">0</span>
+          </div>
+          <div class="tool-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13m0 0-4-4m4 4 4-4M5 21h14"/></svg>
+            Push
+          </div>
+          <div class="tool-btn primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v12a3 3 0 0 0 3 3h9"/><circle cx="6" cy="3" r="2.2"/><circle cx="18" cy="15" r="2.2"/><path d="M15 15h6m-3-3v6"/></svg>
+            Nueva branch
+          </div>
+          <div class="toolbar-spacer"></div>
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            Buscar commit o hash
+          </div>
+        </div>
+
+        <div class="app-body">
+
+          <aside class="sidebar">
+            <div class="side-label">Local</div>
+            <div class="side-item active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v12a3 3 0 0 0 3 3h9"/><circle cx="6" cy="3" r="2.2"/><circle cx="18" cy="15" r="2.2"/></svg>
+              dev
+            </div>
+            <div class="side-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v12a3 3 0 0 0 3 3h9"/><circle cx="6" cy="3" r="2.2"/><circle cx="18" cy="15" r="2.2"/></svg>
+              main
+            </div>
+
+            <div class="side-label">Remote · origin</div>
+            <div class="side-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18Z"/></svg>
+              origin/dev
+            </div>
+            <div class="side-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18Z"/></svg>
+              origin/main
+            </div>
+
+            <div class="side-label">GitHub</div>
+            <div class="side-item roadmap">
+              <span style="display:flex;align-items:center;gap:8px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                Repos privados
+              </span>
+              <span class="phase-tag">fase 4</span>
+            </div>
+          </aside>
+
+          <main class="graph-panel">
+            <div class="panel-header">
+              <div class="cols">
+                <span></span><span>Commit</span><span>Autor</span><span>Fecha</span>
+              </div>
+              <div class="mvp-pill"><span class="dot"></span>núcleo del MVP</div>
+            </div>
+
+            <div class="commit-rows">
+              <svg class="graph-svg" width="60" height="520" viewBox="0 0 60 520">
+                <!-- main, línea inactiva mientras dev avanza en paralelo -->
+                <path d="M18,8 L18,340" stroke="#f0a63e" stroke-width="2" stroke-dasharray="1.5 4" opacity="0.45" fill="none"/>
+                <circle cx="18" cy="8" r="3.5" fill="#10131a" stroke="#f0a63e" stroke-width="1.5" opacity="0.55"/>
+
+                <!-- dev, trabajo nuevo tras la PR -->
+                <path d="M42,20 L42,260" stroke="#4fd1c5" stroke-width="2" fill="none"/>
+                <!-- fork: dev se ramifica desde el commit de merge -->
+                <path d="M42,260 C42,300 18,300 18,340" stroke="#4fd1c5" stroke-width="2" fill="none"/>
+                <!-- main, continúa hacia atrás desde el merge -->
+                <path d="M18,340 L18,500" stroke="#f0a63e" stroke-width="2" fill="none"/>
+
+                <circle cx="42" cy="20" r="4.5" fill="#4fd1c5"/>
+                <circle cx="42" cy="60" r="4.5" fill="#4fd1c5"/>
+                <circle cx="42" cy="100" r="4.5" fill="#4fd1c5"/>
+                <circle cx="42" cy="140" r="4.5" fill="#4fd1c5"/>
+                <circle cx="42" cy="180" r="4.5" fill="#4fd1c5"/>
+                <circle cx="42" cy="220" r="4.5" fill="#4fd1c5"/>
+                <circle cx="42" cy="260" r="4.5" fill="#4fd1c5"/>
+
+                <circle cx="18" cy="340" r="6" fill="#10131a" stroke="#f0a63e" stroke-width="2.5"/>
+                <circle cx="18" cy="380" r="4.5" fill="#f0a63e"/>
+                <circle cx="18" cy="420" r="4.5" fill="#f0a63e"/>
+                <circle cx="18" cy="460" r="4.5" fill="#f0a63e"/>
+                <circle cx="18" cy="500" r="4.5" fill="#f0a63e"/>
+              </svg>
+
+              <div class="graph-divider">
+                <div class="graph-cell"></div>
+                <div class="divider-content">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v12a3 3 0 0 0 3 3h9"/><circle cx="6" cy="3" r="2.2"/><circle cx="18" cy="15" r="2.2"/></svg>
+                  <span><strong>dev</strong> sigue avanzando, 7 commits nuevos desde que la PR #1 se mergeó a main</span>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="graph-cell"></div>
+                <div class="commit-msg"><span class="ref-pill dev">dev</span><span class="text">docs(changelog): record the referrer-policy and video click-to-play changes</span></div>
+                <div class="author-cell"><span class="avatar">DC</span>David</div>
+                <div class="date-cell">08 sep · 01:45</div>
+              </div>
+              <div class="row">
+                <div class="graph-cell"></div>
+                <div class="commit-msg"><span class="text">build(assets): regenerate the compiled site bundle</span></div>
+                <div class="author-cell"><span class="avatar">DC</span>David</div>
+                <div class="date-cell">08 sep · 01:45</div>
+              </div>
+              <div class="row">
+                <div class="graph-cell"></div>
+                <div class="commit-msg"><span class="text">feat(site): add click-to-play lazy loading for video embeds</span></div>
+                <div class="author-cell"><span class="avatar">DC</span>David</div>
+                <div class="date-cell">08 sep · 01:45</div>
+              </div>
+              <div class="row">
+                <div class="graph-cell"></div>
+                <div class="commit-msg"><span class="text">feat(site): add configurable Referrer-Policy security header</span></div>
+                <div class="author-cell"><span class="avatar">DC</span>David</div>
+                <div class="date-cell">08 sep · 01:44</div>
+              </div>
+              <div class="row">
+                <div class="graph-cell"></div>
+                <div class="commit-msg"><span class="text">docs(changelog): record the import modal and narrow-viewport fixes</span></div>
+                <div class="author-cell"><span class="avatar">DC</span>David</div>
+                <div class="date-cell">07 sep · 23:49</div>
+              </div>
+              <div class="row">
+                <div class="graph-cell"></div>
+                <div class="commit-msg"><span class="text">fix(panel): stack toolbars and permission rows on narrow viewports</span></div>
+                <div class="author-cell"><span class="avatar">DC</span>David</div>
+                <div class="date-cell">07 sep · 23:48</div>
+              </div>
+              <div class="row">
+                <div class="graph-cell"></div>
+                <div class="commit-msg"><span class="text">feat(panel): add reusable import modal, use it for redirects CSV import</span></div>
+                <div class="author-cell"><span class="avatar">DC</span>David</div>
+                <div class="date-cell">07 sep · 23:48</div>
+              </div>
+              <div class="row selected">
+                <div class="graph-cell"></div>
+                <div class="commit-msg"><span class="ref-pill main">main</span><span class="text">Merge pull request #1 from dcardenasl/dev</span></div>
+                <div class="author-cell"><span class="avatar">DC</span>David</div>
+                <div class="date-cell">07 sep · 21:12</div>
+              </div>
+              <div class="row">
+                <div class="graph-cell"></div>
+                <div class="commit-msg"><span class="ref-pill tag">v1.0.0</span><span class="text">chore: release v1.0.0</span></div>
+                <div class="author-cell"><span class="avatar">DC</span>David</div>
+                <div class="date-cell">07 sep · 20:58</div>
+              </div>
+              <div class="row">
+                <div class="graph-cell"></div>
+                <div class="commit-msg"><span class="text">docs(changelog): record the browser audit fixes under unreleased</span></div>
+                <div class="author-cell"><span class="avatar">DC</span>David</div>
+                <div class="date-cell">07 sep · 20:01</div>
+              </div>
+              <div class="row">
+                <div class="graph-cell"></div>
+                <div class="commit-msg"><span class="text">docs(audit): record the functional browser audit and its remediation</span></div>
+                <div class="author-cell"><span class="avatar">DC</span>David</div>
+                <div class="date-cell">07 sep · 20:00</div>
+              </div>
+              <div class="row">
+                <div class="graph-cell"></div>
+                <div class="commit-msg"><span class="text">test: cover the regressions found by the browser audit</span></div>
+                <div class="author-cell"><span class="avatar">DC</span>David</div>
+                <div class="date-cell">07 sep · 20:00</div>
+              </div>
+            </div>
+          </main>
+
+          <aside class="detail-panel">
+            <div class="detail-hash">commit <span>a424f1c</span> · parent 11c444a</div>
+            <p class="detail-msg">Merge pull request #1 from dcardenasl/dev</p>
+
+            <div class="detail-author">
+              <span class="avatar">DC</span>
+              <div>
+                <div class="who">David Cárdenas</div>
+                <div class="when">8 sep 2026 · 01:45</div>
+              </div>
+            </div>
+
+            <div class="detail-meta-row"><span class="k">Branch</span><span class="v">main</span></div>
+            <div class="detail-meta-row"><span class="k">Tag más cercano</span><span class="v">v1.0.0</span></div>
+
+            <div class="files-changed">
+              <div class="fc-label">1 archivo modificado</div>
+              <div class="file-row"><span class="file-dot"></span>CHANGELOG.md<span class="stat">+3 -0</span></div>
+            </div>
+
+            <div class="diff-block">
+              <div class="diff-file-head">CHANGELOG.md</div>
+              <div class="diff-line ctx">## [Unreleased]</div>
+              <div class="diff-line add">- Add referrer-policy security header</div>
+              <div class="diff-line add">- Add click-to-play lazy loading for embeds</div>
+              <div class="diff-line ctx"></div>
+              <div class="diff-line ctx">## [1.0.0] - 2026-09-07</div>
+            </div>
+          </aside>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="annotations">
+    <div class="annotation">
+      <span class="num">1</span>
+      <h3>Fase 1 · Motor de datos</h3>
+      <p>Branches locales y remotas, resueltas por <code style="all:unset">git2</code> desde el path canónico del repo.</p>
+    </div>
+    <div class="annotation">
+      <span class="num">2</span>
+      <h3>Fase 2 · El graph</h3>
+      <p>Carriles y merge calculados en TypeScript, renderizados en SVG. Es la razón de ser del proyecto.</p>
+    </div>
+    <div class="annotation">
+      <span class="num">3</span>
+      <h3>Fase 3 · Detalle y diff</h3>
+      <p>Metadata del commit y diff contra el primer padre, con guard para binarios y diffs enormes.</p>
+    </div>
+  </div>
+
+  <footer class="note">
+    Mockup de referencia, no captura de la app real todavía. Datos tomados del historial real de ci4-website-suite. Detalle técnico completo en <code>PLAN-DESARROLLO.md</code>.
+  </footer>
+</div>

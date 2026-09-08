@@ -1,0 +1,30 @@
+# Rust
+/target/
+**/target/
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Tauri build output
+src-tauri/target/
+src-tauri/gen/
+
+# Test and coverage output
+coverage/
+.vitest/
+/e2e-results/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# Secrets and local overrides
+.env
+.env.*
+!.env.example
