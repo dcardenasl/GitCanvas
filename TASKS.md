@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase G · 2/63 tareas · última actualización 2026-09-08
+**Estado:** Fase G · 3/63 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -37,8 +37,19 @@
 - [ ] **G-4 — Remoto privado en GitHub.** `gh repo create dcardenasl/gitcanvas --private`,
       push de `main`.
 
-- [ ] **G-5 — Proteger `main`.** Requerir PR y que el check `quality` pase. Sin esto la
-      puerta de calidad es voluntaria y se salta el día que hay prisa.
+- [x] **G-5 — Guard contra push a `main`.** Hook `pre-push` en la raíz +
+      `scripts/install-git-hooks.sh` (sync, no solo copia: un hook borrado del repo se
+      borra de `.git/hooks`). Rechaza cualquier push a `refs/heads/main`, con escape
+      hatch explícito `ALLOW_MAIN_PUSH=1`. No estorba al release: `gh pr merge` mergea
+      del lado del servidor y el tag va a `refs/tags/*`.
+      *Hallazgo durante la ejecución:* la tarea original era proteger `main` en GitHub,
+      pero **tanto la protección clásica de ramas como los rulesets devuelven 403 en un
+      repo privado del plan gratuito** ("Upgrade to GitHub Pro or make this repository
+      public"). Queda como decisión de David: GitHub Pro, o repo público. Mientras tanto
+      la regla se hace cumplir localmente, que es lo único que sí está garantizado hoy.
+      El instalador de hooks se adelantó desde F0-7 a esta tarea porque el guard lo
+      necesitaba; F0-7 queda reducido a agregar el hook de estilo `pre-commit`.
+      → `chore(hooks): add the pre-push guard against pushing to main`
 
 - [ ] **G-6 — Rama `dev` y cierre del bootstrap.** `git checkout -b dev`, push con
       upstream, y marcar G-3 a G-5 como hechas. Todo el trabajo posterior va a `dev`.
@@ -87,11 +98,11 @@
 - [ ] **F0-6 — Test del roundtrip IPC.**
       → `test(ipc): cover the ping command roundtrip`
 
-- [ ] **F0-7 — Hook de pre-commit.** Hook en la raíz + `scripts/install-git-hooks.sh`
-      disparado desde `prepare` de npm, siguiendo el patrón de `ci4-website-suite`. Corre
-      **solo lo instantáneo**: `cargo fmt --check`, `eslint`, `prettier --check`. Clippy
-      y los tests viven en CI, porque `dev` tiene que seguir siendo rápido.
-      → `chore(hooks): add the pre-commit style hook and its installer`
+- [ ] **F0-7 — Hook de pre-commit.** Agregar el hook `pre-commit` al instalador que ya
+      existe desde G-5, y engancharlo al `prepare` de npm. Corre **solo lo instantáneo**:
+      `cargo fmt --check`, `eslint`, `prettier --check`. Clippy y los tests viven en CI,
+      porque `dev` tiene que seguir siendo rápido.
+      → `chore(hooks): add the pre-commit style hook`
 
 - [ ] **F0-8 — Workflows de CI.** `dev-check.yml` (push a `dev`: typecheck, lint, vitest,
       `cargo test -p gitcanvas-core`, solo ubuntu) y `quality.yml` (PR a `main`: matriz
