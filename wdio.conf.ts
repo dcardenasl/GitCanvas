@@ -64,7 +64,15 @@ function createFixtureRepository(): string {
   return repository;
 }
 
-const fixture = createFixtureRepository();
+/**
+ * The repository the application opens.
+ *
+ * `GITCANVAS_E2E_REPO` points the suite at a real repository, which is how the
+ * graph gets exercised against a history nobody wrote for it. Without it, a
+ * purpose-built fixture is created and removed afterwards.
+ */
+const providedRepository = process.env.GITCANVAS_E2E_REPO;
+const fixture = providedRepository ?? createFixtureRepository();
 
 export const config: WebdriverIO.Config = {
   runner: "local",
@@ -106,6 +114,9 @@ export const config: WebdriverIO.Config = {
   mochaOpts: { ui: "bdd", timeout: 120_000 },
 
   onComplete() {
-    fs.rmSync(fixture, { recursive: true, force: true });
+    // Only remove what this file created; never a repository someone passed in.
+    if (providedRepository === undefined) {
+      fs.rmSync(fixture, { recursive: true, force: true });
+    }
   },
 };

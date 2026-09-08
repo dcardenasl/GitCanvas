@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Release · 64/67 tareas · última actualización 2026-09-08
+**Estado:** Release · 65/68 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -712,6 +712,23 @@ no devuelve nada.
 **Hecho cuando:** checkout con working tree limpio funciona y con cambios pendientes se
 bloquea con mensaje claro · pull ff funciona y un caso que requiere merge se informa sin
 intentar resolverlo.
+
+---
+
+### Mantenimiento posterior a la fase
+
+- [x] **F2-9 — El graph ya no se dibuja sobre el texto.** Al capturar la app contra este
+      mismo repositorio se vio que la línea de carril atravesaba el mensaje de cada
+      commit. Causa: las filas son `position: absolute`, y una caja absoluta resuelve
+      `left` contra la **caja de padding**, así que el `padding-left` del contenedor se
+      ignoraba por completo. Reemplazado por una custom property `--graph-width` aplicada
+      al `left` de cada fila.
+      *Por qué ningún test lo detectó:* jsdom no calcula layout, así que ningún test de
+      componente puede ver un solapamiento visual. El test de regresión afirma el
+      mecanismo —que el offset viaja como `--graph-width` y no como padding— que es lo
+      máximo que se puede comprobar sin un motor de layout. El E2E tampoco lo veía porque
+      consulta el DOM, no píxeles.
+      → `fix(ui): offset commit rows past the graph column`
 
 ---
 

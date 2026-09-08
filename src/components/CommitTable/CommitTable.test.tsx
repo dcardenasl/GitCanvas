@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CommitInfo } from "../../bindings";
 
 import { CommitTable } from "./CommitTable";
-import { ROW_HEIGHT } from "./geometry";
+import { ROW_HEIGHT, graphWidth } from "./geometry";
 
 afterEach(cleanup);
 
@@ -121,6 +121,28 @@ describe("CommitTable", () => {
     return vi.waitFor(() => {
       expect(onReachEnd).toHaveBeenCalled();
     });
+  });
+
+  it("offsets the rows past the graph column instead of padding the list", () => {
+    // Rows are absolutely positioned, and an absolutely positioned box resolves
+    // `left` against the padding box — so padding on the list is ignored and the
+    // graph ends up drawn through the commit messages. This shipped once.
+    withViewport(ROW_HEIGHT * 10);
+
+    const { container } = render(
+      <CommitTable
+        commits={makeCommits(5)}
+        selectedId={null}
+        onSelect={() => undefined}
+        maxLanes={4}
+      />,
+    );
+
+    const list = container.querySelector<HTMLElement>(".commit-table__rows");
+    const expected = `${String(graphWidth(4))}px`;
+
+    expect(list?.style.getPropertyValue("--graph-width")).toBe(expected);
+    expect(list?.style.paddingLeft).toBe("");
   });
 
   it("hands the graph layer the row window it should draw", () => {

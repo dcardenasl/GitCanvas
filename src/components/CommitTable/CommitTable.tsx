@@ -108,7 +108,16 @@ export function CommitTable({
           className="commit-table__rows"
           role="listbox"
           aria-label="Historial de commits"
-          style={{ paddingLeft: `${String(graphWidth(maxLanes))}px` }}
+          // The width the graph column needs. Applied to each row's `left`
+          // rather than as padding here: rows are absolutely positioned, and an
+          // absolutely positioned box resolves `left` against the padding box,
+          // so padding on this container would be ignored and the graph would
+          // be drawn straight through the commit messages.
+          style={
+            {
+              "--graph-width": `${String(graphWidth(maxLanes))}px`,
+            } as React.CSSProperties
+          }
         >
           {items.map((item) => {
             const commit = commits[item.index];
