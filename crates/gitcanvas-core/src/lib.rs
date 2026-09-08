@@ -19,6 +19,7 @@
 //! are responsible for moving that work off the UI thread; in the Tauri layer
 //! that means `tauri::async_runtime::spawn_blocking`.
 
+pub mod diff;
 pub mod error;
 pub mod history;
 pub mod refs;
