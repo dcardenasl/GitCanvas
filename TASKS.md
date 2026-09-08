@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase G · 3/63 tareas · última actualización 2026-09-08
+**Estado:** Fase 0 · 6/63 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -19,7 +19,7 @@
 
 ---
 
-## 🔴 En progreso — Fase G: Bootstrap del repositorio
+## ✅ Fase G — Bootstrap del repositorio (6/6)
 
 - [x] **G-1 — Inicializar el repositorio.** `git init -b main`. `main` es el punto de
       partida del proyecto y el único commit propio que va a recibir es el inicial.
@@ -30,12 +30,12 @@
       Sin `LICENSE`: el asset es privado, y publicar sin licencia es exactamente lo que
       significa "todos los derechos reservados".
 
-- [ ] **G-3 — Commit inicial en `main`.** Incluye `docs/` intacto y el plan rector en
-      `docs/plans/`.
-      → `chore: initialize the repository`
+- [x] **G-3 — Commit inicial en `main`.** Incluye `docs/` intacto y el plan rector en
+      `docs/plans/`. 11 archivos; `.DS_Store` excluido por `.gitignore`.
+      → `chore: initialize the repository` (`6c8b765`)
 
-- [ ] **G-4 — Remoto privado en GitHub.** `gh repo create dcardenasl/gitcanvas --private`,
-      push de `main`.
+- [x] **G-4 — Remoto privado en GitHub.** https://github.com/dcardenasl/gitcanvas —
+      privado, con `main` publicada.
 
 - [x] **G-5 — Guard contra push a `main`.** Hook `pre-push` en la raíz +
       `scripts/install-git-hooks.sh` (sync, no solo copia: un hook borrado del repo se
@@ -51,13 +51,13 @@
       necesitaba; F0-7 queda reducido a agregar el hook de estilo `pre-commit`.
       → `chore(hooks): add the pre-push guard against pushing to main`
 
-- [ ] **G-6 — Rama `dev` y cierre del bootstrap.** `git checkout -b dev`, push con
-      upstream, y marcar G-3 a G-5 como hechas. Todo el trabajo posterior va a `dev`.
+- [x] **G-6 — Rama `dev` y cierre del bootstrap.** `dev` creada desde `main` y publicada
+      con upstream. Todo el trabajo posterior va a `dev`.
       → `docs(tasks): close the repository bootstrap tasks`
 
 ---
 
-## ⏳ Fase 0 — Cimientos
+## 🔴 En progreso — Fase 0: Cimientos
 
 > Que build, lint, tipos, tests, hooks, CI y generación de bindings funcionen **antes**
 > de la primera línea de lógica de negocio.
@@ -372,4 +372,6 @@ intentar resolverlo.
 
 ## ✅ Completado
 
-*(vacío — se llena al cerrar cada fase)*
+- **Fase G — Bootstrap del repositorio** (6/6). Repositorio creado con `main` como punto
+  de partida y `dev` como rama de trabajo, remoto privado en GitHub, y el guard local que
+  impide pushear a `main`.
