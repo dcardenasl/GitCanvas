@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 4 · 44/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 4 · 45/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -502,11 +502,18 @@ diff gigante no bloquea ni ralentiza perceptiblemente la UI.
 
 ## 🔴 En progreso — Fase 4: Integración con GitHub
 
-- [ ] **F4-1 — Token en el keychain del SO.** Crate `keyring` v3 con las features por
-      plataforma explícitas (`apple-native`, `windows-native`, `sync-secret-service`; el
-      crate no tiene features por defecto). Delta D2: Stronghold está deprecado y se
-      elimina en Tauri v3. El token **vive y se usa solo en Rust** — nunca cruza el IPC,
-      ni siquiera enmascarado.
+- [x] **F4-1 — Token en el keychain del SO.** Crate `keyring` v3 con las tres features
+      de plataforma explícitas (`apple-native`, `windows-native`,
+      `sync-secret-service`): el crate no trae features por defecto, así que omitirlas
+      compila y falla en runtime.
+      **El token no sale del crate.** `read_token` es `pub(crate)`: se escribe acá, se lee
+      acá, y se entrega directo al callback de credenciales de libgit2 o a un header. La
+      UI puede preguntar `has_token()`, nunca cuál es. No cruza el IPC ni enmascarado.
+      `delete_token` es idempotente: cerrar sesión sin sesión abierta no es un error,
+      porque el estado deseado ya se cumple.
+      *Sobre el delta D2:* esto reemplaza a Stronghold, que el diseño original nombraba.
+      Stronghold está deprecado y se elimina en Tauri v3, y además exigiría una
+      contraseña del usuario o un lugar donde guardar su propia clave de cifrado.
       → `feat(core): add the github token store backed by the os keychain`
 
 - [ ] **F4-2 — Cliente REST de GitHub.** Se usa **solo** para dos cosas: validar el token

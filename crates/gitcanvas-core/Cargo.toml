@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 git2.workspace = true
+keyring.workspace = true
 serde.workspace = true
 specta.workspace = true
 thiserror.workspace = true

@@ -64,6 +64,14 @@ git2 = { version = "0.21", default-features = false, features = [
     "https",
 ] }
 thiserror = "2"
+
+# The OS keychain. No default features on purpose: the crate ships none, so
+# every platform backend has to be named explicitly.
+keyring = { version = "3", features = [
+    "apple-native",
+    "windows-native",
+    "sync-secret-service",
+] }
 tauri-plugin-dialog = "2"
 
 specta = { version = "=2.0.0-rc.25", features = ["derive"] }
