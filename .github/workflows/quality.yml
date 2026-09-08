@@ -85,6 +85,38 @@ jobs:
             exit 1
           fi
 
+      # --- Dependency posture ---
+      #
+      # Scoped to what actually ships. The end-to-end toolchain pulls in a large
+      # transitive tree with known advisories, and none of it reaches the
+      # binary: Tauri bundles `dist/`, which contains no node_modules. Auditing
+      # everything would mean either ignoring the report or dropping the E2E
+      # suite; auditing production dependencies keeps the signal meaningful.
+      - name: Audit the dependencies that ship
+        run: npm audit --omit=dev --audit-level=high
+
       # --- The bundle ---
       - name: Build the application bundle
         run: npm run tauri build -- --ci
+
+      # --- End to end ---
+      #
+      # Linux only. macOS and Windows runners would each need their own display
+      # and signing setup for a check that verifies wiring, not platform
+      # behaviour, and the wiring is identical on all three.
+      #
+      # Built with `--features e2e`, which is the only configuration that
+      # carries the embedded WebDriver server. The released binary has none.
+      - name: Run the end-to-end suite
+        if: matrix.os == 'ubuntu-latest'
+        run: xvfb-run --auto-servernum npm run test:e2e
+
+      # The feature must never reach a release build, so this asserts it rather
+      # than trusting that nobody adds it to the default set.
+      - name: Check that the release build carries no WebDriver
+        shell: bash
+        run: |
+          if cargo tree -p gitcanvas -e normal | grep -q wdio-webdriver; then
+            echo "::error::the default build pulls in the embedded WebDriver server"
+            exit 1
+          fi

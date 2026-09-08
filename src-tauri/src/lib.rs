@@ -80,7 +80,19 @@ pub fn run() {
     // Starting the runtime is the one place where there is no caller left to
     // return an error to, so the failure is reported and the process exits
     // rather than unwinding through a panic.
-    if let Err(error) = tauri::Builder::default()
+    let mut app_builder = tauri::Builder::default()
+        // The native folder picker. Without this the "open repository" button
+        // fails at runtime with a missing-plugin error.
+        .plugin(tauri_plugin_dialog::init());
+
+    // Only present in an `e2e` build. The released binary carries no WebDriver
+    // server, so nothing can drive it remotely.
+    #[cfg(feature = "e2e")]
+    {
+        app_builder = app_builder.plugin(tauri_plugin_wdio_webdriver::init());
+    }
+
+    if let Err(error) = app_builder
         .manage(std::sync::Arc::new(
             gitcanvas_core::history::HistoryReader::default(),
         ))
@@ -138,6 +150,25 @@ mod tests {
                 "../src/bindings.ts",
             )
             .unwrap();
+    }
+
+    /// The dialog plugin is actually registered, not merely depended on.
+    ///
+    /// It was silently missing once: the crate was in `Cargo.toml`, so it
+    /// linked and showed up in `cargo tree`, but the `.plugin()` call was not
+    /// there. Everything compiled and the "open repository" button failed at
+    /// runtime with a missing-plugin error.
+    ///
+    /// Tauri offers no way to enumerate a builder's plugins, so this reads the
+    /// registration out of the source. Crude, but it fails for exactly the
+    /// reason that bug existed, which a type check never would.
+    #[test]
+    fn the_dialog_plugin_is_registered() {
+        let source = include_str!("lib.rs");
+        assert!(
+            source.contains(".plugin(tauri_plugin_dialog::init())"),
+            "the dialog plugin must be registered on the builder"
+        );
     }
 
     /// Dispatches a real IPC request through a headless application.

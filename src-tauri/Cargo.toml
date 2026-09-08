@@ -25,6 +25,7 @@ tracing-subscriber = { version = "0.3", features = ["json"] }
 tracing-appender = "0.2"
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog.workspace = true
+tauri-plugin-wdio-webdriver = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 
@@ -34,6 +35,11 @@ gitcanvas-core = { path = "../crates/gitcanvas-core" }
 specta.workspace = true
 specta-typescript.workspace = true
 tauri-specta.workspace = true
+
+[features]
+# Builds with an embedded WebDriver server, for `npm run test:e2e`. Never
+# enabled for a release build.
+e2e = ["dep:tauri-plugin-wdio-webdriver"]
 
 [dev-dependencies]
 git2.workspace = true

@@ -78,6 +78,11 @@ keyring = { version = "3", features = [
 ] }
 tauri-plugin-dialog = "2"
 
+# Embedded WebDriver, for the end-to-end suite only. Behind the `e2e` feature so
+# the shipped binary never carries a WebDriver server: a released application
+# that can be driven remotely is a liability, not a feature.
+tauri-plugin-wdio-webdriver = "1.4"
+
 specta = { version = "=2.0.0-rc.25", features = ["derive"] }
 specta-typescript = "=0.0.12"
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }

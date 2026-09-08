@@ -94,6 +94,18 @@ export default tseslint.config(
     },
   },
 
+  /*
+   * The end-to-end suite has its own tsconfig: it runs against a built binary
+   * through WebdriverIO's globals, not against the application's type graph.
+   * Type-aware rules would need the app's project service and would fail to
+   * resolve, so those are turned off here rather than the files being skipped.
+   */
+  {
+    files: ["e2e/**/*.ts", "wdio.conf.ts"],
+    languageOptions: { globals: globals.node },
+    ...tseslint.configs.disableTypeChecked,
+  },
+
   // Config files run in node and are not part of the app's type graph.
   {
     files: ["*.config.{js,ts}"],
