@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Release · 73/76 tareas · última actualización 2026-09-08
+**Estado:** Release · 77/80 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -833,6 +833,44 @@ intentar resolverlo.
       *Y el título de la ventana nombra el repositorio*, que la auditoría reportó como
       siempre "GitCanvas".
       → `fix(ui): lead the file list with the file name and follow with its directory`
+
+---
+
+### Ola UX-3 — Lectura de archivos y ergonomía
+
+- [x] **UX-9 — Ver el archivo completo, no solo el diff.** Comando nuevo en el core
+      (`get_file_content`) con los mismos guards que el diff: binario nunca vuelve como
+      texto, y más de 5.000 líneas se retienen hasta pedirlas. Un archivo con un byte
+      inválido **se muestra igual** con un carácter de reemplazo, en vez de esconderse.
+      El conmutador Cambios/Archivo completo no se ofrece si el commit borró el archivo:
+      ofrecerlo y después fallar es peor que no ofrecerlo.
+      *Derivado, no reiniciado:* el modo elegido se guarda junto al archivo al que
+      pertenece, así abrir otro vuelve a su diff por derivación. Un efecto que lo
+      reinicia renderiza el archivo nuevo una vez en el modo del anterior.
+      → `feat(core): read a file's full contents at a commit` · `feat(ipc): expose the file content command` · `feat(ui): show a file in full, not only its changes`
+
+- [x] **UX-10 — Números de línea y ajuste de texto.** Los números salen de las cabeceras
+      `@@`, no de contar filas: un patch salta todo lo que hay entre hunks, así que un
+      contador corrido se desfasaría en el segundo. Son celdas reales y no contenido
+      generado, así que seleccionar el código **no arrastra los números** — que es lo que
+      vuelve inservible un fragmento copiado. Una tabla de líneas compartida sirve tanto
+      al patch como al archivo completo.
+      → `feat(ui): number diff lines and allow wrapping long ones`
+
+- [x] **UX-11 — El sidebar cede su ancho al leer un archivo.** Idea de David: las ramas
+      son navegación entre commits, y un archivo no es uno. Un control en la toolbar lo
+      vuelve a fijar para quien lo quiera igual. Esto reemplaza además la media query que
+      lo escondía bajo 1000px sin avisar.
+      → `feat(ui): collapse the sidebar while a file is open`
+
+- [x] **UX-12 — Menú contextual y nombres accesibles.** Click derecho sobre un commit
+      copia hash corto, hash completo, mensaje o autor, con el resultado **anunciado**
+      —importa a quien no ve el portapapeles, y un aviso visual en la esquina se lo
+      pierde todo el mundo—. El menú se cierra al hacer scroll: uno anclado a un punto
+      mientras la lista se mueve apunta al commit equivocado cuando se usa.
+      Y cada fila lleva `aria-label` explícito: el DOM concatenaba
+      `…2e53be608-sept, 04:56 p.m.`, leyendo el hash pegado a la fecha.
+      → `feat(ui): copy a commit's hash, message or author from a context menu`
 
 ---
 

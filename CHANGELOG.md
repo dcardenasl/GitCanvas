@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Read a file in full, not only what changed.** The centre panel switches
+  between the patch and the file as it stands at that commit, with the same
+  binary and size guards. A commit that deleted the file does not offer it.
+- **Numbered diff lines.** Both revisions are numbered from the hunk headers,
+  so the numbers are the file's rather than the row's position on screen, and
+  long lines can be wrapped instead of scrolled.
+- **Copy from the commit list.** Right-click a commit to copy its short hash,
+  full hash, message or author.
+- **The sidebar steps aside while a file is open**, giving its width to the
+  code; a toolbar control brings it back.
 - **Commit search.** Find a commit by message, author or abbreviated hash from
   the toolbar or with Cmd-F; Enter walks the matches and the count says how
   many there are. It searches the history already loaded, and says so rather
@@ -77,6 +87,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and running a half-cut directory into the name.
 - **The window says which repository it is showing**, so two of them are
   tellable apart.
+- **Commit rows read properly to a screen reader.** Each row is named
+  explicitly instead of leaving the browser to concatenate its cells, which ran
+  the hash straight into the date.
 
 ### Known limitations
 
