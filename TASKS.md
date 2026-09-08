@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Release · 68/71 tareas · última actualización 2026-09-08
+**Estado:** Release · 73/76 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -775,6 +775,64 @@ intentar resolverlo.
       detectable sin layout real — la misma limitación de jsdom que dejó pasar el
       solapamiento del graph en F2-9.
       → `fix(ui): truncate the directory before the file name`
+
+---
+
+### Ola UX-2 — Auditoría dirigida de la interfaz
+
+> Hecha manejando la app con el harness de E2E y midiendo el DOM, no imaginando
+> problemas. Once chequeos automatizados sobre la app real.
+
+- [x] **UX-4 — El historial ya no se reacomoda al seleccionar.** La auditoría midió el
+      grid: `220px 1292px` sin selección y `220px 982px 310px` con ella. Cada click
+      encogía el historial 310px, reflowing todas las filas y redibujando el graph bajo
+      el cursor que acababa de hacer click. La columna del inspector ahora se reserva
+      siempre, con un estado vacío que además dice qué hacer.
+      → `fix(ui): reserve the inspector column so selecting a commit never reflows the history`
+
+- [x] **UX-5 — Paneles redimensionables.** Divisores arrastrables **y operables con
+      flechas**, anunciados como `separator` con `aria-valuenow`: un divisor que solo
+      responde al mouse no es un control, es decoración. Doble click restaura el medio.
+      Usa pointer capture en vez de listeners de ventana, así el arrastre no se traba si
+      el puntero sale de la ventana. Los anchos persisten en `localStorage`, con toda
+      lectura acotada por si viene de una build vieja o editada a mano.
+      *Defecto que encontró mi propio test:* con los máximos fijos (420 + 620 = 1040px) y
+      la ventana en su mínimo (940px), el historial quedaba en **negativo**. Los límites
+      ahora se derivan del ancho real de la ventana menos el otro panel menos
+      `HISTORY_MIN`, y se recalculan al redimensionar.
+      *Corregido dos veces por el linter:* las dos primeras versiones corregían el estado
+      dentro de un efecto, provocando renders en cascada. Derivar el ancho efectivo es
+      además mejor comportamiento: al agrandar la ventana, el panel vuelve al ancho que
+      el usuario eligió, en vez de quedar recortado para siempre.
+      → `feat(ui): let the sidebar and inspector be resized`
+
+- [x] **UX-6 — Pastillas de rama y tag en las filas.** Estaban en el mockup aprobado y no
+      se habían implementado: la auditoría contó **0 badges**. Sin ellas hay que
+      contrastar el graph contra el sidebar para saber dónde apunta cada rama. La rama
+      activa lleva el color de acento. No cuesta ninguna petición extra: se arman desde
+      las consultas de ramas y tags que el sidebar ya hacía.
+      *El tag resuelve a su commit*, no al objeto tag — la misma trampa de UX-2.
+      → `feat(ui): show branch and tag badges on the commits they point at`
+
+- [x] **UX-7 — Búsqueda de commits.** El otro elemento del mockup que faltaba: la
+      auditoría contó **0 campos de texto**. Busca por mensaje, autor o hash abreviado
+      —por prefijo, como acepta `git show`, no por subcadena—. Cmd-F enfoca, Enter
+      recorre las coincidencias, Shift-Enter va hacia atrás, Escape limpia. El contador
+      dice "1 de 2"; y dice explícitamente que busca en **el historial cargado**, en vez
+      de dar a entender que buscó todo el repositorio.
+      *Derivado, no encadenado:* la posición recorrida se guarda junto a la consulta a la
+      que pertenece, así una consulta nueva empieza de cero por derivación. Reiniciarla
+      en un efecto renderiza una vez con la posición anterior antes de corregirse.
+      → `feat(ui): add commit search by message, author or hash`
+
+- [x] **UX-8 — Rutas legibles a cualquier ancho.** Al ensanchar el inspector se vio
+      `…rc/components/CommitTablCommitTable.test.tsx`: truncar por la izquierda corta el
+      directorio a mitad de token y lo pega al nombre. Invertido al orden que usan los
+      editores —nombre primero, directorio atenuado después—, que además elimina el truco
+      de `direction: rtl` por completo.
+      *Y el título de la ventana nombra el repositorio*, que la auditoría reportó como
+      siempre "GitCanvas".
+      → `fix(ui): lead the file list with the file name and follow with its directory`
 
 ---
 

@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Commit search.** Find a commit by message, author or abbreviated hash from
+  the toolbar or with Cmd-F; Enter walks the matches and the count says how
+  many there are. It searches the history already loaded, and says so rather
+  than implying it searched the repository.
+- **Branch and tag badges.** Every commit a ref points at carries it on the
+  row, with the checked-out branch in the accent colour, so where the branches
+  are is visible in the graph instead of only in the sidebar.
+- **Resizable panels.** Drag or arrow-key the dividers to set the sidebar and
+  inspector widths; they are remembered between sessions and never let the
+  history shrink below what a commit message needs.
 - **File-by-file diffs.** Selecting a commit lists the files it changed in the
   inspector; choosing one opens its diff across the whole centre panel, where a
   unified patch has room to read. Escape or the back control returns to the
@@ -56,6 +66,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checked-out branch.
 - **Git data engine** — Open canonical working repositories, including linked worktrees, and browse topological history with stable cursor pagination, local/remote branches and annotated tags.
 - **Repository diagnostics** — Structured errors and rotating JSON logs report failures while Git operations run outside the UI thread.
+
+### Fixed
+
+- **The history no longer reflows when a commit is selected.** The inspector
+  column is reserved from the start, so choosing a commit stops shrinking the
+  list by 310px and redrawing the graph under the cursor that just clicked.
+- **File paths read at any width.** The list leads with the file name and
+  follows with a dimmed directory, instead of truncating the path from the left
+  and running a half-cut directory into the name.
+- **The window says which repository it is showing**, so two of them are
+  tellable apart.
 
 ### Known limitations
 
