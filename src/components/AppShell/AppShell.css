@@ -32,17 +32,28 @@
      that just clicked. */
   grid-template-columns:
     var(--sidebar-width, 220px)
-    auto
+    var(--sidebar-divider, auto)
     minmax(0, 1fr)
     auto
     var(--inspector-width, 310px);
   min-height: 0;
 }
 
-/* A collapsed sidebar has no width and no divider, so the columns simply
-   close up rather than leaving an empty gutter. */
+/* A collapsed panel keeps its place in the grid and gives up only its width,
+   so the columns and their children never fall out of step. */
 .app-shell__body > .sidebar {
   min-width: 0;
+}
+
+.sidebar[hidden],
+.resizer[hidden] {
+  display: block;
+  overflow: hidden;
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  visibility: hidden;
 }
 
 .app-shell__history {

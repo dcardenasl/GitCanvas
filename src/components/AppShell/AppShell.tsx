@@ -112,27 +112,35 @@ export function AppShell() {
           className="app-shell__body"
           style={
             {
-              // Reading a file gets the sidebar's width back: branches are
-              // navigation between commits, and a file is not one of them.
-              // Pinning overrides that for anyone who wants it anyway.
+              /*
+               * Reading a file gets the sidebar's width back: branches are
+               * navigation between commits, and a file is not one of them.
+               * Pinning overrides that for anyone who wants it anyway.
+               *
+               * Collapsing is width only. The children are always the same
+               * five, because the grid declares five columns and dropping a
+               * child shifts every later one into the wrong column — which
+               * once put the file view in the sidebar's zero-width slot and
+               * left the inspector filling the window.
+               */
               "--sidebar-width": collapseSidebar
                 ? "0px"
                 : `${String(layout.sidebar)}px`,
+              "--sidebar-divider": collapseSidebar ? "0px" : "auto",
               "--inspector-width": `${String(layout.inspector)}px`,
             } as React.CSSProperties
           }
         >
-          {!collapseSidebar && <Sidebar />}
-          {!collapseSidebar && (
-            <Resizer
-              label="Ancho de la barra lateral"
-              width={layout.sidebar}
-              min={SIDEBAR.min}
-              max={layout.sidebarMax}
-              grows="right"
-              onResize={layout.setSidebar}
-            />
-          )}
+          <Sidebar hidden={collapseSidebar} />
+          <Resizer
+            label="Ancho de la barra lateral"
+            width={layout.sidebar}
+            min={SIDEBAR.min}
+            max={layout.sidebarMax}
+            grows="right"
+            onResize={layout.setSidebar}
+            hidden={collapseSidebar}
+          />
           <main className="app-shell__history" aria-label="Historial">
             {selected !== null && selectedFilePath !== null ? (
               <FileDiffView

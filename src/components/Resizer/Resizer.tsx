@@ -11,6 +11,13 @@ export interface ResizerProps {
   /** Which way a wider panel grows, so the drag direction matches the panel. */
   readonly grows: "right" | "left";
   readonly onResize: (width: number) => void;
+  /**
+   * Takes the divider out of reach without taking it out of the grid.
+   *
+   * `[hidden]` is styled to zero width rather than `display: none`, because a
+   * removed grid child shifts every later one into the wrong column.
+   */
+  readonly hidden?: boolean;
 }
 
 /** How much one arrow key press moves the divider, in pixels. */
@@ -35,6 +42,7 @@ export function Resizer({
   max,
   grows,
   onResize,
+  hidden = false,
 }: ResizerProps) {
   const dragging = useRef<{ startX: number; startWidth: number } | null>(null);
 
@@ -84,13 +92,14 @@ export function Resizer({
   return (
     <div
       className="resizer"
+      hidden={hidden}
       role="separator"
       aria-orientation="vertical"
       aria-label={label}
       aria-valuenow={Math.round(width)}
       aria-valuemin={min}
       aria-valuemax={max}
-      tabIndex={0}
+      tabIndex={hidden ? -1 : 0}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}

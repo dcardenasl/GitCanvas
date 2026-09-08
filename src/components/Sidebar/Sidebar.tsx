@@ -19,8 +19,18 @@ export interface RefTarget {
   readonly isHead?: boolean;
 }
 
+export interface SidebarProps {
+  /**
+   * Collapses the sidebar without removing it from the grid.
+   *
+   * Styled to zero width rather than unmounted: a removed grid child shifts
+   * every later one into the wrong column.
+   */
+  readonly hidden?: boolean;
+}
+
 /** Branch and tag navigation for the open repository. */
-export function Sidebar() {
+export function Sidebar({ hidden = false }: SidebarProps) {
   const repository = useSession((state) => state.repository);
   const selectedCommitId = useSession((state) => state.selectedCommitId);
   const revealCommit = useSession((state) => state.revealCommit);
@@ -48,7 +58,7 @@ export function Sidebar() {
   const remote = (branches.data ?? []).filter((branch) => branch.is_remote);
 
   return (
-    <aside className="sidebar" aria-label="Ramas y etiquetas">
+    <aside className="sidebar" hidden={hidden} aria-label="Ramas y etiquetas">
       <RefGroup
         label="Local"
         refs={local.map((branch) => ({

@@ -861,7 +861,18 @@ intentar resolverlo.
       son navegación entre commits, y un archivo no es uno. Un control en la toolbar lo
       vuelve a fijar para quien lo quiera igual. Esto reemplaza además la media query que
       lo escondía bajo 1000px sin avisar.
-      → `feat(ui): collapse the sidebar while a file is open`
+      *Bug grave introducido y corregido:* colapsar el sidebar dejaba de renderizar 2 de
+      los 5 hijos del grid, pero el grid seguía declarando 5 columnas. Los 3 restantes se
+      corrían: **el visor de archivo caía en la columna del sidebar (0px, invisible)** y
+      el inspector se expandía al `1fr`, ocupando toda la pantalla con la lista de
+      archivos. David lo detectó mirando la app; ningún test lo veía. Colapsar ahora es
+      solo ancho — los hijos son siempre cinco.
+      *Cómo se evita que vuelva:* un test afirma que `.app-shell__body` tiene siempre 5
+      hijos en los tres estados (nada seleccionado, commit seleccionado, archivo abierto),
+      y un E2E mide la geometría real: `0px 0px 899px 1px 539px`, con el visor en 900px.
+      La lección de F2-9 otra vez — jsdom no calcula layout, así que el invariante que se
+      puede afirmar sin él es el **conteo de hijos**, no el resultado visual.
+      → `feat(ui): collapse the sidebar while a file is open` · `fix(ui): keep the grid children matched to its columns when collapsing`
 
 - [x] **UX-12 — Menú contextual y nombres accesibles.** Click derecho sobre un commit
       copia hash corto, hash completo, mensaje o autor, con el resultado **anunciado**
