@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 5 · 59/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 5 · 60/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -677,7 +677,9 @@ no devuelve nada.
       Abrir repo → ver graph → click en commit → ver diff.
       → `test(e2e): cover the open repository to diff critical path`
 
-- [ ] **F5-8 — CHANGELOG de acciones.**
+- [x] **F5-8 — CHANGELOG de acciones.** Checkout guardado, pull fast-forward, push con
+      confirmación y la apertura por línea de comandos, más las dos limitaciones
+      conocidas correspondientes.
       → `docs(changelog): record the checkout, pull and push actions`
 
 **Hecho cuando:** checkout con working tree limpio funciona y con cambios pendientes se

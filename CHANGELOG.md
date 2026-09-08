@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Branch actions.** Check out a branch, pull, and push from the toolbar.
+  Checkout refuses when uncommitted work would be lost and names the files at
+  risk; discarding them takes a separate, explicit confirmation. Push always
+  asks first.
+- **Open a repository from the command line.** `gitcanvas /path/to/repo` opens
+  straight into that repository.
 - **GitHub integration.** Sign in with a personal access token, browse the
   repositories it can reach, and clone one into an application-owned cache with
   live transfer progress. Clones are always complete: a truncated history would
@@ -46,5 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Merge diffs cover the first parent only.** A combined diff is a materially
   harder problem and is out of scope for this release; the inspector says so
   explicitly whenever it is showing one.
-- **Pull is fast-forward only.** Anything that needs a real merge is reported,
-  not resolved automatically.
+- **Pull is fast-forward only.** Anything that needs a real merge is reported
+  with both branch names, not resolved automatically — creating a merge commit
+  from a button has correctness implications that deserve a deliberate decision.
+- **Push is never forced.** A rejected non-fast-forward push is explained, never
+  retried with force: the remote having commits the local branch does not is
+  exactly the case where forcing destroys someone else's work.
