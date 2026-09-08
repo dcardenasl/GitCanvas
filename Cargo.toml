@@ -83,6 +83,11 @@ tauri-plugin-dialog = "2"
 # that can be driven remotely is a liability, not a feature.
 tauri-plugin-wdio-webdriver = "1.4"
 
+# AppKit, only to pre-initialise the folder panel on macOS. The bindings used
+# are safe functions, so the workspace's `unsafe_code = "forbid"` still holds.
+objc2-app-kit = { version = "0.3", features = ["NSSavePanel", "NSOpenPanel", "NSPanel", "NSWindow", "NSResponder"] }
+objc2-foundation = "0.3"
+
 specta = { version = "=2.0.0-rc.25", features = ["derive"] }
 specta-typescript = "=0.0.12"
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }

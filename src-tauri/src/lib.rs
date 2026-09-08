@@ -17,6 +17,7 @@
 
 mod commands;
 mod logging;
+mod warmup;
 
 #[cfg(test)]
 mod repository_tests;
@@ -119,6 +120,9 @@ pub fn run() {
                 },
             )));
             tracing::info!(version = env!("CARGO_PKG_VERSION"), "GitCanvas started");
+
+            // Paid here, on the main thread, while nobody is waiting for it.
+            warmup::open_panel();
             builder.mount_events(app);
             Ok(())
         })

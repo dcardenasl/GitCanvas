@@ -36,6 +36,10 @@ specta.workspace = true
 specta-typescript.workspace = true
 tauri-specta.workspace = true
 
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-app-kit.workspace = true
+objc2-foundation.workspace = true
+
 [features]
 # Builds with an embedded WebDriver server, for `npm run test:e2e`. Never
 # enabled for a release build.
