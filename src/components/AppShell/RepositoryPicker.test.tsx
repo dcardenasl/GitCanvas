@@ -48,7 +48,7 @@ describe("RepositoryPicker", () => {
     const button = screen.getByRole("button");
     expect(button.getAttribute("aria-busy")).toBe("true");
     expect(button.hasAttribute("disabled")).toBe(true);
-    expect(button.textContent).toContain("Elegí una carpeta…");
+    expect(button.textContent).toContain("Elige una carpeta…");
 
     panel.resolve(null);
   });
@@ -80,7 +80,32 @@ describe("RepositoryPicker", () => {
 
     // macOS stacks panels behind each other, which is unrecoverable from the
     // interface.
-    expect(open).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(open).toHaveBeenCalledTimes(1);
+    });
+    panel.resolve(null);
+  });
+
+  it("paints the busy state before seizing the main thread", async () => {
+    /*
+     * The dialog is built on the main thread, which on macOS is the one the
+     * WebView paints on. If the call goes out in the same frame as the state
+     * change, the thread is taken before the spinner is ever rendered and the
+     * button looks dead for the whole wait.
+     */
+    const panel = deferred<string | null>();
+    open.mockReturnValue(panel.promise);
+
+    render(<RepositoryPicker />);
+    await userEvent.click(screen.getByRole("button"));
+
+    // Busy immediately...
+    expect(screen.getByRole("button").getAttribute("aria-busy")).toBe("true");
+    // ...and only then is the blocking call made.
+    await waitFor(() => {
+      expect(open).toHaveBeenCalled();
+    });
+
     panel.resolve(null);
   });
 
@@ -101,6 +126,9 @@ describe("RepositoryPicker", () => {
     render(<RepositoryPicker />);
     await userEvent.click(screen.getByRole("button"));
 
+    await waitFor(() => {
+      expect(open).toHaveBeenCalledTimes(2);
+    });
     expect(open.mock.calls[1]?.[0]).toMatchObject({
       defaultPath: "/Users/x/code",
     });
@@ -113,6 +141,9 @@ describe("RepositoryPicker", () => {
     await userEvent.click(screen.getByRole("button"));
 
     // An explicit undefined is a different thing from an absent option.
+    await waitFor(() => {
+      expect(open).toHaveBeenCalled();
+    });
     expect(open.mock.calls[0]?.[0]).not.toHaveProperty("defaultPath");
   });
 

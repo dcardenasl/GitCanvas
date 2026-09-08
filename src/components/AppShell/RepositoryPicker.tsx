@@ -2,6 +2,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useRef, useState } from "react";
 
 import { IpcError, openRepository } from "../../lib/ipc";
+import { afterPaint } from "../../lib/paint";
 import { useSession } from "../../state/session";
 
 /** Where the picker last opened, so it starts there next time. */
@@ -18,7 +19,7 @@ function messageFor(error: unknown): string {
       case "InvalidInput":
         return "La ruta indicada no es válida.";
       case "StaleCursor":
-        return "El historial cambió mientras se leía. Volvé a abrir el repositorio.";
+        return "El historial cambió mientras se leía. Vuelve a abrir el repositorio.";
       case "Git":
       case "Internal":
         return error.message;
@@ -70,12 +71,21 @@ export function RepositoryPicker() {
     inFlight.current = true;
 
     setError(null);
-    // Set before awaiting, not after. The native panel takes long enough to
-    // appear that a button which only reacts once it is up looks broken for
-    // the whole wait.
     setPhase("choosing");
 
     try {
+      /*
+       * Wait for the spinner to actually reach the screen.
+       *
+       * The dialog plugin builds the panel with `run_on_main_thread`, and on
+       * macOS the WebView paints on that same thread. Setting the busy state
+       * and calling straight into the dialog means the thread is taken before
+       * the browser ever renders it, so the button sits there looking dead for
+       * the whole wait. Yielding for a paint first is what makes the state
+       * visible at all.
+       */
+      await afterPaint();
+
       // The key is omitted rather than set to undefined: with
       // `exactOptionalPropertyTypes`, an explicit undefined is a different
       // thing from an absent option, and the plugin wants the latter.
@@ -102,7 +112,7 @@ export function RepositoryPicker() {
 
   const label =
     phase === "choosing"
-      ? "Elegí una carpeta…"
+      ? "Elige una carpeta…"
       : phase === "opening"
         ? "Abriendo…"
         : "Abrir repositorio";
