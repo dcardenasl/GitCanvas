@@ -6,54 +6,63 @@ import { $, $$, browser, expect } from "@wdio/globals";
 const OUT = "/tmp/gc-shots";
 
 describe("GitCanvas against its own history", () => {
-  before(() => {
+  before(async () => {
     fs.mkdirSync(OUT, { recursive: true });
+    await browser.setWindowSize(1440, 900);
+    await browser.pause(3000);
   });
 
   it("captures the graph", async () => {
-    await browser.setWindowSize(1280, 800);
-    await browser.pause(3000);
-
     const rows = await $$('[role="option"]');
     await expect(rows).toBeElementsArrayOfSize({ gte: 10 });
 
     await browser.saveScreenshot(`${OUT}/01-graph.png`);
   });
 
-  it("captures a commit with its diff", async () => {
+  it("captures the file list for a commit", async () => {
     const rows = await $$('[role="option"]');
-    // A commit with real file changes rather than the tip.
     await rows[3].click();
     await browser.pause(2500);
 
-    const panel = await $('[aria-label="Detalle del commit"]');
-    await expect(panel).toBeDisplayed();
+    const files = await $('[aria-label="Archivos modificados"]');
+    await expect(files).toBeDisplayed();
 
-    await browser.saveScreenshot(`${OUT}/02-diff.png`);
+    await browser.saveScreenshot(`${OUT}/02-files.png`);
   });
 
-  it("captures a merge commit, showing the first-parent notice", async () => {
-    const rows = await $$('[role="option"]');
-    let captured = false;
+  it("captures a file diff filling the centre panel", async () => {
+    const files = await $$('[aria-label="Archivos modificados"] button');
+    await expect(files).toBeElementsArrayOfSize({ gte: 1 });
 
-    for (const row of rows.slice(0, 40)) {
-      const text = await row.getText();
-      if (!text.includes("Merge")) continue;
-      await row.click();
-      await browser.pause(2500);
-      await browser.saveScreenshot(`${OUT}/03-merge.png`);
-      captured = true;
+    // The first file with actual hunks, so the capture shows a real patch.
+    for (const file of files) {
+      const label = await file.getText();
+      if (label.includes("binario") || label.includes("grande")) continue;
+      await file.click();
       break;
     }
+    await browser.pause(2500);
 
-    // The repository may legitimately have no merge in the loaded page.
-    console.log(`MERGE_CAPTURED=${String(captured)}`);
+    await browser.saveScreenshot(`${OUT}/03-file-diff.png`);
   });
 
-  it("captures the GitHub panel", async () => {
-    const github = await $("button=GitHub");
-    await github.click();
-    await browser.pause(1500);
-    await browser.saveScreenshot(`${OUT}/04-github.png`);
+  it("captures navigating to a branch tip from the sidebar", async () => {
+    // The initial commit touches a file with a very long name, which is what
+    // makes this capture worth taking: the list has to truncate rather than run
+    // its stats off the panel.
+    const back = await $("button=← Volver al graph");
+    if (await back.isExisting()) {
+      await back.click();
+      await browser.pause(1200);
+    }
+
+    // WebdriverIO's partial-text selector cannot be combined with a CSS
+    // prefix, so the sidebar is scoped first and searched within.
+    const sidebar = await $('aside[aria-label="Ramas y etiquetas"]');
+    const main = await sidebar.$("button*=main");
+    await main.click();
+    await browser.pause(2500);
+
+    await browser.saveScreenshot(`${OUT}/04-branch-jump.png`);
   });
 });
