@@ -22,6 +22,13 @@ export const commands = {
 	getBranches: (path: string) => typedError<BranchInfo[], AppError>(__TAURI_INVOKE("get_branches", { path })),
 	/**  Lists tags, peeling annotated tags to commits when applicable. */
 	getTags: (path: string) => typedError<TagInfo[], AppError>(__TAURI_INVOKE("get_tags", { path })),
+	/**
+	 *  Reads a commit's changes against its first parent.
+	 * 
+	 *  `request.expand_path` opts one file out of the size guard, which is how the
+	 *  interface loads a large diff only when the user asks for it.
+	 */
+	getCommitDiff: (path: string, request: DiffRequest) => typedError<CommitDiff, AppError>(__TAURI_INVOKE("get_commit_diff", { path, request })),
 };
 
 /* Types */
@@ -65,6 +72,18 @@ export type BranchInfo = {
 	is_symbolic: boolean,
 };
 
+/**  A commit's changes against its first parent. */
+export type CommitDiff = {
+	commit_id: string,
+	/**  The parent compared against; absent for a root commit. */
+	parent_id: string | null,
+	files: FileDiff[],
+	insertions: number,
+	deletions: number,
+	/**  True when this commit has more than one parent, so the diff covers one side. */
+	is_merge: boolean,
+};
+
 /**  One commit in the graph. Times are decimal Unix seconds, preserving Git's full integer range. */
 export type CommitInfo = {
 	id: string,
@@ -75,6 +94,41 @@ export type CommitInfo = {
 	author_email: string,
 	author_time: string,
 	commit_time: string,
+};
+
+/**  Why a file has no renderable hunks. */
+export type DiffOmission = 
+/**  libgit2 reports the content as binary; there is no line diff to show. */
+"Binary" | 
+/**  The change is larger than `LARGE_DIFF_LINE_LIMIT` and was not requested. */
+"TooLarge";
+
+/**  Which file, if any, the caller wants in full regardless of its size. */
+export type DiffRequest = {
+	commit_id: string,
+	/**  Path to include in full even if it exceeds the size guard. */
+	expand_path: string | null,
+};
+
+/**  How a path changed between two trees. */
+export type FileChange = "Added" | "Modified" | "Deleted" | "Renamed" | "Copied" | "TypeChanged" | "Other";
+
+/**
+ *  One file in a commit's diff.
+ * 
+ *  `patch` is `None` whenever `omitted` is set, so the two can never disagree
+ *  about whether there is something to render.
+ */
+export type FileDiff = {
+	path: string,
+	/**  Previous path for renames and copies. */
+	old_path: string | null,
+	change: FileChange,
+	insertions: number,
+	deletions: number,
+	omitted: DiffOmission | null,
+	/**  Unified patch text for this file alone, ready for a diff renderer. */
+	patch: string | null,
 };
 
 /**  A bounded page and the information needed to resume its exact traversal. */

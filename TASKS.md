@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 3 · 40/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 3 · 41/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -458,7 +458,11 @@ PR #1 y `dev` bifurcándose, como en `docs/mockup.html`, sin cruces innecesarios
       módulo donde las dos cosas conviven en cada línea.
       → `test(core): cover diffs for text, binary and oversized files`
 
-- [ ] **F3-3 — Comando IPC de diff.**
+- [x] **F3-3 — Comando IPC de diff.** `get_commit_diff` expuesto por `collect_commands!`,
+      corriendo en `spawn_blocking` como todo lo que toca libgit2, más el wrapper tipado
+      en `lib/ipc/`. Los tipos `CommitDiff`, `FileDiff`, `FileChange` y `DiffOmission`
+      aparecieron solos en `bindings.ts` al regenerarlo: no se escribió ni una línea de
+      TypeScript para describirlos.
       → `feat(ipc): expose the commit diff command`
 
 - [ ] **F3-4 — Panel de detalle.** Metadata del commit, autor, refs, archivos modificados.

@@ -1,9 +1,14 @@
 /** Typed application boundary over the generated Rust contract. */
 import { commands } from "../../bindings";
-import type { AppError, HistoryRequest } from "../../bindings";
+import type { AppError, DiffRequest, HistoryRequest } from "../../bindings";
 
 export type {
   AppInfo,
+  CommitDiff,
+  DiffOmission,
+  DiffRequest,
+  FileChange,
+  FileDiff,
   AppError,
   BranchInfo,
   CommitInfo,
@@ -49,3 +54,6 @@ export const getCommits = (path: string, request: HistoryRequest) =>
 export const getBranches = (path: string) => result(commands.getBranches(path));
 /** Lists lightweight and annotated tags. */
 export const getTags = (path: string) => result(commands.getTags(path));
+/** Reads a commit's changes against its first parent. */
+export const getCommitDiff = (path: string, request: DiffRequest) =>
+  result(commands.getCommitDiff(path, request));
