@@ -145,6 +145,48 @@ describe("CommitTable", () => {
     expect(list?.style.paddingLeft).toBe("");
   });
 
+  it("scrolls to a commit it is asked to reveal", () => {
+    withViewport(ROW_HEIGHT * 10);
+    const commits = makeCommits(500);
+    const onRevealed = vi.fn();
+    const target = commits[300]?.id ?? "";
+
+    render(
+      <CommitTable
+        commits={commits}
+        selectedId={target}
+        onSelect={() => undefined}
+        maxLanes={1}
+        revealCommitId={target}
+        onRevealed={onRevealed}
+      />,
+    );
+
+    // Reporting back is what lets the caller clear the request; without it the
+    // history would scroll again on every render.
+    expect(onRevealed).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits rather than failing when the commit is not loaded yet", () => {
+    withViewport(ROW_HEIGHT * 10);
+    const onRevealed = vi.fn();
+
+    render(
+      <CommitTable
+        commits={makeCommits(10)}
+        selectedId={null}
+        onSelect={() => undefined}
+        maxLanes={1}
+        revealCommitId="a-commit-on-a-later-page"
+        onRevealed={onRevealed}
+      />,
+    );
+
+    // Doing nothing is what makes the caller safe to keep fetching pages and
+    // re-rendering until the commit turns up.
+    expect(onRevealed).not.toHaveBeenCalled();
+  });
+
   it("hands the graph layer the row window it should draw", () => {
     withViewport(ROW_HEIGHT * 10);
     const renderGraph = vi.fn().mockReturnValue(null);

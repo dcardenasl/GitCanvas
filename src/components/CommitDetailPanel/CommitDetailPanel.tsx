@@ -1,14 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-
-import type { CommitInfo } from "../../bindings";
-import { getCommitDiff } from "../../lib/ipc";
+import type { CommitInfo, FileChange, FileDiff } from "../../bindings";
+import { useCommitDiff } from "../../state/diff";
+import { useSession } from "../../state/session";
 import {
   authorInitials,
   formatCommitTime,
   shortId,
 } from "../CommitTable/format";
-import { DiffViewer } from "../DiffViewer";
 
 import "./CommitDetailPanel.css";
 
@@ -17,22 +14,54 @@ export interface CommitDetailPanelProps {
   readonly commit: CommitInfo;
 }
 
-/** Metadata and changes for the selected commit. */
+/** One-letter marker per change kind, the way Git status reads. */
+const CHANGE_MARK: Record<FileChange, string> = {
+  Added: "A",
+  Modified: "M",
+  Deleted: "D",
+  Renamed: "R",
+  Copied: "C",
+  TypeChanged: "T",
+  Other: "?",
+};
+
+const CHANGE_LABEL: Record<FileChange, string> = {
+  Added: "Añadido",
+  Modified: "Modificado",
+  Deleted: "Eliminado",
+  Renamed: "Renombrado",
+  Copied: "Copiado",
+  TypeChanged: "Tipo cambiado",
+  Other: "Otro",
+};
+
+/** Trailing file name, so a deep path still reads at a glance. */
+function fileName(path: string): string {
+  return path.slice(path.lastIndexOf("/") + 1);
+}
+
+/** Everything before the file name, or empty for a root-level file. */
+function directory(path: string): string {
+  const cut = path.lastIndexOf("/");
+  return cut < 0 ? "" : path.slice(0, cut + 1);
+}
+
+/**
+ * Metadata for the selected commit and the files it changed.
+ *
+ * The list is navigation, not content: choosing a file opens it in the centre
+ * panel, where there is room to read it. Rendering every diff inline in a
+ * 310px column, which is what this used to do, made long files unreadable and
+ * short ones hard to find.
+ */
 export function CommitDetailPanel({
   repositoryPath,
   commit,
 }: CommitDetailPanelProps) {
-  const [expandPath, setExpandPath] = useState<string | null>(null);
+  const selectedFilePath = useSession((state) => state.selectedFilePath);
+  const selectFile = useSession((state) => state.selectFile);
 
-  const diff = useQuery({
-    queryKey: ["diff", repositoryPath, commit.id, expandPath],
-    queryFn: () =>
-      getCommitDiff(repositoryPath, {
-        commit_id: commit.id,
-        expand_path: expandPath,
-      }),
-    staleTime: Infinity,
-  });
+  const diff = useCommitDiff(repositoryPath, commit.id);
 
   return (
     <aside className="detail-panel" aria-label="Detalle del commit">
@@ -62,7 +91,7 @@ export function CommitDetailPanel({
       )}
 
       {diff.isPending && (
-        <p className="detail-panel__state">Leyendo el diff…</p>
+        <p className="detail-panel__state">Leyendo los archivos…</p>
       )}
 
       {diff.error !== null && (
@@ -92,30 +121,63 @@ export function CommitDetailPanel({
             </span>
           </p>
 
-          {diff.data.files.map((file) => (
-            <section key={file.path} className="detail-panel__file">
-              <header className="detail-panel__file-head">
-                <span className="detail-panel__file-path" title={file.path}>
-                  {file.old_path !== null && (
-                    <span className="detail-panel__old-path">
-                      {file.old_path} →{" "}
-                    </span>
-                  )}
-                  {file.path}
-                </span>
-                <span className="detail-panel__file-stat">
-                  +{file.insertions} −{file.deletions}
-                </span>
-              </header>
-              <DiffViewer
+          <ul className="file-list" aria-label="Archivos modificados">
+            {diff.data.files.map((file) => (
+              <FileRow
+                key={file.path}
                 file={file}
-                expanding={diff.isFetching && expandPath === file.path}
-                onExpand={setExpandPath}
+                selected={file.path === selectedFilePath}
+                onOpen={() => {
+                  selectFile(file.path);
+                }}
               />
-            </section>
-          ))}
+            ))}
+          </ul>
         </>
       )}
     </aside>
+  );
+}
+
+interface FileRowProps {
+  readonly file: FileDiff;
+  readonly selected: boolean;
+  readonly onOpen: () => void;
+}
+
+function FileRow({ file, selected, onOpen }: FileRowProps) {
+  return (
+    <li>
+      <button
+        type="button"
+        className={selected ? "file-row file-row--selected" : "file-row"}
+        aria-current={selected ? "true" : undefined}
+        onClick={onOpen}
+      >
+        <span
+          className={`file-row__mark file-row__mark--${file.change.toLowerCase()}`}
+          title={CHANGE_LABEL[file.change]}
+          aria-label={CHANGE_LABEL[file.change]}
+        >
+          {CHANGE_MARK[file.change]}
+        </span>
+        <span className="file-row__path" title={file.path}>
+          <span className="file-row__dir">{directory(file.path)}</span>
+          <span className="file-row__name">{fileName(file.path)}</span>
+        </span>
+        <span className="file-row__stat">
+          {file.omitted === null ? (
+            <>
+              <span className="detail-panel__stat-add">+{file.insertions}</span>{" "}
+              <span className="detail-panel__stat-del">−{file.deletions}</span>
+            </>
+          ) : (
+            <span className="file-row__omitted">
+              {file.omitted === "Binary" ? "binario" : "grande"}
+            </span>
+          )}
+        </span>
+      </button>
+    </li>
   );
 }

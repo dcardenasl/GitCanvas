@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getStartupRepository } from "../../lib/ipc";
 
 import { CommitDetailPanel } from "../CommitDetailPanel";
+import { FileDiffView } from "../FileDiffView";
 import { GitHubPicker } from "../GitHubPicker";
 import { Actions } from "../Toolbar";
 import { Sidebar } from "../Sidebar";
@@ -19,6 +20,7 @@ export function AppShell() {
   const repository = useSession((state) => state.repository);
   const selectedCommitId = useSession((state) => state.selectedCommitId);
   const history = useHistory(repository?.path ?? null);
+  const selectedFilePath = useSession((state) => state.selectedFilePath);
   const [showGitHub, setShowGitHub] = useState(false);
   const setRepository = useSession((state) => state.openRepository);
 
@@ -84,7 +86,15 @@ export function AppShell() {
         >
           <Sidebar />
           <main className="app-shell__history" aria-label="Historial">
-            <HistoryView />
+            {selected !== null && selectedFilePath !== null ? (
+              <FileDiffView
+                repositoryPath={repository.path}
+                commit={selected}
+                path={selectedFilePath}
+              />
+            ) : (
+              <HistoryView />
+            )}
           </main>
           {selected !== null && (
             <CommitDetailPanel

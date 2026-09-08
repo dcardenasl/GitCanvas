@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Release · 65/68 tareas · última actualización 2026-09-08
+**Estado:** Release · 68/71 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -729,6 +729,52 @@ intentar resolverlo.
       máximo que se puede comprobar sin un motor de layout. El E2E tampoco lo veía porque
       consulta el DOM, no píxeles.
       → `fix(ui): offset commit rows past the graph column`
+
+---
+
+### Ola UX — Navegación estilo GitKraken
+
+> David compartió capturas de GitKraken: la lista de archivos vive en el panel derecho y
+> el diff ocupa el panel **central completo**. El inspector de 310px hacía ilegible
+> cualquier diff con indentación.
+
+- [x] **UX-1 — El diff ocupa el panel central.** Elegir un archivo en el panel derecho
+      reemplaza el graph por `FileDiffView` a ancho completo, con encabezado (ruta,
+      commit, estadísticas), botón de volver y **Escape** para cerrar. El panel derecho
+      pasa a ser navegación: lista los archivos con su marca de cambio (A/M/D/R/C/T) y
+      sus conteos, sin diffs embebidos.
+      *Un solo interruptor:* `selectedFilePath` decide qué muestra el centro. No hay una
+      bandera aparte de "qué vista" que pueda contradecirlo.
+      *Estado que se limpia solo:* cambiar de commit cierra el archivo abierto —la misma
+      ruta en otro commit es otro diff, y cambiar el contenido bajo el lector es peor que
+      volver al graph—. Y `expandedFilePath` es independiente de `selectedFilePath`:
+      abrir un archivo grande y pedir verlo entero son decisiones distintas.
+      *Una sola consulta:* `useCommitDiff` la comparten la lista y el visor, así React
+      Query los sirve de la misma entrada de caché y no pueden discrepar sobre qué cambió.
+      → `feat(ui): open file diffs in the centre panel`
+
+- [x] **UX-2 — El sidebar navega.** Cada rama y etiqueta es un botón que lleva al último
+      commit de ese ref, marcándolo como seleccionado. El ref cuyo commit está
+      seleccionado se resalta, así el sidebar refleja dónde estás.
+      *Bug evitado por el contrato:* usé `tag.target` para navegar, pero en un tag anotado
+      ese es el **objeto tag**, no el commit — habría buscado un id que no está en la
+      lista. El typecheck lo rechazó contra `bindings.ts`; lo correcto es `commit_id`.
+      Un tag que no resuelve a un commit se muestra deshabilitado, no inerte.
+      *Scroll robusto:* `revealCommitId` es declarativo, no un handle imperativo. Si el
+      commit no está cargado, `HistoryView` sigue pidiendo páginas hasta encontrarlo o
+      hasta agotar el historial — `hasNextPage` es lo que hace que termine, en vez de un
+      tope de páginas arbitrario que podría parar justo antes.
+      → `feat(ui): navigate to a branch tip from the sidebar`
+
+- [x] **UX-3 — Truncado de rutas.** El directorio colapsa antes que el nombre del
+      archivo, que es lo que se busca. `flex-shrink: 99999` en el directorio y `1` en el
+      nombre: el nombre solo cede cuando el directorio ya desapareció.
+      *Dos defectos vistos en captura, no en tests:* la primera versión usaba
+      `direction: rtl` en toda la fila y alineaba los nombres a la derecha; la segunda
+      dejaba que un nombre largo se montara sobre sus estadísticas. Ninguno era
+      detectable sin layout real — la misma limitación de jsdom que dejó pasar el
+      solapamiento del graph en F2-9.
+      → `fix(ui): truncate the directory before the file name`
 
 ---
 

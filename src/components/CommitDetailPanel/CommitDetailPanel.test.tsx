@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { CommitDiff, CommitInfo } from "../../bindings";
+import type { CommitDiff, CommitInfo, FileDiff } from "../../bindings";
 
 const getCommitDiff =
   vi.fn<(path: string, request: unknown) => Promise<CommitDiff>>();
@@ -15,6 +15,7 @@ vi.mock("../../lib/ipc", () => ({
 }));
 
 const { CommitDetailPanel } = await import("./CommitDetailPanel");
+const { useSession } = await import("../../state/session");
 
 const COMMIT: CommitInfo = {
   id: "a".repeat(40),
@@ -26,6 +27,19 @@ const COMMIT: CommitInfo = {
   author_time: "1788815520",
   commit_time: "1788815520",
 };
+
+function file(overrides: Partial<FileDiff> = {}): FileDiff {
+  return {
+    path: "src/app.ts",
+    old_path: null,
+    change: "Modified",
+    insertions: 3,
+    deletions: 1,
+    omitted: null,
+    patch: "@@ -1 +1 @@\n-a\n+b\n",
+    ...overrides,
+  };
+}
 
 function diff(overrides: Partial<CommitDiff> = {}): CommitDiff {
   return {
@@ -52,6 +66,7 @@ function renderPanel() {
 
 beforeEach(() => {
   getCommitDiff.mockReset();
+  useSession.setState({ selectedFilePath: null, expandedFilePath: null });
 });
 afterEach(cleanup);
 
@@ -64,8 +79,6 @@ describe("CommitDetailPanel", () => {
     expect(
       screen.getByText("More detail here.", { exact: false }),
     ).toBeDefined();
-    // The label interleaves the file count with the +/- stat spans, so it is
-    // matched on the element rather than on an exact text node.
     expect(
       await screen.findByText(
         (_, element) =>
@@ -85,60 +98,57 @@ describe("CommitDetailPanel", () => {
     ).toBeDefined();
   });
 
-  it("explains a binary file instead of rendering an empty box", async () => {
+  it("lists the changed files as choices, not as inline diffs", async () => {
+    getCommitDiff.mockResolvedValue(
+      diff({
+        files: [file(), file({ path: "README.md", change: "Added" })],
+        insertions: 6,
+        deletions: 1,
+      }),
+    );
+    renderPanel();
+
+    const list = await screen.findByRole("list", {
+      name: "Archivos modificados",
+    });
+    expect(list).toBeDefined();
+    expect(screen.getAllByRole("button")).toHaveLength(2);
+
+    // The panel is navigation now; the patch belongs to the centre view.
+    expect(screen.queryByText("+b")).toBeNull();
+  });
+
+  it("opens the chosen file in the centre panel", async () => {
+    getCommitDiff.mockResolvedValue(diff({ files: [file()] }));
+    renderPanel();
+
+    await userEvent.click(await screen.findByRole("button"));
+
+    expect(useSession.getState().selectedFilePath).toBe("src/app.ts");
+  });
+
+  it("marks a file the engine withheld instead of showing a line count", async () => {
     getCommitDiff.mockResolvedValue(
       diff({
         files: [
-          {
-            path: "logo.png",
-            old_path: null,
-            change: "Added",
-            insertions: 0,
-            deletions: 0,
-            omitted: "Binary",
-            patch: null,
-          },
+          file({ path: "logo.png", omitted: "Binary", patch: null }),
+          file({ path: "bundle.js", omitted: "TooLarge", patch: null }),
         ],
       }),
     );
     renderPanel();
 
-    expect(
-      await screen.findByText(
-        "Archivo binario. No hay diferencias de texto que mostrar.",
-      ),
-    ).toBeDefined();
+    expect(await screen.findByText("binario")).toBeDefined();
+    expect(screen.getByText("grande")).toBeDefined();
   });
 
-  it("loads an oversized diff only when it is asked for", async () => {
-    const held: CommitDiff = diff({
-      files: [
-        {
-          path: "bundle.js",
-          old_path: null,
-          change: "Modified",
-          insertions: 5000,
-          deletions: 100,
-          omitted: "TooLarge",
-          patch: null,
-        },
-      ],
-    });
-    getCommitDiff.mockResolvedValue(held);
+  it("labels each change kind for assistive technology", async () => {
+    getCommitDiff.mockResolvedValue(
+      diff({ files: [file({ change: "Deleted", path: "gone.txt" })] }),
+    );
     renderPanel();
 
-    const button = await screen.findByRole("button", {
-      name: "Ver diff completo",
-    });
-    expect(getCommitDiff.mock.calls[0]?.[1]).toMatchObject({
-      expand_path: null,
-    });
-
-    await userEvent.click(button);
-
-    expect(getCommitDiff.mock.calls.at(-1)?.[1]).toMatchObject({
-      expand_path: "bundle.js",
-    });
+    expect(await screen.findByLabelText("Eliminado")).toBeDefined();
   });
 
   it("reports a diff failure instead of showing nothing", async () => {

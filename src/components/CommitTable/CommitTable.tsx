@@ -1,5 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
 import type { CommitInfo } from "../../bindings";
 
@@ -26,6 +26,17 @@ export interface CommitTableProps {
   readonly renderGraph?: (window: VisibleWindow) => ReactNode;
   /** Called when the last rows come into view, to request the next page. */
   readonly onReachEnd?: () => void;
+  /**
+   * A commit to scroll into view.
+   *
+   * Declarative rather than an imperative handle: the caller states where the
+   * history should be, and this component gets it there. An escape hatch that
+   * exposed the virtualizer would let any caller drive the scroll position and
+   * there would be no single place left that decides it.
+   */
+  readonly revealCommitId?: string | null;
+  /** Called once a reveal has been carried out, so it is not repeated. */
+  readonly onRevealed?: () => void;
 }
 
 /** Inclusive row range currently mounted, plus the total scrolled height. */
@@ -48,6 +59,8 @@ export function CommitTable({
   maxLanes,
   renderGraph,
   onReachEnd,
+  revealCommitId = null,
+  onRevealed,
 }: CommitTableProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -62,6 +75,18 @@ export function CommitTable({
     overscan: OVERSCAN,
     getItemKey: (index) => commits[index]?.id ?? index,
   });
+
+  useEffect(() => {
+    if (revealCommitId === null) return;
+
+    const index = commits.findIndex((commit) => commit.id === revealCommitId);
+    // Not loaded yet: the caller keeps fetching pages, and this runs again
+    // when they arrive. Doing nothing here is what makes that safe to retry.
+    if (index < 0) return;
+
+    virtualizer.scrollToIndex(index, { align: "center" });
+    onRevealed?.();
+  }, [revealCommitId, commits, virtualizer, onRevealed]);
 
   const items = virtualizer.getVirtualItems();
   const totalHeight = virtualizer.getTotalSize();
