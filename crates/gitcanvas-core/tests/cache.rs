@@ -1,0 +1,112 @@
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::indexing_slicing
+)]
+//! Retention for the clone cache, exercised on real directories in a temp root.
+
+use std::{
+    fs,
+    path::Path,
+    time::{Duration, SystemTime},
+};
+
+use gitcanvas_core::github::{
+    cache::{enforce_retention, status, MAX_REPOSITORIES},
+    clone::cache_entry_name,
+};
+
+/// Creates a cache entry of `bytes` last used `age` ago.
+fn seed(root: &Path, name: &str, bytes: usize, age: Duration) {
+    let dir = root.join(name);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(dir.join("payload.bin"), vec![0u8; bytes]).unwrap();
+    let when = SystemTime::now() - age;
+    filetime::set_file_mtime(&dir, filetime::FileTime::from_system_time(when)).unwrap();
+}
+
+#[test]
+fn an_absent_cache_reports_empty_rather_than_failing() {
+    let root = tempfile::tempdir().unwrap();
+    let missing = root.path().join("never-created");
+
+    let status = status(&missing).unwrap();
+
+    assert!(status.entries.is_empty());
+    assert_eq!(status.total_bytes, 0);
+}
+
+#[test]
+fn entries_are_reported_newest_first_with_their_sizes() {
+    let root = tempfile::tempdir().unwrap();
+    seed(root.path(), "old", 1_000, Duration::from_secs(10_000));
+    seed(root.path(), "new", 2_000, Duration::from_secs(10));
+
+    let status = status(root.path()).unwrap();
+
+    assert_eq!(status.entries.len(), 2);
+    assert_eq!(status.entries[0].name, "new", "most recent first");
+    assert!(status.total_bytes >= 3_000);
+}
+
+#[test]
+fn nothing_is_evicted_while_both_limits_are_respected() {
+    let root = tempfile::tempdir().unwrap();
+    seed(root.path(), "a", 100, Duration::from_secs(10));
+    seed(root.path(), "b", 100, Duration::from_secs(20));
+
+    assert!(enforce_retention(root.path(), None).unwrap().is_empty());
+    assert_eq!(status(root.path()).unwrap().entries.len(), 2);
+}
+
+#[test]
+fn the_least_recently_used_repositories_go_first() {
+    let root = tempfile::tempdir().unwrap();
+    for index in 0..=MAX_REPOSITORIES {
+        // Older index means older entry, so index 0 is the eviction candidate.
+        let age = Duration::from_secs(u64::try_from(MAX_REPOSITORIES - index + 1).unwrap() * 1_000);
+        seed(root.path(), &format!("repo{index}"), 10, age);
+    }
+    assert_eq!(
+        status(root.path()).unwrap().entries.len(),
+        MAX_REPOSITORIES + 1
+    );
+
+    let evicted = enforce_retention(root.path(), None).unwrap();
+
+    assert_eq!(evicted, vec!["repo0".to_owned()]);
+    assert_eq!(status(root.path()).unwrap().entries.len(), MAX_REPOSITORIES);
+}
+
+#[test]
+fn the_repository_in_use_is_never_evicted_by_its_own_arrival() {
+    let root = tempfile::tempdir().unwrap();
+    // The oldest entry is also the one the caller says is in use.
+    seed(root.path(), "keep-me", 10, Duration::from_secs(999_999));
+    for index in 0..MAX_REPOSITORIES {
+        seed(
+            root.path(),
+            &format!("repo{index}"),
+            10,
+            Duration::from_secs(10),
+        );
+    }
+
+    let evicted = enforce_retention(root.path(), Some("keep-me")).unwrap();
+
+    assert!(!evicted.contains(&"keep-me".to_owned()));
+    assert!(root.path().join("keep-me").exists());
+    assert_eq!(evicted.len(), 1, "one over the limit means one eviction");
+}
+
+#[test]
+fn cache_entry_names_stay_one_flat_level_inside_the_cache() {
+    // A repository name must never be able to escape the cache root.
+    assert_eq!(
+        cache_entry_name("dcardenasl/gitcanvas"),
+        "dcardenasl_gitcanvas"
+    );
+    assert!(!cache_entry_name("../../etc/passwd").contains('/'));
+    assert!(!cache_entry_name("a/../../b").contains(std::path::MAIN_SEPARATOR));
+}

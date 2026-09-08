@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 4 · 47/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 4 · 50/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -539,16 +539,28 @@ diff gigante no bloquea ni ralentiza perceptiblemente la UI.
       9110.
       → `test(core): cover the github client against a mocked transport`
 
-- [ ] **F4-4 — Clone completo con progreso.** **Nunca shallow**: un historial truncado
-      contradice el valor central del producto. A un directorio de caché bajo el app data
-      dir, con evento Tauri tipado `CloneProgress` para que la espera sea visible.
+- [x] **F4-4 — Clone completo con progreso.** **Nunca shallow**, y el comentario del
+      módulo dice por qué: un `--depth` trunca el historial, y la forma del historial es
+      el producto entero. Un graph truncado sería visualmente convincente y falso, que es
+      peor que negarse. El callback de credenciales lee el token del keychain y se lo pasa
+      directo a libgit2 — nunca vuelve a un llamador. Un clone interrumpido se borra en
+      vez de quedar como un repositorio a medias que después se confunde con uno bueno.
+      Un directorio existente que no abre como repositorio se trata igual.
       → `feat(core): add full repository cloning with progress reporting`
 
-- [ ] **F4-5 — Retención LRU de la caché.** 10 repositorios o 5GB, lo que se cumpla
-      primero, con expulsión del menos usado recientemente.
+- [x] **F4-5 — Retención LRU de la caché.** 10 repositorios o 5 GB, lo que se cumpla
+      primero. El parámetro `keep` protege al repositorio que el usuario acaba de abrir,
+      para que no pueda borrarse a sí mismo al llegar. Usa `mtime` en vez de `atime`
+      porque el tiempo de acceso no se actualiza de forma confiable en todos los sistemas
+      de archivos.
       → `feat(core): add the lru retention policy for the clone cache`
 
-- [ ] **F4-6 — Tests de retención.**
+- [x] **F4-6 — Tests de retención.** Seis casos sobre directorios reales con `mtime`
+      fijado explícitamente, para que el orden LRU lo decida el test y no la velocidad de
+      la máquina: caché inexistente, orden por recencia, nada que expulsar dentro de los
+      límites, expulsión del más viejo al pasarse, y el repo en uso protegido.
+      *El test que más importa:* que `cache_entry_name` aplane el nombre a un solo nivel,
+      de modo que `../../etc/passwd` no pueda escapar de la raíz de la caché.
       → `test(core): cover the clone cache retention policy`
 
 - [ ] **F4-7 — Comandos y evento IPC.**
