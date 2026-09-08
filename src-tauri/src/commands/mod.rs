@@ -8,6 +8,8 @@
 //! next to each function, and a narrow `pub use` of the function alone would
 //! leave those behind.
 
+pub mod actions;
+
 pub mod app;
 
 pub mod diff;

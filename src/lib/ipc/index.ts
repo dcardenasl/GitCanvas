@@ -4,6 +4,10 @@ import type { AppError, DiffRequest, HistoryRequest } from "../../bindings";
 
 export type {
   AppInfo,
+  CheckoutOutcome,
+  DirtyPath,
+  PullOutcome,
+  PushOutcome,
   CacheEntry,
   CacheStatus,
   ClonedRepository,
@@ -82,3 +86,13 @@ export const getCloneCacheStatus = () => result(commands.getCloneCacheStatus());
 
 /** Subscribes to clone progress. Returns the unsubscribe function. */
 export const onCloneProgress = events.cloneProgressEvent.listen;
+
+/** Checks out a local branch. Refuses by default when work would be lost. */
+export const checkoutBranch = (path: string, branch: string, force: boolean) =>
+  result(commands.checkoutBranch(path, branch, force));
+/** Fetches and fast-forwards; anything else is reported, not resolved. */
+export const pullFastForward = (path: string) =>
+  result(commands.pullFastForward(path));
+/** Pushes the current branch to its remote. */
+export const pushCurrentBranch = (path: string) =>
+  result(commands.pushCurrentBranch(path));

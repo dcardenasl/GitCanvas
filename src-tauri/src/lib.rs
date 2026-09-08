@@ -45,6 +45,9 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::github::list_github_repositories,
             commands::github::clone_github_repository,
             commands::github::get_clone_cache_status,
+            commands::actions::checkout_branch,
+            commands::actions::pull_fast_forward,
+            commands::actions::push_current_branch,
         ])
         .events(collect_events![commands::github::CloneProgressEvent])
 }

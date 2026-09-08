@@ -42,6 +42,12 @@ export const commands = {
 	cloneGithubRepository: (cloneUrl: string, fullName: string) => typedError<ClonedRepository, AppError>(__TAURI_INVOKE("clone_github_repository", { cloneUrl, fullName })),
 	/**  Reports what the clone cache holds and the limits it is held to. */
 	getCloneCacheStatus: () => typedError<CacheStatus, AppError>(__TAURI_INVOKE("get_clone_cache_status")),
+	/**  Checks out a local branch, refusing by default when work would be lost. */
+	checkoutBranch: (path: string, branch: string, force: boolean) => typedError<CheckoutOutcome, AppError>(__TAURI_INVOKE("checkout_branch", { path, branch, force })),
+	/**  Fetches and fast-forwards the current branch, reporting anything else. */
+	pullFastForward: (path: string) => typedError<PullOutcome, AppError>(__TAURI_INVOKE("pull_fast_forward", { path })),
+	/**  Pushes the current branch to its remote. */
+	pushCurrentBranch: (path: string) => typedError<PushOutcome, AppError>(__TAURI_INVOKE("push_current_branch", { path })),
 };
 
 /** Events */
@@ -117,6 +123,19 @@ export type CacheStatus = {
 	max_total_bytes: string,
 };
 
+/**
+ *  The outcome of a checkout attempt.
+ *  Serialized with an internal `kind` tag so TypeScript sees a discriminated
+ *  union it can narrow with a `switch`, matching how `AppError` already
+ *  crosses the boundary. The default external tagging generates a shape that
+ *  needs a key lookup before anything can be read.
+ */
+export type CheckoutOutcome = 
+/**  The branch is now checked out. */
+{ kind: "Switched"; branch: string } | 
+/**  Refused: these changes would have been lost. */
+{ kind: "Blocked"; conflicts: DirtyPath[] };
+
 /**  Progress for an in-flight clone, emitted as it advances. */
 export type CloneProgressEvent = {
 	full_name: string,
@@ -169,6 +188,13 @@ export type DiffRequest = {
 	expand_path: string | null,
 };
 
+/**  A path that would be lost or overwritten by an operation. */
+export type DirtyPath = {
+	path: string,
+	/**  True when the change is staged, false when it is only in the worktree. */
+	staged: boolean,
+};
+
 /**  How a path changed between two trees. */
 export type FileChange = "Added" | "Modified" | "Deleted" | "Renamed" | "Copied" | "TypeChanged" | "Other";
 
@@ -218,6 +244,34 @@ export type HistoryRequest = {
 	cursor: string | null,
 	roots: string[] | null,
 };
+
+/**
+ *  The outcome of a pull attempt.
+ *  Serialized with an internal `kind` tag so TypeScript sees a discriminated
+ *  union it can narrow with a `switch`, matching how `AppError` already
+ *  crosses the boundary. The default external tagging generates a shape that
+ *  needs a key lookup before anything can be read.
+ */
+export type PullOutcome = 
+/**  Already up to date; nothing was fetched that changes the branch. */
+{ kind: "UpToDate" } | 
+/**  Fast-forwarded to the remote tip. */
+{ kind: "FastForwarded"; commits: number; to: string } | 
+/**  Refused: the histories diverged and a real merge would be required. */
+{ kind: "DivergedRequiresMerge"; local: string; remote: string } | 
+/**  The branch has no upstream to pull from. */
+{ kind: "NoUpstream" };
+
+/**
+ *  The outcome of a push attempt.
+ *  Serialized with an internal `kind` tag so TypeScript sees a discriminated
+ *  union it can narrow with a `switch`, matching how `AppError` already
+ *  crosses the boundary. The default external tagging generates a shape that
+ *  needs a key lookup before anything can be read.
+ */
+export type PushOutcome = { kind: "Pushed"; branch: string; remote: string } | 
+/**  Refused: the remote has commits the local branch does not. */
+{ kind: "RejectedNonFastForward"; branch: string };
 
 /**  Displayable repository identity, safe to send across IPC. */
 export type RepositoryInfo = {

@@ -22,7 +22,12 @@ pub struct DirtyPath {
 }
 
 /// The outcome of a checkout attempt.
+/// Serialized with an internal `kind` tag so TypeScript sees a discriminated
+/// union it can narrow with a `switch`, matching how `AppError` already
+/// crosses the boundary. The default external tagging generates a shape that
+/// needs a key lookup before anything can be read.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(tag = "kind")]
 pub enum CheckoutOutcome {
     /// The branch is now checked out.
     Switched { branch: String },
@@ -31,7 +36,12 @@ pub enum CheckoutOutcome {
 }
 
 /// The outcome of a pull attempt.
+/// Serialized with an internal `kind` tag so TypeScript sees a discriminated
+/// union it can narrow with a `switch`, matching how `AppError` already
+/// crosses the boundary. The default external tagging generates a shape that
+/// needs a key lookup before anything can be read.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(tag = "kind")]
 pub enum PullOutcome {
     /// Already up to date; nothing was fetched that changes the branch.
     UpToDate,
@@ -44,7 +54,12 @@ pub enum PullOutcome {
 }
 
 /// The outcome of a push attempt.
+/// Serialized with an internal `kind` tag so TypeScript sees a discriminated
+/// union it can narrow with a `switch`, matching how `AppError` already
+/// crosses the boundary. The default external tagging generates a shape that
+/// needs a key lookup before anything can be read.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(tag = "kind")]
 pub enum PushOutcome {
     Pushed {
         branch: String,
