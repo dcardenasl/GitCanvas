@@ -1,9 +1,21 @@
 :root {
   color-scheme: dark;
 
+  /* Tokens from DESIGN.md. */
   --surface: #10131a;
-  --ink: #eceef4;
-  --ink-muted: #565e72;
+  --surface-sidebar: #14161d;
+  --surface-toolbar: #12141b;
+  --surface-hover: #171a22;
+  --surface-selected: #1b1f2a;
+  --control: #171a22;
+  --border: #262b38;
+  --divider: #1c2029;
+  --ink: #d3d6e0;
+  --ink-muted: #a1a9bc;
+  --ink-faint: #565e72;
+  --accent: #f0a63e;
+  --accent-ink: #1a1206;
+  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
 
   font-family:
     ui-sans-serif,

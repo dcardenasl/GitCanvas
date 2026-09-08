@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Fase 2 · 33/67 tareas · última actualización 2026-09-08
+**Estado:** Fase 2 · 34/67 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -341,7 +341,28 @@ aserción de tiempo en un runner compartido es flaky por diseño) · cero `unwra
       desde cero. Extienden `docs/mockup.html`, no lo reemplazan.
       → `docs: add the design and product references`
 
-- [ ] **F2-4 — Tabla de commits virtualizada.** `@tanstack/react-virtual`.
+- [x] **F2-4 — Tabla de commits virtualizada.** `@tanstack/react-virtual` con un único
+      contenedor de scroll (delta D5): el layer del graph se pasa como `renderGraph` y se
+      monta *dentro* del mismo contenido scrolleado, recibiendo la ventana de filas
+      visibles. Dos contenedores sincronizados por JS derivan un frame en cada scroll;
+      el código que los sincroniza no puede fallar si no existe. Geometría (alto de fila,
+      ancho de carril, centros) en un módulo compartido para que la tabla y el graph no
+      puedan discrepar en un píxel. Navegación con flechas, foco visible y roles
+      `listbox`/`option`, según DESIGN.md.
+      *Defecto encontrado y corregido por un test:* `formatCommitTime("")` devolvía
+      `31 dic, 21:00` en vez de vacío, porque `Number("")` es `0` y `0` es finito. Un
+      commit sin fecha habría mostrado la época Unix como si fuera real.
+      *Endurecido respecto del plan:* `npm run lint` pasa a `--max-warnings=0`. Se
+      descubrió que `eslint .` sale con 0 aun con warnings, así que el CI los habría
+      dejado acumular en silencio — exactamente la deuda que este plan prohíbe.
+      *Hallazgo durante la ejecución:* jsdom no implementa `ResizeObserver` ni layout, así
+      que el virtualizer concluía que nada era visible y montaba cero filas. Resuelto con
+      `src/test-setup.ts`, guardado por `typeof window`, de modo que los tests `node` del
+      graph-layout siguen sin ver un DOM. Verificado con una sonda: `window` sigue siendo
+      `undefined` ahí.
+      *Verificado:* 5 tests del componente, incluido que con 5.000 commits monta menos de
+      100 filas.
+      → `feat(ui): add the virtualized commit table`
       → `feat(ui): add the virtualized commit table`
 
 - [ ] **F2-5 — Render SVG del graph.** Capa absoluta dentro del **mismo** contenedor de

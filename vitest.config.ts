@@ -12,11 +12,16 @@ export default defineConfig({
      * visible in the file that has it.
      */
     environment: "node",
+    setupFiles: ["src/test-setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],
-      exclude: ["src/bindings.ts", "src/**/*.{test,spec}.{ts,tsx}"],
+      exclude: [
+        "src/bindings.ts",
+        "src/test-setup.ts",
+        "src/**/*.{test,spec}.{ts,tsx}",
+      ],
       reporter: ["text-summary", "lcov"],
       thresholds: {
         // The layout algorithm concentrates the most value and is the hardest
