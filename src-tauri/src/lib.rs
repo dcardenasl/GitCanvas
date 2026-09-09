@@ -219,11 +219,17 @@ mod tests {
                 cmd: "ping".into(),
                 callback: tauri::ipc::CallbackFn(0),
                 error: tauri::ipc::CallbackFn(1),
-                // Must match the scheme the capability resolves against.
-                // macOS webviews serve from `tauri://localhost`; the
-                // `http://tauri.localhost` form used on Windows and Linux is
-                // rejected here by the ACL as an unknown origin.
-                url: "tauri://localhost".parse().unwrap(),
+                // Must match the scheme the mock webview's ACL resolves
+                // against, which is `tauri://localhost` everywhere except
+                // Windows, where it is `http://tauri.localhost`; the other
+                // scheme is rejected as an unknown origin on each platform.
+                url: if cfg!(target_os = "windows") {
+                    "http://tauri.localhost"
+                } else {
+                    "tauri://localhost"
+                }
+                .parse()
+                .unwrap(),
                 body: tauri::ipc::InvokeBody::default(),
                 headers: tauri::http::HeaderMap::new(),
                 invoke_key: INVOKE_KEY.to_string(),
