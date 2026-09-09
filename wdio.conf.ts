@@ -50,6 +50,18 @@ function createFixtureRepository(): string {
   git("config", "user.email", "e2e@example.com");
   git("config", "user.name", "End To End");
 
+  // Screenshot and layout specs read specific rows out of the history table
+  // (the fifth, the tenth), so the merge below needs real depth behind it —
+  // not just the three commits the assertions past the first row would need.
+  for (let filler = 1; filler <= 8; filler += 1) {
+    fs.writeFileSync(
+      path.join(repository, "filler.txt"),
+      `${String(filler)}\n`,
+    );
+    git("add", "filler.txt");
+    git("commit", "-m", `filler commit ${String(filler)}`);
+  }
+
   fs.writeFileSync(path.join(repository, "a.txt"), "one\n");
   git("add", "a.txt");
   git("commit", "-m", "first commit");
@@ -80,6 +92,16 @@ export const config: WebdriverIO.Config = {
 
   specs: ["./e2e/**/*.spec.ts"],
   maxInstances: 1,
+
+  // Relaunching the app against an already-watched repository sometimes races
+  // Tauri's own IPC bridge against `tauri-plugin-wdio-webdriver`'s injected
+  // script: the frontend's `core.invoke` calls never resolve, so the window
+  // opens but the history never renders. It is confined to this harness — the
+  // plugin never ships in a release build — and a fresh relaunch does not hit
+  // the same race twice in a row, which a retry of the whole spec file (a new
+  // process, not just the failed assertion) is what actually clears it.
+  specFileRetries: 2,
+  specFileRetriesDelay: 2,
 
   capabilities: [
     {
