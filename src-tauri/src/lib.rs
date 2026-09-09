@@ -51,8 +51,13 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::actions::checkout_branch,
             commands::actions::pull_fast_forward,
             commands::actions::push_current_branch,
+            commands::watch::watch_repository,
+            commands::watch::unwatch_repository,
         ])
-        .events(collect_events![commands::github::CloneProgressEvent])
+        .events(collect_events![
+            commands::github::CloneProgressEvent,
+            commands::watch::RepositoryChangedEvent
+        ])
 }
 
 /// The application context, generated from `tauri.conf.json` and the
@@ -111,6 +116,16 @@ pub fn run() {
             app.manage(commands::github::CacheRoot(data_dir.join("clones")));
 
             let handle = app.handle().clone();
+            app.manage(commands::watch::ActiveWatch::default());
+
+            let watch_handle = app.handle().clone();
+            app.manage(commands::watch::ChangeNotifier(std::sync::Arc::new(
+                move |path: String| {
+                    use tauri_specta::Event as _;
+                    let _ = commands::watch::RepositoryChangedEvent { path }.emit(&watch_handle);
+                },
+            )));
+
             app.manage(commands::github::ProgressEmitter(std::sync::Arc::new(
                 move |event: commands::github::CloneProgressEvent| {
                     use tauri_specta::Event as _;

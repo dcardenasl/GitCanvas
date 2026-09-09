@@ -76,11 +76,21 @@ export const commands = {
 	pullFastForward: (path: string) => typedError<PullOutcome, AppError>(__TAURI_INVOKE("pull_fast_forward", { path })),
 	/**  Pushes the current branch to its remote. */
 	pushCurrentBranch: (path: string) => typedError<PushOutcome, AppError>(__TAURI_INVOKE("push_current_branch", { path })),
+	/**
+	 *  Starts watching a repository, replacing any previous watch.
+	 * 
+	 *  Idempotent from the interface's point of view: calling it again for the
+	 *  same repository simply re-establishes the watch.
+	 */
+	watchRepository: (path: string) => typedError<null, AppError>(__TAURI_INVOKE("watch_repository", { path })),
+	/**  Stops watching, if anything was being watched. */
+	unwatchRepository: () => typedError<null, AppError>(__TAURI_INVOKE("unwatch_repository")),
 };
 
 /** Events */
 export const events = {
 	cloneProgressEvent: makeEvent<CloneProgressEvent>("clone-progress-event"),
+	repositoryChangedEvent: makeEvent<RepositoryChangedEvent>("repository-changed-event"),
 };
 
 /* Types */
@@ -324,6 +334,17 @@ export type PullOutcome =
 export type PushOutcome = { kind: "Pushed"; branch: string; remote: string } | 
 /**  Refused: the remote has commits the local branch does not. */
 { kind: "RejectedNonFastForward"; branch: string };
+
+/**
+ *  Announces that the open repository changed on disk.
+ * 
+ *  Carries no detail on purpose: what changed is not something the interface
+ *  acts on differently, and a payload describing it would be a second source
+ *  of truth next to the queries it triggers.
+ */
+export type RepositoryChangedEvent = {
+	path: string,
+};
 
 /**  Displayable repository identity, safe to send across IPC. */
 export type RepositoryInfo = {

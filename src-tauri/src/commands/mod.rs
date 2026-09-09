@@ -17,3 +17,5 @@ pub mod diff;
 pub mod github;
 
 pub mod repository;
+
+pub mod watch;

@@ -31,6 +31,7 @@ export type {
   CommitInfo,
   HistoryPage,
   HistoryRequest,
+  RepositoryChangedEvent,
   RepositoryInfo,
   TagInfo,
 } from "../../bindings";
@@ -110,3 +111,12 @@ export const pushCurrentBranch = (path: string) =>
 /** Reads a file's full contents as it stands at a commit. */
 export const getFileContent = (path: string, request: FileContentRequest) =>
   result(commands.getFileContent(path, request));
+
+/** Starts watching the open repository, replacing any previous watch. */
+export const watchRepository = (path: string) =>
+  result(commands.watchRepository(path));
+/** Stops watching. */
+export const unwatchRepository = () => result(commands.unwatchRepository());
+
+/** Subscribes to repository changes. Returns the unsubscribe function. */
+export const onRepositoryChanged = events.repositoryChangedEvent.listen;
