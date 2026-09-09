@@ -1,0 +1,15 @@
+# Prettier's default `endOfLine` is `lf`; without this, Git for Windows
+# checks files out with CRLF (`core.autocrlf=true` is the default on
+# `windows-latest` runners), and `npm run format:check` fails on every file.
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
+*.icns binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
