@@ -102,6 +102,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Commit rows read properly to a screen reader.** Each row is named
   explicitly instead of leaving the browser to concatenate its cells, which ran
   the hash straight into the date.
+- **Commit rows no longer sit under the graph.** Rows were drawn from the
+  window's left edge, so the lane lines overlapped the first characters of the
+  message; rows now start past the graph column's width.
+- **Collapsing a panel no longer misaligns the layout.** A hidden sidebar or
+  inspector kept its grid column instead of closing it up, so the panels next
+  to it drifted out of step with the columns they were assigned.
+- **Neutral Spanish across the interface.** Copy written with Argentine voseo
+  ("Abrí un repositorio") now reads in the neutral form ("Abre un
+  repositorio").
 
 ### Known limitations
 
