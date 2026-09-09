@@ -113,6 +113,20 @@ export const config: WebdriverIO.Config = {
   connectionRetryTimeout: 120_000,
   mochaOpts: { ui: "bdd", timeout: 120_000 },
 
+  async before(_capabilities, _specs, browser) {
+    // `tsx` loads these spec files through esbuild with `keepNames` hardcoded
+    // on, which wraps every named function in a call to `__name(fn, "name")`.
+    // That helper is defined in the transpiled Node module, not in what
+    // `browser.execute()` serialises and sends to the page, so any spec whose
+    // callback assigns a function to a name throws `__name is not defined`
+    // before it runs. A no-op `__name` on `window` closes the gap. Passed as
+    // a string, not a function, so this call itself is not transpiled and
+    // cannot trip the same bug.
+    await (browser as WebdriverIO.Browser).execute(
+      "window.__name = window.__name || function (fn) { return fn; };",
+    );
+  },
+
   onComplete() {
     // Only remove what this file created; never a repository someone passed in.
     if (providedRepository === undefined) {
