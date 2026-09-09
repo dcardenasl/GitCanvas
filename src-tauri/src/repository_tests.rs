@@ -28,13 +28,10 @@ fn invoke(
             cmd: cmd.into(),
             callback: tauri::ipc::CallbackFn(0),
             error: tauri::ipc::CallbackFn(1),
-            url: if cfg!(target_os = "macos") {
-                "tauri://localhost"
-            } else {
-                "http://tauri.localhost"
-            }
-            .parse()
-            .unwrap(),
+            // Must match the scheme the mock webview's ACL resolves against,
+            // which is always `tauri://localhost` regardless of the host OS
+            // running the test — see the `ping` roundtrip test in `lib.rs`.
+            url: "tauri://localhost".parse().unwrap(),
             body: tauri::ipc::InvokeBody::Json(body),
             headers: tauri::http::HeaderMap::new(),
             invoke_key: INVOKE_KEY.into(),
