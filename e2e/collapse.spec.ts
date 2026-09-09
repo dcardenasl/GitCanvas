@@ -7,7 +7,16 @@ describe("reading a file with the sidebar collapsed", () => {
   before(async () => {
     fs.mkdirSync("/tmp/gc-shots", { recursive: true });
     await browser.setWindowSize(1440, 900);
-    await browser.pause(3500);
+    // A fixed pause is a coin flip on a loaded machine: cold-start time
+    // varies with whatever else is running. Wait for the actual signal that
+    // the history rendered instead of guessing how long that takes.
+    await browser.waitUntil(
+      async () => (await $$('[role="option"]').length) > 0,
+      {
+        timeout: 20_000,
+        timeoutMsg: "the commit history never rendered",
+      },
+    );
   });
 
   it("gives the file view the room the sidebar released", async () => {

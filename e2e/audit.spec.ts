@@ -14,7 +14,16 @@ describe("interface audit", () => {
 
   before(async () => {
     await browser.setWindowSize(1280, 800);
-    await browser.pause(3500);
+    // A fixed pause is a coin flip on a loaded machine: cold-start time
+    // varies with whatever else is running. Wait for the actual signal that
+    // the history rendered instead of guessing how long that takes.
+    await browser.waitUntil(
+      async () => (await $$('[role="option"]').length) > 0,
+      {
+        timeout: 20_000,
+        timeoutMsg: "the commit history never rendered",
+      },
+    );
   });
 
   after(() => {

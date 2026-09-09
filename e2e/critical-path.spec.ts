@@ -11,6 +11,19 @@ import { $, $$, browser, expect } from "@wdio/globals";
  * so by the time this runs the history is already on screen.
  */
 describe("open a repository and read a commit", () => {
+  before(async () => {
+    // A fixed pause is a coin flip on a loaded machine: cold-start time
+    // varies with whatever else is running. Wait for the actual signal that
+    // the history rendered instead of guessing how long that takes.
+    await browser.waitUntil(
+      async () => (await $$('[role="option"]').length) > 0,
+      {
+        timeout: 20_000,
+        timeoutMsg: "the commit history never rendered",
+      },
+    );
+  });
+
   it("draws the history over the commit rows", async () => {
     const rows = await $$('[role="option"]');
     await expect(rows).toBeElementsArrayOfSize({ gte: 3 });
