@@ -12,6 +12,15 @@ impl Fixture {
     pub fn new() -> Self {
         let dir = tempfile::tempdir().unwrap();
         let repo = Repository::init(dir.path()).unwrap();
+        // Otherwise a checkout picks up whatever `core.autocrlf` the machine
+        // running the test happens to have — true by default on Git for
+        // Windows — and rewrites committed `\n` content to `\r\n` on disk,
+        // which is exactly what a byte-exact assertion on checked-out content
+        // is meant to catch.
+        repo.config()
+            .unwrap()
+            .set_bool("core.autocrlf", false)
+            .unwrap();
         Self { dir, repo }
     }
 
