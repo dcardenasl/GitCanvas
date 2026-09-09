@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Release · 81/84 tareas · última actualización 2026-09-08
+**Estado:** Release · 81/85 tareas · última actualización 2026-09-09
 
 ## Cómo se usa este archivo
 
@@ -983,7 +983,56 @@ intentar resolverlo.
 
 - [x] **R-3 — Commit de release.** Último commit de `dev` antes del PR, con el
       CHANGELOG y el estado del README.
-      → `chore: release v0.1.0`
+      *Hallazgos durante la ejecución:* el PR de un intento de release anterior seguía
+      abierto y su `quality` nunca había corrido completo — cada fix exponía el
+      siguiente. (1) `repository_tests.rs` probaba la ACL del webview mock contra
+      `http://tauri.localhost` en Windows y Linux; en la práctica el mock solo acepta
+      `tauri://localhost` en macOS y Linux, y `http://tauri.localhost` únicamente en
+      Windows. (2) A Windows le faltaba `.gitattributes`: el checkout con
+      `core.autocrlf=true` reventaba `prettier --check` en 104 archivos. (3) Al
+      `webkit2gtk-driver` no instalado en el runner de Linux (E2E queda mudo, sin poder
+      ejecutar scripts en el WebView). (4) `cargo test` en Windows moría con
+      `STATUS_ENTRYPOINT_NOT_FOUND`: el binario de test no lleva el manifest de Windows
+      que `tauri-build` sí embebe en el binario de la app — se genera aparte y se
+      embebe con `/MANIFEST:EMBED` para ambos. (5) El fixture de
+      `crates/gitcanvas-core/tests/support` heredaba `core.autocrlf` del runner; fijado
+      a `false` para que un checkout sea siempre byte-exacto. (6) `tsx` (el loader de
+      TypeScript de los specs E2E) trae `keepNames: true` fijo en esbuild, así que
+      `browser.execute()` con una función con nombre revienta con
+      `__name is not defined` en el navegador; hace falta un polyfill de `window.__name`
+      antes de cada spec. (7) El fixture sintético de E2E solo tenía 3 commits;
+      `collapse.spec.ts` y `screenshots.spec.ts` esperaban al menos 10 (fueron escritos
+      para correr con `GITCANVAS_E2E_REPO` apuntando a un repo real). (8) A
+      `critical-path.spec.ts` le faltaba el `before()` que sí tienen los otros tres
+      specs, así que corría antes de que la ventana terminara de montar.
+      *Bug sin resolver, documentado como R-3.1:* con esos ocho arreglos, el primer
+      lanzamiento de la app en una sesión de WebDriver funciona siempre; el segundo en
+      adelante a veces no — el frontend llama a `core.invoke`, Rust responde
+      (`success: true` en el log), pero la promesa del lado JS nunca resuelve y la
+      ventana se queda sin repositorio abierto. No es determinístico por posición: en
+      una corrida local, `screenshots → audit` pasaron los dos; en otra, todo lo que
+      seguía a `audit` falló incluso con reintentos de archivo completo. Reproduce en
+      macOS y en el Linux de CI por igual. Mitigado con `specFileRetries` en
+      `wdio.conf.ts` — cada intento relanza el proceso entero, y normalmente alcanza.
+      Confinado al feature `e2e`: `tauri-plugin-wdio-webdriver` nunca viaja en un build
+      de release, así que esto no llega a un usuario real.
+      → `chore: release v0.1.0` · `test(ipc): fix the mocked origin for repository
+      command tests` · `ci: force lf line endings so windows checkout matches prettier`
+      · `ci: install webkit2gtk-driver so the e2e suite can drive the webview` ·
+      `ci: exclude the workspace from windows defender before building` · `ci: embed
+      the windows manifest in test binaries to fix STATUS_ENTRYPOINT_NOT_FOUND` ·
+      `test(ipc): match the mock webview origin windows actually resolves` ·
+      `test(core): pin the fixture repo's autocrlf so checkouts are byte-exact` ·
+      `test(e2e): polyfill esbuild's __name helper for browser.execute callbacks` ·
+      `test(e2e): wait for the commit history instead of a fixed pause` · `test(e2e):
+      grow the fixture repository and retry a spec that races the IPC bridge`
+
+- [ ] **R-3.1 — Investigar la carrera de `core.invoke` en relanzamientos de E2E.** Por
+      qué la respuesta de un comando Tauri a veces no resuelve la promesa del lado JS en
+      el segundo lanzamiento o posteriores dentro de la misma sesión de WebDriver.
+      Sospecha: compite con el script que inyecta `tauri-plugin-wdio-webdriver` durante
+      la carga de la página. Hoy mitigado con `specFileRetries: 2`, no resuelto. Sin
+      impacto en producción — el plugin solo existe bajo `--features e2e`.
 
 - [ ] **R-4 — PR `dev → main`.** Abrir, esperar `quality` verde, **esperar aprobación de
       David**, y mergear con `--merge` (nunca squash ni rebase).
