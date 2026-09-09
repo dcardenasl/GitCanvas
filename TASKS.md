@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Release · 81/85 tareas · última actualización 2026-09-09
+**Estado:** Release · 81/84 tareas · última actualización 2026-09-09
 
 ## Cómo se usa este archivo
 
@@ -1005,17 +1005,18 @@ intentar resolverlo.
       para correr con `GITCANVAS_E2E_REPO` apuntando a un repo real). (8) A
       `critical-path.spec.ts` le faltaba el `before()` que sí tienen los otros tres
       specs, así que corría antes de que la ventana terminara de montar.
-      *Bug sin resolver, documentado como R-3.1:* con esos ocho arreglos, el primer
-      lanzamiento de la app en una sesión de WebDriver funciona siempre; el segundo en
-      adelante a veces no — el frontend llama a `core.invoke`, Rust responde
-      (`success: true` en el log), pero la promesa del lado JS nunca resuelve y la
-      ventana se queda sin repositorio abierto. No es determinístico por posición: en
-      una corrida local, `screenshots → audit` pasaron los dos; en otra, todo lo que
-      seguía a `audit` falló incluso con reintentos de archivo completo. Reproduce en
-      macOS y en el Linux de CI por igual. Mitigado con `specFileRetries` en
-      `wdio.conf.ts` — cada intento relanza el proceso entero, y normalmente alcanza.
-      Confinado al feature `e2e`: `tauri-plugin-wdio-webdriver` nunca viaja en un build
-      de release, así que esto no llega a un usuario real.
+      (9) Con esos ocho arreglos, el primer lanzamiento de la app dentro de un proceso
+      de `wdio run` funcionaba siempre; el segundo en adelante a veces no — el frontend
+      llama a `core.invoke`, Rust responde (`success: true` en el log), pero la promesa
+      del lado JS nunca resuelve y la ventana se queda sin repositorio abierto.
+      `specFileRetries` no lo arreglaba (un reintento relanza el proceso de la app, no
+      el proceso de Node que lo orquesta, así que hereda el mismo estado roto).
+      Reproducía igual en macOS y en el Linux de CI. Resuelto en la raíz: cada archivo
+      de spec corre en su propio proceso `wdio run` (`scripts/run-e2e.sh`), así que
+      cada uno recibe el único lanzamiento que `@wdio/tauri-service` deja bien
+      inicializado. Confirmado en 3 corridas limpias, local y en CI: 4/4 specs en
+      verde. Sin impacto en producción de cualquier forma — `tauri-plugin-wdio-webdriver`
+      solo existe bajo `--features e2e`, nunca en un build de release.
       → `chore: release v0.1.0` · `test(ipc): fix the mocked origin for repository
       command tests` · `ci: force lf line endings so windows checkout matches prettier`
       · `ci: install webkit2gtk-driver so the e2e suite can drive the webview` ·
@@ -1025,14 +1026,8 @@ intentar resolverlo.
       `test(core): pin the fixture repo's autocrlf so checkouts are byte-exact` ·
       `test(e2e): polyfill esbuild's __name helper for browser.execute callbacks` ·
       `test(e2e): wait for the commit history instead of a fixed pause` · `test(e2e):
-      grow the fixture repository and retry a spec that races the IPC bridge`
-
-- [ ] **R-3.1 — Investigar la carrera de `core.invoke` en relanzamientos de E2E.** Por
-      qué la respuesta de un comando Tauri a veces no resuelve la promesa del lado JS en
-      el segundo lanzamiento o posteriores dentro de la misma sesión de WebDriver.
-      Sospecha: compite con el script que inyecta `tauri-plugin-wdio-webdriver` durante
-      la carga de la página. Hoy mitigado con `specFileRetries: 2`, no resuelto. Sin
-      impacto en producción — el plugin solo existe bajo `--features e2e`.
+      grow the fixture repository and retry a spec that races the IPC bridge` ·
+      `test(e2e): run each spec file in its own wdio process`
 
 - [ ] **R-4 — PR `dev → main`.** Abrir, esperar `quality` verde, **esperar aprobación de
       David**, y mergear con `--merge` (nunca squash ni rebase).
