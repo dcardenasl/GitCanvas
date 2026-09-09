@@ -59,7 +59,8 @@ jobs:
             patchelf \
             libxdo-dev \
             libdbus-1-dev \
-            pkg-config
+            pkg-config \
+            webkit2gtk-driver
 
       - run: npm ci
 
