@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { getStartupRepository } from "../../lib/ipc";
@@ -9,6 +10,7 @@ import { GitHubPicker } from "../GitHubPicker";
 import { Resizer } from "../Resizer";
 import { Actions } from "../Toolbar";
 import { INSPECTOR, SIDEBAR, useLayout } from "../../state/layout";
+import { LIVE_QUERIES, useLiveRepository } from "../../state/liveRepository";
 import { Sidebar } from "../Sidebar";
 import { useHistory } from "../../state/history";
 import { useSession } from "../../state/session";
@@ -26,6 +28,9 @@ export function AppShell() {
   const selectedFilePath = useSession((state) => state.selectedFilePath);
   const [showGitHub, setShowGitHub] = useState(false);
   const layout = useLayout();
+  const queryClient = useQueryClient();
+
+  useLiveRepository(repository?.path ?? null);
   const [sidebarPinned, setSidebarPinned] = useState(false);
   const revealCommit = useSession((state) => state.revealCommit);
   const setRepository = useSession((state) => state.openRepository);
@@ -58,6 +63,22 @@ export function AppShell() {
         <span className="toolbar__repository">
           {repository?.name ?? "Ningún repositorio abierto"}
         </span>
+        {repository !== null && (
+          <button
+            type="button"
+            className="button"
+            title="Volver a leer el repositorio desde el disco"
+            onClick={() => {
+              for (const key of LIVE_QUERIES) {
+                void queryClient.invalidateQueries({
+                  queryKey: [key, repository.path],
+                });
+              }
+            }}
+          >
+            Actualizar
+          </button>
+        )}
         {readingFile && (
           <button
             type="button"

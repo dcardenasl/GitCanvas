@@ -18,6 +18,9 @@ vi.mock("../../lib/ipc", () => ({
   checkoutBranch: () => Promise.resolve(null),
   pullFastForward: () => Promise.resolve(null),
   pushCurrentBranch: () => Promise.resolve(null),
+  watchRepository: () => Promise.resolve(null),
+  unwatchRepository: () => Promise.resolve(null),
+  onRepositoryChanged: () => Promise.resolve(() => undefined),
   IpcError: class extends Error {},
 }));
 

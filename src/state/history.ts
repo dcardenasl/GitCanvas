@@ -63,8 +63,14 @@ export function useHistory(path: string | null): HistoryView {
         last.next_cursor === null
           ? undefined
           : { cursor: last.next_cursor, roots: last.roots },
-      // History is immutable once walked, so a page never needs refetching.
-      staleTime: Infinity,
+      /*
+       * A walk is stable, but a repository is not: refs move and commits
+       * arrive. Caching forever showed the repository as it was when it was
+       * opened, so a commit made anywhere else never appeared. The watcher in
+       * `useLiveRepository` invalidates this when the refs move; a short
+       * stale time covers the gap when the watch could not be established.
+       */
+      staleTime: 30_000,
       gcTime: 5 * 60 * 1000,
     });
 

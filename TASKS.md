@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Release · 80/83 tareas · última actualización 2026-09-08
+**Estado:** Release · 81/84 tareas · última actualización 2026-09-08
 
 ## Cómo se usa este archivo
 
@@ -932,6 +932,39 @@ intentar resolverlo.
       repositorio", "Pegá un Personal Access Token", "Traelos con pull" y "Elegí un
       commit". Queda un grep de verificación anotado en la memoria del proyecto.
       → `fix(ui): use neutral spanish across the interface`
+
+---
+
+### Ola UX-5 — El repositorio en vivo
+
+- [x] **UX-16 — La ventana refleja el repositorio, no una foto de él.** David hizo un
+      commit desde fuera y la aplicación no lo mostró.
+      *Decisión mía que estaba mal:* `staleTime: Infinity` en el historial, razonando que
+      "un historial ya recorrido es inmutable". Cierto para un recorrido dado, **falso
+      para un repositorio vivo**: las referencias se mueven y llegan commits. Con
+      `refetchOnWindowFocus: false` encima, no había forma de enterarse nunca.
+      *Solución:* vigilancia del directorio de metadatos con `notify`, en el crate de
+      dominio y sin que sepa que Tauri existe — recibe un callback, y `src-tauri` lo
+      conecta a un evento tipado.
+      *Tres decisiones que la hacen robusta:*
+      **(1)** Se vigila solo el directorio de metadatos, nunca el árbol de trabajo: una
+      vigilancia sobre el checkout completo se dispara con cada archivo guardado y en un
+      repositorio grande cuesta miles de descriptores por información que no se usa.
+      **(2)** Los eventos se agrupan con 250 ms de espera: un commit reescribe el índice,
+      una referencia y el reflog, llegando como una docena de eventos: reaccionar a cada
+      uno releería el historial una docena de veces por un solo commit.
+      **(3)** Se usa la ruta que el propio repositorio declara, no `<worktree>/.git`, para
+      que un worktree enlazado —donde `.git` es un archivo— también funcione.
+      *Lo que no se invalida:* el diff de un commit y el contenido de un archivo, que sí
+      son inmutables una vez escritos. Descartarlos en cada cambio releería trabajo que
+      no pudo haber cambiado.
+      *Dos respaldos, porque una vigilancia puede fallar* en un volumen de red o bajo un
+      sandbox restrictivo: refresco al volver a la ventana, y un botón *Actualizar*
+      explícito. Si la vigilancia no se establece, la ventana sigue funcionando.
+      *Verificado:* 5 tests de Rust contra actividad real del sistema de archivos
+      —incluido que un commit reporte **una sola vez** y que soltar el handle detenga la
+      vigilancia— y 6 de interfaz, incluido que el diff **no** se invalide.
+      → `feat(core): watch a repository for changes` · `feat(ipc): expose the repository watch` · `feat(ui): keep the open repository in step with the disk`
 
 ---
 

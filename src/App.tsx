@@ -16,7 +16,13 @@ const queryClient = new QueryClient({
       // Reading git is local and deterministic; retrying a failed read just
       // delays showing the user what went wrong.
       retry: false,
-      refetchOnWindowFocus: false,
+      /*
+       * Coming back to the window is exactly when work done elsewhere should
+       * appear. The filesystem watch already covers most of it; this is the
+       * cheap safety net for when the watch could not be established, and it
+       * costs a few milliseconds against a local repository.
+       */
+      refetchOnWindowFocus: true,
     },
   },
 });

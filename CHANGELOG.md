@@ -79,6 +79,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The window keeps up with the repository.** Commits, branches and tags made
+  anywhere else now appear without reopening: the repository's metadata is
+  watched, coming back to the window re-reads it, and a refresh control covers
+  the cases where a watch cannot be established.
+
 - **The system folder panel is pre-initialised at startup**, so the first
   "open repository" no longer pays for AppKit loading its frameworks while the
   interface cannot repaint.
