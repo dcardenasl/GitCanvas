@@ -27,6 +27,7 @@ pub mod github;
 pub mod history;
 pub mod refs;
 pub mod repository;
+pub mod watch;
 
 /// The crate version, so the application can report what engine it is running.
 #[must_use]

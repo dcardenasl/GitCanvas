@@ -65,6 +65,10 @@ git2 = { version = "0.21", default-features = false, features = [
 ] }
 thiserror = "2"
 
+# Filesystem notification, for noticing that a repository changed underneath the
+# window. Pinned to the stable 8.x line rather than the 9.0 release candidate.
+notify = "8"
+
 # HTTP for the two GitHub REST calls. `rustls` rather than the system TLS stack,
 # for the same reason libgit2 is vendored: identical behaviour everywhere.
 ureq = { version = "3", default-features = false, features = ["rustls", "json"] }
