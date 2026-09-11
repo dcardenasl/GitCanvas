@@ -90,6 +90,73 @@
   font-size: 13px;
 }
 
+.history-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.history-view > .commit-table {
+  min-height: 0;
+  flex: 1;
+}
+
+.working-tree-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-toolbar);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.working-tree-row:hover {
+  background: var(--surface-hover);
+}
+
+.working-tree-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.working-tree-row--selected {
+  background: var(--surface-selected);
+}
+
+.working-tree-row__marker {
+  padding: 2px 6px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.working-tree-row__title {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.working-tree-row__summary,
+.working-tree-row__stats {
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
 .repository-picker {
   display: flex;
   gap: 10px;

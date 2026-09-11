@@ -66,7 +66,10 @@ function renderPanel() {
 
 beforeEach(() => {
   getCommitDiff.mockReset();
-  useSession.setState({ selectedFilePath: null, expandedFilePath: null });
+  useSession.setState({
+    selection: { kind: "commit", commitId: COMMIT.id, filePath: null },
+    expandedFilePath: null,
+  });
 });
 afterEach(cleanup);
 
@@ -124,7 +127,11 @@ describe("CommitDetailPanel", () => {
 
     await userEvent.click(await screen.findByRole("button"));
 
-    expect(useSession.getState().selectedFilePath).toBe("src/app.ts");
+    expect(useSession.getState().selection).toEqual({
+      kind: "commit",
+      commitId: COMMIT.id,
+      filePath: "src/app.ts",
+    });
   });
 
   it("marks a file the engine withheld instead of showing a line count", async () => {

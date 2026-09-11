@@ -5,16 +5,23 @@ import { createElement, type ReactNode } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-type Handler = (event: { payload: { path: string } }) => void;
+type Handler = (event: {
+  payload: {
+    path: string;
+    generation: number;
+    kind: "Metadata" | "Worktree" | { Degraded: { message: string } };
+  };
+}) => void;
 
 let handler: Handler | null = null;
 const stop = vi.fn();
-const watchRepository = vi.fn<(path: string) => Promise<null>>();
-const unwatchRepository = vi.fn<() => Promise<null>>();
+const watchRepository = vi.fn<(request: unknown) => Promise<null>>();
+const unwatchRepository = vi.fn<(generation: number) => Promise<null>>();
 
 vi.mock("../lib/ipc", () => ({
-  watchRepository: (path: string) => watchRepository(path),
-  unwatchRepository: () => unwatchRepository(),
+  watchRepository: (request: unknown) => watchRepository(request),
+  unwatchRepository: (generation: number) => unwatchRepository(generation),
+  getWorktreeFingerprint: () => Promise.resolve({ revision: "revision" }),
   onRepositoryChanged: (fn: Handler) => {
     handler = fn;
     return Promise.resolve(stop);
@@ -49,7 +56,10 @@ describe("useLiveRepository", () => {
       { wrapper },
     );
 
-    expect(watchRepository).toHaveBeenCalledWith("/tmp/repo");
+    expect(watchRepository).toHaveBeenCalledWith({
+      path: "/tmp/repo",
+      generation: 1,
+    });
   });
 
   it("watches nothing when no repository is open", () => {
@@ -74,15 +84,19 @@ describe("useLiveRepository", () => {
 
     // Let the listener subscription resolve.
     await Promise.resolve();
-    handler?.({ payload: { path: "/tmp/repo" } });
+    handler?.({
+      payload: { path: "/tmp/repo", generation: 1, kind: "Metadata" },
+    });
 
     const keys = invalidate.mock.calls.map((call) => call[0]?.queryKey?.[0]);
     expect(keys).toContain("history");
     expect(keys).toContain("branches");
     expect(keys).toContain("tags");
+    expect(keys).not.toContain("worktree");
+    expect(keys).not.toContain("worktree-file-diff");
   });
 
-  it("leaves a commit's own diff alone", async () => {
+  it("invalidates only local queries for a working-tree change", async () => {
     // A commit's diff really is immutable once written; discarding it on every
     // change would re-read work that cannot have changed.
     const invalidate = vi.spyOn(client, "invalidateQueries");
@@ -94,9 +108,13 @@ describe("useLiveRepository", () => {
     );
 
     await Promise.resolve();
-    handler?.({ payload: { path: "/tmp/repo" } });
+    handler?.({
+      payload: { path: "/tmp/repo", generation: 1, kind: "Worktree" },
+    });
 
     const keys = invalidate.mock.calls.map((call) => call[0]?.queryKey?.[0]);
+    expect(keys).toContain("worktree");
+    expect(keys).toContain("worktree-file-diff");
     expect(keys).not.toContain("diff");
     expect(keys).not.toContain("file");
   });
@@ -114,7 +132,7 @@ describe("useLiveRepository", () => {
 
     // A watch that outlives its window keeps invalidating caches for a
     // repository nobody is looking at.
-    expect(unwatchRepository).toHaveBeenCalled();
+    expect(unwatchRepository).toHaveBeenCalledWith(1);
   });
 
   it("keeps working when the watch cannot be established", async () => {

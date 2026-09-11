@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 import { getStartupRepository } from "../../lib/ipc";
 
-import { CommitDetailPanel, EmptyInspector } from "../CommitDetailPanel";
+import { CommitDetailPanel } from "../CommitDetailPanel";
 import { CommitSearch } from "../CommitSearch";
 import { FileDiffView } from "../FileDiffView";
 import { GitHubPicker } from "../GitHubPicker";
@@ -12,8 +12,13 @@ import { Actions } from "../Toolbar";
 import { INSPECTOR, SIDEBAR, useLayout } from "../../state/layout";
 import { LIVE_QUERIES, useLiveRepository } from "../../state/liveRepository";
 import { Sidebar } from "../Sidebar";
+import { WorkingTreeDetailPanel } from "../WorkingTreeDetailPanel";
 import { useHistory } from "../../state/history";
-import { useSession } from "../../state/session";
+import {
+  selectedCommitId as getSelectedCommitId,
+  selectedFilePath as getSelectedFilePath,
+  useSession,
+} from "../../state/session";
 
 import { HistoryView } from "./HistoryView";
 import { RepositoryPicker } from "./RepositoryPicker";
@@ -23,14 +28,15 @@ import "./AppShell.css";
 /** The application window: toolbar, navigation and history. */
 export function AppShell() {
   const repository = useSession((state) => state.repository);
-  const selectedCommitId = useSession((state) => state.selectedCommitId);
+  const selection = useSession((state) => state.selection);
+  const selectedCommitId = useSession(getSelectedCommitId);
   const history = useHistory(repository?.path ?? null);
-  const selectedFilePath = useSession((state) => state.selectedFilePath);
+  const selectedFilePath = useSession(getSelectedFilePath);
   const [showGitHub, setShowGitHub] = useState(false);
   const layout = useLayout();
   const queryClient = useQueryClient();
 
-  useLiveRepository(repository?.path ?? null);
+  const watcher = useLiveRepository(repository?.path ?? null);
   const [sidebarPinned, setSidebarPinned] = useState(false);
   const revealCommit = useSession((state) => state.revealCommit);
   const setRepository = useSession((state) => state.openRepository);
@@ -54,7 +60,11 @@ export function AppShell() {
   }, [setRepository]);
   const selected =
     history.commits.find((commit) => commit.id === selectedCommitId) ?? null;
-  const readingFile = selected !== null && selectedFilePath !== null;
+  const readingCommitFile = selected !== null && selectedFilePath !== null;
+  const worktreeFile = selection.kind === "worktree" ? selection : null;
+  const readingWorktreeFile =
+    worktreeFile !== null && worktreeFile.filePath !== null;
+  const readingFile = readingCommitFile || readingWorktreeFile;
   const collapseSidebar = readingFile && !sidebarPinned;
 
   return (
@@ -78,6 +88,14 @@ export function AppShell() {
           >
             Actualizar
           </button>
+        )}
+        {watcher.status.kind === "degraded" && (
+          <span role="alert" className="toolbar__status">
+            Watcher degradado: {watcher.status.message}
+            <button type="button" className="button" onClick={watcher.retry}>
+              Reintentar
+            </button>
+          </span>
         )}
         {readingFile && (
           <button
@@ -169,6 +187,12 @@ export function AppShell() {
                 commit={selected}
                 path={selectedFilePath}
               />
+            ) : worktreeFile !== null && worktreeFile.filePath !== null ? (
+              <FileDiffView
+                repositoryPath={repository.path}
+                path={worktreeFile.filePath}
+                worktree={{ side: worktreeFile.side }}
+              />
             ) : (
               <HistoryView />
             )}
@@ -182,7 +206,7 @@ export function AppShell() {
             onResize={layout.setInspector}
           />
           {selected === null ? (
-            <EmptyInspector />
+            <WorkingTreeDetailPanel repositoryPath={repository.path} />
           ) : (
             <CommitDetailPanel
               repositoryPath={repository.path}

@@ -1,86 +1,116 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
-import type { CommitInfo } from "../../bindings";
-import { getFileContent } from "../../lib/ipc";
+import type {
+  CommitInfo,
+  FileContent,
+  WorktreeFileContent,
+} from "../../bindings";
+import { getFileContent, getWorktreeFileContent } from "../../lib/ipc";
 import { useCommitDiff } from "../../state/diff";
 import { useSession } from "../../state/session";
+import { useWorktreeFileDiff, useWorktreeSnapshot } from "../../state/worktree";
 import { shortId } from "../CommitTable/format";
 import { LineTable, parseWholeFile } from "../DiffViewer";
 import { DiffViewer } from "../DiffViewer";
 
 import "./FileDiffView.css";
 
-export interface FileDiffViewProps {
+interface SharedProps {
   readonly repositoryPath: string;
-  readonly commit: CommitInfo;
   readonly path: string;
 }
 
-/** Which of the two readings of a file is on screen. */
+export type FileDiffViewProps =
+  | (SharedProps & {
+      readonly commit: CommitInfo;
+      readonly worktree?: never;
+    })
+  | (SharedProps & {
+      readonly commit?: never;
+      readonly worktree: { readonly side: "staged" | "unstaged" };
+    });
+
 type Mode = "diff" | "file";
 
-/**
- * One file, filling the centre panel, as a patch or in full.
- *
- * The width is the point. A unified diff of indented code needs room, and the
- * inspector column never had it; here a hunk reads without wrapping or
- * horizontal scrolling for anything but genuinely long lines.
- */
-export function FileDiffView({
-  repositoryPath,
-  commit,
-  path,
-}: FileDiffViewProps) {
+/** One commit or one local file, with an impossible-to-confuse source. */
+export function FileDiffView(props: FileDiffViewProps) {
+  const { repositoryPath, path } = props;
   const selectFile = useSession((state) => state.selectFile);
   const expandPath = useSession((state) => state.expandedFilePath);
   const expandFile = useSession((state) => state.expandFile);
-
   const [wrap, setWrap] = useState(false);
-
-  /*
-   * The chosen mode is stored with the file it belongs to, so opening another
-   * file falls back to its diff by derivation. Resetting it in an effect
-   * renders the new file once in the previous file's mode before correcting
-   * itself, which shows the wrong thing for a frame.
-   */
   const [choice, setChoice] = useState<{
     key: string;
     mode: Mode;
     expand: boolean;
   }>({ key: "", mode: "diff", expand: false });
-  const key = `${commit.id}/${path}`;
+
+  const isWorktree = props.worktree !== undefined;
+  const sourceKey = isWorktree
+    ? props.worktree.side
+    : `commit-${props.commit.id}`;
+  const key = `${sourceKey}/${path}`;
   const mode: Mode = choice.key === key ? choice.mode : "diff";
   const expandWholeFile = choice.key === key && choice.expand;
 
-  const setMode = (next: Mode) => {
-    setChoice({ key, mode: next, expand: expandWholeFile });
-  };
-
-  const diff = useCommitDiff(repositoryPath, commit.id, expandPath);
-  const file = diff.data?.files.find((entry) => entry.path === path);
-
-  // A commit that deleted the file has nothing to show in full, so the choice
-  // is not offered rather than offered and then failing.
+  const commitDiff = useCommitDiff(
+    repositoryPath,
+    isWorktree ? null : props.commit.id,
+    expandPath,
+  );
+  const localSnapshot = useWorktreeSnapshot(isWorktree ? repositoryPath : null);
+  const localRevision = localSnapshot.data?.revision;
+  const worktreeFileDiff = useWorktreeFileDiff(
+    repositoryPath,
+    isWorktree && localRevision !== undefined
+      ? {
+          side: props.worktree.side,
+          path,
+          expected_revision: localRevision,
+          expand: expandWholeFile,
+        }
+      : null,
+  );
+  const diff = isWorktree ? worktreeFileDiff : commitDiff;
+  const file = isWorktree
+    ? worktreeFileDiff.data?.file
+    : commitDiff.data?.files.find((entry) => entry.path === path);
   const deleted = file?.change === "Deleted";
 
-  const whole = useQuery({
-    queryKey: ["file", repositoryPath, commit.id, path, expandWholeFile],
+  const whole = useQuery<FileContent | WorktreeFileContent>({
+    queryKey: [
+      isWorktree ? "worktree-file" : "file",
+      repositoryPath,
+      isWorktree ? props.worktree.side : props.commit.id,
+      path,
+      expandWholeFile,
+      localRevision,
+    ],
     enabled: mode === "file" && !deleted,
-    queryFn: () =>
-      getFileContent(repositoryPath, {
-        commit_id: commit.id,
+    queryFn: () => {
+      if (isWorktree) {
+        return getWorktreeFileContent(repositoryPath, {
+          side: props.worktree.side,
+          path,
+          expected_revision: localRevision ?? null,
+          expand: expandWholeFile,
+        });
+      }
+      return getFileContent(repositoryPath, {
+        commit_id: props.commit.id,
         path,
         expand: expandWholeFile,
-      }),
-    staleTime: Infinity,
+      });
+    },
+    staleTime: isWorktree ? 1_000 : Infinity,
   });
 
-  const text = whole.data?.text ?? null;
-  const wholeLines = useMemo(
-    () => (text === null ? [] : parseWholeFile(text)),
-    [text],
-  );
+  useEffect(() => {
+    if (isWorktree && (diff.error !== null || whole.error !== null)) {
+      selectFile(null);
+    }
+  }, [diff.error, whole.error, isWorktree, selectFile]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -91,6 +121,16 @@ export function FileDiffView({
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [selectFile]);
+
+  const wholeText = whole.data?.text ?? null;
+  const wholeLines = useMemo(
+    () => (wholeText === null ? [] : parseWholeFile(wholeText)),
+    [wholeText],
+  );
+
+  const setMode = (next: Mode) => {
+    setChoice({ key, mode: next, expand: expandWholeFile });
+  };
 
   return (
     <section className="file-diff" aria-label={`Cambios en ${path}`}>
@@ -110,7 +150,9 @@ export function FileDiffView({
             {path}
           </span>
           <span className="file-diff__commit">
-            en {shortId(commit.id)} · {commit.summary}
+            {isWorktree
+              ? `cambios locales · ${props.worktree.side === "staged" ? "preparado" : "sin preparar"}`
+              : `en ${shortId(props.commit.id)} · ${props.commit.summary}`}
           </span>
         </div>
 
@@ -181,14 +223,16 @@ export function FileDiffView({
             )}
             {diff.data !== undefined && file === undefined && (
               <p className="file-diff__state" role="alert">
-                Este commit no modifica {path}.
+                {isWorktree
+                  ? "Este archivo ya no forma parte de los cambios locales."
+                  : `Este commit no modifica ${path}.`}
               </p>
             )}
             {file !== undefined && (
               <DiffViewer
                 file={file}
                 wrap={wrap}
-                expanding={diff.isFetching && expandPath === file.path}
+                expanding={diff.isFetching}
                 onExpand={expandFile}
               />
             )}
@@ -212,8 +256,8 @@ export function FileDiffView({
             {whole.data?.omitted === "TooLarge" && (
               <div className="diff-viewer__notice">
                 <p className="diff-viewer__notice-text">
-                  Archivo de {whole.data.lines} líneas, retenido para no
-                  bloquear la vista.
+                  Archivo de {whole.data.bytes} bytes, retenido para no bloquear
+                  la vista.
                 </p>
                 <button
                   type="button"

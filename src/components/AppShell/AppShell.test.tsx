@@ -11,6 +11,30 @@ const getCommitDiff = vi.fn<() => Promise<CommitDiff>>();
 vi.mock("../../lib/ipc", () => ({
   getCommits: () => getCommits(),
   getCommitDiff: () => getCommitDiff(),
+  getWorktreeSnapshot: () =>
+    Promise.resolve({
+      revision: "revision",
+      staged: {
+        side: "staged",
+        revision: "revision",
+        files: [],
+        total_files: 0,
+        next_cursor: null,
+        insertions: 0,
+        deletions: 0,
+      },
+      unstaged: {
+        side: "unstaged",
+        revision: "revision",
+        files: [],
+        total_files: 0,
+        next_cursor: null,
+        insertions: 0,
+        deletions: 0,
+      },
+    }),
+  getWorktreeFingerprint: () => Promise.resolve({ revision: "revision" }),
+  getWorktreeFileContent: () => Promise.resolve(null),
   getBranches: () => Promise.resolve([]),
   getTags: () => Promise.resolve([]),
   getStartupRepository: () => Promise.resolve(null),
@@ -84,8 +108,7 @@ beforeEach(() => {
   });
   useSession.setState({
     repository: { path: "/tmp/repo", name: "repo" },
-    selectedCommitId: null,
-    selectedFilePath: null,
+    selection: { kind: "history" },
     expandedFilePath: null,
     revealCommitId: null,
   });
@@ -105,7 +128,9 @@ describe("AppShell layout", () => {
   });
 
   it("keeps them matched with a commit selected", async () => {
-    useSession.setState({ selectedCommitId: COMMIT.id });
+    useSession.setState({
+      selection: { kind: "commit", commitId: COMMIT.id, filePath: null },
+    });
     const { container } = renderShell();
 
     await waitFor(() => {
@@ -118,8 +143,7 @@ describe("AppShell layout", () => {
 
   it("keeps them matched while a file is open and the sidebar is collapsed", async () => {
     useSession.setState({
-      selectedCommitId: COMMIT.id,
-      selectedFilePath: "a.txt",
+      selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },
     });
     const { container } = renderShell();
 
@@ -142,8 +166,7 @@ describe("AppShell layout", () => {
 
   it("collapses the sidebar to zero width rather than unmounting it", async () => {
     useSession.setState({
-      selectedCommitId: COMMIT.id,
-      selectedFilePath: "a.txt",
+      selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },
     });
     const { container } = renderShell();
 

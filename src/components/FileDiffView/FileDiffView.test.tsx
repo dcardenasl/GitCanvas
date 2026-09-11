@@ -9,18 +9,33 @@ import type {
   CommitInfo,
   FileContent,
   FileDiff,
+  WorktreeSnapshot,
+  WorktreeFileContent,
+  WorktreeFileDiff,
 } from "../../bindings";
 
 const getCommitDiff =
   vi.fn<(path: string, request: unknown) => Promise<CommitDiff>>();
 const getFileContent =
   vi.fn<(path: string, request: unknown) => Promise<FileContent>>();
+const getWorktreeSnapshot =
+  vi.fn<(path: string, request: unknown) => Promise<WorktreeSnapshot>>();
+const getWorktreeFileDiff =
+  vi.fn<(path: string, request: unknown) => Promise<WorktreeFileDiff>>();
+const getWorktreeFileContent =
+  vi.fn<(path: string, request: unknown) => Promise<WorktreeFileContent>>();
 
 vi.mock("../../lib/ipc", () => ({
   getCommitDiff: (path: string, request: unknown) =>
     getCommitDiff(path, request),
   getFileContent: (path: string, request: unknown) =>
     getFileContent(path, request),
+  getWorktreeSnapshot: (path: string, request: unknown) =>
+    getWorktreeSnapshot(path, request),
+  getWorktreeFileDiff: (path: string, request: unknown) =>
+    getWorktreeFileDiff(path, request),
+  getWorktreeFileContent: (path: string, request: unknown) =>
+    getWorktreeFileContent(path, request),
 }));
 
 const { FileDiffView } = await import("./FileDiffView");
@@ -61,13 +76,52 @@ function diff(files: FileDiff[]): CommitDiff {
   };
 }
 
-function renderView(path = "src/app.ts") {
+function worktreeSnapshot(files: FileDiff[] = []): WorktreeSnapshot {
+  const summaries = files.map((entry) => ({
+    path: entry.path,
+    old_path: entry.old_path,
+    change: entry.change,
+    insertions: entry.insertions,
+    deletions: entry.deletions,
+    omitted: entry.omitted,
+  }));
+  return {
+    revision: "revision",
+    staged: {
+      side: "staged",
+      revision: "revision",
+      files: [],
+      total_files: 0,
+      next_cursor: null,
+      insertions: 0,
+      deletions: 0,
+    },
+    unstaged: {
+      side: "unstaged",
+      revision: "revision",
+      files: summaries,
+      total_files: summaries.length,
+      next_cursor: null,
+      insertions: 2,
+      deletions: 1,
+    },
+  };
+}
+
+function renderView(
+  path = "src/app.ts",
+  worktree?: { side: "staged" | "unstaged" },
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <FileDiffView repositoryPath="/tmp/repo" commit={COMMIT} path={path} />
+      <FileDiffView
+        repositoryPath="/tmp/repo"
+        path={path}
+        {...(worktree === undefined ? { commit: COMMIT } : { worktree })}
+      />
     </QueryClientProvider>,
   );
 }
@@ -87,9 +141,11 @@ function content(overrides: Partial<FileContent> = {}): FileContent {
 beforeEach(() => {
   getCommitDiff.mockReset();
   getFileContent.mockReset();
+  getWorktreeSnapshot.mockReset();
+  getWorktreeFileDiff.mockReset();
+  getWorktreeFileContent.mockReset();
   useSession.setState({
-    selectedCommitId: COMMIT.id,
-    selectedFilePath: "src/app.ts",
+    selection: { kind: "commit", commitId: COMMIT.id, filePath: "src/app.ts" },
     expandedFilePath: null,
   });
 });
@@ -117,7 +173,7 @@ describe("FileDiffView", () => {
       await screen.findByRole("button", { name: "← Volver al graph" }),
     );
 
-    expect(useSession.getState().selectedFilePath).toBeNull();
+    expect(useSession.getState().selection).toMatchObject({ filePath: null });
   });
 
   it("returns to the graph on Escape", async () => {
@@ -127,7 +183,7 @@ describe("FileDiffView", () => {
 
     await userEvent.keyboard("{Escape}");
 
-    expect(useSession.getState().selectedFilePath).toBeNull();
+    expect(useSession.getState().selection).toMatchObject({ filePath: null });
   });
 
   it("says so when the commit does not touch the file", async () => {
@@ -257,5 +313,28 @@ describe("FileDiffView", () => {
       screen.getByRole("button", { name: "Ajustar líneas" }),
     );
     expect(container.querySelector(".diff-viewer--wrap")).not.toBeNull();
+  });
+
+  it("renders an unstaged local file", async () => {
+    getWorktreeSnapshot.mockResolvedValue(
+      worktreeSnapshot([file({ path: "local.ts" })]),
+    );
+    getWorktreeFileDiff.mockResolvedValue({
+      side: "unstaged",
+      revision: "revision",
+      file: file({ path: "local.ts" }),
+    });
+    useSession.setState({
+      selection: { kind: "worktree", side: "unstaged", filePath: "local.ts" },
+    });
+
+    renderView("local.ts", { side: "unstaged" });
+
+    expect(await screen.findByText("const b = 3;")).toBeDefined();
+    expect(screen.getByText(/cambios locales · sin preparar/)).toBeDefined();
+    expect(getWorktreeFileDiff.mock.calls[0]?.[1]).toMatchObject({
+      side: "unstaged",
+      expected_revision: "revision",
+    });
   });
 });

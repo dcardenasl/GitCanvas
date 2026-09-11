@@ -3,13 +3,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { HistoryPage } from "../../bindings";
+import type { HistoryPage, WorktreeSnapshot } from "../../bindings";
 
 const getCommits =
   vi.fn<(path: string, request: unknown) => Promise<HistoryPage>>();
+const getWorktreeSnapshot =
+  vi.fn<(path: string, request: unknown) => Promise<WorktreeSnapshot>>();
 
 vi.mock("../../lib/ipc", () => ({
   getCommits: (path: string, request: unknown) => getCommits(path, request),
+  getWorktreeSnapshot: (path: string, request: unknown) =>
+    getWorktreeSnapshot(path, request),
   IpcError: class extends Error {},
 }));
 
@@ -54,9 +58,31 @@ function renderView() {
 
 beforeEach(() => {
   getCommits.mockReset();
+  getWorktreeSnapshot.mockReset();
+  getWorktreeSnapshot.mockResolvedValue({
+    revision: "revision",
+    staged: {
+      side: "staged",
+      revision: "revision",
+      files: [],
+      total_files: 0,
+      next_cursor: null,
+      insertions: 0,
+      deletions: 0,
+    },
+    unstaged: {
+      side: "unstaged",
+      revision: "revision",
+      files: [],
+      total_files: 0,
+      next_cursor: null,
+      insertions: 0,
+      deletions: 0,
+    },
+  });
   useSession.setState({
     repository: { path: "/tmp/repo", name: "repo" },
-    selectedCommitId: null,
+    selection: { kind: "history" },
   });
 });
 

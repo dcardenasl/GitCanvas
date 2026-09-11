@@ -5,6 +5,10 @@ import type {
   DiffRequest,
   FileContentRequest,
   HistoryRequest,
+  WorktreeFileDiffRequest,
+  WorktreeFileContentRequest,
+  WorktreeSnapshotRequest,
+  WatchRequest,
 } from "../../bindings";
 
 export type {
@@ -34,6 +38,16 @@ export type {
   RepositoryChangedEvent,
   RepositoryInfo,
   TagInfo,
+  WorktreeDiffPage,
+  WorktreeFileDiff,
+  WorktreeFileDiffRequest,
+  WorktreeFileContent,
+  WorktreeFileContentRequest,
+  WorktreeFingerprint,
+  WorktreeSnapshot,
+  WorktreeSnapshotRequest,
+  WatchRequest,
+  RepositoryChangedKind,
 } from "../../bindings";
 
 /** A domain error with a stable category for actionable UI messages. */
@@ -111,12 +125,31 @@ export const pushCurrentBranch = (path: string) =>
 /** Reads a file's full contents as it stands at a commit. */
 export const getFileContent = (path: string, request: FileContentRequest) =>
   result(commands.getFileContent(path, request));
+/** Reads both local change sets with one shared revision. */
+export const getWorktreeSnapshot = (
+  path: string,
+  request: WorktreeSnapshotRequest,
+) => result(commands.getWorktreeSnapshot(path, request));
+/** Reads one local file diff on demand. */
+export const getWorktreeFileDiff = (
+  path: string,
+  request: WorktreeFileDiffRequest,
+) => result(commands.getWorktreeFileDiff(path, request));
+/** Reads a staged file from the index or an unstaged file from disk. */
+export const getWorktreeFileContent = (
+  path: string,
+  request: WorktreeFileContentRequest,
+) => result(commands.getWorktreeFileContent(path, request));
+/** Reads the current local revision without materializing patches. */
+export const getWorktreeFingerprint = (path: string) =>
+  result(commands.getWorktreeFingerprint(path));
 
 /** Starts watching the open repository, replacing any previous watch. */
-export const watchRepository = (path: string) =>
-  result(commands.watchRepository(path));
-/** Stops watching. */
-export const unwatchRepository = () => result(commands.unwatchRepository());
+export const watchRepository = (request: WatchRequest) =>
+  result(commands.watchRepository(request));
+/** Stops watching the generation that requested the cleanup. */
+export const unwatchRepository = (generation: number) =>
+  result(commands.unwatchRepository(generation));
 
 /** Subscribes to repository changes. Returns the unsubscribe function. */
 export const onRepositoryChanged = events.repositoryChangedEvent.listen;

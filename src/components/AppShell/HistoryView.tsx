@@ -4,23 +4,73 @@ import { CommitTable } from "../CommitTable";
 import { GraphCanvas } from "../GraphCanvas";
 import { useHistory } from "../../state/history";
 import { useRefsByCommit } from "../../state/refs";
-import { useSession } from "../../state/session";
+import {
+  selectedCommitId as getSelectedCommitId,
+  useSession,
+} from "../../state/session";
+import { useWorktreeSnapshot } from "../../state/worktree";
 
 /** The history pane: the virtualized table with the graph drawn over it. */
 export function HistoryView() {
   const repository = useSession((state) => state.repository);
-  const selectedCommitId = useSession((state) => state.selectedCommitId);
+  const selection = useSession((state) => state.selection);
+  const selectedCommitId = useSession(getSelectedCommitId);
   const selectCommit = useSession((state) => state.selectCommit);
+  const selectFile = useSession((state) => state.selectFile);
   const revealCommitId = useSession((state) => state.revealCommitId);
   const clearReveal = useSession((state) => state.clearReveal);
 
   const history = useHistory(repository?.path ?? null);
   const refsByCommit = useRefsByCommit(repository?.path ?? null);
+  const local = useWorktreeSnapshot(repository?.path ?? null);
 
   const { commits, hasNextPage, isFetchingNextPage, fetchNextPage } = history;
   const loaded =
     revealCommitId === null ||
     commits.some((commit) => commit.id === revealCommitId);
+
+  const localRow =
+    local.data !== undefined &&
+    local.error === null &&
+    (local.data.staged.files.length > 0 ||
+      local.data.unstaged.files.length > 0) ? (
+      <button
+        type="button"
+        className={
+          selection.kind === "history"
+            ? "working-tree-row working-tree-row--selected"
+            : "working-tree-row"
+        }
+        aria-pressed={selection.kind === "history"}
+        onClick={() => {
+          selectFile(null);
+          selectCommit(null);
+        }}
+      >
+        <span className="working-tree-row__marker" aria-hidden="true">
+          WIP
+        </span>
+        <span className="working-tree-row__title">Cambios locales</span>
+        <span className="working-tree-row__summary">
+          {local.data.staged.files.length} preparados ·{" "}
+          {local.data.unstaged.files.length} sin preparar
+        </span>
+        <span className="working-tree-row__stats">
+          <span className="detail-panel__stat-add">
+            +{local.data.staged.insertions + local.data.unstaged.insertions}
+          </span>{" "}
+          <span className="detail-panel__stat-del">
+            −{local.data.staged.deletions + local.data.unstaged.deletions}
+          </span>
+        </span>
+      </button>
+    ) : null;
+  const localState =
+    local.error !== null ? (
+      <p className="history-view__state" role="alert">
+        No se pudieron leer los cambios locales: {local.error.message}
+      </p>
+    ) : null;
 
   useEffect(() => {
     // The commit being revealed may be deeper than what is loaded — an old
@@ -39,40 +89,60 @@ export function HistoryView() {
 
   if (history.error !== null) {
     return (
-      <p className="history-view__state" role="alert">
-        {history.error.message}
-      </p>
+      <div className="history-view">
+        {localRow}
+        {localState}
+        <p className="history-view__state" role="alert">
+          {history.error.message}
+        </p>
+      </div>
     );
   }
 
   if (history.isLoading) {
-    return <p className="history-view__state">Leyendo el historial…</p>;
+    return (
+      <div className="history-view">
+        {localRow}
+        {localState}
+        <p className="history-view__state">Leyendo el historial…</p>
+      </div>
+    );
   }
 
   if (commits.length === 0) {
     return (
-      <p className="history-view__state">Este repositorio no tiene commits.</p>
+      <div className="history-view">
+        {localRow}
+        {localState}
+        <p className="history-view__state">
+          Este repositorio no tiene commits.
+        </p>
+      </div>
     );
   }
 
   return (
-    <CommitTable
-      commits={commits}
-      selectedId={selectedCommitId}
-      onSelect={selectCommit}
-      maxLanes={history.maxLanes}
-      onReachEnd={fetchNextPage}
-      revealCommitId={revealCommitId}
-      onRevealed={clearReveal}
-      refsByCommit={refsByCommit}
-      renderGraph={(window) => (
-        <GraphCanvas
-          rows={history.rows}
-          window={window}
-          maxLanes={history.maxLanes}
-          selectedId={selectedCommitId}
-        />
-      )}
-    />
+    <div className="history-view">
+      {localRow}
+      {localState}
+      <CommitTable
+        commits={commits}
+        selectedId={selectedCommitId}
+        onSelect={selectCommit}
+        maxLanes={history.maxLanes}
+        onReachEnd={fetchNextPage}
+        revealCommitId={revealCommitId}
+        onRevealed={clearReveal}
+        refsByCommit={refsByCommit}
+        renderGraph={(window) => (
+          <GraphCanvas
+            rows={history.rows}
+            window={window}
+            maxLanes={history.maxLanes}
+            selectedId={selectedCommitId}
+          />
+        )}
+      />
+    </div>
   );
 }

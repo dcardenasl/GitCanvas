@@ -1,4 +1,4 @@
-import type { CommitInfo, FileChange, FileDiff } from "../../bindings";
+import type { CommitInfo } from "../../bindings";
 import { useCommitDiff } from "../../state/diff";
 import { useSession } from "../../state/session";
 import {
@@ -6,44 +6,13 @@ import {
   formatCommitTime,
   shortId,
 } from "../CommitTable/format";
+import { ChangedFileRow } from "../ChangedFileRow/ChangedFileRow";
 
 import "./CommitDetailPanel.css";
 
 export interface CommitDetailPanelProps {
   readonly repositoryPath: string;
   readonly commit: CommitInfo;
-}
-
-/** One-letter marker per change kind, the way Git status reads. */
-const CHANGE_MARK: Record<FileChange, string> = {
-  Added: "A",
-  Modified: "M",
-  Deleted: "D",
-  Renamed: "R",
-  Copied: "C",
-  TypeChanged: "T",
-  Other: "?",
-};
-
-const CHANGE_LABEL: Record<FileChange, string> = {
-  Added: "Añadido",
-  Modified: "Modificado",
-  Deleted: "Eliminado",
-  Renamed: "Renombrado",
-  Copied: "Copiado",
-  TypeChanged: "Tipo cambiado",
-  Other: "Otro",
-};
-
-/** Trailing file name, so a deep path still reads at a glance. */
-function fileName(path: string): string {
-  return path.slice(path.lastIndexOf("/") + 1);
-}
-
-/** Everything before the file name, without the trailing slash. */
-function directory(path: string): string {
-  const cut = path.lastIndexOf("/");
-  return cut < 0 ? "" : path.slice(0, cut);
 }
 
 /**
@@ -58,7 +27,9 @@ export function CommitDetailPanel({
   repositoryPath,
   commit,
 }: CommitDetailPanelProps) {
-  const selectedFilePath = useSession((state) => state.selectedFilePath);
+  const selection = useSession((state) => state.selection);
+  const selectedFilePath =
+    selection.kind === "commit" ? selection.filePath : null;
   const selectFile = useSession((state) => state.selectFile);
 
   const diff = useCommitDiff(repositoryPath, commit.id);
@@ -123,7 +94,7 @@ export function CommitDetailPanel({
 
           <ul className="file-list" aria-label="Archivos modificados">
             {diff.data.files.map((file) => (
-              <FileRow
+              <ChangedFileRow
                 key={file.path}
                 file={file}
                 selected={file.path === selectedFilePath}
@@ -136,58 +107,5 @@ export function CommitDetailPanel({
         </>
       )}
     </aside>
-  );
-}
-
-interface FileRowProps {
-  readonly file: FileDiff;
-  readonly selected: boolean;
-  readonly onOpen: () => void;
-}
-
-function FileRow({ file, selected, onOpen }: FileRowProps) {
-  return (
-    <li>
-      <button
-        type="button"
-        className={selected ? "file-row file-row--selected" : "file-row"}
-        aria-current={selected ? "true" : undefined}
-        onClick={onOpen}
-      >
-        <span
-          className={`file-row__mark file-row__mark--${file.change.toLowerCase()}`}
-          title={CHANGE_LABEL[file.change]}
-          aria-label={CHANGE_LABEL[file.change]}
-        >
-          {CHANGE_MARK[file.change]}
-        </span>
-        {/*
-          Name first, directory after it.
-
-          A path truncated from the left cuts the directory mid-token and runs
-          it straight into the file name, which reads as one nonsense word.
-          Leading with the name keeps the thing being looked for at a stable
-          position and lets the directory truncate the ordinary way.
-        */}
-        <span className="file-row__path" title={file.path}>
-          <span className="file-row__name">{fileName(file.path)}</span>
-          {directory(file.path) !== "" && (
-            <span className="file-row__dir">{directory(file.path)}</span>
-          )}
-        </span>
-        <span className="file-row__stat">
-          {file.omitted === null ? (
-            <>
-              <span className="detail-panel__stat-add">+{file.insertions}</span>{" "}
-              <span className="detail-panel__stat-del">−{file.deletions}</span>
-            </>
-          ) : (
-            <span className="file-row__omitted">
-              {file.omitted === "Binary" ? "binario" : "grande"}
-            </span>
-          )}
-        </span>
-      </button>
-    </li>
   );
 }

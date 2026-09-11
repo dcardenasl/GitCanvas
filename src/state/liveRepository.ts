@@ -1,11 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   onRepositoryChanged,
   unwatchRepository,
   watchRepository,
 } from "../lib/ipc";
+import { useWorktreeFingerprint } from "./worktree";
 
 /**
  * Query families that describe the repository as it is right now.
@@ -14,7 +15,14 @@ import {
  * immutable once written, so discarding them on every change would re-read
  * work that cannot have changed.
  */
-const LIVE_QUERIES = ["history", "branches", "tags"] as const;
+const LIVE_QUERIES = [
+  "history",
+  "branches",
+  "tags",
+  "worktree",
+  "worktree-file-diff",
+  "worktree-fingerprint",
+] as const;
 
 /**
  * Keeps the open repository in step with what is on disk.
@@ -24,25 +32,77 @@ const LIVE_QUERIES = ["history", "branches", "tags"] as const;
  * appeared. Watching the metadata directory is what makes the window a view of
  * the repository rather than a snapshot of it.
  */
-export function useLiveRepository(path: string | null): void {
+export function useLiveRepository(path: string | null): {
+  status: WatcherStatus;
+  retry: () => void;
+} {
   const queryClient = useQueryClient();
+  const [retryToken, setRetryToken] = useState(0);
+  const [status, setStatus] = useState<WatcherStatus>(() =>
+    path === null ? { kind: "idle" } : { kind: "ready" },
+  );
+  const generationRef = useRef(0);
+  const fingerprint = useWorktreeFingerprint(path, status.kind === "degraded");
+  const previousFingerprint = useRef<string | null>(null);
 
   useEffect(() => {
-    if (path === null) return;
+    const current = fingerprint.data?.revision ?? null;
+    if (
+      current !== null &&
+      previousFingerprint.current !== null &&
+      current !== previousFingerprint.current
+    ) {
+      void queryClient.invalidateQueries({ queryKey: ["worktree", path] });
+      void queryClient.invalidateQueries({
+        queryKey: ["worktree-file-diff", path],
+      });
+    }
+    previousFingerprint.current = current;
+  }, [fingerprint.data?.revision, path, queryClient]);
+
+  useEffect(() => {
+    if (path === null) {
+      return;
+    }
 
     let cancelled = false;
-
-    const started = watchRepository(path).catch(() => {
-      // A watch can fail on a network volume or under a restrictive sandbox.
-      // The manual refresh and the focus refetch still cover those cases, so
-      // this degrades rather than breaking the window.
-      return undefined;
-    });
-
-    const listening = onRepositoryChanged(() => {
-      if (cancelled) return;
-      for (const key of LIVE_QUERIES) {
+    const generation = generationRef.current + 1;
+    generationRef.current = generation;
+    const invalidate = (scope: "metadata" | "worktree") => {
+      const keys =
+        scope === "metadata"
+          ? ["history", "branches", "tags"]
+          : ["worktree", "worktree-file-diff"];
+      for (const key of keys) {
         void queryClient.invalidateQueries({ queryKey: [key, path] });
+      }
+    };
+
+    const started = watchRepository({ path, generation })
+      .then(() => {
+        if (!cancelled) setStatus({ kind: "ready" });
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setStatus({
+            kind: "degraded",
+            message:
+              error instanceof Error
+                ? error.message
+                : "No se pudo iniciar el watcher",
+          });
+        }
+      });
+
+    const listening = onRepositoryChanged(({ payload }) => {
+      if (cancelled) return;
+      if (payload.path !== path || payload.generation !== generation) return;
+      if (payload.kind === "Metadata") {
+        invalidate("metadata");
+      } else if (payload.kind === "Worktree") {
+        invalidate("worktree");
+      } else {
+        setStatus({ kind: "degraded", message: payload.kind.Degraded.message });
       }
     });
 
@@ -52,9 +112,22 @@ export function useLiveRepository(path: string | null): void {
       void listening.then((stop) => {
         stop();
       });
-      void unwatchRepository().catch(() => undefined);
+      void unwatchRepository(generation).catch(() => undefined);
     };
-  }, [path, queryClient]);
+  }, [path, queryClient, retryToken]);
+
+  return {
+    status,
+    retry: () => {
+      setRetryToken((token) => token + 1);
+    },
+  };
 }
+
+export type WatcherStatus =
+  | { kind: "idle" }
+  | { kind: "starting" }
+  | { kind: "ready" }
+  | { kind: "degraded"; message: string };
 
 export { LIVE_QUERIES };

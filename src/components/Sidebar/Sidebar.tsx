@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { getBranches, getTags } from "../../lib/ipc";
-import { useSession } from "../../state/session";
+import {
+  selectedCommitId as getSelectedCommitId,
+  useSession,
+} from "../../state/session";
 
 import "./Sidebar.css";
 
@@ -32,7 +35,7 @@ export interface SidebarProps {
 /** Branch and tag navigation for the open repository. */
 export function Sidebar({ hidden = false }: SidebarProps) {
   const repository = useSession((state) => state.repository);
-  const selectedCommitId = useSession((state) => state.selectedCommitId);
+  const selectedCommitId = useSession(getSelectedCommitId);
   const revealCommit = useSession((state) => state.revealCommit);
   const path = repository?.path ?? null;
 

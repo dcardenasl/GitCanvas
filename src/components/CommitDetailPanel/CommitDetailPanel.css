@@ -97,6 +97,35 @@
   font-size: 12px;
 }
 
+.detail-panel__local-hint {
+  margin: -8px 0 14px;
+  color: var(--ink-faint);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.detail-panel__local-group {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
+}
+
+.detail-panel__local-group-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 7px;
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.detail-panel__local-count {
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+}
+
 .detail-panel__files-label {
   margin: 14px 0 8px;
   padding-top: 12px;

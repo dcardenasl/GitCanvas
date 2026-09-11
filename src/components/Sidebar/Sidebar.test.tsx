@@ -63,7 +63,7 @@ beforeEach(() => {
   getTags.mockResolvedValue([]);
   useSession.setState({
     repository: { path: "/tmp/repo", name: "repo" },
-    selectedCommitId: null,
+    selection: { kind: "history" },
     revealCommitId: null,
   });
 });
@@ -76,7 +76,11 @@ describe("Sidebar", () => {
     await userEvent.click(await screen.findByRole("button", { name: /^main/ }));
 
     const state = useSession.getState();
-    expect(state.selectedCommitId).toBe(MAIN_TIP);
+    expect(state.selection).toEqual({
+      kind: "commit",
+      commitId: MAIN_TIP,
+      filePath: null,
+    });
     expect(state.revealCommitId).toBe(MAIN_TIP);
   });
 
@@ -96,7 +100,9 @@ describe("Sidebar", () => {
   });
 
   it("marks the ref whose commit is selected", async () => {
-    useSession.setState({ selectedCommitId: DEV_TIP });
+    useSession.setState({
+      selection: { kind: "commit", commitId: DEV_TIP, filePath: null },
+    });
     renderSidebar();
 
     const dev = await screen.findByRole("button", { name: /^dev/ });

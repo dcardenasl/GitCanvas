@@ -2,56 +2,30 @@ import { create } from "zustand";
 
 import type { RepositoryInfo } from "../bindings";
 
-/**
- * Interface state.
- *
- * Deliberately separate from React Query, which owns everything that comes
- * from Rust. This store holds only what the user has chosen: which repository
- * is open, which commit is selected, which file is being read, and whether the
- * history has been asked to scroll somewhere. Mixing the two is how a cache
- * invalidation ends up clearing a selection.
- */
+export type FileSource = "commit" | "staged" | "unstaged";
+
+/** The only legal interface selections. */
+export type Selection =
+  | { kind: "history" }
+  | { kind: "commit"; commitId: string; filePath: string | null }
+  | { kind: "worktree"; side: "staged" | "unstaged"; filePath: string | null };
+
 interface SessionState {
   readonly repository: RepositoryInfo | null;
-  readonly selectedCommitId: string | null;
-  /**
-   * The file open in the centre panel, or `null` when the graph is showing.
-   *
-   * The centre panel shows one thing at a time, so this single value is the
-   * whole switch: there is no separate "which view" flag that could disagree
-   * with it.
-   */
-  readonly selectedFilePath: string | null;
-  /**
-   * A commit the history has been asked to scroll to.
-   *
-   * Separate from `selectedCommitId` because selecting and revealing are
-   * different intents: clicking a row selects without scrolling, clicking a
-   * branch does both. Cleared once the scroll happens, so re-selecting the
-   * same commit later scrolls again.
-   */
+  readonly selection: Selection;
   readonly revealCommitId: string | null;
-  /**
-   * The file whose size guard the reader has explicitly lifted.
-   *
-   * Separate from `selectedFilePath` because opening a large file and asking
-   * for all of it are different decisions: the first is cheap, the second is
-   * what the guard exists to make deliberate.
-   */
   readonly expandedFilePath: string | null;
-
   openRepository: (repository: RepositoryInfo) => void;
   closeRepository: () => void;
   selectCommit: (id: string | null) => void;
-  selectFile: (path: string | null) => void;
+  selectFile: (path: string | null, source?: FileSource) => void;
   expandFile: (path: string) => void;
   revealCommit: (id: string) => void;
   clearReveal: () => void;
 }
 
 const EMPTY = {
-  selectedCommitId: null,
-  selectedFilePath: null,
+  selection: { kind: "history" } as const,
   revealCommitId: null,
   expandedFilePath: null,
 } as const;
@@ -61,8 +35,6 @@ export const useSession = create<SessionState>((set) => ({
   ...EMPTY,
 
   openRepository: (repository) => {
-    // A different repository invalidates every selection; keeping one would
-    // leave the inspector showing a commit that is not in this history.
     set({ repository, ...EMPTY });
   },
 
@@ -71,22 +43,52 @@ export const useSession = create<SessionState>((set) => ({
   },
 
   selectCommit: (id) => {
-    // Changing commit closes the open file: the same path in another commit is
-    // a different diff, and silently swapping the content under the reader is
-    // worse than returning to the graph.
     set((state) => ({
-      selectedCommitId: id,
-      selectedFilePath:
-        state.selectedCommitId === id ? state.selectedFilePath : null,
+      selection:
+        id === null
+          ? { kind: "history" }
+          : state.selection.kind === "commit" && state.selection.commitId === id
+            ? state.selection
+            : { kind: "commit", commitId: id, filePath: null },
       expandedFilePath:
-        state.selectedCommitId === id ? state.expandedFilePath : null,
+        id !== null &&
+        state.selection.kind === "commit" &&
+        state.selection.commitId === id
+          ? state.expandedFilePath
+          : null,
     }));
   },
 
-  selectFile: (path) => {
-    // Closing or switching file drops the expansion: a guard the reader lifted
-    // for one file says nothing about the next one.
-    set({ selectedFilePath: path, expandedFilePath: null });
+  selectFile: (path, source = "commit") => {
+    set((state) => {
+      if (path === null) {
+        if (state.selection.kind === "commit") {
+          return {
+            selection: { ...state.selection, filePath: null },
+            expandedFilePath: null,
+          };
+        }
+        return { selection: { kind: "history" }, expandedFilePath: null };
+      }
+
+      if (source === "commit") {
+        if (state.selection.kind !== "commit") {
+          return {
+            selection: { kind: "history" },
+            expandedFilePath: null,
+          };
+        }
+        return {
+          selection: { ...state.selection, filePath: path },
+          expandedFilePath: null,
+        };
+      }
+
+      return {
+        selection: { kind: "worktree", side: source, filePath: path },
+        expandedFilePath: null,
+      };
+    });
   },
 
   expandFile: (path) => {
@@ -95,8 +97,7 @@ export const useSession = create<SessionState>((set) => ({
 
   revealCommit: (id) => {
     set({
-      selectedCommitId: id,
-      selectedFilePath: null,
+      selection: { kind: "commit", commitId: id, filePath: null },
       expandedFilePath: null,
       revealCommitId: id,
     });
@@ -106,3 +107,18 @@ export const useSession = create<SessionState>((set) => ({
     set({ revealCommitId: null });
   },
 }));
+
+export function selectedCommitId(state: SessionState): string | null {
+  return state.selection.kind === "commit" && state.selection.commitId !== ""
+    ? state.selection.commitId
+    : null;
+}
+
+export function selectedFilePath(state: SessionState): string | null {
+  return state.selection.kind === "history" ? null : state.selection.filePath;
+}
+
+export function selectedFileSource(state: SessionState): FileSource | null {
+  if (state.selection.kind === "history") return null;
+  return state.selection.kind === "commit" ? "commit" : state.selection.side;
+}
