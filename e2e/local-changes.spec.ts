@@ -23,7 +23,7 @@ describe("local changes", () => {
     git("add", "staged.txt");
   });
 
-  it("shows only staged and unstaged tracked files", async () => {
+  it("shows staged, unstaged and new project files", async () => {
     await browser.waitUntil(
       async () =>
         (await (await browser.$('[aria-label="Preparados"]')).isDisplayed()) &&
@@ -41,7 +41,7 @@ describe("local changes", () => {
       .$('[aria-label="Cambios locales"]')
       .getText();
     expect(localText).toContain("staged.txt");
-    expect(localText).not.toContain("untracked.txt");
+    expect(localText).toContain("untracked.txt");
   });
 
   it("closes a staged view when its revision disappears", async () => {

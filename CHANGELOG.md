@@ -9,11 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Local changes are a bounded, live view.** Staged and unstaged changes to
-  files already known to Git share one revisioned snapshot, paginated summaries
-  and on-demand diffs and contents. Native observation listens only to Git
-  metadata, protected by generation tokens and backed by a visible fingerprint
-  fallback, so unrelated files cannot degrade the repository view.
+- **Local changes are a bounded, live view.** Staged and unstaged changes plus
+  new non-ignored project files share one revisioned snapshot, paginated
+  summaries and on-demand diffs and contents. Native observation listens only
+  to Git metadata, protected by generation tokens and backed by a visible
+  fingerprint fallback, so ignored files cannot degrade the repository view.
 - **Local reads are confined and typed.** Traversal and external symlinks are
   rejected, disk reads use a stable stat/read/stat policy, and binary, UTF-8,
   stale-read and resource-limit outcomes cross IPC as explicit errors.

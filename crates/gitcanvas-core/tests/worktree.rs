@@ -37,7 +37,7 @@ fn active(fixture: &Fixture) -> ActiveRepo {
 }
 
 #[test]
-fn separates_staged_and_unstaged_tracked_changes() {
+fn separates_staged_unstaged_and_new_files() {
     let fixture = Fixture::new();
     let commit = fixture.commit_files(
         "refs/heads/main",
@@ -69,32 +69,36 @@ fn separates_staged_and_unstaged_tracked_changes() {
     assert_eq!(snapshot.staged.files.len(), 1);
     assert_eq!(snapshot.staged.files[0].path, "a.txt");
     assert_eq!(snapshot.staged.insertions, 1);
-    assert_eq!(snapshot.unstaged.files.len(), 1);
+    assert_eq!(snapshot.unstaged.files.len(), 2);
     assert!(snapshot
         .unstaged
         .files
         .iter()
         .any(|file| file.path == "a.txt"));
-    assert!(!snapshot
+    assert!(snapshot
         .unstaged
         .files
         .iter()
         .any(|file| file.path == "new.txt"));
-    assert_eq!(snapshot.unstaged.insertions, 1);
+    assert_eq!(snapshot.unstaged.insertions, 2);
 }
 
 #[test]
-fn ignores_untracked_files_and_rejects_direct_reads_of_them() {
+fn includes_new_files_but_respects_gitignore_for_reads_and_listing() {
     let fixture = Fixture::new();
     let commit = fixture.commit_files(
         "refs/heads/main",
         "initial",
         &[],
         1_000,
-        &[("tracked.txt", b"tracked\n")],
+        &[
+            (".gitignore", b"ignored.txt\n"),
+            ("tracked.txt", b"tracked\n"),
+        ],
     );
     clean_checkout(&fixture, commit);
     fs::write(fixture.dir.path().join("untracked.txt"), "external\n").unwrap();
+    fs::write(fixture.dir.path().join("ignored.txt"), "generated\n").unwrap();
 
     let repository = active(&fixture);
     let snapshot = get_worktree_snapshot(
@@ -107,13 +111,34 @@ fn ignores_untracked_files_and_rejects_direct_reads_of_them() {
         },
     )
     .unwrap();
-    assert!(snapshot.unstaged.files.is_empty());
+    assert!(snapshot
+        .unstaged
+        .files
+        .iter()
+        .any(|file| file.path == "untracked.txt"));
+    assert!(!snapshot
+        .unstaged
+        .files
+        .iter()
+        .any(|file| file.path == "ignored.txt"));
+
+    let untracked = get_worktree_file_content(
+        &repository,
+        &WorktreeFileContentRequest {
+            side: WorktreeSide::Unstaged,
+            path: "untracked.txt".into(),
+            expected_revision: None,
+            expand: false,
+        },
+    )
+    .unwrap();
+    assert_eq!(untracked.text.as_deref(), Some("external\n"));
 
     let error = get_worktree_file_content(
         &repository,
         &WorktreeFileContentRequest {
             side: WorktreeSide::Unstaged,
-            path: "untracked.txt".into(),
+            path: "ignored.txt".into(),
             expected_revision: None,
             expand: false,
         },
@@ -275,9 +300,6 @@ fn reports_binary_invalid_utf8_and_resource_limits_consistently() {
     let mut late_nul = vec![b'x'; 8_001];
     late_nul.push(0);
     fs::write(fixture.dir.path().join("late-nul.txt"), late_nul).unwrap();
-    let mut index = fixture.repo.index().unwrap();
-    index.add_path(Path::new("late-nul.txt")).unwrap();
-    index.write().unwrap();
 
     let repository = active(&fixture);
     let binary = get_worktree_file_content(
@@ -321,9 +343,6 @@ fn reports_binary_invalid_utf8_and_resource_limits_consistently() {
 
     let huge = vec![b'x'; 2 * 1024 * 1024 + 1];
     fs::write(fixture.dir.path().join("huge.txt"), huge).unwrap();
-    let mut index = fixture.repo.index().unwrap();
-    index.add_path(Path::new("huge.txt")).unwrap();
-    index.write().unwrap();
     let response = get_worktree_file_content(
         &repository,
         &WorktreeFileContentRequest {

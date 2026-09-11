@@ -207,7 +207,7 @@ pub fn get_worktree_file_content(
         read_index_content(&repo, &index, &request.path, request.expand)
     } else {
         let path = resolve_worktree_file(&repo, &request.path)?;
-        ensure_tracked(&index, &request.path)?;
+        ensure_visible_worktree_file(&repo, &index, &request.path)?;
         read_disk_content(&path, &request.path, request.expand)
     }?;
 
@@ -274,8 +274,11 @@ fn build_diff<'repo>(
         Ok(repo.diff_tree_to_index(head_tree.as_ref(), Some(index), Some(&mut options))?)
     } else {
         options
-            // This view is for edits to files Git already knows about.
-            .include_untracked(false);
+            // Include new project files, while Git's ignore rules keep
+            // generated and external files out of the view.
+            .include_untracked(true)
+            .recurse_untracked_dirs(true)
+            .show_untracked_content(true);
         Ok(repo.diff_index_to_workdir(Some(index), Some(&mut options))?)
     }
 }
@@ -379,13 +382,32 @@ fn read_disk_content(
     Err(AppError::WorktreeChanged(display_path.to_owned()))
 }
 
-fn ensure_tracked(index: &Index, path: &str) -> Result<(), AppError> {
+fn ensure_visible_worktree_file(
+    repo: &Repository,
+    index: &Index,
+    path: &str,
+) -> Result<(), AppError> {
     if index.get_path(Path::new(path), 0).is_some() {
         Ok(())
     } else {
-        Err(AppError::WorktreeFileUnavailable(format!(
-            "{path} is not tracked by Git"
-        )))
+        let mut statuses = StatusOptions::new();
+        statuses
+            .include_untracked(true)
+            .recurse_untracked_dirs(true)
+            .include_ignored(false)
+            .exclude_submodules(true)
+            .pathspec(path);
+        if repo
+            .statuses(Some(&mut statuses))?
+            .iter()
+            .any(|entry| entry.path().is_ok_and(|candidate| candidate == path))
+        {
+            Ok(())
+        } else {
+            Err(AppError::WorktreeFileUnavailable(format!(
+                "{path} is not a visible Git worktree file"
+            )))
+        }
     }
 }
 
@@ -445,7 +467,8 @@ fn revision(repo: &Repository, index: &Index) -> Result<String, AppError> {
 
     let mut statuses = StatusOptions::new();
     statuses
-        .include_untracked(false)
+        .include_untracked(true)
+        .recurse_untracked_dirs(true)
         .include_ignored(false)
         .exclude_submodules(true);
     for entry in repo.statuses(Some(&mut statuses))?.iter() {
