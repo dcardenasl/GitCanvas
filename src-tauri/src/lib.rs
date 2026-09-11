@@ -31,7 +31,9 @@ fn normalize_generated_bindings(path: &std::path::Path) -> std::io::Result<()> {
         .lines()
         .map(str::trim_end)
         .collect::<Vec<_>>()
-        .join("\n");
+        .join("\n")
+        .trim_end()
+        .to_owned();
     std::fs::write(path, format!("{normalized}\n"))
 }
 
