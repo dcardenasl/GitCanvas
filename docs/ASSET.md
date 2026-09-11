@@ -8,11 +8,11 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión actual** | v0.0 (diseño) |
-| **Estado** | En desarrollo (fase de diseño cerrada, sin código todavía) |
-| **Última sesión** | 2026-09-08 |
-| **¿Dónde quedé?** | Sesión de diseño completa, más plan de desarrollo detallado por fase (arquitectura, decisiones técnicas, criterios de aceptación, riesgos) en PLAN-DESARROLLO.md. |
-| **Próximo paso concreto** | Fase 0: instalar Rust + Tauri CLI y scaffoldear con `npm create tauri-app@latest` (React + TypeScript) |
+| **Versión actual** | v0.1.0 |
+| **Estado** | MVP funcional en endurecimiento |
+| **Última sesión** | 2026-09-11 |
+| **¿Dónde quedé?** | Funcionalidad de historial, graph, detalle de commits y cambios locales con contratos Specta, límites de recursos, watcher generacional y fallback por fingerprint. |
+| **Próximo paso concreto** | Validación completa de release en macOS y mantenimiento de la matriz de pruebas |
 | **Bloqueante activo** | Ninguno |
 
 ---
@@ -24,10 +24,10 @@
 | **Slug** | gitcanvas |
 | **Tipo** | Aplicación de escritorio (herramienta de desarrollo) |
 | **Visibilidad** | Privado (uso personal por ahora, evaluar abrir a otros devs más adelante) |
-| **Repositorio** | Pendiente de crear |
+| **Repositorio** | GitCanvas local |
 | **Licencia** | Pendiente de definir |
 | **Inicio** | 2026-09-08 |
-| **Versión actual** | v0.0 |
+| **Versión actual** | v0.1.0 |
 | **Stack** | Tauri v2 + Rust (backend, vía `git2`/libgit2) + React + TypeScript (frontend: layout del graph + render SVG) |
 
 ---
@@ -61,27 +61,28 @@ Revisar el historial de branches y commits de los repos propios (CI4 Enterprise 
 
 | Componente | Estado | Descripción |
 |---|---|---|
-| Definición de arquitectura y stack | ✅ | Cerrada en sesión 2026-09-08 |
-| Scaffold Tauri v2 + Rust + React/TS | ⏳ | Fase 0, por iniciar |
-| Backend Rust: lectura de commits/branches/refs vía `git2` | ⏳ | Fase 1 |
-| Algoritmo de layout del graph (carriles, líneas de merge) en TS | ⏳ | Fase 2, núcleo de valor del MVP |
-| Render del graph en SVG con virtualización de filas | ⏳ | Fase 2 |
-| Panel de detalle de commit + diff | ⏳ | Fase 3 |
-| Integración GitHub (clone de repos públicos) | ⏳ | Fase 4 |
-| Integración GitHub (repos privados vía token) | ⏳ | Fase 4 |
-| Acciones básicas (checkout, pull, push) | ⏳ | Fase 5 |
+| Definición de arquitectura y stack | ✅ | Cerrada |
+| Scaffold Tauri v2 + Rust + React/TS | ✅ | Base funcional |
+| Backend Rust: lectura de commits/branches/refs vía `git2` | ✅ | Contratos tipados y paginación |
+| Algoritmo de layout del graph (carriles, líneas de merge) en TS | ✅ | Función pura con cobertura dedicada |
+| Render del graph en SVG con virtualización de filas | ✅ | Historial navegable |
+| Panel de detalle de commit + diff | ✅ | Diff y contenido bajo demanda |
+| Cambios locales staged/unstaged/untracked | ✅ | Snapshot, límites, seguridad y watcher |
+| Integración GitHub | ✅ | Token en keychain y clone local |
+| Acciones básicas (checkout, pull, push) | ✅ | Operaciones con confirmación |
 
 ---
 
 ## Roadmap
 
 ### Próximas mejoras (corto plazo, MVP)
-- [ ] Fase 0: scaffold Tauri v2 + Rust + React/TypeScript
-- [ ] Fase 1: backend Rust con `git2` que camina el historial y expone commits/branches/refs
-- [ ] Fase 2: algoritmo de layout de carriles en TypeScript + render del graph en SVG con virtualización (esto es el corazón del MVP, prioridad sobre el panel de detalle)
-- [ ] Fase 3: panel de detalle de commit con diff de archivos
-- [ ] Fase 4: integración GitHub, clone de repos públicos sin auth y luego repos privados propios vía Personal Access Token (todo vía clone local + `git2`, sin construir un camino de datos separado basado en la API de GitHub)
-- [ ] Fase 5: acciones básicas: checkout de branch, pull, push
+- [x] Fase 0: scaffold Tauri v2 + Rust + React/TypeScript
+- [x] Fase 1: backend Rust con `git2` que camina el historial y expone commits/branches/refs
+- [x] Fase 2: algoritmo de layout de carriles en TypeScript + render del graph en SVG con virtualización
+- [x] Fase 3: panel de detalle de commit con diff y contenido bajo demanda
+- [x] Fase 4: integración GitHub mediante clone local completo
+- [x] Fase 5: acciones básicas: checkout de branch, pull, push
+- [ ] Endurecimiento continuo: ampliar E2E real y validación de release por plataforma
 
 ### Ideas para el futuro (largo plazo)
 - Undo/redo de operaciones git estilo GitKraken

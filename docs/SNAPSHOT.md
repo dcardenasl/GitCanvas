@@ -1,14 +1,14 @@
 # GitCanvas: Snapshot
-> Actualizado: 2026-09-08 · Detalle completo: [ASSET.md](ASSET.md)
+> Actualizado: 2026-09-11 · Detalle completo: [ASSET.md](ASSET.md)
 
 ## ⚡ Retomar en 30 segundos
 
 | Campo | Valor |
 |---|---|
-| **Etapa** | 💡 Idea (diseño cerrado, sin código) |
-| **Última sesión** | 2026-09-08 |
-| **¿Dónde quedé?** | Diseño cerrado más plan de desarrollo detallado y completo por fase, ya escrito en PLAN-DESARROLLO.md: arquitectura, decisiones técnicas concretas (sin puntos abiertos), criterios de aceptación, estrategia de testing, CI/CD, riesgos con mitigación y performance budget. |
-| **Próximo paso** | Fase 0: instalar Rust + Tauri CLI y scaffoldear con `npm create tauri-app@latest` (React + TypeScript) |
+| **Etapa** | 🛠️ MVP implementado; endurecimiento en curso |
+| **Última sesión** | 2026-09-11 |
+| **¿Dónde quedé?** | Graph, historial, GitHub, acciones básicas, diffs de commits y cambios locales staged/unstaged/untracked están implementados. El contrato local usa snapshots acotados, detalles bajo demanda, confinamiento de rutas y fallback por fingerprint. |
+| **Próximo paso** | Completar la matriz de validación macOS y mantener los contratos generados sin drift |
 | **Bloqueante activo** | Ninguno |
 | **Decisión pendiente** | Ninguna: todas las decisiones técnicas de esta sesión quedaron cerradas |
 
