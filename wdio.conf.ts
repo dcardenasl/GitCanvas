@@ -85,6 +85,7 @@ function createFixtureRepository(): string {
  */
 const providedRepository = process.env.GITCANVAS_E2E_REPO;
 const fixture = providedRepository ?? createFixtureRepository();
+export const e2eRepository = fixture;
 
 export const config: WebdriverIO.Config = {
   runner: "local",

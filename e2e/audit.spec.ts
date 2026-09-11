@@ -110,7 +110,7 @@ describe("interface audit", () => {
 
   it("checks whether the diff shows line numbers", async () => {
     const files = await $$('[aria-label="Archivos modificados"] button');
-    if (files.length === 0) {
+    if ((await files.length) === 0) {
       note("file list", "empty for this commit");
       return;
     }
