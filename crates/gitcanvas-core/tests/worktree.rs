@@ -37,7 +37,7 @@ fn active(fixture: &Fixture) -> ActiveRepo {
 }
 
 #[test]
-fn separates_staged_unstaged_and_untracked_changes() {
+fn separates_staged_and_unstaged_tracked_changes() {
     let fixture = Fixture::new();
     let commit = fixture.commit_files(
         "refs/heads/main",
@@ -69,18 +69,57 @@ fn separates_staged_unstaged_and_untracked_changes() {
     assert_eq!(snapshot.staged.files.len(), 1);
     assert_eq!(snapshot.staged.files[0].path, "a.txt");
     assert_eq!(snapshot.staged.insertions, 1);
-    assert_eq!(snapshot.unstaged.files.len(), 2);
+    assert_eq!(snapshot.unstaged.files.len(), 1);
     assert!(snapshot
         .unstaged
         .files
         .iter()
         .any(|file| file.path == "a.txt"));
-    assert!(snapshot
+    assert!(!snapshot
         .unstaged
         .files
         .iter()
         .any(|file| file.path == "new.txt"));
-    assert_eq!(snapshot.unstaged.insertions, 2);
+    assert_eq!(snapshot.unstaged.insertions, 1);
+}
+
+#[test]
+fn ignores_untracked_files_and_rejects_direct_reads_of_them() {
+    let fixture = Fixture::new();
+    let commit = fixture.commit_files(
+        "refs/heads/main",
+        "initial",
+        &[],
+        1_000,
+        &[("tracked.txt", b"tracked\n")],
+    );
+    clean_checkout(&fixture, commit);
+    fs::write(fixture.dir.path().join("untracked.txt"), "external\n").unwrap();
+
+    let repository = active(&fixture);
+    let snapshot = get_worktree_snapshot(
+        &repository,
+        &WorktreeSnapshotRequest {
+            staged_cursor: None,
+            unstaged_cursor: None,
+            limit: None,
+            expected_revision: None,
+        },
+    )
+    .unwrap();
+    assert!(snapshot.unstaged.files.is_empty());
+
+    let error = get_worktree_file_content(
+        &repository,
+        &WorktreeFileContentRequest {
+            side: WorktreeSide::Unstaged,
+            path: "untracked.txt".into(),
+            expected_revision: None,
+            expand: false,
+        },
+    )
+    .unwrap_err();
+    assert!(matches!(error, AppError::WorktreeFileUnavailable(_)));
 }
 
 #[test]
@@ -236,6 +275,9 @@ fn reports_binary_invalid_utf8_and_resource_limits_consistently() {
     let mut late_nul = vec![b'x'; 8_001];
     late_nul.push(0);
     fs::write(fixture.dir.path().join("late-nul.txt"), late_nul).unwrap();
+    let mut index = fixture.repo.index().unwrap();
+    index.add_path(Path::new("late-nul.txt")).unwrap();
+    index.write().unwrap();
 
     let repository = active(&fixture);
     let binary = get_worktree_file_content(
@@ -279,6 +321,9 @@ fn reports_binary_invalid_utf8_and_resource_limits_consistently() {
 
     let huge = vec![b'x'; 2 * 1024 * 1024 + 1];
     fs::write(fixture.dir.path().join("huge.txt"), huge).unwrap();
+    let mut index = fixture.repo.index().unwrap();
+    index.add_path(Path::new("huge.txt")).unwrap();
+    index.write().unwrap();
     let response = get_worktree_file_content(
         &repository,
         &WorktreeFileContentRequest {

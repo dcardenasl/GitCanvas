@@ -144,7 +144,7 @@ fn stops_reporting_once_the_handle_is_dropped() {
 }
 
 #[test]
-fn reports_worktree_changes_without_invalidating_history_scope() {
+fn reports_index_changes_as_worktree_changes() {
     let fixture = Fixture::new();
     fixture.commit_files("refs/heads/main", "first", &[], 1_000, &[("a.txt", b"a\n")]);
     let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
@@ -156,6 +156,9 @@ fn reports_worktree_changes_without_invalidating_history_scope() {
     std::thread::sleep(Duration::from_millis(300));
 
     std::fs::write(fixture.dir.path().join("a.txt"), "changed\n").unwrap();
+    let mut index = fixture.repo.index().unwrap();
+    index.add_path(std::path::Path::new("a.txt")).unwrap();
+    index.write().unwrap();
 
     assert!(matches!(
         rx.recv_timeout(WAIT)

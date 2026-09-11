@@ -207,6 +207,7 @@ pub fn get_worktree_file_content(
         read_index_content(&repo, &index, &request.path, request.expand)
     } else {
         let path = resolve_worktree_file(&repo, &request.path)?;
+        ensure_tracked(&index, &request.path)?;
         read_disk_content(&path, &request.path, request.expand)
     }?;
 
@@ -273,9 +274,8 @@ fn build_diff<'repo>(
         Ok(repo.diff_tree_to_index(head_tree.as_ref(), Some(index), Some(&mut options))?)
     } else {
         options
-            .include_untracked(true)
-            .recurse_untracked_dirs(true)
-            .show_untracked_content(true);
+            // This view is for edits to files Git already knows about.
+            .include_untracked(false);
         Ok(repo.diff_index_to_workdir(Some(index), Some(&mut options))?)
     }
 }
@@ -379,6 +379,16 @@ fn read_disk_content(
     Err(AppError::WorktreeChanged(display_path.to_owned()))
 }
 
+fn ensure_tracked(index: &Index, path: &str) -> Result<(), AppError> {
+    if index.get_path(Path::new(path), 0).is_some() {
+        Ok(())
+    } else {
+        Err(AppError::WorktreeFileUnavailable(format!(
+            "{path} is not tracked by Git"
+        )))
+    }
+}
+
 fn resolve_worktree_file(repo: &Repository, path: &str) -> Result<PathBuf, AppError> {
     let worktree = repo
         .workdir()
@@ -435,8 +445,7 @@ fn revision(repo: &Repository, index: &Index) -> Result<String, AppError> {
 
     let mut statuses = StatusOptions::new();
     statuses
-        .include_untracked(true)
-        .recurse_untracked_dirs(true)
+        .include_untracked(false)
         .include_ignored(false)
         .exclude_submodules(true);
     for entry in repo.statuses(Some(&mut statuses))?.iter() {

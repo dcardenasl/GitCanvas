@@ -1,7 +1,8 @@
 //! Native observation of repository metadata and the working tree.
 
 use std::{
-    path::{Path, PathBuf},
+    collections::BTreeSet,
+    path::PathBuf,
     sync::mpsc,
     thread::{self, JoinHandle},
     time::Duration,
@@ -48,25 +49,33 @@ impl Drop for RepositoryWatcher {
     }
 }
 
-fn metadata_dir(active: &ActiveRepo) -> Result<PathBuf, AppError> {
-    Ok(active.open()?.path().to_path_buf())
+fn metadata_dirs(active: &ActiveRepo) -> Result<Vec<PathBuf>, AppError> {
+    let repo = active.open()?;
+    Ok(
+        BTreeSet::from([repo.path().to_path_buf(), repo.commondir().to_path_buf()])
+            .into_iter()
+            .collect(),
+    )
 }
 
 fn is_mutating(kind: EventKind) -> bool {
     !matches!(kind, EventKind::Access(_))
 }
 
-fn classify(event: &Event, metadata: &Path, worktree: &Path) -> Option<ChangeScope> {
+fn classify(event: &Event, metadata: &[PathBuf]) -> Option<ChangeScope> {
     if !is_mutating(event.kind) {
         return None;
     }
     if event.paths.iter().any(|path| {
-        path.starts_with(metadata) && path.file_name().is_some_and(|name| name == "index")
+        metadata.iter().any(|metadata| path.starts_with(metadata))
+            && path
+                .file_name()
+                .is_some_and(|name| name == "index" || name == "index.lock")
     }) {
         return Some(ChangeScope::Worktree);
     }
     if event.paths.iter().any(|path| {
-        path.starts_with(metadata)
+        metadata.iter().any(|metadata| path.starts_with(metadata))
             && path.components().any(|component| {
                 INTERESTING_METADATA
                     .iter()
@@ -75,17 +84,14 @@ fn classify(event: &Event, metadata: &Path, worktree: &Path) -> Option<ChangeSco
     }) {
         return Some(ChangeScope::Metadata);
     }
-    if event
-        .paths
-        .iter()
-        .any(|path| path.starts_with(worktree) && !path.starts_with(metadata))
-    {
-        return Some(ChangeScope::Worktree);
-    }
     None
 }
 
-/// Watches metadata and working-tree mutations, debounced into one event.
+/// Watches Git metadata, debounced into one event.
+///
+/// Working-tree content is intentionally not watched through a recursive
+/// filesystem subscription. Its revision is polled from Git status instead,
+/// which keeps the watcher independent of repository size and layout.
 ///
 /// # Errors
 ///
@@ -95,17 +101,15 @@ pub fn watch_repository(
     active: &ActiveRepo,
     on_event: impl Fn(WatchEvent) + Send + 'static,
 ) -> Result<RepositoryWatcher, AppError> {
-    let metadata = metadata_dir(active)?;
-    let worktree = active.path().to_path_buf();
+    let metadata = metadata_dirs(active)?;
     let (message_tx, message_rx) = mpsc::channel::<Message>();
     let callback_tx = message_tx.clone();
     let callback_metadata = metadata.clone();
-    let callback_worktree = worktree.clone();
 
     let mut watcher = RecommendedWatcher::new(
         move |result: notify::Result<Event>| match result {
             Ok(event) => {
-                if let Some(scope) = classify(&event, &callback_metadata, &callback_worktree) {
+                if let Some(scope) = classify(&event, &callback_metadata) {
                     let _ = callback_tx.send(Message::Changed(scope));
                 }
             }
@@ -117,17 +121,23 @@ pub fn watch_repository(
     )
     .map_err(|error| AppError::WatchDegraded(format!("could not create watcher: {error}")))?;
 
-    watcher
-        .watch(&worktree, RecursiveMode::Recursive)
-        .map_err(|error| AppError::WatchDegraded(format!("could not watch worktree: {error}")))?;
-    if !metadata.starts_with(&worktree) {
+    for directory in &metadata {
         watcher
-            .watch(&metadata, RecursiveMode::Recursive)
+            .watch(directory, RecursiveMode::NonRecursive)
             .map_err(|error| {
                 AppError::WatchDegraded(format!("could not watch metadata: {error}"))
             })?;
     }
-
+    for directory in &metadata {
+        let refs = directory.join("refs");
+        if refs.is_dir() {
+            watcher
+                .watch(&refs, RecursiveMode::Recursive)
+                .map_err(|error| {
+                    AppError::WatchDegraded(format!("could not watch refs: {error}"))
+                })?;
+        }
+    }
     let worker = thread::spawn(move || {
         while let Ok(message) = message_rx.recv() {
             let mut pending = None;
