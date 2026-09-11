@@ -1,132 +1,169 @@
-//! Noticing that a repository changed underneath the window.
-//!
-//! History is only immutable for a given walk. Refs move, commits arrive, and
-//! a client that reads once and caches forever shows a repository as it was
-//! when it was opened. Watching the metadata directory is what turns that into
-//! a view of what is actually there.
+//! Native observation of repository metadata and the working tree.
 
 use std::{
     path::{Path, PathBuf},
     sync::mpsc,
-    thread,
+    thread::{self, JoinHandle},
     time::Duration,
 };
 
-use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
 use crate::{error::AppError, repository::ActiveRepo};
 
-/// How long to wait for a burst of filesystem events to settle.
-///
-/// A single commit rewrites the index, a ref, the reflog and often
-/// `packed-refs`, arriving as a dozen events over a few milliseconds. Reacting
-/// to each one would re-read the history a dozen times for one commit.
 const SETTLE: Duration = Duration::from_millis(250);
+const INTERESTING_METADATA: [&str; 5] = ["HEAD", "refs", "packed-refs", "ORIG_HEAD", "MERGE_HEAD"];
 
-/// Metadata whose change means the history or the refs moved.
-///
-/// Everything else under the metadata directory — object files, lock files,
-/// caches — either accompanies one of these or is noise.
-const INTERESTING: [&str; 5] = ["HEAD", "refs", "packed-refs", "ORIG_HEAD", "MERGE_HEAD"];
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum WatchEvent {
+    Changed(ChangeScope),
+    Degraded(String),
+}
 
-/// A live watch over one repository. Dropping it stops the watch.
-///
-/// The handle owns both the watcher and the thread that debounces its events;
-/// letting either outlive the other is how a watch keeps firing for a
-/// repository nobody is looking at any more.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChangeScope {
+    Metadata,
+    Worktree,
+}
+
+enum Message {
+    Changed(ChangeScope),
+    Degraded(String),
+    Stop,
+}
+
+/// A live watch that owns both native subscriptions and its worker thread.
 pub struct RepositoryWatcher {
     _watcher: RecommendedWatcher,
-    stop: mpsc::Sender<()>,
+    stop: mpsc::Sender<Message>,
+    worker: Option<JoinHandle<()>>,
 }
 
 impl Drop for RepositoryWatcher {
     fn drop(&mut self) {
-        // Best effort: the thread may already have exited with the channel.
-        let _ = self.stop.send(());
+        let _ = self.stop.send(Message::Stop);
+        if let Some(worker) = self.worker.take() {
+            let _ = worker.join();
+        }
     }
 }
 
-fn is_interesting(event: &Event) -> bool {
-    event.paths.iter().any(|path| {
-        path.components().any(|component| {
-            INTERESTING
-                .iter()
-                .any(|name| component.as_os_str() == *name)
-        })
-    })
-}
-
-/// The directory holding a repository's metadata.
-///
-/// Usually `<worktree>/.git`, but a linked worktree has a `.git` *file*
-/// pointing elsewhere, so the repository's own answer is used rather than an
-/// assumption about the layout.
 fn metadata_dir(active: &ActiveRepo) -> Result<PathBuf, AppError> {
     Ok(active.open()?.path().to_path_buf())
 }
 
-/// Watches a repository and calls `on_change` when its refs or HEAD move.
-///
-/// Only the metadata directory is watched, never the working tree: a watch
-/// over the whole checkout fires on every file save, and on a large repository
-/// costs thousands of handles for information this application does not use.
+fn is_mutating(kind: EventKind) -> bool {
+    !matches!(kind, EventKind::Access(_))
+}
+
+fn classify(event: &Event, metadata: &Path, worktree: &Path) -> Option<ChangeScope> {
+    if !is_mutating(event.kind) {
+        return None;
+    }
+    if event.paths.iter().any(|path| {
+        path.starts_with(metadata) && path.file_name().is_some_and(|name| name == "index")
+    }) {
+        return Some(ChangeScope::Worktree);
+    }
+    if event.paths.iter().any(|path| {
+        path.starts_with(metadata)
+            && path.components().any(|component| {
+                INTERESTING_METADATA
+                    .iter()
+                    .any(|name| component.as_os_str() == *name)
+            })
+    }) {
+        return Some(ChangeScope::Metadata);
+    }
+    if event
+        .paths
+        .iter()
+        .any(|path| path.starts_with(worktree) && !path.starts_with(metadata))
+    {
+        return Some(ChangeScope::Worktree);
+    }
+    None
+}
+
+/// Watches metadata and working-tree mutations, debounced into one event.
 ///
 /// # Errors
 ///
-/// Returns [`AppError`] when the repository cannot be opened or the platform
-/// refuses to establish the watch.
+/// Returns [`AppError::WatchDegraded`] when the platform cannot create or
+/// attach the watcher to the validated repository paths.
 pub fn watch_repository(
     active: &ActiveRepo,
-    on_change: impl Fn() + Send + 'static,
+    on_event: impl Fn(WatchEvent) + Send + 'static,
 ) -> Result<RepositoryWatcher, AppError> {
-    let directory = metadata_dir(active)?;
-    let (events_tx, events_rx) = mpsc::channel::<Event>();
-    let (stop_tx, stop_rx) = mpsc::channel::<()>();
+    let metadata = metadata_dir(active)?;
+    let worktree = active.path().to_path_buf();
+    let (message_tx, message_rx) = mpsc::channel::<Message>();
+    let callback_tx = message_tx.clone();
+    let callback_metadata = metadata.clone();
+    let callback_worktree = worktree.clone();
 
-    let mut watcher = notify::recommended_watcher(move |result: notify::Result<Event>| {
-        if let Ok(event) = result {
-            if is_interesting(&event) {
-                // A closed receiver means the handle was dropped; the watcher
-                // is about to go with it, so the failure is not worth logging.
-                let _ = events_tx.send(event);
+    let mut watcher = RecommendedWatcher::new(
+        move |result: notify::Result<Event>| match result {
+            Ok(event) => {
+                if let Some(scope) = classify(&event, &callback_metadata, &callback_worktree) {
+                    let _ = callback_tx.send(Message::Changed(scope));
+                }
             }
-        }
-    })
-    .map_err(|error| AppError::Internal(format!("could not create a watcher: {error}")))?;
+            Err(error) => {
+                let _ = callback_tx.send(Message::Degraded(error.to_string()));
+            }
+        },
+        Config::default().with_follow_symlinks(false),
+    )
+    .map_err(|error| AppError::WatchDegraded(format!("could not create watcher: {error}")))?;
 
     watcher
-        .watch(&directory, RecursiveMode::Recursive)
-        .map_err(|error| {
-            AppError::Internal(format!("could not watch {}: {error}", directory.display()))
-        })?;
+        .watch(&worktree, RecursiveMode::Recursive)
+        .map_err(|error| AppError::WatchDegraded(format!("could not watch worktree: {error}")))?;
+    if !metadata.starts_with(&worktree) {
+        watcher
+            .watch(&metadata, RecursiveMode::Recursive)
+            .map_err(|error| {
+                AppError::WatchDegraded(format!("could not watch metadata: {error}"))
+            })?;
+    }
 
-    thread::spawn(move || {
-        loop {
-            // Block until something happens, then swallow the rest of the
-            // burst before reporting once.
-            match events_rx.recv() {
-                Ok(_) => {}
-                Err(_) => return,
+    let worker = thread::spawn(move || {
+        while let Ok(message) = message_rx.recv() {
+            let mut pending = None;
+            match message {
+                Message::Stop => return,
+                Message::Changed(scope) => pending = Some(scope),
+                Message::Degraded(error) => on_event(WatchEvent::Degraded(error)),
             }
-            while events_rx.recv_timeout(SETTLE).is_ok() {}
 
-            if stop_rx.try_recv().is_ok() {
-                return;
+            loop {
+                match message_rx.recv_timeout(SETTLE) {
+                    Ok(Message::Changed(scope)) => {
+                        pending = Some(match (pending, scope) {
+                            (Some(ChangeScope::Metadata), _) | (_, ChangeScope::Metadata) => {
+                                ChangeScope::Metadata
+                            }
+                            _ => ChangeScope::Worktree,
+                        });
+                    }
+                    Ok(Message::Degraded(error)) => {
+                        on_event(WatchEvent::Degraded(error));
+                    }
+                    Err(mpsc::RecvTimeoutError::Timeout) => break,
+                    Ok(Message::Stop) | Err(mpsc::RecvTimeoutError::Disconnected) => return,
+                }
             }
-            on_change();
+
+            if let Some(scope) = pending {
+                on_event(WatchEvent::Changed(scope));
+            }
         }
     });
 
     Ok(RepositoryWatcher {
         _watcher: watcher,
-        stop: stop_tx,
+        stop: message_tx,
+        worker: Some(worker),
     })
-}
-
-/// Whether a path looks like a repository this module can watch.
-///
-/// Exposed for tests; the watch itself validates through [`ActiveRepo`].
-#[must_use]
-pub fn is_metadata_path(path: &Path) -> bool {
-    path.file_name().is_some_and(|name| name == ".git")
 }

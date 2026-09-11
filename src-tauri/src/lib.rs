@@ -24,6 +24,17 @@ mod repository_tests;
 
 use tauri_specta::{collect_commands, collect_events};
 
+#[cfg(any(debug_assertions, test))]
+fn normalize_generated_bindings(path: &std::path::Path) -> std::io::Result<()> {
+    let source = std::fs::read_to_string(path)?;
+    let normalized = source
+        .lines()
+        .map(str::trim_end)
+        .collect::<Vec<_>>()
+        .join("\n");
+    std::fs::write(path, format!("{normalized}\n"))
+}
+
 /// Builds the typed command registry shared by the application and by the
 /// bindings generator.
 ///
@@ -42,6 +53,10 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::repository::get_tags,
             commands::diff::get_commit_diff,
             commands::diff::get_file_content,
+            commands::diff::get_worktree_snapshot,
+            commands::diff::get_worktree_file_diff,
+            commands::diff::get_worktree_file_content,
+            commands::diff::get_worktree_fingerprint,
             commands::github::store_github_token,
             commands::github::has_github_token,
             commands::github::forget_github_token,
@@ -82,11 +97,16 @@ pub fn run() {
         "../src/bindings.ts",
     ) {
         eprintln!("warning: could not export TypeScript bindings: {error}");
+    } else if let Err(error) =
+        normalize_generated_bindings(std::path::Path::new("../src/bindings.ts"))
+    {
+        eprintln!("warning: could not normalize TypeScript bindings: {error}");
     }
 
     // Starting the runtime is the one place where there is no caller left to
     // return an error to, so the failure is reported and the process exits
     // rather than unwinding through a panic.
+    #[cfg_attr(not(feature = "e2e"), allow(unused_mut))]
     let mut app_builder = tauri::Builder::default()
         // The native folder picker. Without this the "open repository" button
         // fails at runtime with a missing-plugin error.
@@ -120,9 +140,9 @@ pub fn run() {
 
             let watch_handle = app.handle().clone();
             app.manage(commands::watch::ChangeNotifier(std::sync::Arc::new(
-                move |path: String| {
+                move |event: commands::watch::RepositoryChangedEvent| {
                     use tauri_specta::Event as _;
-                    let _ = commands::watch::RepositoryChangedEvent { path }.emit(&watch_handle);
+                    let _ = event.emit(&watch_handle);
                 },
             )));
 
@@ -170,6 +190,7 @@ mod tests {
                 "../src/bindings.ts",
             )
             .unwrap();
+        super::normalize_generated_bindings(std::path::Path::new("../src/bindings.ts")).unwrap();
     }
 
     /// The dialog plugin is actually registered, not merely depended on.

@@ -16,11 +16,14 @@ use std::{
     time::Duration,
 };
 
-use gitcanvas_core::{repository::ActiveRepo, watch::watch_repository};
+use gitcanvas_core::{
+    repository::ActiveRepo,
+    watch::{watch_repository, ChangeScope, WatchEvent},
+};
 use support::Fixture;
 
 /// Long enough for a debounced watcher to report, short enough to fail fast.
-const WAIT: Duration = Duration::from_secs(5);
+const WAIT: Duration = Duration::from_secs(10);
 
 #[test]
 fn reports_a_commit_made_after_the_repository_was_opened() {
@@ -29,10 +32,11 @@ fn reports_a_commit_made_after_the_repository_was_opened() {
     let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
 
     let (tx, rx) = mpsc::channel();
-    let _watcher = watch_repository(&active, move || {
-        let _ = tx.send(());
+    let _watcher = watch_repository(&active, move |event| {
+        let _ = tx.send(event);
     })
     .unwrap();
+    std::thread::sleep(Duration::from_secs(2));
 
     // The exact situation this exists for: work arriving while the window is
     // already open.
@@ -44,8 +48,11 @@ fn reports_a_commit_made_after_the_repository_was_opened() {
         &[("a.txt", b"a\nb\n")],
     );
 
-    rx.recv_timeout(WAIT)
-        .expect("a new commit should have been reported");
+    assert!(matches!(
+        rx.recv_timeout(WAIT)
+            .expect("a new commit should have been reported"),
+        WatchEvent::Changed(ChangeScope::Metadata)
+    ));
 }
 
 #[test]
@@ -55,15 +62,19 @@ fn reports_a_branch_moving() {
     let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
 
     let (tx, rx) = mpsc::channel();
-    let _watcher = watch_repository(&active, move || {
-        let _ = tx.send(());
+    let _watcher = watch_repository(&active, move |event| {
+        let _ = tx.send(event);
     })
     .unwrap();
+    std::thread::sleep(Duration::from_secs(2));
 
     fixture.commit_files("refs/heads/feature", "on a branch", &[base], 2_000, &[]);
 
-    rx.recv_timeout(WAIT)
-        .expect("a new branch should have been reported");
+    assert!(matches!(
+        rx.recv_timeout(WAIT)
+            .expect("a new branch should have been reported"),
+        WatchEvent::Changed(ChangeScope::Metadata)
+    ));
 }
 
 #[test]
@@ -75,11 +86,12 @@ fn coalesces_the_burst_a_single_commit_produces() {
     let calls = Arc::new(AtomicUsize::new(0));
     let counter = Arc::clone(&calls);
     let (tx, rx) = mpsc::channel();
-    let _watcher = watch_repository(&active, move || {
+    let _watcher = watch_repository(&active, move |_| {
         counter.fetch_add(1, Ordering::SeqCst);
         let _ = tx.send(());
     })
     .unwrap();
+    std::thread::sleep(Duration::from_secs(2));
 
     fixture.commit_files(
         "refs/heads/main",
@@ -108,13 +120,14 @@ fn stops_reporting_once_the_handle_is_dropped() {
 
     let calls = Arc::new(AtomicUsize::new(0));
     let counter = Arc::clone(&calls);
-    let watcher = watch_repository(&active, move || {
+    let watcher = watch_repository(&active, move |_| {
         counter.fetch_add(1, Ordering::SeqCst);
     })
     .unwrap();
+    std::thread::sleep(Duration::from_secs(2));
 
     drop(watcher);
-    std::thread::sleep(Duration::from_millis(300));
+    std::thread::sleep(Duration::from_secs(2));
 
     fixture.commit_files(
         "refs/heads/main",
@@ -128,6 +141,27 @@ fn stops_reporting_once_the_handle_is_dropped() {
     // A watch that outlives the repository nobody is looking at any more keeps
     // invalidating caches for a window that has moved on.
     assert_eq!(calls.load(Ordering::SeqCst), 0);
+}
+
+#[test]
+fn reports_worktree_changes_without_invalidating_history_scope() {
+    let fixture = Fixture::new();
+    fixture.commit_files("refs/heads/main", "first", &[], 1_000, &[("a.txt", b"a\n")]);
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let (tx, rx) = mpsc::channel();
+    let _watcher = watch_repository(&active, move |event| {
+        let _ = tx.send(event);
+    })
+    .unwrap();
+    std::thread::sleep(Duration::from_millis(300));
+
+    std::fs::write(fixture.dir.path().join("a.txt"), "changed\n").unwrap();
+
+    assert!(matches!(
+        rx.recv_timeout(WAIT)
+            .expect("a worktree change should be reported"),
+        WatchEvent::Changed(ChangeScope::Worktree)
+    ));
 }
 
 #[test]

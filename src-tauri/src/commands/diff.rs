@@ -6,6 +6,10 @@ use gitcanvas_core::{
     diff::{self, CommitDiff, DiffRequest},
     error::AppError,
     repository::ActiveRepo,
+    worktree::{
+        self, WorktreeFileContent, WorktreeFileContentRequest, WorktreeFileDiff,
+        WorktreeFileDiffRequest, WorktreeFingerprint, WorktreeSnapshot, WorktreeSnapshotRequest,
+    },
 };
 
 use super::repository::blocking;
@@ -35,6 +39,55 @@ pub async fn get_file_content(
 ) -> Result<FileContent, AppError> {
     blocking("get_file_content", move || {
         blob::get_file_content(&ActiveRepo::validate(path)?, &request)
+    })
+    .await
+}
+
+/// Reads both local change sets with one repository revision.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_worktree_snapshot(
+    path: String,
+    request: WorktreeSnapshotRequest,
+) -> Result<WorktreeSnapshot, AppError> {
+    blocking("get_worktree_snapshot", move || {
+        worktree::get_worktree_snapshot(&ActiveRepo::validate(path)?, &request)
+    })
+    .await
+}
+
+/// Reads one staged or unstaged file diff on demand.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_worktree_file_diff(
+    path: String,
+    request: WorktreeFileDiffRequest,
+) -> Result<WorktreeFileDiff, AppError> {
+    blocking("get_worktree_file_diff", move || {
+        worktree::get_worktree_file_diff(&ActiveRepo::validate(path)?, &request)
+    })
+    .await
+}
+
+/// Reads a staged file from the index or an unstaged file from disk.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_worktree_file_content(
+    path: String,
+    request: WorktreeFileContentRequest,
+) -> Result<WorktreeFileContent, AppError> {
+    blocking("get_worktree_file_content", move || {
+        worktree::get_worktree_file_content(&ActiveRepo::validate(path)?, &request)
+    })
+    .await
+}
+
+/// Reads a cheap revision used when filesystem events are unavailable.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_worktree_fingerprint(path: String) -> Result<WorktreeFingerprint, AppError> {
+    blocking("get_worktree_fingerprint", move || {
+        worktree::get_worktree_fingerprint(&ActiveRepo::validate(path)?)
     })
     .await
 }

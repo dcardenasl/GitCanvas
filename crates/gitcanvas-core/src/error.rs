@@ -19,6 +19,21 @@ pub enum AppError {
     /// A request violates the public contract.
     #[error("Invalid request: {0}")]
     InvalidInput(String),
+    /// A requested file would resolve outside the selected repository.
+    #[error("Path is outside the repository: {0}")]
+    PathOutsideRepository(String),
+    /// The working tree changed while a local file was being read.
+    #[error("Working tree changed while reading {0}")]
+    WorktreeChanged(String),
+    /// The requested local file cannot be represented by the selected source.
+    #[error("Local file is unavailable: {0}")]
+    WorktreeFileUnavailable(String),
+    /// The operation would exceed an explicit resource budget.
+    #[error("Resource limit exceeded: {0}")]
+    ResourceLimitExceeded(String),
+    /// The filesystem watcher is not available for this repository.
+    #[error("Repository watcher is degraded: {0}")]
+    WatchDegraded(String),
     /// The history represented by a pagination cursor is no longer available.
     #[error("History changed: {0}")]
     StaleCursor(String),

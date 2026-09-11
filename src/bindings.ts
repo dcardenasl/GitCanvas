@@ -7,7 +7,7 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 export const commands = {
 	/**
 	 *  Round-trips the IPC boundary and reports what is running.
-	 * 
+	 *
 	 *  This exists to prove the whole pipeline — command registration, type
 	 *  generation, and the TypeScript client — works end to end before anything
 	 *  depends on it.
@@ -20,17 +20,17 @@ export const commands = {
 	/**
 	 *  The repository named on the command line, if the application was launched
 	 *  with one.
-	 * 
+	 *
 	 *  `gitcanvas /path/to/repo` is what a terminal user expects of a Git client,
 	 *  and it is also what lets the end-to-end suite open a repository without a
 	 *  native file dialog.
-	 * 
+	 *
 	 *  Every argument is scanned rather than only the first: a launcher may put its
 	 *  own flags ahead of the user's path, which is exactly what the WebDriver
 	 *  harness does. The first argument that both looks like a path and validates
 	 *  as a repository wins; an argument that is not one is skipped rather than
 	 *  reported, because it probably belongs to the runtime.
-	 * 
+	 *
 	 *  `GITCANVAS_REPOSITORY` does the same thing for environments where passing
 	 *  arguments is awkward.
 	 */
@@ -46,18 +46,26 @@ export const commands = {
 	getTags: (path: string) => typedError<TagInfo[], AppError>(__TAURI_INVOKE("get_tags", { path })),
 	/**
 	 *  Reads a commit's changes against its first parent.
-	 * 
+	 *
 	 *  `request.expand_path` opts one file out of the size guard, which is how the
 	 *  interface loads a large diff only when the user asks for it.
 	 */
 	getCommitDiff: (path: string, request: DiffRequest) => typedError<CommitDiff, AppError>(__TAURI_INVOKE("get_commit_diff", { path, request })),
 	/**
 	 *  Reads a file's full contents as it stands at a commit.
-	 * 
+	 *
 	 *  Complements the diff: a change only shows what moved, and reading the file
 	 *  around it is often what answers the question.
 	 */
 	getFileContent: (path: string, request: FileContentRequest) => typedError<FileContent, AppError>(__TAURI_INVOKE("get_file_content", { path, request })),
+	/**  Reads both local change sets with one repository revision. */
+	getWorktreeSnapshot: (path: string, request: WorktreeSnapshotRequest) => typedError<WorktreeSnapshot, AppError>(__TAURI_INVOKE("get_worktree_snapshot", { path, request })),
+	/**  Reads one staged or unstaged file diff on demand. */
+	getWorktreeFileDiff: (path: string, request: WorktreeFileDiffRequest) => typedError<WorktreeFileDiff, AppError>(__TAURI_INVOKE("get_worktree_file_diff", { path, request })),
+	/**  Reads a staged file from the index or an unstaged file from disk. */
+	getWorktreeFileContent: (path: string, request: WorktreeFileContentRequest) => typedError<WorktreeFileContent, AppError>(__TAURI_INVOKE("get_worktree_file_content", { path, request })),
+	/**  Reads a cheap revision used when filesystem events are unavailable. */
+	getWorktreeFingerprint: (path: string) => typedError<WorktreeFingerprint, AppError>(__TAURI_INVOKE("get_worktree_fingerprint", { path })),
 	/**  Stores a personal access token in the OS keychain. */
 	storeGithubToken: (token: string) => typedError<GitHubAccount, AppError>(__TAURI_INVOKE("store_github_token", { token })),
 	/**  Reports whether a token is stored, without revealing it. */
@@ -78,13 +86,13 @@ export const commands = {
 	pushCurrentBranch: (path: string) => typedError<PushOutcome, AppError>(__TAURI_INVOKE("push_current_branch", { path })),
 	/**
 	 *  Starts watching a repository, replacing any previous watch.
-	 * 
+	 *
 	 *  Idempotent from the interface's point of view: calling it again for the
 	 *  same repository simply re-establishes the watch.
 	 */
-	watchRepository: (path: string) => typedError<null, AppError>(__TAURI_INVOKE("watch_repository", { path })),
+	watchRepository: (request: WatchRequest) => typedError<null, AppError>(__TAURI_INVOKE("watch_repository", { request })),
 	/**  Stops watching, if anything was being watched. */
-	unwatchRepository: () => typedError<null, AppError>(__TAURI_INVOKE("unwatch_repository")),
+	unwatchRepository: (generation: number) => typedError<null, AppError>(__TAURI_INVOKE("unwatch_repository", { generation })),
 };
 
 /** Events */
@@ -95,23 +103,33 @@ export const events = {
 
 /* Types */
 /**  A domain failure, never a raw library error or a panic. */
-export type AppError = 
+export type AppError =
 /**  The supplied path does not identify a supported working repository. */
-{ kind: "InvalidRepository"; message: string } | 
+{ kind: "InvalidRepository"; message: string } |
 /**  A filesystem operation failed. */
-{ kind: "Io"; message: string } | 
+{ kind: "Io"; message: string } |
 /**  libgit2 could not complete an operation. */
-{ kind: "Git"; message: string } | 
+{ kind: "Git"; message: string } |
 /**  A request violates the public contract. */
-{ kind: "InvalidInput"; message: string } | 
+{ kind: "InvalidInput"; message: string } |
+/**  A requested file would resolve outside the selected repository. */
+{ kind: "PathOutsideRepository"; message: string } |
+/**  The working tree changed while a local file was being read. */
+{ kind: "WorktreeChanged"; message: string } |
+/**  The requested local file cannot be represented by the selected source. */
+{ kind: "WorktreeFileUnavailable"; message: string } |
+/**  The operation would exceed an explicit resource budget. */
+{ kind: "ResourceLimitExceeded"; message: string } |
+/**  The filesystem watcher is not available for this repository. */
+{ kind: "WatchDegraded"; message: string } |
 /**  The history represented by a pagination cursor is no longer available. */
-{ kind: "StaleCursor"; message: string } | 
+{ kind: "StaleCursor"; message: string } |
 /**  Background work could not complete. */
 { kind: "Internal"; message: string };
 
 /**
  *  What the application reports about itself.
- * 
+ *
  *  Deliberately a struct rather than a bare string: it exercises struct
  *  generation through specta, which is the shape every real payload will take.
  */
@@ -140,7 +158,7 @@ export type CacheEntry = {
 	name: string,
 	/**
 	 *  Size in bytes, as a decimal string.
-	 * 
+	 *
 	 *  A directory can exceed what a JavaScript number represents exactly, and
 	 *  specta refuses to export 64-bit integers for that reason. The same
 	 *  convention as commit timestamps: cross the boundary as text, parse on
@@ -168,9 +186,9 @@ export type CacheStatus = {
  *  crosses the boundary. The default external tagging generates a shape that
  *  needs a key lookup before anything can be read.
  */
-export type CheckoutOutcome = 
+export type CheckoutOutcome =
 /**  The branch is now checked out. */
-{ kind: "Switched"; branch: string } | 
+{ kind: "Switched"; branch: string } |
 /**  Refused: these changes would have been lost. */
 { kind: "Blocked"; conflicts: DirtyPath[] };
 
@@ -213,9 +231,9 @@ export type CommitInfo = {
 };
 
 /**  Why a file has no renderable hunks. */
-export type DiffOmission = 
+export type DiffOmission =
 /**  libgit2 reports the content as binary; there is no line diff to show. */
-"Binary" | 
+"Binary" |
 /**  The change is larger than `LARGE_DIFF_LINE_LIMIT` and was not requested. */
 "TooLarge";
 
@@ -262,7 +280,7 @@ export type FileContentRequest = {
 
 /**
  *  One file in a commit's diff.
- * 
+ *
  *  `patch` is `None` whenever `omitted` is set, so the two can never disagree
  *  about whether there is something to render.
  */
@@ -276,6 +294,16 @@ export type FileDiff = {
 	omitted: DiffOmission | null,
 	/**  Unified patch text for this file alone, ready for a diff renderer. */
 	patch: string | null,
+};
+
+/**  File metadata used by large listings before a patch is requested. */
+export type FileDiffSummary = {
+	path: string,
+	old_path: string | null,
+	change: FileChange,
+	insertions: number,
+	deletions: number,
+	omitted: DiffOmission | null,
 };
 
 /**  The authenticated account. */
@@ -314,13 +342,13 @@ export type HistoryRequest = {
  *  crosses the boundary. The default external tagging generates a shape that
  *  needs a key lookup before anything can be read.
  */
-export type PullOutcome = 
+export type PullOutcome =
 /**  Already up to date; nothing was fetched that changes the branch. */
-{ kind: "UpToDate" } | 
+{ kind: "UpToDate" } |
 /**  Fast-forwarded to the remote tip. */
-{ kind: "FastForwarded"; commits: number; to: string } | 
+{ kind: "FastForwarded"; commits: number; to: string } |
 /**  Refused: the histories diverged and a real merge would be required. */
-{ kind: "DivergedRequiresMerge"; local: string; remote: string } | 
+{ kind: "DivergedRequiresMerge"; local: string; remote: string } |
 /**  The branch has no upstream to pull from. */
 { kind: "NoUpstream" };
 
@@ -331,20 +359,20 @@ export type PullOutcome =
  *  crosses the boundary. The default external tagging generates a shape that
  *  needs a key lookup before anything can be read.
  */
-export type PushOutcome = { kind: "Pushed"; branch: string; remote: string } | 
+export type PushOutcome = { kind: "Pushed"; branch: string; remote: string } |
 /**  Refused: the remote has commits the local branch does not. */
 { kind: "RejectedNonFastForward"; branch: string };
 
-/**
- *  Announces that the open repository changed on disk.
- * 
- *  Carries no detail on purpose: what changed is not something the interface
- *  acts on differently, and a payload describing it would be a second source
- *  of truth next to the queries it triggers.
- */
 export type RepositoryChangedEvent = {
 	path: string,
+	generation: number,
+	kind: RepositoryChangedKind,
 };
+
+/**  Announces a scoped change in the generation currently shown by the window. */
+export type RepositoryChangedKind = "Metadata" | "Worktree" | { Degraded: {
+	message: string,
+} };
 
 /**  Displayable repository identity, safe to send across IPC. */
 export type RepositoryInfo = {
@@ -358,6 +386,77 @@ export type TagInfo = {
 	target: string,
 	commit_id: string | null,
 	is_annotated: boolean,
+};
+
+export type WatchRequest = {
+	path: string,
+	generation: number,
+};
+
+/**  A bounded page of local file summaries. */
+export type WorktreeDiffPage = {
+	side: WorktreeSide,
+	revision: string,
+	files: FileDiffSummary[],
+	total_files: number,
+	next_cursor: string | null,
+	insertions: number,
+	deletions: number,
+};
+
+export type WorktreeFileContent = {
+	side: WorktreeSide,
+	revision: string,
+	path: string,
+	lines: number,
+	bytes: string,
+	omitted: DiffOmission | null,
+	text: string | null,
+};
+
+/**  Reads a local file from the index or disk. */
+export type WorktreeFileContentRequest = {
+	side: WorktreeSide,
+	path: string,
+	expected_revision: string | null,
+	expand: boolean,
+};
+
+export type WorktreeFileDiff = {
+	side: WorktreeSide,
+	revision: string,
+	file: FileDiff,
+};
+
+/**  A single detailed local diff, fetched after a file is selected. */
+export type WorktreeFileDiffRequest = {
+	side: WorktreeSide,
+	path: string,
+	expected_revision: string | null,
+	expand: boolean,
+};
+
+/**  Lightweight revision used by the fallback poller and stale-read guard. */
+export type WorktreeFingerprint = {
+	revision: string,
+};
+
+/**  Which side of the local changes the caller wants to inspect. */
+export type WorktreeSide = "staged" | "unstaged";
+
+/**  Both sides share one revision and one React Query cache entry. */
+export type WorktreeSnapshot = {
+	revision: string,
+	staged: WorktreeDiffPage,
+	unstaged: WorktreeDiffPage,
+};
+
+/**  The combined initial snapshot request. */
+export type WorktreeSnapshotRequest = {
+	staged_cursor: string | null,
+	unstaged_cursor: string | null,
+	limit: number | null,
+	expected_revision: string | null,
 };
 
 /* Tauri Specta runtime */

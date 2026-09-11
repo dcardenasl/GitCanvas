@@ -14,6 +14,97 @@ use crate::{diff::DiffOmission, error::AppError, repository::ActiveRepo};
 /// Lines above which a file's contents are withheld until requested.
 pub const LARGE_FILE_LINE_LIMIT: u32 = 5_000;
 
+/// Maximum content returned without an explicit expansion request.
+pub const MAX_INITIAL_CONTENT_BYTES: usize = 2 * 1024 * 1024;
+
+/// Hard maximum for content explicitly requested by the user.
+pub const MAX_EXPANDED_CONTENT_BYTES: usize = 32 * 1024 * 1024;
+
+/// The normalized result of reading text from either a commit blob or disk.
+///
+/// Keeping this behind one helper is the seam that makes binary detection,
+/// byte limits, line counts and UTF-8 handling identical for both sources.
+#[derive(Debug)]
+pub(crate) struct ContentRead {
+    pub bytes: String,
+    pub lines: u32,
+    pub omitted: Option<DiffOmission>,
+    pub text: Option<String>,
+}
+
+/// Creates a bounded response from a known file size without reading bytes.
+pub(crate) fn too_large_content(
+    byte_count: u64,
+    path: &str,
+    expand: bool,
+) -> Result<ContentRead, AppError> {
+    if expand && byte_count > MAX_EXPANDED_CONTENT_BYTES as u64 {
+        return Err(AppError::ResourceLimitExceeded(format!(
+            "{path} is {byte_count} bytes; the maximum is {MAX_EXPANDED_CONTENT_BYTES}"
+        )));
+    }
+    Ok(ContentRead {
+        bytes: byte_count.to_string(),
+        lines: 0,
+        omitted: Some(DiffOmission::TooLarge),
+        text: None,
+    })
+}
+
+/// Applies the shared content policy without allocating a copy of an
+/// over-sized file.
+///
+/// # Errors
+///
+/// Returns a typed resource error when an explicit expansion exceeds the hard
+/// maximum.
+pub(crate) fn read_content(raw: &[u8], path: &str, expand: bool) -> Result<ContentRead, AppError> {
+    let byte_count = raw.len();
+    let byte_string = byte_count.to_string();
+
+    if byte_count > MAX_EXPANDED_CONTENT_BYTES {
+        return too_large_content(byte_count as u64, path, expand);
+    }
+
+    if byte_count > MAX_INITIAL_CONTENT_BYTES && !expand {
+        return Ok(ContentRead {
+            bytes: byte_string,
+            lines: 0,
+            omitted: Some(DiffOmission::TooLarge),
+            text: None,
+        });
+    }
+
+    let binary = raw.iter().take(8_000).any(|byte| *byte == 0);
+    if binary {
+        return Ok(ContentRead {
+            bytes: byte_string,
+            lines: 0,
+            omitted: Some(DiffOmission::Binary),
+            text: None,
+        });
+    }
+
+    let text = String::from_utf8_lossy(raw).into_owned();
+    let lines = u32::try_from(text.lines().count()).unwrap_or(u32::MAX);
+
+    if lines > LARGE_FILE_LINE_LIMIT && !expand {
+        return Ok(ContentRead {
+            bytes: byte_string,
+            lines,
+            omitted: Some(DiffOmission::TooLarge),
+            text: None,
+        });
+    }
+
+    Ok(ContentRead {
+        bytes: byte_string,
+        lines,
+        omitted: None,
+        text: Some(text),
+    })
+}
+
 /// A file as it stands at one commit.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct FileContent {
@@ -64,34 +155,16 @@ pub fn get_file_content(
         AppError::InvalidInput(format!("{} is not a file at this commit", request.path))
     })?;
 
-    let bytes = blob.content();
-    let byte_count = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
-
-    if blob.is_binary() {
-        return Ok(FileContent {
-            path: request.path.clone(),
-            commit_id: commit.id().to_string(),
-            lines: 0,
-            bytes: byte_count.to_string(),
-            omitted: Some(DiffOmission::Binary),
-            text: None,
-        });
-    }
-
-    // Lossy on purpose: a file with a stray invalid byte is still worth reading,
-    // and refusing to show it would be less useful than showing a replacement
-    // character where the byte was.
-    let text = String::from_utf8_lossy(bytes).into_owned();
-    let lines = u32::try_from(text.lines().count()).unwrap_or(u32::MAX);
-
-    let withheld = lines > LARGE_FILE_LINE_LIMIT && !request.expand;
+    // Lossy UTF-8 is intentional: a file with a stray invalid byte remains
+    // useful, with a replacement character where the byte was.
+    let content = read_content(blob.content(), &request.path, request.expand)?;
 
     Ok(FileContent {
         path: request.path.clone(),
         commit_id: commit.id().to_string(),
-        lines,
-        bytes: byte_count.to_string(),
-        omitted: withheld.then_some(DiffOmission::TooLarge),
-        text: (!withheld).then_some(text),
+        lines: content.lines,
+        bytes: content.bytes,
+        omitted: content.omitted,
+        text: content.text,
     })
 }

@@ -18,6 +18,12 @@ use crate::{error::AppError, repository::ActiveRepo};
 /// eagerly stalls the interface for something nobody reads.
 pub const LARGE_DIFF_LINE_LIMIT: u32 = 2_000;
 
+/// Maximum patch payload returned for an ordinary request.
+pub const MAX_INITIAL_DIFF_BYTES: usize = 1024 * 1024;
+
+/// Hard maximum for a patch explicitly expanded by the user.
+pub const MAX_EXPANDED_DIFF_BYTES: usize = 16 * 1024 * 1024;
+
 /// How a path changed between two trees.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub enum FileChange {
@@ -68,6 +74,30 @@ pub struct FileDiff {
     pub omitted: Option<DiffOmission>,
     /// Unified patch text for this file alone, ready for a diff renderer.
     pub patch: Option<String>,
+}
+
+/// File metadata used by large listings before a patch is requested.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+pub struct FileDiffSummary {
+    pub path: String,
+    pub old_path: Option<String>,
+    pub change: FileChange,
+    pub insertions: u32,
+    pub deletions: u32,
+    pub omitted: Option<DiffOmission>,
+}
+
+impl From<&FileDiff> for FileDiffSummary {
+    fn from(file: &FileDiff) -> Self {
+        Self {
+            path: file.path.clone(),
+            old_path: file.old_path.clone(),
+            change: file.change,
+            insertions: file.insertions,
+            deletions: file.deletions,
+            omitted: file.omitted,
+        }
+    }
 }
 
 /// A commit's changes against its first parent.
@@ -125,8 +155,14 @@ pub fn get_commit_diff(active: &ActiveRepo, request: &DiffRequest) -> Result<Com
     diff.find_similar(None)?;
 
     let files = collect_files(&diff, request.expand_path.as_deref())?;
-    let insertions = files.iter().map(|file| file.insertions).sum();
-    let deletions = files.iter().map(|file| file.deletions).sum();
+    let insertions = files
+        .iter()
+        .map(|file| file.insertions)
+        .fold(0, u32::saturating_add);
+    let deletions = files
+        .iter()
+        .map(|file| file.deletions)
+        .fold(0, u32::saturating_add);
 
     Ok(CommitDiff {
         commit_id: commit.id().to_string(),
@@ -138,9 +174,35 @@ pub fn get_commit_diff(active: &ActiveRepo, request: &DiffRequest) -> Result<Com
     })
 }
 
-fn collect_files(
+pub(crate) fn collect_files(
     diff: &git2::Diff<'_>,
     expand_path: Option<&str>,
+) -> Result<Vec<FileDiff>, AppError> {
+    collect_files_internal(diff, expand_path, None, true)
+}
+
+/// Collects file metadata without materializing patch text.
+pub(crate) fn collect_summaries(diff: &git2::Diff<'_>) -> Result<Vec<FileDiffSummary>, AppError> {
+    collect_files_internal(diff, None, None, false)
+        .map(|files| files.iter().map(FileDiffSummary::from).collect::<Vec<_>>())
+}
+
+/// Collects one detailed file, keeping the expensive patch allocation out of
+/// the initial worktree listing.
+pub(crate) fn collect_file(
+    diff: &git2::Diff<'_>,
+    path: &str,
+    expand: bool,
+) -> Result<Option<FileDiff>, AppError> {
+    let expanded = expand.then_some(path);
+    collect_files_internal(diff, expanded, Some(path), true).map(|mut files| files.pop())
+}
+
+fn collect_files_internal(
+    diff: &git2::Diff<'_>,
+    expand_path: Option<&str>,
+    only_path: Option<&str>,
+    include_patch: bool,
 ) -> Result<Vec<FileDiff>, AppError> {
     let mut files = Vec::new();
 
@@ -155,6 +217,10 @@ fn collect_files(
             .map(|path| path.to_string_lossy().into_owned())
             .unwrap_or_default();
 
+        if only_path.is_some_and(|requested| requested != path) {
+            continue;
+        }
+
         let old_path = delta
             .old_file()
             .path()
@@ -167,19 +233,27 @@ fn collect_files(
             .map_or(Ok((0, 0, 0)), git2::Patch::line_stats)?;
 
         let binary = delta.new_file().is_binary() || delta.old_file().is_binary();
-        let lines = u32::try_from(insertions + deletions).unwrap_or(u32::MAX);
-        let oversized = lines > LARGE_DIFF_LINE_LIMIT && expand_path != Some(path.as_str());
+        let lines = u32::try_from(insertions)
+            .unwrap_or(u32::MAX)
+            .saturating_add(u32::try_from(deletions).unwrap_or(u32::MAX));
+        let patch_bytes = hunks
+            .as_ref()
+            .map_or(0, |patch| patch.size(true, true, true));
+        let expanded = expand_path == Some(path.as_str());
+        let oversized =
+            (lines > LARGE_DIFF_LINE_LIMIT || patch_bytes > MAX_INITIAL_DIFF_BYTES) && !expanded;
+        let beyond_hard_limit = patch_bytes > MAX_EXPANDED_DIFF_BYTES && expanded;
 
         let omitted = if binary {
             Some(DiffOmission::Binary)
-        } else if oversized {
+        } else if oversized || beyond_hard_limit {
             Some(DiffOmission::TooLarge)
         } else {
             None
         };
 
         let text = match (omitted, hunks) {
-            (None, Some(mut hunks)) => {
+            (None, Some(mut hunks)) if include_patch => {
                 Some(String::from_utf8_lossy(hunks.to_buf()?.as_ref()).into_owned())
             }
             _ => None,

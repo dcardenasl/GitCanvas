@@ -67,7 +67,7 @@ thiserror = "2"
 
 # Filesystem notification, for noticing that a repository changed underneath the
 # window. Pinned to the stable 8.x line rather than the 9.0 release candidate.
-notify = "8"
+notify = { version = "8", default-features = false, features = ["macos_kqueue"] }
 
 # HTTP for the two GitHub REST calls. `rustls` rather than the system TLS stack,
 # for the same reason libgit2 is vendored: identical behaviour everywhere.
