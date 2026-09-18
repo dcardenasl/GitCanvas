@@ -25,9 +25,11 @@ const CHANGE_LABEL: Record<FileChange, string> = {
 type ChangedFile = FileDiff | FileDiffSummary;
 
 interface ChangedFileRowProps {
-  readonly file: ChangedFile;
+  readonly file: ChangedFile | null;
+  readonly path: string;
   readonly selected: boolean;
   readonly onOpen: () => void;
+  readonly showDirectory?: boolean;
 }
 
 function fileName(path: string): string {
@@ -42,8 +44,10 @@ function directory(path: string): string {
 /** Shared navigation row for committed and local file changes. */
 export function ChangedFileRow({
   file,
+  path,
   selected,
   onOpen,
+  showDirectory = true,
 }: ChangedFileRowProps) {
   return (
     <li>
@@ -53,21 +57,31 @@ export function ChangedFileRow({
         aria-current={selected ? "true" : undefined}
         onClick={onOpen}
       >
-        <span
-          className={`file-row__mark file-row__mark--${file.change.toLowerCase()}`}
-          title={CHANGE_LABEL[file.change]}
-          aria-label={CHANGE_LABEL[file.change]}
-        >
-          {CHANGE_MARK[file.change]}
-        </span>
-        <span className="file-row__path" title={file.path}>
-          <span className="file-row__name">{fileName(file.path)}</span>
-          {directory(file.path) !== "" && (
-            <span className="file-row__dir">{directory(file.path)}</span>
+        {file === null ? (
+          <span
+            className="file-row__mark file-row__mark--unchanged"
+            title="Sin cambios en este commit"
+            aria-label="Sin cambios en este commit"
+          >
+            ·
+          </span>
+        ) : (
+          <span
+            className={`file-row__mark file-row__mark--${file.change.toLowerCase()}`}
+            title={CHANGE_LABEL[file.change]}
+            aria-label={CHANGE_LABEL[file.change]}
+          >
+            {CHANGE_MARK[file.change]}
+          </span>
+        )}
+        <span className="file-row__path" title={path}>
+          <span className="file-row__name">{fileName(path)}</span>
+          {showDirectory && directory(path) !== "" && (
+            <span className="file-row__dir">{directory(path)}</span>
           )}
         </span>
         <span className="file-row__stat">
-          {file.omitted === null ? (
+          {file === null ? null : file.omitted === null ? (
             <>
               <span className="detail-panel__stat-add">+{file.insertions}</span>{" "}
               <span className="detail-panel__stat-del">−{file.deletions}</span>

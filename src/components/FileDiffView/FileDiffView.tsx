@@ -25,10 +25,12 @@ export type FileDiffViewProps =
   | (SharedProps & {
       readonly commit: CommitInfo;
       readonly worktree?: never;
+      readonly snapshot?: boolean;
     })
   | (SharedProps & {
       readonly commit?: never;
       readonly worktree: { readonly side: "staged" | "unstaged" };
+      readonly snapshot?: never;
     });
 
 type Mode = "diff" | "file";
@@ -47,11 +49,16 @@ export function FileDiffView(props: FileDiffViewProps) {
   }>({ key: "", mode: "diff", expand: false });
 
   const isWorktree = props.worktree !== undefined;
+  const isSnapshot = !isWorktree && props.snapshot === true;
   const sourceKey = isWorktree
     ? props.worktree.side
     : `commit-${props.commit.id}`;
   const key = `${sourceKey}/${path}`;
-  const mode: Mode = choice.key === key ? choice.mode : "diff";
+  const mode: Mode = isSnapshot
+    ? "file"
+    : choice.key === key
+      ? choice.mode
+      : "diff";
   const expandWholeFile = choice.key === key && choice.expand;
 
   const commitDiff = useCommitDiff(
@@ -77,6 +84,17 @@ export function FileDiffView(props: FileDiffViewProps) {
     ? worktreeFileDiff.data?.file
     : commitDiff.data?.files.find((entry) => entry.path === path);
   const deleted = file?.change === "Deleted";
+
+  useEffect(() => {
+    if (
+      isSnapshot &&
+      commitDiff.data?.files.some((entry) => entry.path === path) === true
+    ) {
+      // The file tree can be opened while the changed-file diff is still
+      // loading. Once it arrives, changed files always use their patch view.
+      selectFile(path, "commit", "diff");
+    }
+  }, [commitDiff.data, isSnapshot, path, selectFile]);
 
   const whole = useQuery<FileContent | WorktreeFileContent>({
     queryKey: [
@@ -133,7 +151,10 @@ export function FileDiffView(props: FileDiffViewProps) {
   };
 
   return (
-    <section className="file-diff" aria-label={`Cambios en ${path}`}>
+    <section
+      className="file-diff"
+      aria-label={`${isSnapshot ? "Archivo en" : "Cambios en"} ${path}`}
+    >
       <header className="file-diff__head">
         <button
           type="button"
@@ -157,7 +178,7 @@ export function FileDiffView(props: FileDiffViewProps) {
         </div>
 
         <div className="file-diff__controls">
-          {!deleted && (
+          {!deleted && !isSnapshot && (
             <div
               className="segmented"
               role="group"
@@ -270,6 +291,9 @@ export function FileDiffView(props: FileDiffViewProps) {
                   {whole.isFetching ? "Cargando…" : "Ver archivo completo"}
                 </button>
               </div>
+            )}
+            {whole.data?.text === "" && (
+              <p className="file-diff__state">El archivo está vacío.</p>
             )}
             {wholeLines.length > 0 && (
               <LineTable lines={wholeLines} wrap={wrap} />

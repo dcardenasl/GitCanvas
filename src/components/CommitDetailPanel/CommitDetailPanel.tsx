@@ -1,12 +1,17 @@
+import { useMemo } from "react";
+
 import type { CommitInfo } from "../../bindings";
 import { useCommitDiff } from "../../state/diff";
 import { useSession } from "../../state/session";
+import {
+  ChangedFilesBrowser,
+  type ChangedFilesGroup,
+} from "../ChangedFilesBrowser/ChangedFilesBrowser";
 import {
   authorInitials,
   formatCommitTime,
   shortId,
 } from "../CommitTable/format";
-import { ChangedFileRow } from "../ChangedFileRow/ChangedFileRow";
 
 import "./CommitDetailPanel.css";
 
@@ -30,9 +35,23 @@ export function CommitDetailPanel({
   const selection = useSession((state) => state.selection);
   const selectedFilePath =
     selection.kind === "commit" ? selection.filePath : null;
+  const selectedFileSource = selection.kind === "commit" ? "commit" : null;
   const selectFile = useSession((state) => state.selectFile);
 
   const diff = useCommitDiff(repositoryPath, commit.id);
+  const changedGroups = useMemo<ChangedFilesGroup[]>(
+    () =>
+      diff.data === undefined
+        ? []
+        : [
+            {
+              files: diff.data.files,
+              source: "commit",
+              listLabel: "Archivos modificados",
+            },
+          ],
+    [diff.data],
+  );
 
   return (
     <aside className="detail-panel" aria-label="Detalle del commit">
@@ -78,7 +97,6 @@ export function CommitDetailPanel({
               Commit de merge: se muestran los cambios contra el primer padre.
             </p>
           )}
-
           <p className="detail-panel__files-label">
             {diff.data.files.length === 1
               ? "1 archivo modificado"
@@ -91,21 +109,22 @@ export function CommitDetailPanel({
               −{diff.data.deletions}
             </span>
           </p>
-
-          <ul className="file-list" aria-label="Archivos modificados">
-            {diff.data.files.map((file) => (
-              <ChangedFileRow
-                key={file.path}
-                file={file}
-                selected={file.path === selectedFilePath}
-                onOpen={() => {
-                  selectFile(file.path);
-                }}
-              />
-            ))}
-          </ul>
         </>
       )}
+
+      <ChangedFilesBrowser
+        key={commit.id}
+        allCommitFiles={{
+          repositoryPath,
+          commitId: commit.id,
+        }}
+        groups={changedGroups}
+        selectedFilePath={selectedFilePath}
+        selectedFileSource={selectedFileSource}
+        onOpen={(path, source, snapshot) => {
+          selectFile(path, source, snapshot ? "snapshot" : "diff");
+        }}
+      />
     </aside>
   );
 }

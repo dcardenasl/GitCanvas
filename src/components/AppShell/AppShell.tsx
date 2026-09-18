@@ -186,6 +186,10 @@ export function AppShell() {
                 repositoryPath={repository.path}
                 commit={selected}
                 path={selectedFilePath}
+                snapshot={
+                  selection.kind === "commit" &&
+                  selection.fileMode === "snapshot"
+                }
               />
             ) : worktreeFile !== null && worktreeFile.filePath !== null ? (
               <FileDiffView

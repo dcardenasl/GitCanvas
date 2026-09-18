@@ -142,6 +142,217 @@
   color: #f0a3a1;
 }
 
+/* ---------- changed-file path/tree navigation ---------- */
+
+.changed-files-browser__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 8px;
+}
+
+.file-view-mode {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--control);
+}
+
+.file-view-mode__button,
+.file-tree__all-toggle {
+  min-height: 25px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 10.5px;
+  cursor: default;
+}
+
+.file-view-mode__button[aria-pressed="true"] {
+  background: var(--surface-selected);
+  color: var(--ink);
+}
+
+.file-tree__all-toggle {
+  border: 1px solid var(--border);
+}
+
+.file-view-mode__button:hover,
+.file-tree__all-toggle:hover {
+  color: var(--ink);
+}
+
+.file-tree__all-files {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 25px;
+  color: var(--ink-muted);
+  font-size: 10.5px;
+  cursor: default;
+}
+
+.file-tree__all-files input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.file-view-mode__button:focus-visible,
+.file-tree__all-toggle:focus-visible,
+.file-tree__toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.file-tree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.file-tree__children {
+  margin-left: 11px;
+  padding-left: 8px;
+  border-left: 1px solid var(--divider);
+}
+
+.file-tree__contents {
+  min-width: 0;
+}
+
+.file-tree__state {
+  margin: 6px 0 6px 20px;
+  color: var(--ink-faint);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.file-tree__state p {
+  margin: 0 0 5px;
+}
+
+.file-tree__retry,
+.file-tree__more {
+  min-height: 26px;
+  margin: 5px 0 5px 20px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--control);
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 10.5px;
+  cursor: default;
+}
+
+.file-tree__retry:hover:not(:disabled),
+.file-tree__more:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.file-tree__retry:focus-visible,
+.file-tree__more:focus-visible,
+.file-tree__all-files:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.file-tree__retry:disabled,
+.file-tree__more:disabled {
+  opacity: 0.65;
+}
+
+.file-tree__submodule {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px 6px 26px;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.commit-tree-browser__deleted {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--divider);
+}
+
+.file-tree__toggle {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  min-height: 28px;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  cursor: default;
+}
+
+.file-tree__toggle:hover {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.file-tree__chevron {
+  width: 9px;
+  flex: 0 0 9px;
+  color: var(--ink-faint);
+  transform: rotate(0deg);
+  transition: transform 120ms ease-out;
+}
+
+.file-tree__toggle[aria-expanded="true"] .file-tree__chevron {
+  transform: rotate(90deg);
+}
+
+.file-tree__folder {
+  display: flex;
+  flex: 0 0 13px;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  color: var(--accent);
+}
+
+.file-tree__folder svg {
+  width: 13px;
+  height: 13px;
+}
+
+.file-tree__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-tree__count {
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.file-tree .file-row__dir {
+  display: none;
+}
+
 /* ---------- file list ---------- */
 
 .file-list {
@@ -197,6 +408,13 @@
 .file-row__mark--added {
   background: rgb(74 222 128 / 15%);
   color: #7be3a1;
+}
+
+.file-row__mark--unchanged {
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 14px;
 }
 
 .file-row__mark--deleted {

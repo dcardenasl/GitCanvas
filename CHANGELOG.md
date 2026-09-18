@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Browse changed files as paths or a directory tree.** Commit and working-tree
+  panels share the same view switcher; commit trees can include unchanged files
+  and load directory contents in bounded pages while retaining change status.
 - **Local changes are a bounded, live view.** Staged and unstaged changes plus
   new non-ignored project files share one revisioned snapshot, paginated
   summaries and on-demand diffs and contents. Native observation listens only

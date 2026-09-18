@@ -3,6 +3,7 @@
 
 use gitcanvas_core::{
     blob::{self, FileContent, FileContentRequest},
+    commit_tree::{self, CommitTreePage, CommitTreeRequest},
     diff::{self, CommitDiff, DiffRequest},
     error::AppError,
     repository::ActiveRepo,
@@ -39,6 +40,19 @@ pub async fn get_file_content(
 ) -> Result<FileContent, AppError> {
     blocking("get_file_content", move || {
         blob::get_file_content(&ActiveRepo::validate(path)?, &request)
+    })
+    .await
+}
+
+/// Reads one bounded page of direct children from a commit directory.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_commit_tree_page(
+    path: String,
+    request: CommitTreeRequest,
+) -> Result<CommitTreePage, AppError> {
+    blocking("get_commit_tree_page", move || {
+        commit_tree::get_commit_tree_page(&ActiveRepo::validate(path)?, &request)
     })
     .await
 }

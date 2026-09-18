@@ -58,6 +58,8 @@ export const commands = {
 	 *  around it is often what answers the question.
 	 */
 	getFileContent: (path: string, request: FileContentRequest) => typedError<FileContent, AppError>(__TAURI_INVOKE("get_file_content", { path, request })),
+	/**  Reads one bounded page of direct children from a commit directory. */
+	getCommitTreePage: (path: string, request: CommitTreeRequest) => typedError<CommitTreePage, AppError>(__TAURI_INVOKE("get_commit_tree_page", { path, request })),
 	/**  Reads both local change sets with one repository revision. */
 	getWorktreeSnapshot: (path: string, request: WorktreeSnapshotRequest) => typedError<WorktreeSnapshot, AppError>(__TAURI_INVOKE("get_worktree_snapshot", { path, request })),
 	/**  Reads one staged or unstaged file diff on demand. */
@@ -228,6 +230,34 @@ export type CommitInfo = {
 	author_email: string,
 	author_time: string,
 	commit_time: string,
+};
+
+/**  A direct child in a commit tree. Directories are loaded on demand by the UI. */
+export type CommitTreeEntry = {
+	name: string,
+	/**  Repository-relative path, always separated with `/`. */
+	path: string,
+	kind: CommitTreeEntryKind,
+};
+
+/**  Git object types that can occur in a tree and have distinct UI behavior. */
+export type CommitTreeEntryKind = "Directory" | "File" | "Submodule";
+
+/**  A bounded page of direct children from a commit directory. */
+export type CommitTreePage = {
+	commit_id: string,
+	directory_path: string | null,
+	entries: CommitTreeEntry[],
+	/**  Offset for the next page, absent when this directory is exhausted. */
+	next_offset: number | null,
+};
+
+/**  Identifies one immutable commit directory and the next direct-child offset. */
+export type CommitTreeRequest = {
+	commit_id: string,
+	/**  `None` selects the root. Non-root paths must be canonical Git paths. */
+	directory_path: string | null,
+	offset: number,
 };
 
 /**  Why a file has no renderable hunks. */

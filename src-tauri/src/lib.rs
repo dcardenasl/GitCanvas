@@ -55,6 +55,7 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::repository::get_tags,
             commands::diff::get_commit_diff,
             commands::diff::get_file_content,
+            commands::diff::get_commit_tree_page,
             commands::diff::get_worktree_snapshot,
             commands::diff::get_worktree_file_diff,
             commands::diff::get_worktree_file_content,

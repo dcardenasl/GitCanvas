@@ -1,7 +1,10 @@
 import type { FileDiffSummary } from "../../bindings";
 import { useSession, type FileSource } from "../../state/session";
 import { useWorktreeSnapshot } from "../../state/worktree";
-import { ChangedFileRow } from "../ChangedFileRow/ChangedFileRow";
+import {
+  ChangedFilesBrowser,
+  type ChangedFilesGroup,
+} from "../ChangedFilesBrowser/ChangedFilesBrowser";
 
 import "../CommitDetailPanel/CommitDetailPanel.css";
 
@@ -23,6 +26,14 @@ export function WorkingTreeDetailPanel({
     selection.kind === "worktree" ? selection.filePath : null;
   const selectedFileSource: FileSource | null =
     selection.kind === "worktree" ? selection.side : null;
+  const groups: ChangedFilesGroup[] = [];
+
+  if (stagedFiles.length > 0) {
+    groups.push(localFileGroup("Preparados", stagedFiles, "staged"));
+  }
+  if (unstagedFiles.length > 0) {
+    groups.push(localFileGroup("Sin preparar", unstagedFiles, "unstaged"));
+  }
 
   return (
     <aside className="detail-panel" aria-label="Cambios locales">
@@ -48,24 +59,9 @@ export function WorkingTreeDetailPanel({
           <p className="detail-panel__state">No hay cambios locales.</p>
         )}
 
-      {stagedFiles.length > 0 && (
-        <LocalFileGroup
-          label="Preparados"
-          files={stagedFiles}
-          source="staged"
-          selectedFilePath={selectedFilePath}
-          selectedFileSource={selectedFileSource}
-          onOpen={(path, source) => {
-            selectFile(path, source);
-          }}
-        />
-      )}
-
-      {unstagedFiles.length > 0 && (
-        <LocalFileGroup
-          label="Sin preparar"
-          files={unstagedFiles}
-          source="unstaged"
+      {groups.length > 0 && (
+        <ChangedFilesBrowser
+          groups={groups}
           selectedFilePath={selectedFilePath}
           selectedFileSource={selectedFileSource}
           onOpen={(path, source) => {
@@ -77,28 +73,20 @@ export function WorkingTreeDetailPanel({
   );
 }
 
-interface LocalFileGroupProps {
-  readonly label: string;
-  readonly files: readonly FileDiffSummary[];
-  readonly source: "staged" | "unstaged";
-  readonly selectedFilePath: string | null;
-  readonly selectedFileSource: FileSource | null;
-  readonly onOpen: (path: string, source: "staged" | "unstaged") => void;
-}
-
-function LocalFileGroup({
-  label,
-  files,
-  source,
-  selectedFilePath,
-  selectedFileSource,
-  onOpen,
-}: LocalFileGroupProps) {
+function localFileGroup(
+  label: string,
+  files: readonly FileDiffSummary[],
+  source: "staged" | "unstaged",
+): ChangedFilesGroup {
   const insertions = files.reduce((sum, file) => sum + file.insertions, 0);
   const deletions = files.reduce((sum, file) => sum + file.deletions, 0);
 
-  return (
-    <section className="detail-panel__local-group" aria-label={label}>
+  return {
+    files,
+    source,
+    sectionLabel: label,
+    listLabel: `Archivos ${label.toLowerCase()}`,
+    heading: (
       <div className="detail-panel__local-group-head">
         <span>{label}</span>
         <span className="detail-panel__local-count">
@@ -107,20 +95,6 @@ function LocalFileGroup({
           <span className="detail-panel__stat-del">−{deletions}</span>
         </span>
       </div>
-      <ul className="file-list" aria-label={`Archivos ${label.toLowerCase()}`}>
-        {files.map((file) => (
-          <ChangedFileRow
-            key={file.path}
-            file={file}
-            selected={
-              selectedFilePath === file.path && selectedFileSource === source
-            }
-            onOpen={() => {
-              onOpen(file.path, source);
-            }}
-          />
-        ))}
-      </ul>
-    </section>
-  );
+    ),
+  };
 }

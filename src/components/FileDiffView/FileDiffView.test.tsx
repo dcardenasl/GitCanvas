@@ -111,6 +111,7 @@ function worktreeSnapshot(files: FileDiff[] = []): WorktreeSnapshot {
 function renderView(
   path = "src/app.ts",
   worktree?: { side: "staged" | "unstaged" },
+  snapshot = false,
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -120,7 +121,9 @@ function renderView(
       <FileDiffView
         repositoryPath="/tmp/repo"
         path={path}
-        {...(worktree === undefined ? { commit: COMMIT } : { worktree })}
+        {...(worktree === undefined
+          ? { commit: COMMIT, snapshot }
+          : { worktree })}
       />
     </QueryClientProvider>,
   );
@@ -163,6 +166,45 @@ describe("FileDiffView", () => {
 
     expect(await screen.findByText("const b = 3;")).toBeDefined();
     expect(screen.queryByText("other")).toBeNull();
+  });
+
+  it("opens an unchanged commit-tree file directly as a bounded snapshot", async () => {
+    getCommitDiff.mockResolvedValue(diff([]));
+    getFileContent.mockResolvedValue(content({ path: "src/stable.ts" }));
+    renderView("src/stable.ts", undefined, true);
+
+    expect(await screen.findByText("export {};")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Cambios" })).toBeNull();
+    expect(getFileContent.mock.calls[0]?.[1]).toMatchObject({
+      commit_id: COMMIT.id,
+      path: "src/stable.ts",
+      expand: false,
+    });
+    expect(getCommitDiff).toHaveBeenCalledWith(
+      "/tmp/repo",
+      expect.objectContaining({ commit_id: COMMIT.id }),
+    );
+  });
+
+  it("switches to the diff if the commit tree opens a file before the diff arrives", async () => {
+    getCommitDiff.mockResolvedValue(diff([file({ path: "src/stable.ts" })]));
+    getFileContent.mockResolvedValue(content({ path: "src/stable.ts" }));
+    useSession.setState({
+      selection: {
+        kind: "commit",
+        commitId: COMMIT.id,
+        filePath: "src/stable.ts",
+        fileMode: "snapshot",
+      },
+    });
+    renderView("src/stable.ts", undefined, true);
+
+    expect(await screen.findByText("const b = 3;")).toBeDefined();
+    expect(useSession.getState().selection).toEqual({
+      kind: "commit",
+      commitId: COMMIT.id,
+      filePath: "src/stable.ts",
+    });
   });
 
   it("returns to the graph when asked", async () => {

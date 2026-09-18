@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,6 +16,8 @@ vi.mock("../../lib/ipc", () => ({
 
 const { WorkingTreeDetailPanel } = await import("./WorkingTreeDetailPanel");
 const { useSession } = await import("../../state/session");
+const { useFileListPreferences } =
+  await import("../../state/fileListPreferences");
 
 function file(overrides: Partial<FileDiff> = {}): FileDiff {
   return {
@@ -73,6 +75,8 @@ function renderPanel() {
 
 beforeEach(() => {
   getWorktreeSnapshot.mockReset();
+  localStorage.removeItem("gitcanvas.file-list-view");
+  useFileListPreferences.setState({ view: "path" });
   useSession.setState({
     selection: { kind: "history" },
   });
@@ -99,12 +103,75 @@ describe("WorkingTreeDetailPanel", () => {
     getWorktreeSnapshot.mockResolvedValue(local([file()], []));
 
     renderPanel();
-    await userEvent.click(await screen.findByRole("button"));
+    const list = await screen.findByRole("list", {
+      name: "Archivos preparados",
+    });
+    await userEvent.click(within(list).getByRole("button"));
 
     expect(useSession.getState().selection).toEqual({
       kind: "worktree",
       side: "staged",
       filePath: "src/app.ts",
     });
+  });
+
+  it("groups files by directory and preserves the staged/unstaged source", async () => {
+    getWorktreeSnapshot.mockResolvedValue(
+      local(
+        [file({ path: "src/app.ts" })],
+        [file({ path: "src/components/Button.tsx" })],
+      ),
+    );
+
+    renderPanel();
+    await screen.findByRole("list", { name: "Archivos preparados" });
+    await userEvent.click(screen.getByRole("button", { name: "Árbol" }));
+
+    const unstaged = await screen.findByRole("region", {
+      name: "Sin preparar",
+    });
+    const tree = within(unstaged).getByRole("list", {
+      name: "Archivos sin preparar",
+    });
+    expect(
+      within(tree).getByRole("button", { name: "src, 1 archivo modificado" }),
+    ).toBeDefined();
+    expect(within(tree).getByText("Button.tsx")).toBeDefined();
+
+    await userEvent.click(within(tree).getByText("Button.tsx"));
+    expect(useSession.getState().selection).toEqual({
+      kind: "worktree",
+      side: "unstaged",
+      filePath: "src/components/Button.tsx",
+    });
+  });
+
+  it("collapses and expands every directory from the shared control", async () => {
+    getWorktreeSnapshot.mockResolvedValue(
+      local([file({ path: "src/a.ts" })], [file({ path: "test/b.ts" })]),
+    );
+
+    renderPanel();
+    await screen.findByRole("list", { name: "Archivos preparados" });
+    await userEvent.click(screen.getByRole("button", { name: "Árbol" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Contraer todo" }),
+    );
+
+    expect(
+      screen
+        .getByRole("button", { name: "src, 1 archivo modificado" })
+        .getAttribute("aria-expanded"),
+    ).toBe("false");
+    expect(screen.getByText("Expandir todo")).toBeDefined();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Expandir todo" }),
+    );
+    expect(
+      screen
+        .getByRole("button", { name: "test, 1 archivo modificado" })
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
   });
 });

@@ -21,6 +21,7 @@
 
 pub mod actions;
 pub mod blob;
+pub mod commit_tree;
 pub mod diff;
 pub mod error;
 pub mod github;

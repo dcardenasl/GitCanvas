@@ -3,6 +3,7 @@ import { commands, events } from "../../bindings";
 import type {
   AppError,
   DiffRequest,
+  CommitTreeRequest,
   FileContentRequest,
   HistoryRequest,
   WorktreeFileDiffRequest,
@@ -24,6 +25,10 @@ export type {
   GitHubAccount,
   GitHubRepository,
   CommitDiff,
+  CommitTreeEntry,
+  CommitTreeEntryKind,
+  CommitTreePage,
+  CommitTreeRequest,
   DiffOmission,
   DiffRequest,
   FileChange,
@@ -92,6 +97,9 @@ export const getTags = (path: string) => result(commands.getTags(path));
 /** Reads a commit's changes against its first parent. */
 export const getCommitDiff = (path: string, request: DiffRequest) =>
   result(commands.getCommitDiff(path, request));
+/** Reads one bounded page of direct children from a directory in a commit. */
+export const getCommitTreePage = (path: string, request: CommitTreeRequest) =>
+  result(commands.getCommitTreePage(path, request));
 
 /** Verifies a personal access token and stores it in the OS keychain. */
 export const storeGithubToken = (token: string) =>

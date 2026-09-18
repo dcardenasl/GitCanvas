@@ -7,7 +7,12 @@ export type FileSource = "commit" | "staged" | "unstaged";
 /** The only legal interface selections. */
 export type Selection =
   | { kind: "history" }
-  | { kind: "commit"; commitId: string; filePath: string | null }
+  | {
+      kind: "commit";
+      commitId: string;
+      filePath: string | null;
+      fileMode?: "snapshot";
+    }
   | { kind: "worktree"; side: "staged" | "unstaged"; filePath: string | null };
 
 interface SessionState {
@@ -18,7 +23,11 @@ interface SessionState {
   openRepository: (repository: RepositoryInfo) => void;
   closeRepository: () => void;
   selectCommit: (id: string | null) => void;
-  selectFile: (path: string | null, source?: FileSource) => void;
+  selectFile: (
+    path: string | null,
+    source?: FileSource,
+    mode?: "diff" | "snapshot",
+  ) => void;
   expandFile: (path: string) => void;
   revealCommit: (id: string) => void;
   clearReveal: () => void;
@@ -59,12 +68,16 @@ export const useSession = create<SessionState>((set) => ({
     }));
   },
 
-  selectFile: (path, source = "commit") => {
+  selectFile: (path, source = "commit", mode = "diff") => {
     set((state) => {
       if (path === null) {
         if (state.selection.kind === "commit") {
           return {
-            selection: { ...state.selection, filePath: null },
+            selection: {
+              kind: "commit",
+              commitId: state.selection.commitId,
+              filePath: null,
+            },
             expandedFilePath: null,
           };
         }
@@ -79,7 +92,12 @@ export const useSession = create<SessionState>((set) => ({
           };
         }
         return {
-          selection: { ...state.selection, filePath: path },
+          selection: {
+            kind: "commit",
+            commitId: state.selection.commitId,
+            filePath: path,
+            ...(mode === "snapshot" ? { fileMode: "snapshot" as const } : {}),
+          },
           expandedFilePath: null,
         };
       }

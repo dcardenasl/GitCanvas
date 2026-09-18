@@ -1,21 +1,32 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { CommitDiff, CommitInfo, FileDiff } from "../../bindings";
+import type {
+  CommitDiff,
+  CommitInfo,
+  CommitTreePage,
+  FileDiff,
+} from "../../bindings";
 
 const getCommitDiff =
   vi.fn<(path: string, request: unknown) => Promise<CommitDiff>>();
+const getCommitTreePage =
+  vi.fn<(path: string, request: unknown) => Promise<CommitTreePage>>();
 
 vi.mock("../../lib/ipc", () => ({
   getCommitDiff: (path: string, request: unknown) =>
     getCommitDiff(path, request),
+  getCommitTreePage: (path: string, request: unknown) =>
+    getCommitTreePage(path, request),
 }));
 
 const { CommitDetailPanel } = await import("./CommitDetailPanel");
 const { useSession } = await import("../../state/session");
+const { useFileListPreferences } =
+  await import("../../state/fileListPreferences");
 
 const COMMIT: CommitInfo = {
   id: "a".repeat(40),
@@ -66,6 +77,9 @@ function renderPanel() {
 
 beforeEach(() => {
   getCommitDiff.mockReset();
+  getCommitTreePage.mockReset();
+  localStorage.removeItem("gitcanvas.file-list-view");
+  useFileListPreferences.setState({ view: "path" });
   useSession.setState({
     selection: { kind: "commit", commitId: COMMIT.id, filePath: null },
     expandedFilePath: null,
@@ -115,7 +129,7 @@ describe("CommitDetailPanel", () => {
       name: "Archivos modificados",
     });
     expect(list).toBeDefined();
-    expect(screen.getAllByRole("button")).toHaveLength(2);
+    expect(within(list).getAllByRole("button")).toHaveLength(2);
 
     // The panel is navigation now; the patch belongs to the centre view.
     expect(screen.queryByText("+b")).toBeNull();
@@ -125,7 +139,10 @@ describe("CommitDetailPanel", () => {
     getCommitDiff.mockResolvedValue(diff({ files: [file()] }));
     renderPanel();
 
-    await userEvent.click(await screen.findByRole("button"));
+    const list = await screen.findByRole("list", {
+      name: "Archivos modificados",
+    });
+    await userEvent.click(within(list).getByRole("button"));
 
     expect(useSession.getState().selection).toEqual({
       kind: "commit",
@@ -157,7 +174,10 @@ describe("CommitDetailPanel", () => {
     );
     renderPanel();
 
-    const row = await screen.findByRole("button");
+    const list = await screen.findByRole("list", {
+      name: "Archivos modificados",
+    });
+    const row = within(list).getByRole("button");
     const text = row.textContent;
 
     expect(text.indexOf("index.ts")).toBeLessThan(
@@ -165,6 +185,135 @@ describe("CommitDetailPanel", () => {
     );
     // The directory carries no trailing slash now that it follows the name.
     expect(text).not.toContain("CommitTable/index.ts");
+  });
+
+  it("switches to a collapsible directory tree without changing file navigation", async () => {
+    getCommitDiff.mockResolvedValue(
+      diff({
+        files: [
+          file({ path: "src/components/CommitTable/index.ts" }),
+          file({ path: "README.md" }),
+        ],
+      }),
+    );
+    renderPanel();
+
+    await screen.findByRole("list", { name: "Archivos modificados" });
+    await userEvent.click(screen.getByRole("button", { name: "Árbol" }));
+    expect(useFileListPreferences.getState().view).toBe("tree");
+    expect(localStorage.getItem("gitcanvas.file-list-view")).toBe("tree");
+    const list = await screen.findByRole("list", {
+      name: "Archivos modificados",
+    });
+    const directory = within(list).getByRole("button", {
+      name: "src, 1 archivo modificado",
+    });
+    expect(directory.getAttribute("aria-expanded")).toBe("true");
+    expect(within(list).getByText("index.ts")).toBeDefined();
+
+    await userEvent.click(directory);
+    expect(directory.getAttribute("aria-expanded")).toBe("false");
+    expect(within(list).queryByText("index.ts")).toBeNull();
+
+    await userEvent.click(directory);
+    await userEvent.click(within(list).getByText("index.ts"));
+    expect(useSession.getState().selection).toEqual({
+      kind: "commit",
+      commitId: COMMIT.id,
+      filePath: "src/components/CommitTable/index.ts",
+    });
+  });
+
+  it("loads all files lazily and opens unchanged files as commit snapshots", async () => {
+    getCommitDiff.mockResolvedValue(diff({ files: [file()] }));
+    getCommitTreePage
+      .mockResolvedValueOnce({
+        commit_id: COMMIT.id,
+        directory_path: null,
+        entries: [{ name: "src", path: "src", kind: "Directory" }],
+        next_offset: null,
+      })
+      .mockResolvedValueOnce({
+        commit_id: COMMIT.id,
+        directory_path: "src",
+        entries: [
+          { name: "app.ts", path: "src/app.ts", kind: "File" },
+          { name: "stable.ts", path: "src/stable.ts", kind: "File" },
+        ],
+        next_offset: null,
+      });
+    renderPanel();
+
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: "Ver todos los archivos" }),
+    );
+    expect(useFileListPreferences.getState().view).toBe("tree");
+    const tree = await screen.findByRole("list", {
+      name: "Todos los archivos del commit",
+    });
+    const directory = within(tree).getByRole("button", {
+      name: "src, carpeta, 1 archivo con cambios",
+    });
+    await userEvent.click(directory);
+
+    const unchanged = await screen.findByRole("button", {
+      name: /stable\.ts/,
+    });
+    expect(
+      within(unchanged).getByLabelText("Sin cambios en este commit"),
+    ).toBeDefined();
+    await userEvent.click(unchanged);
+    expect(useSession.getState().selection).toEqual({
+      kind: "commit",
+      commitId: COMMIT.id,
+      filePath: "src/stable.ts",
+      fileMode: "snapshot",
+    });
+    expect(getCommitTreePage).toHaveBeenNthCalledWith(
+      2,
+      "/tmp/repo",
+      expect.objectContaining({ directory_path: "src", offset: 0 }),
+    );
+  });
+
+  it("loads large commit directories one bounded page at a time", async () => {
+    getCommitDiff.mockResolvedValue(diff());
+    getCommitTreePage
+      .mockResolvedValueOnce({
+        commit_id: COMMIT.id,
+        directory_path: null,
+        entries: Array.from({ length: 200 }, (_, index) => ({
+          name: `file-${String(index).padStart(3, "0")}.txt`,
+          path: `file-${String(index).padStart(3, "0")}.txt`,
+          kind: "File" as const,
+        })),
+        next_offset: 200,
+      })
+      .mockResolvedValueOnce({
+        commit_id: COMMIT.id,
+        directory_path: null,
+        entries: [{ name: "zz-last.txt", path: "zz-last.txt", kind: "File" }],
+        next_offset: null,
+      });
+    renderPanel();
+
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: "Ver todos los archivos" }),
+    );
+    expect(await screen.findByText("file-000.txt")).toBeDefined();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Cargar más entradas" }),
+    );
+
+    expect(await screen.findByText("zz-last.txt")).toBeDefined();
+    expect(getCommitTreePage).toHaveBeenNthCalledWith(
+      2,
+      "/tmp/repo",
+      expect.objectContaining({ offset: 200 }),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Cargar más entradas" }),
+    ).toBeNull();
   });
 
   it("labels each change kind for assistive technology", async () => {
