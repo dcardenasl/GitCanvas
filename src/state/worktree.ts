@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import type {
   WorktreeFileDiff,
@@ -36,6 +36,7 @@ export function useWorktreeSnapshot(
       }
       return getWorktreeSnapshot(repositoryPath, request);
     },
+    placeholderData: keepPreviousData,
     staleTime: 1_000,
   });
 }

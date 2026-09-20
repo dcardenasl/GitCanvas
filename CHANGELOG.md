@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rejected, disk reads use a stable stat/read/stat policy, and binary, UTF-8,
   stale-read and resource-limit outcomes cross IPC as explicit errors.
 
+### Changed
+
+- **Live repository reads and watchers.** Transient `Too many open files` errors
+  retry with backoff so the working-tree view can recover without restarting the app.
+
 ## [0.1.0] — 2026-09-08
 
 ### Added

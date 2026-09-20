@@ -13,9 +13,17 @@ import "./App.css";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Reading git is local and deterministic; retrying a failed read just
-      // delays showing the user what went wrong.
-      retry: false,
+      // Reading git is local and deterministic; transient EMFILE (Too many open files)
+      // errors are retried automatically with backoff.
+      retry: (failureCount, error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        const isEmfile =
+          message.includes("Too many open files") ||
+          message.includes("os error 24") ||
+          message.includes("EMFILE");
+        return isEmfile && failureCount < 3;
+      },
+      retryDelay: (attemptIndex) => Math.min(100 * 2 ** attemptIndex, 1000),
       /*
        * Coming back to the window is exactly when work done elsewhere should
        * appear. The filesystem watch already covers most of it; this is the

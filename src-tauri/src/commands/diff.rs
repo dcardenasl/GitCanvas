@@ -23,7 +23,7 @@ use super::repository::blocking;
 #[specta::specta]
 pub async fn get_commit_diff(path: String, request: DiffRequest) -> Result<CommitDiff, AppError> {
     blocking("get_commit_diff", move || {
-        diff::get_commit_diff(&ActiveRepo::validate(path)?, &request)
+        diff::get_commit_diff(&ActiveRepo::validate(&path)?, &request)
     })
     .await
 }
@@ -39,7 +39,7 @@ pub async fn get_file_content(
     request: FileContentRequest,
 ) -> Result<FileContent, AppError> {
     blocking("get_file_content", move || {
-        blob::get_file_content(&ActiveRepo::validate(path)?, &request)
+        blob::get_file_content(&ActiveRepo::validate(&path)?, &request)
     })
     .await
 }
@@ -52,7 +52,7 @@ pub async fn get_commit_tree_page(
     request: CommitTreeRequest,
 ) -> Result<CommitTreePage, AppError> {
     blocking("get_commit_tree_page", move || {
-        commit_tree::get_commit_tree_page(&ActiveRepo::validate(path)?, &request)
+        commit_tree::get_commit_tree_page(&ActiveRepo::validate(&path)?, &request)
     })
     .await
 }
@@ -65,7 +65,7 @@ pub async fn get_worktree_snapshot(
     request: WorktreeSnapshotRequest,
 ) -> Result<WorktreeSnapshot, AppError> {
     blocking("get_worktree_snapshot", move || {
-        worktree::get_worktree_snapshot(&ActiveRepo::validate(path)?, &request)
+        worktree::get_worktree_snapshot(&ActiveRepo::validate(&path)?, &request)
     })
     .await
 }
@@ -78,7 +78,7 @@ pub async fn get_worktree_file_diff(
     request: WorktreeFileDiffRequest,
 ) -> Result<WorktreeFileDiff, AppError> {
     blocking("get_worktree_file_diff", move || {
-        worktree::get_worktree_file_diff(&ActiveRepo::validate(path)?, &request)
+        worktree::get_worktree_file_diff(&ActiveRepo::validate(&path)?, &request)
     })
     .await
 }
@@ -91,7 +91,7 @@ pub async fn get_worktree_file_content(
     request: WorktreeFileContentRequest,
 ) -> Result<WorktreeFileContent, AppError> {
     blocking("get_worktree_file_content", move || {
-        worktree::get_worktree_file_content(&ActiveRepo::validate(path)?, &request)
+        worktree::get_worktree_file_content(&ActiveRepo::validate(&path)?, &request)
     })
     .await
 }
@@ -101,7 +101,7 @@ pub async fn get_worktree_file_content(
 #[specta::specta]
 pub async fn get_worktree_fingerprint(path: String) -> Result<WorktreeFingerprint, AppError> {
     blocking("get_worktree_fingerprint", move || {
-        worktree::get_worktree_fingerprint(&ActiveRepo::validate(path)?)
+        worktree::get_worktree_fingerprint(&ActiveRepo::validate(&path)?)
     })
     .await
 }

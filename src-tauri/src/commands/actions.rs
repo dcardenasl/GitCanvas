@@ -21,7 +21,7 @@ pub async fn checkout_branch(
     force: bool,
 ) -> Result<CheckoutOutcome, AppError> {
     blocking("checkout_branch", move || {
-        actions::checkout_branch(&ActiveRepo::validate(path)?, &branch, force)
+        actions::checkout_branch(&ActiveRepo::validate(&path)?, &branch, force)
     })
     .await
 }
@@ -31,7 +31,7 @@ pub async fn checkout_branch(
 #[specta::specta]
 pub async fn pull_fast_forward(path: String) -> Result<PullOutcome, AppError> {
     blocking("pull_fast_forward", move || {
-        actions::pull_fast_forward(&ActiveRepo::validate(path)?)
+        actions::pull_fast_forward(&ActiveRepo::validate(&path)?)
     })
     .await
 }
@@ -41,7 +41,7 @@ pub async fn pull_fast_forward(path: String) -> Result<PullOutcome, AppError> {
 #[specta::specta]
 pub async fn push_current_branch(path: String) -> Result<PushOutcome, AppError> {
     blocking("push_current_branch", move || {
-        actions::push_current_branch(&ActiveRepo::validate(path)?)
+        actions::push_current_branch(&ActiveRepo::validate(&path)?)
     })
     .await
 }

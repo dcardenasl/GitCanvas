@@ -122,20 +122,50 @@ pub fn watch_repository(
     .map_err(|error| AppError::WatchDegraded(format!("could not create watcher: {error}")))?;
 
     for directory in &metadata {
-        watcher
-            .watch(directory, RecursiveMode::NonRecursive)
-            .map_err(|error| {
-                AppError::WatchDegraded(format!("could not watch metadata: {error}"))
-            })?;
+        let mut retries = 0u32;
+        loop {
+            match watcher.watch(directory, RecursiveMode::NonRecursive) {
+                Ok(()) => break,
+                Err(error) => {
+                    let err_msg = error.to_string();
+                    let is_emfile = err_msg.contains("Too many open files")
+                        || err_msg.contains("os error 24")
+                        || err_msg.contains("EMFILE");
+                    if is_emfile && retries < 3 {
+                        retries += 1;
+                        thread::sleep(Duration::from_millis(100 * u64::from(retries)));
+                        continue;
+                    }
+                    return Err(AppError::WatchDegraded(format!(
+                        "could not watch metadata: {error}"
+                    )));
+                }
+            }
+        }
     }
     for directory in &metadata {
         let refs = directory.join("refs");
         if refs.is_dir() {
-            watcher
-                .watch(&refs, RecursiveMode::Recursive)
-                .map_err(|error| {
-                    AppError::WatchDegraded(format!("could not watch refs: {error}"))
-                })?;
+            let mut retries = 0u32;
+            loop {
+                match watcher.watch(&refs, RecursiveMode::Recursive) {
+                    Ok(()) => break,
+                    Err(error) => {
+                        let err_msg = error.to_string();
+                        let is_emfile = err_msg.contains("Too many open files")
+                            || err_msg.contains("os error 24")
+                            || err_msg.contains("EMFILE");
+                        if is_emfile && retries < 3 {
+                            retries += 1;
+                            thread::sleep(Duration::from_millis(100 * u64::from(retries)));
+                            continue;
+                        }
+                        return Err(AppError::WatchDegraded(format!(
+                            "could not watch refs: {error}"
+                        )));
+                    }
+                }
+            }
         }
     }
     let worker = thread::spawn(move || {

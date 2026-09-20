@@ -116,6 +116,16 @@ export function useLiveRepository(path: string | null): {
     };
   }, [path, queryClient, retryToken]);
 
+  useEffect(() => {
+    if (status.kind !== "degraded") return;
+    const timer = setInterval(() => {
+      setRetryToken((token) => token + 1);
+    }, 3_000);
+    return () => {
+      clearInterval(timer);
+    };
+  }, [status.kind]);
+
   return {
     status,
     retry: () => {

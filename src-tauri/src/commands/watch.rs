@@ -84,6 +84,8 @@ pub async fn watch_repository(
 
     let watcher = blocking("watch_repository", move || {
         let active = ActiveRepo::validate(&request.path)?;
+        let publish = publish.clone();
+        let reported_path = reported_path.clone();
         watch::watch_repository(&active, move |event| {
             let kind = match event {
                 watch::WatchEvent::Changed(watch::ChangeScope::Metadata) => {

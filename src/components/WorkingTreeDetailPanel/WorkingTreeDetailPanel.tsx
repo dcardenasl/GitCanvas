@@ -43,10 +43,10 @@ export function WorkingTreeDetailPanel({
         Lo que cambió en disco desde el último commit.
       </p>
 
-      {local.isPending && (
+      {local.isPending && !localData && (
         <p className="detail-panel__state">Leyendo cambios locales…</p>
       )}
-      {local.error !== null && (
+      {local.error !== null && groups.length === 0 && (
         <p className="detail-panel__state" role="alert">
           {local.error.message}
         </p>
