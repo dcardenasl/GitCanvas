@@ -24,7 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Live repository reads and watchers.** Transient `Too many open files` errors
-  retry with backoff so the working-tree view can recover without restarting the app.
+  retry with backoff, macOS's low Finder-launched descriptor limit is raised when
+  permitted, concurrent Git operations are bounded, and degraded watcher recovery
+  backs off to prevent resource exhaustion.
 
 ## [0.1.0] — 2026-09-08
 

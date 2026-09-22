@@ -17,6 +17,7 @@
 
 mod commands;
 mod logging;
+mod resources;
 mod warmup;
 
 #[cfg(test)]
@@ -90,6 +91,9 @@ fn app_context<R: tauri::Runtime>() -> tauri::Context<R> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    if let Err(error) = resources::raise_file_descriptor_limit() {
+        eprintln!("warning: could not raise the file descriptor limit: {error}");
+    }
     let builder = specta_builder::<tauri::Wry>();
 
     // Debug builds regenerate the bindings on every run, so the contract can

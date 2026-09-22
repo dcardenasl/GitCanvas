@@ -28,6 +28,7 @@ tauri-plugin-dialog.workspace = true
 tauri-plugin-wdio-webdriver = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
+rlimit.workspace = true
 
 # The git domain. This layer only translates between IPC and core.
 gitcanvas-core = { path = "../crates/gitcanvas-core" }

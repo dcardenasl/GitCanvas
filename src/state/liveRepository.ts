@@ -118,11 +118,15 @@ export function useLiveRepository(path: string | null): {
 
   useEffect(() => {
     if (status.kind !== "degraded") return;
-    const timer = setInterval(() => {
+    // The fingerprint poller keeps local changes fresh while degraded. Retry
+    // installing the native watcher slowly so a persistent OS resource error
+    // cannot turn into a request storm; the toolbar still offers an immediate
+    // manual retry.
+    const timer = setTimeout(() => {
       setRetryToken((token) => token + 1);
-    }, 3_000);
+    }, 30_000);
     return () => {
-      clearInterval(timer);
+      clearTimeout(timer);
     };
   }, [status.kind]);
 

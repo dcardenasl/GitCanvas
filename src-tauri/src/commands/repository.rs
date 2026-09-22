@@ -1,12 +1,60 @@
 //! Repository commands. Each request carries its repository identity so an older
 //! in-flight request cannot accidentally read a newly selected repository.
 
+use std::sync::{Condvar, Mutex, OnceLock};
+
 use gitcanvas_core::{
     error::AppError,
     history::{HistoryPage, HistoryReader, HistoryRequest},
     refs::{self, BranchInfo, TagInfo},
     repository::{ActiveRepo, RepositoryInfo},
 };
+
+const MAX_CONCURRENT_GIT_OPERATIONS: usize = 2;
+
+struct GitOperationGate {
+    available: Mutex<usize>,
+    changed: Condvar,
+}
+
+impl GitOperationGate {
+    fn acquire(&self) -> Result<GitOperationPermit<'_>, AppError> {
+        let mut available = self
+            .available
+            .lock()
+            .map_err(|_| AppError::Internal("git operation gate was poisoned".to_owned()))?;
+        while *available == 0 {
+            available = self
+                .changed
+                .wait(available)
+                .map_err(|_| AppError::Internal("git operation gate was poisoned".to_owned()))?;
+        }
+        *available -= 1;
+        Ok(GitOperationPermit { gate: self })
+    }
+}
+
+struct GitOperationPermit<'a> {
+    gate: &'a GitOperationGate,
+}
+
+impl Drop for GitOperationPermit<'_> {
+    fn drop(&mut self) {
+        if let Ok(mut available) = self.gate.available.lock() {
+            *available += 1;
+            self.gate.changed.notify_one();
+        }
+    }
+}
+
+static GIT_OPERATION_GATE: OnceLock<GitOperationGate> = OnceLock::new();
+
+fn git_operation_gate() -> &'static GitOperationGate {
+    GIT_OPERATION_GATE.get_or_init(|| GitOperationGate {
+        available: Mutex::new(MAX_CONCURRENT_GIT_OPERATIONS),
+        changed: Condvar::new(),
+    })
+}
 
 fn is_emfile(error: &AppError) -> bool {
     let msg = error.to_string();
@@ -19,6 +67,10 @@ pub(crate) async fn blocking<T: Send + 'static>(
     mut work: impl FnMut() -> Result<T, AppError> + Send + 'static,
 ) -> Result<T, AppError> {
     tauri::async_runtime::spawn_blocking(move || {
+        // libgit2 can retain object and pack descriptors for the lifetime of a
+        // Repository handle. Bound simultaneous Git work so a burst of IPC
+        // queries cannot exhaust the process-wide descriptor budget.
+        let _permit = git_operation_gate().acquire()?;
         let start = std::time::Instant::now();
         let mut attempts = 0u32;
         loop {
