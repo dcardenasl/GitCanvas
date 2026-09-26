@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -149,6 +149,130 @@ describe("GitHubPicker", () => {
 
     await waitFor(() => {
       expect(stop).toHaveBeenCalled();
+    });
+  });
+
+  describe("signing in", () => {
+    it("sends the token, then lists repositories", async () => {
+      hasGithubToken.mockResolvedValueOnce(false);
+      storeGithubToken.mockResolvedValue({ login: "david", name: null });
+      listGithubRepositories.mockResolvedValue([REPO]);
+      renderPicker();
+
+      await userEvent.type(
+        await screen.findByLabelText("Personal Access Token"),
+        "ghp_secret",
+      );
+      hasGithubToken.mockResolvedValue(true);
+      await userEvent.click(screen.getByRole("button", { name: "Conectar" }));
+
+      expect(storeGithubToken).toHaveBeenCalledWith("ghp_secret");
+      expect(await screen.findByText("dcardenasl/gitcanvas")).toBeDefined();
+    });
+
+    it("shows why a token was refused and keeps asking", async () => {
+      hasGithubToken.mockResolvedValue(false);
+      storeGithubToken.mockRejectedValue(new Error("the token is invalid"));
+      renderPicker();
+
+      await userEvent.type(
+        await screen.findByLabelText("Personal Access Token"),
+        "nope",
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Conectar" }));
+
+      expect((await screen.findByRole("alert")).textContent).toContain(
+        "the token is invalid",
+      );
+      expect(screen.getByLabelText("Personal Access Token")).toBeDefined();
+    });
+  });
+
+  it("signs out through the keychain", async () => {
+    hasGithubToken.mockResolvedValue(true);
+    listGithubRepositories.mockResolvedValue([]);
+    forgetGithubToken.mockResolvedValue(null);
+    renderPicker();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Desconectar" }),
+    );
+
+    await waitFor(() => {
+      expect(forgetGithubToken).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("cloning", () => {
+    /** A clone that never finishes, so the progress line can be read. */
+    async function startClone() {
+      let emit: (payload: unknown) => void = () => undefined;
+      onCloneProgress.mockImplementation((handler: unknown) => {
+        emit = (payload) => {
+          (handler as (event: { payload: unknown }) => void)({ payload });
+        };
+        return Promise.resolve(() => undefined);
+      });
+      hasGithubToken.mockResolvedValue(true);
+      listGithubRepositories.mockResolvedValue([REPO]);
+      cloneGithubRepository.mockReturnValue(new Promise(() => undefined));
+      renderPicker();
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Clonar" }),
+      );
+      return (payload: unknown) => {
+        act(() => {
+          emit(payload);
+        });
+      };
+    }
+
+    it("shows a percentage once the total is known", async () => {
+      const emit = await startClone();
+
+      emit({
+        full_name: REPO.full_name,
+        received_objects: 50,
+        total_objects: 200,
+        received_bytes: String(3 * 1024 * 1024),
+      });
+
+      expect((await screen.findByRole("status")).textContent).toContain(
+        "25% · 3.0 MB",
+      );
+    });
+
+    it("does not invent a percentage while the server is still counting", async () => {
+      const emit = await startClone();
+
+      emit({
+        full_name: REPO.full_name,
+        received_objects: 0,
+        total_objects: 0,
+        received_bytes: "1048576",
+      });
+
+      expect((await screen.findByRole("status")).textContent).toContain(
+        "Preparando… 1.0 MB",
+      );
+    });
+
+    it("reports a failed clone and lets the user try again", async () => {
+      hasGithubToken.mockResolvedValue(true);
+      listGithubRepositories.mockResolvedValue([REPO]);
+      cloneGithubRepository.mockRejectedValue(new Error("network down"));
+      renderPicker();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Clonar" }),
+      );
+
+      expect((await screen.findByRole("alert")).textContent).toContain(
+        "network down",
+      );
+      expect(
+        screen.getByRole("button", { name: "Clonar" }).hasAttribute("disabled"),
+      ).toBe(false);
     });
   });
 });

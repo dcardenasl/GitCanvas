@@ -968,7 +968,7 @@ intentar resolverlo.
 
 ---
 
-## 🔧 Fase H — Endurecimiento (19/21)
+## 🔧 Fase H — Endurecimiento (20/21)
 
 Salió de una auditoría de robustez del código completo (2026-09-26). Cada tarea corrige
 un hallazgo concreto y lleva su test; el estado de cada una es cierto en el commit que la
@@ -1012,7 +1012,10 @@ marca.
 - [x] **H-17 — Progreso de clone acotado y `last_used` real del caché.**
 - [x] **H-18 — Estado del watcher fiel.**
 - [x] **H-19 — Convención de idioma explícita.**
-- [x] **H-20 — Cobertura exigida por zona.**
+- [x] **H-20 — Cobertura exigida por zona.** Piso global 90/80/88/90 y umbrales propios
+      para `state/` y `components/` además del 90 % de `graph-layout`. La suite pasó de 174 a
+      291 tests y de 79 % a 94.6 % de líneas (Resizer, CommitSearch, GitHubPicker, la capa
+      `lib/ipc`, session, layout, refs y AppShell estaban por debajo del 65 %).
 - [x] **H-21 — Documentación sincronizada.**
 
 ---

@@ -14,6 +14,9 @@ import type {
 const getCommits = vi.fn<() => Promise<HistoryPage>>();
 const getCommitDiff = vi.fn<() => Promise<CommitDiff>>();
 const getBranches = vi.fn<() => Promise<BranchInfo[]>>();
+const getStartupRepository =
+  vi.fn<() => Promise<{ path: string; name: string } | null>>();
+const watchRepository = vi.fn<(request: unknown) => Promise<null>>();
 
 vi.mock("../../lib/ipc", () => ({
   getCommits: () => getCommits(),
@@ -44,12 +47,19 @@ vi.mock("../../lib/ipc", () => ({
   getWorktreeFileContent: () => Promise.resolve(null),
   getBranches: () => getBranches(),
   getTags: () => Promise.resolve([]),
-  getStartupRepository: () => Promise.resolve(null),
+  getStartupRepository: () => getStartupRepository(),
+  hasGithubToken: () => Promise.resolve(false),
+  storeGithubToken: () => Promise.resolve(null),
+  forgetGithubToken: () => Promise.resolve(null),
+  cloneGithubRepository: () => Promise.resolve(null),
+  openRepository: () => Promise.resolve(null),
+  listGithubRepositories: () => Promise.resolve([]),
+  onCloneProgress: () => Promise.resolve(() => undefined),
   getFileContent: () => Promise.resolve(null),
   checkoutBranch: () => Promise.resolve(null),
   pullFastForward: () => Promise.resolve(null),
   pushCurrentBranch: () => Promise.resolve(null),
-  watchRepository: () => Promise.resolve(null),
+  watchRepository: (request: unknown) => watchRepository(request),
   unwatchRepository: () => Promise.resolve(null),
   onRepositoryChanged: () => Promise.resolve(() => undefined),
   IpcError: class extends Error {},
@@ -97,6 +107,8 @@ beforeEach(() => {
   });
   HTMLDialogElement.prototype.showModal = vi.fn();
   getBranches.mockResolvedValue([]);
+  getStartupRepository.mockResolvedValue(null);
+  watchRepository.mockResolvedValue(null);
   getCommitDiff.mockResolvedValue({
     commit_id: COMMIT.id,
     parent_id: null,
@@ -218,5 +230,114 @@ describe("AppShell push confirmation", () => {
 
     const push = await screen.findByRole("button", { name: "Push" });
     expect(push).toHaveProperty("disabled", true);
+  });
+});
+
+describe("AppShell toolbar", () => {
+  it("shows the empty state until a repository is open", async () => {
+    useSession.setState({ repository: null });
+    renderShell();
+
+    expect(
+      await screen.findByText(/Abre un repositorio para ver su historial/),
+    ).toBeDefined();
+    expect(screen.getByText("Ningún repositorio abierto")).toBeDefined();
+  });
+
+  it("opens the repository named on the command line", async () => {
+    useSession.setState({ repository: null });
+    getStartupRepository.mockResolvedValue({ path: "/tmp/cli", name: "cli" });
+    renderShell();
+
+    await waitFor(() => {
+      expect(useSession.getState().repository).toEqual({
+        path: "/tmp/cli",
+        name: "cli",
+      });
+    });
+  });
+
+  it("still opens when the command-line lookup fails", async () => {
+    useSession.setState({ repository: null });
+    getStartupRepository.mockRejectedValue(new Error("no argv"));
+    renderShell();
+
+    expect(await screen.findByText("Ningún repositorio abierto")).toBeDefined();
+  });
+
+  it("titles the window with the repository it shows", async () => {
+    renderShell();
+
+    await waitFor(() => {
+      expect(document.title).toBe("repo — GitCanvas");
+    });
+  });
+
+  it("re-reads the repository from disk on demand", async () => {
+    renderShell();
+    await waitFor(() => {
+      expect(getBranches).toHaveBeenCalled();
+    });
+    const before = getBranches.mock.calls.length;
+
+    await userEvent.click(screen.getByRole("button", { name: "Actualizar" }));
+
+    await waitFor(() => {
+      expect(getBranches.mock.calls.length).toBeGreaterThan(before);
+    });
+  });
+
+  it("swaps the history for the GitHub picker and back", async () => {
+    renderShell();
+    const toggle = await screen.findByRole("button", { name: "GitHub" });
+
+    await userEvent.click(toggle);
+    expect(await screen.findByText("Conectar con GitHub")).toBeDefined();
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+
+    await userEvent.click(toggle);
+    await waitFor(() => {
+      expect(screen.queryByText("Conectar con GitHub")).toBeNull();
+    });
+  });
+
+  it("says when the watcher is degraded and retries on request", async () => {
+    watchRepository.mockRejectedValue(new Error("too many watches"));
+    renderShell();
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Watcher degradado");
+    expect(alert.textContent).toContain("too many watches");
+    const attempts = watchRepository.mock.calls.length;
+
+    watchRepository.mockResolvedValue(null);
+    await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+
+    await waitFor(() => {
+      expect(watchRepository.mock.calls.length).toBeGreaterThan(attempts);
+    });
+    await waitFor(() => {
+      expect(screen.queryByText(/Watcher degradado/)).toBeNull();
+    });
+  });
+
+  it("offers to pin the branch list while a file is open", async () => {
+    useSession.setState({
+      selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },
+    });
+    const { container } = renderShell();
+
+    const pin = await screen.findByRole("button", { name: "Ramas" });
+    expect(pin.getAttribute("aria-pressed")).toBe("false");
+    expect(container.querySelector(".sidebar")?.hasAttribute("hidden")).toBe(
+      true,
+    );
+
+    await userEvent.click(pin);
+
+    expect(pin.getAttribute("aria-pressed")).toBe("true");
+    expect(container.querySelector(".sidebar")?.hasAttribute("hidden")).toBe(
+      false,
+    );
   });
 });
