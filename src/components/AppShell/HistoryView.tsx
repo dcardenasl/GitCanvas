@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+import { userMessage } from "../../lib/errors";
 import { CommitTable } from "../CommitTable";
 import { GraphCanvas } from "../GraphCanvas";
 import type { HistoryData } from "../../state/history";
@@ -73,7 +74,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
   const localState =
     local.error !== null ? (
       <p className="history-view__state" role="alert">
-        No se pudieron leer los cambios locales: {local.error.message}
+        No se pudieron leer los cambios locales: {userMessage(local.error)}
       </p>
     ) : null;
 
@@ -98,7 +99,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
         {localRow}
         {localState}
         <p className="history-view__state" role="alert">
-          {history.error.message}
+          {userMessage(history.error)}
         </p>
       </div>
     );

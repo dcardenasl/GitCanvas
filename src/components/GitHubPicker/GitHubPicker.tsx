@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import type { CloneProgressEvent } from "../../bindings";
+import { userMessage } from "../../lib/errors";
 import {
   cloneGithubRepository,
   forgetGithubToken,
@@ -118,7 +119,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
         </form>
         {signIn.error !== null && (
           <p className="github-picker__error" role="alert">
-            {signIn.error.message}
+            {userMessage(signIn.error)}
           </p>
         )}
       </div>
@@ -146,7 +147,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
 
       {repositories.error !== null && (
         <p className="github-picker__error" role="alert">
-          {repositories.error.message}
+          {userMessage(repositories.error)}
         </p>
       )}
 
@@ -158,7 +159,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
 
       {clone.error !== null && (
         <p className="github-picker__error" role="alert">
-          {clone.error.message}
+          {userMessage(clone.error)}
         </p>
       )}
 

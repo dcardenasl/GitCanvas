@@ -6,6 +6,7 @@ import type {
   FileContent,
   WorktreeFileContent,
 } from "../../bindings";
+import { userMessage } from "../../lib/errors";
 import { getFileContent, getWorktreeFileContent } from "../../lib/ipc";
 import { useCommitDiff } from "../../state/diff";
 import { useSession } from "../../state/session";
@@ -239,7 +240,7 @@ export function FileDiffView(props: FileDiffViewProps) {
             )}
             {diff.error !== null && (
               <p className="file-diff__state" role="alert">
-                {diff.error.message}
+                {userMessage(diff.error)}
               </p>
             )}
             {diff.data !== undefined && file === undefined && (
@@ -265,7 +266,7 @@ export function FileDiffView(props: FileDiffViewProps) {
             )}
             {whole.error !== null && (
               <p className="file-diff__state" role="alert">
-                {whole.error.message}
+                {userMessage(whole.error)}
               </p>
             )}
             {whole.data?.omitted === "Binary" && (

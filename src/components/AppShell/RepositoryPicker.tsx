@@ -1,6 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { useRef, useState } from "react";
 
+import { userMessage } from "../../lib/errors";
 import { IpcError, openRepository } from "../../lib/ipc";
 import { afterPaint } from "../../lib/paint";
 import { useSession } from "../../state/session";
@@ -20,12 +21,11 @@ function messageFor(error: unknown): string {
         return "La ruta indicada no es válida.";
       case "StaleCursor":
         return "El historial cambió mientras se leía. Vuelve a abrir el repositorio.";
-      case "Git":
-      case "Internal":
-        return error.message;
+      default:
+        break;
     }
   }
-  return error instanceof Error ? error.message : String(error);
+  return userMessage(error);
 }
 
 /** The directory the picker should start in, if one was remembered. */

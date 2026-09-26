@@ -1,3 +1,4 @@
+import { userMessage } from "../../lib/errors";
 import { useSession, type FileSource } from "../../state/session";
 import { useWorktreeFiles, type LocalSide } from "../../state/worktree";
 import {
@@ -68,7 +69,7 @@ export function WorkingTreeDetailPanel({
       )}
       {local.error !== null && groups.length === 0 && (
         <p className="detail-panel__state" role="alert">
-          {local.error.message}
+          {userMessage(local.error)}
         </p>
       )}
 
@@ -81,7 +82,7 @@ export function WorkingTreeDetailPanel({
 
       {loadError !== null && (
         <p className="detail-panel__state" role="alert">
-          {loadError.message}
+          {userMessage(loadError)}
         </p>
       )}
 

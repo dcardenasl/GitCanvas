@@ -968,7 +968,7 @@ intentar resolverlo.
 
 ---
 
-## 🔧 Fase H — Endurecimiento (18/21)
+## 🔧 Fase H — Endurecimiento (19/21)
 
 Salió de una auditoría de robustez del código completo (2026-09-26). Cada tarea corrige
 un hallazgo concreto y lleva su test; el estado de cada una es cierto en el commit que la
@@ -1011,7 +1011,7 @@ marca.
 - [x] **H-16 — Sin efectos secundarios durante el render de la tabla.**
 - [x] **H-17 — Progreso de clone acotado y `last_used` real del caché.**
 - [x] **H-18 — Estado del watcher fiel.**
-- [ ] **H-19 — Convención de idioma explícita.**
+- [x] **H-19 — Convención de idioma explícita.**
 - [x] **H-20 — Cobertura exigida por zona.**
 - [x] **H-21 — Documentación sincronizada.**
 

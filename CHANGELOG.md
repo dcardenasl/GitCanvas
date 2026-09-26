@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Error messages** — failures from the engine are introduced by a Spanish summary of
+  their kind instead of appearing as raw English text in an otherwise Spanish interface.
 - **Push confirmation** — the dialog now names the checked-out branch instead of the
   repository folder, and Push stays disabled on a detached HEAD.
 - **`clone_github_repository`** — every repository now gets its own cache entry

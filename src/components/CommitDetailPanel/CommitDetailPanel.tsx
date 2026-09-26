@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 
 import type { CommitInfo } from "../../bindings";
+import { userMessage } from "../../lib/errors";
 import { useCommitDiff } from "../../state/diff";
 import { useSession } from "../../state/session";
 import {
@@ -86,7 +87,7 @@ export function CommitDetailPanel({
 
       {diff.error !== null && (
         <p className="detail-panel__state" role="alert">
-          {diff.error.message}
+          {userMessage(diff.error)}
         </p>
       )}
 

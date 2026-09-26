@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
+import { userMessage } from "../lib/errors";
 import {
   onRepositoryChanged,
   unwatchRepository,
@@ -101,10 +102,7 @@ export function useLiveRepository(path: string | null): {
             path,
             status: {
               kind: "degraded",
-              message:
-                error instanceof Error
-                  ? error.message
-                  : "No se pudo iniciar el watcher",
+              message: userMessage(error),
             },
           });
         }

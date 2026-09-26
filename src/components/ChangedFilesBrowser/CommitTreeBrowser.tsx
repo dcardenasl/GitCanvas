@@ -6,6 +6,7 @@ import type {
   FileDiff,
   FileDiffSummary,
 } from "../../bindings";
+import { userMessage } from "../../lib/errors";
 import { getCommitTreePage } from "../../lib/ipc";
 import { ChangedFileRow } from "../ChangedFileRow/ChangedFileRow";
 
@@ -86,7 +87,7 @@ export function CommitTreeBrowser({
       )}
       {tree.error !== null && (
         <div className="file-tree__state" role="alert">
-          <p>{tree.error.message}</p>
+          <p>{userMessage(tree.error)}</p>
           <button
             type="button"
             className="file-tree__retry"
@@ -285,7 +286,7 @@ function TreeDirectory({
           )}
           {children.error !== null && (
             <div className="file-tree__state" role="alert">
-              <p>{children.error.message}</p>
+              <p>{userMessage(children.error)}</p>
               <button
                 type="button"
                 className="file-tree__retry"

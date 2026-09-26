@@ -142,6 +142,10 @@ Cada una está hecha para fallar el build, no para depender de que alguien se ac
 - **Idioma:** la conversación con David es en español. **Código, comentarios, mensajes
   de commit, CHANGELOG y docs técnicos del repo van en inglés.** `TASKS.md` y `docs/`
   son la excepción: español.
+- **Idioma de la interfaz:** todo texto que ve el usuario va en español. Los mensajes de
+  error del backend son diagnósticos en inglés y se muestran detrás de un resumen en
+  español por tipo de error (`src/lib/errors.ts`, `userMessage`); nunca se pintan crudos.
+  Los errores que el código lanza para sí mismo (`throw new Error(…)`) van en inglés.
 - **Indentación** (de `~/Developer/AGENTS.md`): 4 espacios en Rust, 2 en JS/TS.
 - **Nombres:** `PascalCase` clases y componentes, `camelCase` variables y funciones,
   `kebab-case` archivos web.

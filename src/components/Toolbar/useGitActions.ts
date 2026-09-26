@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { CheckoutOutcome, DirtyPath } from "../../bindings";
+import { userMessage } from "../../lib/errors";
 import {
   checkoutBranch,
   pullFastForward,
@@ -59,7 +60,7 @@ export function useGitActions(repositoryPath: string | null): GitActions {
     return repositoryPath;
   };
   const fail = (error: Error) => {
-    setNotice({ tone: "error", text: error.message });
+    setNotice({ tone: "error", text: userMessage(error) });
   };
 
   const checkout = useMutation({
