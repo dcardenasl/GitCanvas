@@ -84,7 +84,22 @@ function createFixtureRepository(): string {
  * purpose-built fixture is created and removed afterwards.
  */
 const providedRepository = process.env.GITCANVAS_E2E_REPO;
-const fixture = providedRepository ?? createFixtureRepository();
+
+/*
+ * This file is evaluated twice: once by the launcher, which starts the
+ * application against the fixture, and again inside each spec's worker, because
+ * specs import `e2eRepository` from here. Without a hand-off the worker built
+ * a second fixture and the spec edited a repository the application was not
+ * showing, so every spec that changes the repository saw nothing happen. The
+ * launcher publishes its fixture in the environment and the worker reuses it.
+ */
+const fixture =
+  providedRepository ??
+  process.env.GITCANVAS_E2E_FIXTURE ??
+  createFixtureRepository();
+if (providedRepository === undefined) {
+  process.env.GITCANVAS_E2E_FIXTURE = fixture;
+}
 export const e2eRepository = fixture;
 
 export const config: WebdriverIO.Config = {
