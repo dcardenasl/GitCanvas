@@ -113,5 +113,13 @@ export default tseslint.config(
     ...tseslint.configs.disableTypeChecked,
   },
 
+  // Demo and maintenance scripts run directly in Node and are not included in
+  // the application's TypeScript project.
+  {
+    files: ["scripts/**/*.mjs"],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: { globals: globals.node },
+  },
+
   prettier,
 );
