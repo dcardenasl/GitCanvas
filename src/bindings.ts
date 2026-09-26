@@ -5,14 +5,6 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 
 /** Commands */
 export const commands = {
-	/**
-	 *  Round-trips the IPC boundary and reports what is running.
-	 *
-	 *  This exists to prove the whole pipeline — command registration, type
-	 *  generation, and the TypeScript client — works end to end before anything
-	 *  depends on it.
-	 */
-	ping: () => __TAURI_INVOKE<AppInfo>("ping"),
 	/**  Validates and opens a local repository, returning its canonical identity. */
 	openRepository: (path: string) => typedError<RepositoryInfo, AppError>(__TAURI_INVOKE("open_repository", { path })),
 	/**  Checks a candidate working-tree root without changing application selection. */
@@ -133,21 +125,6 @@ export type AppError =
 { kind: "ResourceExhausted"; message: string } |
 /**  Background work could not complete. */
 { kind: "Internal"; message: string };
-
-/**
- *  What the application reports about itself.
- *
- *  Deliberately a struct rather than a bare string: it exercises struct
- *  generation through specta, which is the shape every real payload will take.
- */
-export type AppInfo = {
-	/**  Display name of the application. */
-	name: string,
-	/**  Version of the Tauri application shell. */
-	version: string,
-	/**  Version of the git engine crate backing it. */
-	core_version: string,
-};
 
 /**  A branch uses its full ref name as identity; short names are display only. */
 export type BranchInfo = {

@@ -31,19 +31,3 @@ pub mod repository;
 pub mod retry;
 pub mod watch;
 pub mod worktree;
-
-/// The crate version, so the application can report what engine it is running.
-#[must_use]
-pub fn version() -> &'static str {
-    env!("CARGO_PKG_VERSION")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::version;
-
-    #[test]
-    fn version_is_reported() {
-        assert_eq!(version(), env!("CARGO_PKG_VERSION"));
-    }
-}

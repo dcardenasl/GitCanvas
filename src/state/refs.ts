@@ -11,8 +11,6 @@ export interface RefBadge {
   readonly isHead: boolean;
 }
 
-const EMPTY: readonly RefBadge[] = [];
-
 /** Local first, then remotes, then tags; alphabetical within each. */
 const ORDER: Record<RefBadge["kind"], number> = {
   local: 0,
@@ -110,5 +108,3 @@ export function useRefsByCommit(
     return byCommit;
   }, [branches.data, tags.data]);
 }
-
-export { EMPTY as NO_REFS };

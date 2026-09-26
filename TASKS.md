@@ -968,7 +968,7 @@ intentar resolverlo.
 
 ---
 
-## 🔧 Fase H — Endurecimiento (17/21)
+## 🔧 Fase H — Endurecimiento (18/21)
 
 Salió de una auditoría de robustez del código completo (2026-09-26). Cada tarea corrige
 un hallazgo concreto y lleva su test; el estado de cada una es cierto en el commit que la
@@ -1000,7 +1000,11 @@ marca.
       mostraban solo los cargados. Ahora los totales vienen del backend y hay "Cargar N
       archivos más".
 - [x] **H-13 — Un único parseo de ids de commit.**
-- [ ] **H-14 — Fuera el código fantasma.**
+- [x] **H-14 — Fuera el código fantasma.** `ping` y `AppInfo` (existían para probar el
+      pipeline; `repository_tests.rs` ya cubre el round trip real), `version()`,
+      `EmptyInspector`, `NO_REFS`, `cache_path`, `CloneProgress::fraction`. Se conserva
+      `history::get_commits` (sin caché) como implementación de referencia que los tests
+      usan de oráculo.
 - [x] **H-15 — Checkout accesible desde la UI.** Clic derecho sobre una rama local
       → "Cambiar a …", con el mismo diálogo de confirmación antes de descartar trabajo.
       Antes el backend, el diálogo y el comando existían pero nada los alcanzaba.

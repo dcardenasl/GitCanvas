@@ -13,7 +13,6 @@ import type {
 } from "../../bindings";
 
 export type {
-  AppInfo,
   CheckoutOutcome,
   DirtyPath,
   PullOutcome,
@@ -76,8 +75,6 @@ async function result<T>(
   return value.data;
 }
 
-/** Reports application and engine versions. */
-export const ping = commands.ping;
 /** Opens a validated repository and returns its canonical identity. */
 export const openRepository = (path: string) =>
   result(commands.openRepository(path));
