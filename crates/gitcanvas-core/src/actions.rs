@@ -4,9 +4,11 @@
 //! stands in the way. Forcing is always a separate, explicit decision made
 //! above this layer — nothing in this module silently discards anything.
 
+use std::{cell::RefCell, rc::Rc};
+
 use git2::{
-    build::CheckoutBuilder, AnnotatedCommit, AutotagOption, BranchType, Cred, FetchOptions,
-    PushOptions, RemoteCallbacks, Repository, StatusOptions,
+    build::CheckoutBuilder, AnnotatedCommit, AutotagOption, BranchType, Direction, ErrorCode,
+    FetchOptions, PushOptions, RemoteCallbacks, Repository, StatusOptions,
 };
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -156,22 +158,32 @@ fn upstream_remote(repo: &Repository, head_name: &str) -> String {
         .unwrap_or_else(|| "origin".to_owned())
 }
 
+/// The ref on the remote that `branch` pushes to and pulls from.
+///
+/// Read from `branch.<name>.merge`, because a local branch is free to track a
+/// remote branch with a different name. Without an upstream the branch pushes to
+/// its own name, which is what creates it on a first push.
+fn upstream_ref(repo: &Repository, branch: &str) -> String {
+    repo.config()
+        .and_then(|config| config.get_string(&format!("branch.{branch}.merge")))
+        .unwrap_or_else(|_| format!("refs/heads/{branch}"))
+}
+
 fn remote_callbacks<'a>() -> RemoteCallbacks<'a> {
     let mut callbacks = RemoteCallbacks::new();
-    callbacks.credentials(|_url, username, allowed| {
-        if allowed.contains(git2::CredentialType::USER_PASS_PLAINTEXT) {
-            if let Ok(token) = credentials::read_token() {
-                return Cred::userpass_plaintext(&token, "");
-            }
-        }
-        if allowed.contains(git2::CredentialType::SSH_KEY) {
-            if let Some(username) = username {
-                return Cred::ssh_key_from_agent(username);
-            }
-        }
-        Cred::default()
-    });
+    callbacks.credentials(credentials::callback());
     callbacks
+}
+
+/// The current branch's name, or an explanation when HEAD is detached.
+fn current_branch(repo: &Repository, verb: &str) -> Result<(String, String), AppError> {
+    let head = repo.head()?;
+    if !head.is_branch() {
+        return Err(AppError::InvalidInput(format!(
+            "HEAD is detached, so there is no branch to {verb}"
+        )));
+    }
+    Ok((head.shorthand()?.to_owned(), head.name()?.to_owned()))
 }
 
 /// Fetches the upstream and fast-forwards the current branch onto it.
@@ -180,32 +192,40 @@ fn remote_callbacks<'a>() -> RemoteCallbacks<'a> {
 /// merge commit from a button has correctness and history implications that
 /// deserve a deliberate decision, and the command line is right there.
 ///
+/// The working tree is updated before the branch ref moves. If local changes
+/// stand in the way the checkout refuses and nothing has changed, instead of
+/// leaving the branch advanced over a working tree that still shows the old
+/// files as staged reversals.
+///
 /// # Errors
 ///
-/// Returns [`AppError`] when the repository cannot be opened, the remote is
-/// unreachable, or credentials are rejected.
+/// Returns [`AppError`] when the repository cannot be opened, HEAD is detached,
+/// the remote is unreachable, credentials are rejected, or local changes would
+/// be overwritten.
 pub fn pull_fast_forward(active: &ActiveRepo) -> Result<PullOutcome, AppError> {
     let repo = active.open()?;
-    let head = repo.head()?;
-    let branch_name = head.shorthand()?.to_owned();
-    let head_name = head.name()?.to_owned();
+    let (branch_name, head_name) = current_branch(&repo, "pull")?;
 
     let branch = repo.find_branch(&branch_name, BranchType::Local)?;
     let Ok(upstream) = branch.upstream() else {
         return Ok(PullOutcome::NoUpstream);
     };
     let upstream_name = upstream.name()?.unwrap_or("upstream").to_owned();
+    let upstream_ref_name = upstream.get().name()?.to_owned();
+    drop(upstream);
+    drop(branch);
 
     let remote_name = upstream_remote(&repo, &head_name);
-
     let mut remote = repo.find_remote(&remote_name)?;
     let mut fetch = FetchOptions::new();
     fetch.remote_callbacks(remote_callbacks());
     fetch.download_tags(AutotagOption::All);
-    remote.fetch(&[&branch_name], Some(&mut fetch), None)?;
+    // The remote's configured refspecs, so the tracking ref the branch points
+    // at is the one that gets updated — whatever the remote branch is called.
+    remote.fetch(&[] as &[&str], Some(&mut fetch), None)?;
 
-    let fetch_head = repo.find_reference("FETCH_HEAD")?;
-    let target: AnnotatedCommit<'_> = repo.reference_to_annotated_commit(&fetch_head)?;
+    let tracking = repo.find_reference(&upstream_ref_name)?;
+    let target: AnnotatedCommit<'_> = repo.reference_to_annotated_commit(&tracking)?;
     let (analysis, _) = repo.merge_analysis(&[&target])?;
 
     if analysis.is_up_to_date() {
@@ -218,20 +238,57 @@ pub fn pull_fast_forward(active: &ActiveRepo) -> Result<PullOutcome, AppError> {
         });
     }
 
+    let head = repo.head()?;
     let local_oid = head.target().unwrap_or(git2::Oid::ZERO_SHA1);
     let ahead = repo
         .graph_ahead_behind(target.id(), local_oid)
         .map_or(0, |(ahead, _)| u32::try_from(ahead).unwrap_or(u32::MAX));
 
+    let commit = repo.find_commit(target.id())?;
+    repo.checkout_tree(commit.as_object(), Some(CheckoutBuilder::new().safe()))
+        .map_err(|error| {
+            if error.code() == ErrorCode::Conflict {
+                AppError::InvalidInput(
+                    "local changes would be overwritten by the pull; commit or discard them first"
+                        .to_owned(),
+                )
+            } else {
+                AppError::from(error)
+            }
+        })?;
     let mut reference = repo.find_reference(&head_name)?;
     reference.set_target(target.id(), "pull: fast-forward")?;
-    repo.set_head(&head_name)?;
-    repo.checkout_head(Some(CheckoutBuilder::default().safe()))?;
 
     Ok(PullOutcome::FastForwarded {
         commits: ahead,
         to: target.id().to_string(),
     })
+}
+
+/// Whether a server's rejection message means "your branch is behind".
+fn is_non_fast_forward(message: &str) -> bool {
+    let message = message.to_ascii_lowercase();
+    [
+        "non-fast-forward",
+        "fetch first",
+        "not a fast-forward",
+        "stale info",
+    ]
+    .iter()
+    .any(|marker| message.contains(marker))
+}
+
+/// The commit a remote currently has at `reference`, if it has one.
+fn remote_tip(
+    remote: &mut git2::Remote<'_>,
+    reference: &str,
+) -> Result<Option<git2::Oid>, AppError> {
+    let connection = remote.connect_auth(Direction::Push, Some(remote_callbacks()), None)?;
+    Ok(connection
+        .list()?
+        .iter()
+        .find(|head| head.name() == reference)
+        .map(git2::RemoteHead::oid))
 }
 
 /// Pushes the current branch to its remote.
@@ -240,39 +297,104 @@ pub fn pull_fast_forward(active: &ActiveRepo) -> Result<PullOutcome, AppError> {
 /// remote having commits the local branch does not is exactly the case where
 /// forcing destroys someone else's work.
 ///
+/// libgit2 does not compare histories before pushing, and a remote's refusal
+/// arrives as a per-ref status rather than as a failed call. Both are handled
+/// explicitly: the remote's tip is compared with the local branch first, and
+/// any status the server returns is turned into an outcome or an error, so a
+/// push the remote refused can never be reported as pushed.
+///
 /// # Errors
 ///
-/// Returns [`AppError`] when the repository cannot be opened, the remote is
-/// unreachable, or credentials are rejected.
+/// Returns [`AppError`] when the repository cannot be opened, HEAD is detached,
+/// the remote is unreachable, credentials are rejected, or the remote refuses
+/// the update for a reason other than being ahead.
 pub fn push_current_branch(active: &ActiveRepo) -> Result<PushOutcome, AppError> {
     let repo = active.open()?;
-    let head = repo.head()?;
-    if !head.is_branch() {
-        return Err(AppError::InvalidInput(
-            "HEAD is detached, so there is no branch to push".to_owned(),
-        ));
-    }
-    let branch_name = head.shorthand()?.to_owned();
-    let remote_name = upstream_remote(&repo, head.name()?);
+    let (branch_name, head_name) = current_branch(&repo, "push")?;
+    let remote_name = upstream_remote(&repo, &head_name);
+    let target_ref = upstream_ref(&repo, &branch_name);
+
+    let local_oid = repo
+        .find_reference(&head_name)?
+        .target()
+        .ok_or_else(|| AppError::Git("the current branch has no commit to push".to_owned()))?;
 
     let mut remote = repo.find_remote(&remote_name)?;
-    let mut options = PushOptions::new();
-    options.remote_callbacks(remote_callbacks());
 
-    let refspec = format!("refs/heads/{branch_name}:refs/heads/{branch_name}");
-    match remote.push(&[&refspec], Some(&mut options)) {
-        Ok(()) => Ok(PushOutcome::Pushed {
+    if let Some(remote_oid) = remote_tip(&mut remote, &target_ref)? {
+        // A tip this repository does not even have is, by definition, work the
+        // local branch has not seen.
+        let behind = remote_oid != local_oid
+            && (repo.find_commit(remote_oid).is_err()
+                || !repo.graph_descendant_of(local_oid, remote_oid)?);
+        if behind {
+            return Ok(PushOutcome::RejectedNonFastForward {
+                branch: branch_name,
+            });
+        }
+    }
+
+    let refusal: Rc<RefCell<Option<String>>> = Rc::default();
+    let mut callbacks = remote_callbacks();
+    callbacks.push_update_reference({
+        let refusal = Rc::clone(&refusal);
+        move |reference, status| {
+            if let Some(status) = status {
+                *refusal.borrow_mut() = Some(format!("{reference}: {status}"));
+            }
+            Ok(())
+        }
+    });
+    let mut options = PushOptions::new();
+    options.remote_callbacks(callbacks);
+
+    let refspec = format!("{head_name}:{target_ref}");
+    let result = remote.push(&[&refspec], Some(&mut options));
+    drop(options);
+
+    match result {
+        Ok(()) => {}
+        Err(error) if error.code() == ErrorCode::NotFastForward => {
+            return Ok(PushOutcome::RejectedNonFastForward {
+                branch: branch_name,
+            });
+        }
+        Err(error) if error.code() == ErrorCode::Auth => {
+            return Err(AppError::InvalidInput(
+                "the remote rejected the credentials for this push".to_owned(),
+            ));
+        }
+        Err(error) => return Err(AppError::from(error)),
+    }
+
+    match refusal.take() {
+        None => Ok(PushOutcome::Pushed {
             branch: branch_name,
             remote: remote_name,
         }),
-        Err(error) if error.code() == git2::ErrorCode::NotFastForward => {
-            Ok(PushOutcome::RejectedNonFastForward {
-                branch: branch_name,
-            })
+        Some(message) if is_non_fast_forward(&message) => Ok(PushOutcome::RejectedNonFastForward {
+            branch: branch_name,
+        }),
+        Some(message) => Err(AppError::Git(format!(
+            "the remote refused the push: {message}"
+        ))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_non_fast_forward;
+
+    #[test]
+    fn server_wording_for_a_branch_that_is_behind_is_recognised() {
+        for message in [
+            "refs/heads/main: non-fast-forward",
+            "refs/heads/main: Fetch first",
+            "refs/heads/main: stale info",
+            "refs/heads/main: not a fast-forward",
+        ] {
+            assert!(is_non_fast_forward(message), "missed {message}");
         }
-        Err(error) if error.code() == git2::ErrorCode::Auth => Err(AppError::InvalidInput(
-            "the remote rejected the credentials for this push".to_owned(),
-        )),
-        Err(error) => Err(AppError::from(error)),
+        assert!(!is_non_fast_forward("refs/heads/main: protected branch"));
     }
 }

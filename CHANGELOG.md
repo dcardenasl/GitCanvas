@@ -33,6 +33,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   folder and serve the wrong history. A cached entry cloned from another remote is
   replaced, clones land atomically, and only `https://github.com` URLs that match the
   repository are accepted.
+- **`pull_fast_forward`** — the working tree is updated before the branch moves, so a
+  pull that local changes block leaves everything as it was, and it follows the branch
+  the local one actually tracks instead of assuming both share a name.
+- **`push_current_branch`** — a push the remote refused is no longer reported as
+  pushed: the remote's tip is compared first and any per-ref rejection becomes an
+  outcome or an error. A branch pushes to the name it tracks.
+- **GitHub token** — offered only to `https://github.com`, once per kind, so a remote
+  on another host never receives it and a rejected token cannot loop.
 
 ### Changed
 

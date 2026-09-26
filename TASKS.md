@@ -968,7 +968,7 @@ intentar resolverlo.
 
 ---
 
-## 🔧 Fase H — Endurecimiento (2/21)
+## 🔧 Fase H — Endurecimiento (5/21)
 
 Salió de una auditoría de robustez del código completo (2026-09-26). Cada tarea corrige
 un hallazgo concreto y lleva su test; el estado de cada una es cierto en el commit que la
@@ -978,11 +978,11 @@ marca.
       carpeta como rama actual. Ahora sale de la query de ramas compartida.
 - [x] **H-2 — Identidad inyectiva del caché de clones.** `a_b/c` y `a/b_c` compartían
       carpeta y el segundo devolvía el repo equivocado.
-- [ ] **H-3 — Pull seguro.** Checkout antes de mover la ref y fetch contra el upstream
+- [x] **H-3 — Pull seguro.** Checkout antes de mover la ref y fetch contra el upstream
       configurado, no contra el nombre de la rama local.
-- [ ] **H-4 — Push detecta el rechazo del remoto.** Vía `push_update_reference`, no solo
+- [x] **H-4 — Push detecta el rechazo del remoto.** Vía `push_update_reference`, no solo
       por el código de error local.
-- [ ] **H-5 — El token solo viaja a github.com.** Credenciales acotadas por host, con un
+- [x] **H-5 — El token solo viaja a github.com.** Credenciales acotadas por host, con un
       solo intento, y `clone_url` validada.
 - [ ] **H-6 — CSP definida y sin seam de entorno en producción.**
 - [ ] **H-7 — Clasificación tipada de `Too many open files`.** Una sola definición en
