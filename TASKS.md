@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Release pendiente (R-4 a R-6, esperan a David) · 81/84 tareas del plan + Fase H 21/21 · última actualización 2026-09-26
+**Estado:** Release pendiente (R-4 a R-6, esperan a David) · 81/84 tareas del plan + Fase H 22/22 · última actualización 2026-09-26
 
 ## Cómo se usa este archivo
 
@@ -984,7 +984,7 @@ con sus commits, para que el historial de tareas sea completo.
 
 ---
 
-## 🔧 Fase H — Endurecimiento (21/21)
+## 🔧 Fase H — Endurecimiento (22/22)
 
 Salió de una auditoría de robustez del código completo (2026-09-26). Cada tarea corrige
 un hallazgo concreto y lleva su test; el estado de cada una es cierto en el commit que la
@@ -1035,6 +1035,13 @@ marca.
 - [x] **H-21 — Documentación sincronizada.** `ARCHITECTURE.md` (runtime, secretos, CSP,
       paginado, errores), ADR 0003, `docs/SNAPSHOT.md` y este archivo, que llevaba desde el
       2026-09-09 sin reflejar el trabajo posterior (arriba, Fase P).
+- [x] **H-22 — La suite E2E de cambios locales pasa.** No era la app: cada `$`/click
+      esperaba un timeout de 5 s del `@wdio/tauri-service` (busca `window.__TAURI__`, que la
+      app no expone), así que un `waitUntil` de 20 s hacía 2-3 iteraciones y fallaba en el
+      primer lanzamiento. Cambiar a la única ventana en `before` lo desactiva: las 6 specs
+      pasan en ~30 s (antes, más de 15 min). Además el spec tenía un `await` faltante que
+      hacía que "la vista se cierra" no pudiera cumplirse nunca, y su paso "se refresca"
+      pasaba sin comprobar nada.
 
 ---
 

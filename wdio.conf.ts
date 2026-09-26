@@ -163,6 +163,18 @@ export const config: WebdriverIO.Config = {
     await (browser as WebdriverIO.Browser).execute(
       "window.__name = window.__name || function (fn) { return fn; };",
     );
+
+    // Before every element lookup or click, `@wdio/tauri-service` asks the app
+    // which window is active, through `window.__TAURI__`. This application does
+    // not expose that global, so each of those checks waited out a five second
+    // timeout: every command cost five seconds, and a 20 second `waitUntil` got
+    // through two or three iterations. That is what made specs that watch the
+    // interface change (local changes, refresh) fail on a first launch and pass
+    // on a retry. There is one window, so switching to it explicitly is a no-op
+    // that also tells the service not to second-guess the choice.
+    const driver = browser as WebdriverIO.Browser;
+    const [window] = await driver.getWindowHandles();
+    if (window !== undefined) await driver.switchToWindow(window);
   },
 
   onComplete() {

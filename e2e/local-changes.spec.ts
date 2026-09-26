@@ -53,15 +53,22 @@ describe("local changes", () => {
 
     fs.writeFileSync(path.join(e2eRepository, "staged.txt"), "after\n");
     git("add", "staged.txt");
+    // Still open, and showing the new content: an edit while reading a file
+    // must refresh the view, not close it.
     await browser.waitUntil(
-      async () => (await browser.$(".file-diff")).isDisplayed(),
+      async () => {
+        const view = await browser.$(".file-diff");
+        return (
+          (await view.isDisplayed()) && (await view.getText()).includes("after")
+        );
+      },
       { timeout: 20_000, timeoutMsg: "the staged diff did not refresh" },
     );
 
     fs.rmSync(path.join(e2eRepository, "staged.txt"));
     git("add", "-u", "staged.txt");
     await browser.waitUntil(
-      async () => !(await browser.$(".file-diff")).isDisplayed(),
+      async () => !(await (await browser.$(".file-diff")).isDisplayed()),
       {
         timeout: 20_000,
         timeoutMsg: "the deleted local file view stayed open",
