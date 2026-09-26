@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **GitCanvas branding** — the toolbar shows the mark beside the repository name, the
+  empty state shows the full logo, and the application icons are the new ones.
 - **Choose dark, light or system appearance.** The window-level preference is
   saved locally, defaults to dark and follows operating-system changes when
   system appearance is selected.

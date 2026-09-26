@@ -2,6 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { getStartupRepository } from "../../lib/ipc";
+import brandMark from "../../assets/branding/gitcanvas-mark.png";
+import brandHorizontal from "../../assets/branding/gitcanvas-horizontal.png";
 
 import { CommitDetailPanel } from "../CommitDetailPanel";
 import { CommitSearch } from "../CommitSearch";
@@ -74,6 +76,14 @@ export function AppShell() {
   return (
     <div className="app-shell">
       <header className="toolbar">
+        {repository !== null && (
+          <img
+            className="toolbar__brand"
+            src={brandMark}
+            alt=""
+            aria-hidden="true"
+          />
+        )}
         <span className="toolbar__repository">
           {repository?.name ?? "Ningún repositorio abierto"}
         </span>
@@ -143,7 +153,11 @@ export function AppShell() {
         />
       ) : repository === null ? (
         <div className="app-shell__empty">
-          <p className="app-shell__empty-title">GitCanvas</p>
+          <img
+            className="app-shell__empty-logo"
+            src={brandHorizontal}
+            alt="GitCanvas"
+          />
           <p className="app-shell__empty-hint">
             Abre un repositorio para ver su historial de ramas y commits.
           </p>

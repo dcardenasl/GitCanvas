@@ -1,7 +1,7 @@
 # Design
 
-The application window in `docs/mockup.html` is the existing, user-approved visual
-reference. This implementation extends that design; it does not introduce a new identity.
+The application window in `docs/mockup.html` is the visual reference. Preserve its compact
+Git workspace while carrying the GitCanvas orchid identity through purposeful UI accents.
 
 ## Surface and hierarchy
 
