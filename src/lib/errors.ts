@@ -30,6 +30,14 @@ function summaryFor(kind: string): string | undefined {
   return (KIND_SUMMARY as Partial<Record<string, string>>)[kind];
 }
 
+/** The backend error category of `error`, if it came from the backend. */
+export function errorKind(error: unknown): AppError["kind"] | null {
+  if (!(error instanceof Error) || !("kind" in error)) return null;
+  return typeof error.kind === "string"
+    ? (error.kind as AppError["kind"])
+    : null;
+}
+
 /**
  * Text to show the user for a failure of any origin.
  *

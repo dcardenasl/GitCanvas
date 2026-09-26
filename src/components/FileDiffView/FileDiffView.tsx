@@ -8,6 +8,7 @@ import type {
 } from "../../bindings";
 import { userMessage } from "../../lib/errors";
 import { getFileContent, getWorktreeFileContent } from "../../lib/ipc";
+import { errorKind } from "../../lib/errors";
 import { useCommitDiff } from "../../state/diff";
 import { useSession } from "../../state/session";
 import { useWorktreeFileDiff, useWorktreeSnapshot } from "../../state/worktree";
@@ -125,11 +126,22 @@ export function FileDiffView(props: FileDiffViewProps) {
     staleTime: isWorktree ? 1_000 : Infinity,
   });
 
+  const refetchLocalSnapshot = localSnapshot.refetch;
   useEffect(() => {
-    if (isWorktree && (diff.error !== null || whole.error !== null)) {
-      selectFile(null);
+    if (!isWorktree) return;
+    const failure = diff.error ?? whole.error;
+    if (failure === null) return;
+
+    // A read is tied to the revision it was asked for, so editing the file
+    // while it is open makes that read fail as stale. The file is still there:
+    // take the new revision and read again instead of closing what the user is
+    // looking at. Any other failure means the file cannot be shown.
+    if (errorKind(failure) === "WorktreeChanged") {
+      void refetchLocalSnapshot();
+      return;
     }
-  }, [diff.error, whole.error, isWorktree, selectFile]);
+    selectFile(null);
+  }, [diff.error, whole.error, isWorktree, selectFile, refetchLocalSnapshot]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {

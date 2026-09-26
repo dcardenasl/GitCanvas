@@ -379,4 +379,59 @@ describe("FileDiffView", () => {
       expected_revision: "revision",
     });
   });
+
+  describe("when the local file changes while it is open", () => {
+    const local = () => file({ path: "local.ts" });
+
+    function open() {
+      useSession.setState({
+        selection: { kind: "worktree", side: "unstaged", filePath: "local.ts" },
+      });
+      renderView("local.ts", { side: "unstaged" });
+    }
+
+    it("reads it again under the new revision instead of closing", async () => {
+      getWorktreeSnapshot.mockResolvedValueOnce(worktreeSnapshot([local()]));
+      // The first read races an edit and is refused as stale.
+      getWorktreeFileDiff.mockRejectedValueOnce(
+        Object.assign(new Error("repository revision is stale"), {
+          kind: "WorktreeChanged",
+        }),
+      );
+      getWorktreeSnapshot.mockResolvedValue({
+        ...worktreeSnapshot([local()]),
+        revision: "newer",
+      });
+      getWorktreeFileDiff.mockResolvedValue({
+        side: "unstaged",
+        revision: "newer",
+        file: local(),
+      });
+      open();
+
+      expect(await screen.findByText("const b = 3;")).toBeDefined();
+      expect(useSession.getState().selection).toEqual({
+        kind: "worktree",
+        side: "unstaged",
+        filePath: "local.ts",
+      });
+      expect(getWorktreeFileDiff.mock.calls.at(-1)?.[1]).toMatchObject({
+        expected_revision: "newer",
+      });
+    });
+
+    it("closes when the file can no longer be shown", async () => {
+      getWorktreeSnapshot.mockResolvedValue(worktreeSnapshot([local()]));
+      getWorktreeFileDiff.mockRejectedValue(
+        Object.assign(new Error("local.ts"), {
+          kind: "WorktreeFileUnavailable",
+        }),
+      );
+      open();
+
+      await vi.waitFor(() => {
+        expect(useSession.getState().selection).toEqual({ kind: "history" });
+      });
+    });
+  });
 });
