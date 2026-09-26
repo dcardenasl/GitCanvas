@@ -55,6 +55,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **History graph** — the layout is computed once and extended page by page (it was
   recomputed from the first commit twice per page), so scrolling deep into a large
   repository stays smooth.
+- **Local-changes polling** — the wait between fingerprint reads scales with how long
+  the last one took, so a very large working tree no longer keeps the machine busy
+  checking it every five seconds. The watcher status also follows the repository it
+  belongs to instead of carrying over from the previous one.
 
 ### Changed
 

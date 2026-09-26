@@ -32,7 +32,7 @@ export function useWorktreeSnapshot(
     enabled: repositoryPath !== null,
     queryFn: () => {
       if (repositoryPath === null) {
-        throw new Error("No hay un repositorio abierto");
+        throw new Error("No repository is open");
       }
       return getWorktreeSnapshot(repositoryPath, request);
     },
@@ -51,13 +51,41 @@ export function useWorktreeFileDiff(
     enabled: repositoryPath !== null && request !== null,
     queryFn: () => {
       if (repositoryPath === null || request === null) {
-        throw new Error("No hay un archivo local seleccionado");
+        throw new Error("No local file is selected");
       }
       return getWorktreeFileDiff(repositoryPath, request);
     },
     staleTime: 1_000,
   });
 }
+
+/** Poll interval while the native watcher is healthy, in milliseconds. */
+const POLL_INTERVAL = 5_000;
+/** Poll interval while it is degraded and polling is the only signal. */
+const DEGRADED_POLL_INTERVAL = 2_000;
+/** The slowest a poll is ever allowed to become. */
+const MAX_POLL_INTERVAL = 60_000;
+/** Idle time left between polls per unit of time a poll took. */
+const POLL_DUTY_FACTOR = 10;
+
+/**
+ * How long to wait before the next fingerprint poll.
+ *
+ * Reading the fingerprint walks the index and the working tree, so on a large
+ * repository one poll can take a noticeable share of a second. A fixed interval
+ * would keep the machine busy checking; scaling the wait to the cost keeps the
+ * poller at roughly a tenth of a core however big the repository is, while a
+ * small one still refreshes on the base interval.
+ */
+export function pollInterval(baseMs: number, lastPollMs: number): number {
+  return Math.min(
+    MAX_POLL_INTERVAL,
+    Math.max(baseMs, lastPollMs * POLL_DUTY_FACTOR),
+  );
+}
+
+/** How long the last fingerprint read took, per repository. */
+const lastPollDuration = new Map<string, number>();
 
 /** Polling uses only a fingerprint, never a full diff payload. */
 export function useWorktreeFingerprint(
@@ -67,14 +95,23 @@ export function useWorktreeFingerprint(
   return useQuery<WorktreeFingerprint>({
     queryKey: ["worktree-fingerprint", repositoryPath],
     enabled: repositoryPath !== null,
-    queryFn: () => {
+    queryFn: async () => {
       if (repositoryPath === null) {
-        throw new Error("No hay un repositorio abierto");
+        throw new Error("No repository is open");
       }
-      return getWorktreeFingerprint(repositoryPath);
+      const started = performance.now();
+      const fingerprint = await getWorktreeFingerprint(repositoryPath);
+      lastPollDuration.set(repositoryPath, performance.now() - started);
+      return fingerprint;
     },
     staleTime: 0,
-    refetchInterval: degraded ? 2_000 : 5_000,
+    refetchInterval: () =>
+      pollInterval(
+        degraded ? DEGRADED_POLL_INTERVAL : POLL_INTERVAL,
+        repositoryPath === null
+          ? 0
+          : (lastPollDuration.get(repositoryPath) ?? 0),
+      ),
     refetchIntervalInBackground: false,
   });
 }

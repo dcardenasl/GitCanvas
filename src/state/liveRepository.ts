@@ -8,6 +8,12 @@ import {
 } from "../lib/ipc";
 import { useWorktreeFingerprint } from "./worktree";
 
+/** Queries that a change to refs, tags or branches can stale. */
+const METADATA_QUERIES = ["history", "branches", "tags"] as const;
+
+/** Queries that a change to the index or the working tree can stale. */
+const WORKTREE_QUERIES = ["worktree", "worktree-file-diff"] as const;
+
 /**
  * Query families that describe the repository as it is right now.
  *
@@ -15,12 +21,9 @@ import { useWorktreeFingerprint } from "./worktree";
  * immutable once written, so discarding them on every change would re-read
  * work that cannot have changed.
  */
-const LIVE_QUERIES = [
-  "history",
-  "branches",
-  "tags",
-  "worktree",
-  "worktree-file-diff",
+export const LIVE_QUERIES = [
+  ...METADATA_QUERIES,
+  ...WORKTREE_QUERIES,
   "worktree-fingerprint",
 ] as const;
 
@@ -38,26 +41,39 @@ export function useLiveRepository(path: string | null): {
 } {
   const queryClient = useQueryClient();
   const [retryToken, setRetryToken] = useState(0);
-  const [status, setStatus] = useState<WatcherStatus>(() =>
-    path === null ? { kind: "idle" } : { kind: "ready" },
-  );
+  // The outcome is stored with the repository it belongs to, so switching
+  // repositories reads as "starting" again instead of inheriting the previous
+  // repository's status while the new watch is still being set up.
+  const [outcome, setOutcome] = useState<{
+    readonly path: string;
+    readonly status: WatcherStatus;
+  } | null>(null);
+  const status: WatcherStatus =
+    path === null
+      ? { kind: "idle" }
+      : outcome?.path === path
+        ? outcome.status
+        : { kind: "starting" };
   const generationRef = useRef(0);
   const fingerprint = useWorktreeFingerprint(path, status.kind === "degraded");
-  const previousFingerprint = useRef<string | null>(null);
+  const previousFingerprint = useRef<{
+    readonly path: string;
+    readonly revision: string;
+  } | null>(null);
 
   useEffect(() => {
-    const current = fingerprint.data?.revision ?? null;
-    if (
-      current !== null &&
-      previousFingerprint.current !== null &&
-      current !== previousFingerprint.current
-    ) {
-      void queryClient.invalidateQueries({ queryKey: ["worktree", path] });
-      void queryClient.invalidateQueries({
-        queryKey: ["worktree-file-diff", path],
-      });
+    const revision = fingerprint.data?.revision;
+    if (path === null || revision === undefined) return;
+
+    // Compared only within one repository: a different repository always has a
+    // different revision, and that is not a change worth reacting to.
+    const previous = previousFingerprint.current;
+    if (previous?.path === path && previous.revision !== revision) {
+      for (const key of WORKTREE_QUERIES) {
+        void queryClient.invalidateQueries({ queryKey: [key, path] });
+      }
     }
-    previousFingerprint.current = current;
+    previousFingerprint.current = { path, revision };
   }, [fingerprint.data?.revision, path, queryClient]);
 
   useEffect(() => {
@@ -69,27 +85,27 @@ export function useLiveRepository(path: string | null): {
     const generation = generationRef.current + 1;
     generationRef.current = generation;
     const invalidate = (scope: "metadata" | "worktree") => {
-      const keys =
-        scope === "metadata"
-          ? ["history", "branches", "tags"]
-          : ["worktree", "worktree-file-diff"];
+      const keys = scope === "metadata" ? METADATA_QUERIES : WORKTREE_QUERIES;
       for (const key of keys) {
         void queryClient.invalidateQueries({ queryKey: [key, path] });
       }
     };
 
-    const started = watchRepository({ path, generation })
+    void watchRepository({ path, generation })
       .then(() => {
-        if (!cancelled) setStatus({ kind: "ready" });
+        if (!cancelled) setOutcome({ path, status: { kind: "ready" } });
       })
       .catch((error: unknown) => {
         if (!cancelled) {
-          setStatus({
-            kind: "degraded",
-            message:
-              error instanceof Error
-                ? error.message
-                : "No se pudo iniciar el watcher",
+          setOutcome({
+            path,
+            status: {
+              kind: "degraded",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "No se pudo iniciar el watcher",
+            },
           });
         }
       });
@@ -102,13 +118,15 @@ export function useLiveRepository(path: string | null): {
       } else if (payload.kind === "Worktree") {
         invalidate("worktree");
       } else {
-        setStatus({ kind: "degraded", message: payload.kind.Degraded.message });
+        setOutcome({
+          path,
+          status: { kind: "degraded", message: payload.kind.Degraded.message },
+        });
       }
     });
 
     return () => {
       cancelled = true;
-      void started;
       void listening.then((stop) => {
         stop();
       });
@@ -143,5 +161,3 @@ export type WatcherStatus =
   | { kind: "starting" }
   | { kind: "ready" }
   | { kind: "degraded"; message: string };
-
-export { LIVE_QUERIES };

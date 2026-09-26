@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -149,5 +149,56 @@ describe("useLiveRepository", () => {
       );
     }).not.toThrow();
     await Promise.resolve();
+  });
+
+  it("reports starting until the watch is established, then ready", async () => {
+    const { result } = renderHook(() => useLiveRepository("/tmp/repo"), {
+      wrapper,
+    });
+
+    expect(result.current.status.kind).toBe("starting");
+    await waitFor(() => {
+      expect(result.current.status.kind).toBe("ready");
+    });
+  });
+
+  it("reports the reason when the watch cannot be established", async () => {
+    watchRepository.mockRejectedValue(new Error("permission denied"));
+    const { result } = renderHook(() => useLiveRepository("/tmp/repo"), {
+      wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.status).toEqual({
+        kind: "degraded",
+        message: "permission denied",
+      });
+    });
+  });
+
+  it("does not carry one repository's status over to the next", async () => {
+    let release: () => void = () => undefined;
+    const { result, rerender } = renderHook(
+      ({ path }: { path: string }) => useLiveRepository(path),
+      { wrapper, initialProps: { path: "/tmp/one" } },
+    );
+    await waitFor(() => {
+      expect(result.current.status.kind).toBe("ready");
+    });
+
+    watchRepository.mockReturnValue(
+      new Promise<null>((resolve) => {
+        release = () => {
+          resolve(null);
+        };
+      }),
+    );
+    rerender({ path: "/tmp/two" });
+
+    expect(result.current.status.kind).toBe("starting");
+    release();
+    await waitFor(() => {
+      expect(result.current.status.kind).toBe("ready");
+    });
   });
 });
