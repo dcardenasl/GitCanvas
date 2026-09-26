@@ -6,11 +6,14 @@
 //! rather than approximated: showing a merge's changes against one side while
 //! implying it covers both would be worse than not showing them.
 
-use git2::{Delta, DiffOptions, Oid};
+use git2::{Delta, DiffOptions};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::{error::AppError, repository::ActiveRepo};
+use crate::{
+    error::AppError,
+    repository::{parse_commit_id, ActiveRepo},
+};
 
 /// Lines above which a file's hunks are withheld until explicitly requested.
 ///
@@ -129,8 +132,7 @@ pub struct DiffRequest {
 /// malformed or unknown, or libgit2 fails to produce the diff.
 pub fn get_commit_diff(active: &ActiveRepo, request: &DiffRequest) -> Result<CommitDiff, AppError> {
     let repo = active.open()?;
-    let oid = Oid::from_str(&request.commit_id)
-        .map_err(|_| AppError::InvalidInput("commit id is not a valid object id".to_owned()))?;
+    let oid = parse_commit_id(&request.commit_id)?;
     let commit = repo.find_commit(oid)?;
 
     let parent = commit.parents().next();

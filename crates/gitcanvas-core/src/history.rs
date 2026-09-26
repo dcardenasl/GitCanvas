@@ -10,7 +10,10 @@ use git2::{ErrorCode, Oid, Repository, Sort};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::{error::AppError, repository::ActiveRepo};
+use crate::{
+    error::AppError,
+    repository::{parse_commit_id, ActiveRepo},
+};
 
 /// Maximum number of commits returned by one request.
 pub const MAX_PAGE_SIZE: u16 = 500;
@@ -181,12 +184,12 @@ fn read_page(
             }
             roots
                 .iter()
-                .map(|id| parse_oid(id))
+                .map(|id| parse_commit_id(id))
                 .collect::<Result<Vec<_>, _>>()?
         }
         None => history_roots(&repo)?,
     };
-    let cursor = request.cursor.as_deref().map(parse_oid).transpose()?;
+    let cursor = request.cursor.as_deref().map(parse_commit_id).transpose()?;
     let cached = reader
         .map(|reader| reader.find(active, &roots))
         .transpose()?
@@ -274,15 +277,6 @@ fn page_from_walk(
         next_cursor,
         roots: roots.iter().map(ToString::to_string).collect(),
     })
-}
-
-pub(crate) fn parse_oid(value: &str) -> Result<Oid, AppError> {
-    if value.len() != 40 {
-        return Err(AppError::InvalidInput(
-            "Expected a complete 40-character commit SHA".into(),
-        ));
-    }
-    Oid::from_str(value).map_err(|_| AppError::InvalidInput("Invalid commit SHA".into()))
 }
 
 fn history_roots(repo: &Repository) -> Result<Vec<Oid>, AppError> {

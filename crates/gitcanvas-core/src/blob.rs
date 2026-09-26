@@ -5,11 +5,14 @@
 //! viewer that happily loads a hundred-megabyte generated bundle is a viewer
 //! that freezes.
 
-use git2::Oid;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::{diff::DiffOmission, error::AppError, repository::ActiveRepo};
+use crate::{
+    diff::DiffOmission,
+    error::AppError,
+    repository::{parse_commit_id, ActiveRepo},
+};
 
 /// Lines above which a file's contents are withheld until requested.
 pub const LARGE_FILE_LINE_LIMIT: u32 = 5_000;
@@ -140,8 +143,7 @@ pub fn get_file_content(
     request: &FileContentRequest,
 ) -> Result<FileContent, AppError> {
     let repo = active.open()?;
-    let oid = Oid::from_str(&request.commit_id)
-        .map_err(|_| AppError::InvalidInput("commit id is not a valid object id".to_owned()))?;
+    let oid = parse_commit_id(&request.commit_id)?;
     let commit = repo.find_commit(oid)?;
     let tree = commit.tree()?;
 

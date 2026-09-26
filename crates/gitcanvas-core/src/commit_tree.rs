@@ -1,10 +1,13 @@
 //! Bounded browsing of a commit's immutable file tree.
 
-use git2::{ObjectType, Oid};
+use git2::ObjectType;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::{error::AppError, repository::ActiveRepo};
+use crate::{
+    error::AppError,
+    repository::{parse_commit_id, ActiveRepo},
+};
 
 /// Maximum number of direct children returned for one directory request.
 pub const COMMIT_TREE_PAGE_SIZE: usize = 200;
@@ -58,8 +61,7 @@ pub fn get_commit_tree_page(
     request: &CommitTreeRequest,
 ) -> Result<CommitTreePage, AppError> {
     let repo = active.open()?;
-    let commit_oid = Oid::from_str(&request.commit_id)
-        .map_err(|_| AppError::InvalidInput("commit id is not a valid object id".to_owned()))?;
+    let commit_oid = parse_commit_id(&request.commit_id)?;
     let commit = repo.find_commit(commit_oid)?;
     let commit_tree = commit.tree()?;
 

@@ -968,7 +968,7 @@ intentar resolverlo.
 
 ---
 
-## 🔧 Fase H — Endurecimiento (13/21)
+## 🔧 Fase H — Endurecimiento (14/21)
 
 Salió de una auditoría de robustez del código completo (2026-09-26). Cada tarea corrige
 un hallazgo concreto y lleva su test; el estado de cada una es cierto en el commit que la
@@ -999,7 +999,7 @@ marca.
       cambios locales: con más de 250 archivos el resto no aparecía y los contadores
       mostraban solo los cargados. Ahora los totales vienen del backend y hay "Cargar N
       archivos más".
-- [ ] **H-13 — Un único parseo de ids de commit.**
+- [x] **H-13 — Un único parseo de ids de commit.**
 - [ ] **H-14 — Fuera el código fantasma.**
 - [ ] **H-15 — Checkout accesible desde la UI.**
 - [ ] **H-16 — Sin efectos secundarios durante el render de la tabla.**

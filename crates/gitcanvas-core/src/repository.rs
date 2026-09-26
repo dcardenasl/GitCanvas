@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use git2::{Repository, RepositoryOpenFlags};
+use git2::{Oid, Repository, RepositoryOpenFlags};
 use serde::Serialize;
 use specta::Type;
 
@@ -21,6 +21,25 @@ pub struct ActiveRepo {
 pub struct RepositoryInfo {
     pub path: String,
     pub name: String,
+}
+
+/// Parses a commit id received across the IPC boundary.
+///
+/// The one place ids are validated. `Oid::from_str` alone accepts an
+/// abbreviation and silently pads it, so a short id would name a commit that
+/// does not exist; requiring the full 40 hexadecimal digits keeps every command
+/// answering the same question the same way.
+///
+/// # Errors
+///
+/// Returns [`AppError::InvalidInput`] unless `value` is a complete SHA-1.
+pub(crate) fn parse_commit_id(value: &str) -> Result<Oid, AppError> {
+    if value.len() != 40 {
+        return Err(AppError::InvalidInput(
+            "Expected a complete 40-character commit SHA".into(),
+        ));
+    }
+    Oid::from_str(value).map_err(|_| AppError::InvalidInput("Invalid commit SHA".into()))
 }
 
 impl ActiveRepo {
@@ -88,5 +107,27 @@ impl ActiveRepo {
                 .unwrap_or(path)
                 .into(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_commit_id;
+
+    #[test]
+    fn only_a_complete_hexadecimal_sha_is_accepted() {
+        let full = "0123456789abcdef0123456789abcdef01234567";
+        assert_eq!(parse_commit_id(full).unwrap().to_string(), full);
+        assert!(parse_commit_id(&full.to_uppercase()).is_ok());
+
+        for rejected in [
+            "",
+            "abc123",
+            &full[..39],
+            &format!("{full}0"),
+            "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        ] {
+            assert!(parse_commit_id(rejected).is_err(), "accepted {rejected:?}");
+        }
     }
 }
