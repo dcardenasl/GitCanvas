@@ -428,7 +428,12 @@ export type WatchRequest = {
 	generation: number,
 };
 
-/**  A bounded page of local file summaries. */
+/**
+ *  A bounded page of local file summaries.
+ *
+ *  `next_cursor` is `"<revision>:<offset>"`: the position is bound to the listing
+ *  it was read from and is refused as stale once the changes have moved on.
+ */
 export type WorktreeDiffPage = {
 	side: WorktreeSide,
 	revision: string,
