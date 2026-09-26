@@ -75,28 +75,28 @@
 }
 
 .ref-pill--local {
-  border-color: rgb(79 209 197 / 35%);
-  background: rgb(79 209 197 / 12%);
-  color: #4fd1c5;
+  border-color: var(--local-ref-border);
+  background: var(--local-ref-surface);
+  color: var(--local-ref);
 }
 
 .ref-pill--remote {
-  border-color: rgb(141 137 127 / 35%);
-  background: rgb(141 137 127 / 10%);
-  color: var(--ink-muted);
+  border-color: var(--remote-ref-border);
+  background: var(--remote-ref-surface);
+  color: var(--remote-ref);
 }
 
 .ref-pill--tag {
-  border-color: rgb(217 196 138 / 30%);
-  background: rgb(217 196 138 / 10%);
-  color: #d9c48a;
+  border-color: var(--tag-ref-border);
+  background: var(--tag-ref-surface);
+  color: var(--tag-ref);
 }
 
 /* The checked-out branch carries the accent, so where you are stands out from
    where you could go. */
 .ref-pill--head {
   border-color: var(--accent);
-  background: rgb(240 166 62 / 14%);
+  background: var(--modified-ref-surface);
   color: var(--accent);
 }
 

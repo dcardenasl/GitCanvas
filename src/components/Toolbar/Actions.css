@@ -9,7 +9,7 @@
 }
 
 .actions__notice--error {
-  color: #f0a3a1;
+  color: var(--danger);
 }
 
 .confirm {
@@ -22,7 +22,7 @@
 }
 
 .confirm::backdrop {
-  background: rgb(0 0 0 / 55%);
+  background: var(--backdrop);
 }
 
 .confirm__title {
@@ -62,7 +62,7 @@
 
 .button--destructive {
   border-color: transparent;
-  background: #b3413f;
-  color: #fff;
+  background: var(--destructive);
+  color: var(--destructive-ink);
   font-weight: 600;
 }

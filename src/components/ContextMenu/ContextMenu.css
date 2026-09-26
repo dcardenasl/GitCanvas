@@ -8,7 +8,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-toolbar);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+  box-shadow: var(--menu-shadow);
 }
 
 .context-menu__item {

@@ -12,10 +12,11 @@ space for the commit message; allow horizontal graph scrolling for many lanes.
 
 ## Tokens
 
-- Background: #10131a; sidebar: #14161d; toolbar: #12141b.
-- Controls: #171a22; borders: #262b38; subtle dividers: #1c2029.
-- Primary text: #d3d6e0; secondary text: #a1a9bc (raised from the mockup for contrast).
-- Accent: #f0a63e, with dark #1a1206 foreground on filled buttons.
+- Dark theme: background #10131a; sidebar #14161d; toolbar #12141b; controls #171a22; borders #262b38; text #d3d6e0.
+- Light theme: background #f7f6f3; sidebar #f0efeb; toolbar #fbfaf8; controls white; borders #d9d6d0; text #25232c.
+- Orchid remains the brand accent (#c4a3ff dark, #6941a5 light); selected rows use a subtle violet tint in both themes.
+- Green and red remain reserved for added and removed code; graph lane hues stay stable and receive a subtle surface outline for separation.
+- Theme preference is window-level, persisted locally, defaults to dark, and can follow the operating system.
 - Sans: Hanken Grotesk, system-ui fallback. Code and SHAs: JetBrains Mono, monospace.
 - Controls: 7px corner radius, 13px text, explicit hover/focus/disabled states.
 

@@ -165,7 +165,7 @@
 
 .repository-picker__error {
   margin: 0;
-  color: #f0a3a1;
+  color: var(--danger);
   font-size: 12px;
 }
 

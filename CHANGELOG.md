@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Choose dark, light or system appearance.** The window-level preference is
+  saved locally, defaults to dark and follows operating-system changes when
+  system appearance is selected.
 - **Browse changed files as paths or a directory tree.** Commit and working-tree
   panels share the same view switcher; commit trees can include unchanged files
   and load directory contents in bounded pages while retaining change status.

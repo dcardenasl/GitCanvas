@@ -9,6 +9,7 @@ import { FileDiffView } from "../FileDiffView";
 import { GitHubPicker } from "../GitHubPicker";
 import { Resizer } from "../Resizer";
 import { Actions } from "../Toolbar";
+import { ThemeSelector } from "../ThemeSelector/ThemeSelector";
 import { INSPECTOR, SIDEBAR, useLayout } from "../../state/layout";
 import { LIVE_QUERIES, useLiveRepository } from "../../state/liveRepository";
 import { Sidebar } from "../Sidebar";
@@ -114,6 +115,7 @@ export function AppShell() {
           <CommitSearch commits={history.commits} onGo={revealCommit} />
         )}
         <div className="toolbar__spacer" />
+        <ThemeSelector />
         {repository !== null && (
           <Actions
             repositoryPath={repository.path}

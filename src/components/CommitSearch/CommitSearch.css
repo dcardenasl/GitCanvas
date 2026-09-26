@@ -34,5 +34,5 @@
 }
 
 .commit-search__status--empty {
-  color: #f0a3a1;
+  color: var(--danger);
 }
