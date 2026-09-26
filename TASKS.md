@@ -4,7 +4,7 @@
 > [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 
-**Estado:** Release · 81/84 tareas · última actualización 2026-09-09
+**Estado:** Release pendiente (R-4 a R-6, esperan a David) · 81/84 tareas del plan + Fase H 21/21 · última actualización 2026-09-26
 
 ## Cómo se usa este archivo
 
@@ -968,7 +968,23 @@ intentar resolverlo.
 
 ---
 
-## 🔧 Fase H — Endurecimiento (20/21)
+## ✅ Fase P — Trabajo posterior al release candidate (registro retroactivo)
+
+Se hizo entre el 2026-09-11 y el 2026-09-26 sin pasar por este archivo. Se anota aquí,
+con sus commits, para que el historial de tareas sea completo.
+
+- [x] **P-1 — Cambios locales en vivo.** Staged, unstaged y archivos nuevos en un snapshot
+      acotado con revisión, diffs bajo demanda y eventos del watcher por alcance.
+      → `d9bca2b` · `3caae8e` · `3e67882` · `f51ff76` · `08f3665`
+- [x] **P-2 — Navegación de archivos en árbol.** Vista ruta/árbol compartida y árbol
+      completo del commit paginado. → `2ee22d2`
+- [x] **P-3 — Fiabilidad ante `Too many open files`.** Reintento, límite de descriptores
+      elevado y operaciones git acotadas. → `5ba57fc` · `db0e60f`
+- [x] **P-4 — Apariencia clara, oscura o del sistema.** → `af40cf7`
+
+---
+
+## 🔧 Fase H — Endurecimiento (21/21)
 
 Salió de una auditoría de robustez del código completo (2026-09-26). Cada tarea corrige
 un hallazgo concreto y lleva su test; el estado de cada una es cierto en el commit que la
@@ -1016,7 +1032,9 @@ marca.
       para `state/` y `components/` además del 90 % de `graph-layout`. La suite pasó de 174 a
       291 tests y de 79 % a 94.6 % de líneas (Resizer, CommitSearch, GitHubPicker, la capa
       `lib/ipc`, session, layout, refs y AppShell estaban por debajo del 65 %).
-- [x] **H-21 — Documentación sincronizada.**
+- [x] **H-21 — Documentación sincronizada.** `ARCHITECTURE.md` (runtime, secretos, CSP,
+      paginado, errores), ADR 0003, `docs/SNAPSHOT.md` y este archivo, que llevaba desde el
+      2026-09-09 sin reflejar el trabajo posterior (arriba, Fase P).
 
 ---
 
