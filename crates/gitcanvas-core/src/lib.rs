@@ -28,6 +28,7 @@ pub mod github;
 pub mod history;
 pub mod refs;
 pub mod repository;
+pub mod retry;
 pub mod watch;
 pub mod worktree;
 

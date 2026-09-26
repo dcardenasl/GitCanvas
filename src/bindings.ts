@@ -126,6 +126,11 @@ export type AppError =
 { kind: "WatchDegraded"; message: string } |
 /**  The history represented by a pagination cursor is no longer available. */
 { kind: "StaleCursor"; message: string } |
+/**
+ *  The process ran out of file descriptors. Transient: retrying after other
+ *  work has released its handles usually succeeds.
+ */
+{ kind: "ResourceExhausted"; message: string } |
 /**  Background work could not complete. */
 { kind: "Internal"; message: string };
 

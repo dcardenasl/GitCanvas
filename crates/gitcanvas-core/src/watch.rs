@@ -2,7 +2,7 @@
 
 use std::{
     collections::BTreeSet,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::mpsc,
     thread::{self, JoinHandle},
     time::Duration,
@@ -10,9 +10,15 @@ use std::{
 
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
-use crate::{error::AppError, repository::ActiveRepo};
+use crate::{
+    error::{is_descriptor_exhaustion, AppError},
+    repository::ActiveRepo,
+    retry::retry_transient,
+};
 
 const SETTLE: Duration = Duration::from_millis(250);
+const WATCH_RETRIES: u32 = 3;
+const WATCH_BACKOFF: Duration = Duration::from_millis(100);
 const INTERESTING_METADATA: [&str; 5] = ["HEAD", "refs", "packed-refs", "ORIG_HEAD", "MERGE_HEAD"];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -87,6 +93,33 @@ fn classify(event: &Event, metadata: &[PathBuf]) -> Option<ChangeScope> {
     None
 }
 
+/// Subscribes `watcher` to `path`, retrying while the process is out of
+/// descriptors: each native subscription holds one, and they are released as
+/// other work finishes.
+fn subscribe(
+    watcher: &mut RecommendedWatcher,
+    path: &Path,
+    mode: RecursiveMode,
+    what: &str,
+) -> Result<(), AppError> {
+    retry_transient(WATCH_RETRIES, WATCH_BACKOFF, || {
+        watcher
+            .watch(path, mode)
+            .map_err(|error| match &error.kind {
+                notify::ErrorKind::Io(io) if is_descriptor_exhaustion(io) => {
+                    AppError::ResourceExhausted(error.to_string())
+                }
+                _ => AppError::WatchDegraded(format!("could not watch {what}: {error}")),
+            })
+    })
+    .map_err(|error| match error {
+        AppError::ResourceExhausted(message) => {
+            AppError::WatchDegraded(format!("could not watch {what}: {message}"))
+        }
+        other => other,
+    })
+}
+
 /// Watches Git metadata, debounced into one event.
 ///
 /// Working-tree content is intentionally not watched through a recursive
@@ -122,50 +155,17 @@ pub fn watch_repository(
     .map_err(|error| AppError::WatchDegraded(format!("could not create watcher: {error}")))?;
 
     for directory in &metadata {
-        let mut retries = 0u32;
-        loop {
-            match watcher.watch(directory, RecursiveMode::NonRecursive) {
-                Ok(()) => break,
-                Err(error) => {
-                    let err_msg = error.to_string();
-                    let is_emfile = err_msg.contains("Too many open files")
-                        || err_msg.contains("os error 24")
-                        || err_msg.contains("EMFILE");
-                    if is_emfile && retries < 3 {
-                        retries += 1;
-                        thread::sleep(Duration::from_millis(100 * u64::from(retries)));
-                        continue;
-                    }
-                    return Err(AppError::WatchDegraded(format!(
-                        "could not watch metadata: {error}"
-                    )));
-                }
-            }
-        }
+        subscribe(
+            &mut watcher,
+            directory,
+            RecursiveMode::NonRecursive,
+            "metadata",
+        )?;
     }
     for directory in &metadata {
         let refs = directory.join("refs");
         if refs.is_dir() {
-            let mut retries = 0u32;
-            loop {
-                match watcher.watch(&refs, RecursiveMode::Recursive) {
-                    Ok(()) => break,
-                    Err(error) => {
-                        let err_msg = error.to_string();
-                        let is_emfile = err_msg.contains("Too many open files")
-                            || err_msg.contains("os error 24")
-                            || err_msg.contains("EMFILE");
-                        if is_emfile && retries < 3 {
-                            retries += 1;
-                            thread::sleep(Duration::from_millis(100 * u64::from(retries)));
-                            continue;
-                        }
-                        return Err(AppError::WatchDegraded(format!(
-                            "could not watch refs: {error}"
-                        )));
-                    }
-                }
-            }
+            subscribe(&mut watcher, &refs, RecursiveMode::Recursive, "refs")?;
         }
     }
     let worker = thread::spawn(move || {
