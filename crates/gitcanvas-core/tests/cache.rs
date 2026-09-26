@@ -104,9 +104,21 @@ fn the_repository_in_use_is_never_evicted_by_its_own_arrival() {
 fn cache_entry_names_stay_one_flat_level_inside_the_cache() {
     // A repository name must never be able to escape the cache root.
     assert_eq!(
-        cache_entry_name("dcardenasl/gitcanvas"),
-        "dcardenasl_gitcanvas"
+        cache_entry_name("dcardenasl/gitcanvas").unwrap(),
+        "dcardenasl__gitcanvas"
     );
-    assert!(!cache_entry_name("../../etc/passwd").contains('/'));
-    assert!(!cache_entry_name("a/../../b").contains(std::path::MAIN_SEPARATOR));
+    assert!(cache_entry_name("../../etc/passwd").is_err());
+    assert!(cache_entry_name("a/../../b").is_err());
+}
+
+#[test]
+fn in_flight_clones_are_not_counted_as_cache_entries() {
+    let root = tempfile::tempdir().unwrap();
+    seed(root.path(), "real", 10, Duration::from_secs(10));
+    seed(root.path(), ".partial-real", 10, Duration::from_secs(10));
+
+    let status = status(root.path()).unwrap();
+
+    assert_eq!(status.entries.len(), 1);
+    assert_eq!(status.entries[0].name, "real");
 }

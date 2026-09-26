@@ -101,7 +101,9 @@ pub async fn clone_github_repository(
 ) -> Result<clone::ClonedRepository, AppError> {
     let destination = root.0.clone();
     let publish = Arc::clone(&emitter.0);
-    let name = full_name.clone();
+    // Validated before any work starts, so a malformed name fails here rather
+    // than after the transfer.
+    let entry = clone::cache_entry_name(&full_name)?;
 
     let cloned = blocking("clone_github_repository", move || {
         clone::clone_repository(&clone_url, &full_name, &destination, |progress| {
@@ -118,7 +120,7 @@ pub async fn clone_github_repository(
     // Retention runs after the clone, protecting the one that just arrived.
     let destination = root.0.clone();
     blocking("enforce_cache_retention", move || {
-        cache::enforce_retention(&destination, Some(&clone::cache_entry_name(&name)))
+        cache::enforce_retention(&destination, Some(&entry))
     })
     .await?;
 

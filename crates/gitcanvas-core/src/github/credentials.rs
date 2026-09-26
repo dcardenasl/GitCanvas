@@ -9,6 +9,7 @@
 //! is deprecated and slated for removal in Tauri v3, and it would additionally
 //! require either a user password or somewhere to keep its own encryption key.
 
+use git2::{Cred, CredentialType, Error as GitError, ErrorClass, ErrorCode};
 use keyring::Entry;
 
 use crate::error::AppError;
@@ -76,5 +77,90 @@ pub fn delete_token() -> Result<(), AppError> {
     match entry()?.delete_credential() {
         Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
         Err(error) => Err(AppError::from(error)),
+    }
+}
+
+/// Whether `url` is an HTTPS URL served by `github.com` itself.
+///
+/// The stored token is a GitHub credential. Handing it to any other host — a
+/// GitLab remote, a self-hosted server, a look-alike domain — would leak it, so
+/// this is the only test that gates its use. It is deliberately strict: a
+/// userinfo section (`https://github.com@evil.example/`), a port, or any
+/// subdomain makes the URL fail rather than be interpreted charitably.
+#[must_use]
+pub fn is_github_https(url: &str) -> bool {
+    let Some(rest) = url.strip_prefix("https://") else {
+        return false;
+    };
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or_default();
+    authority.eq_ignore_ascii_case("github.com")
+}
+
+/// Builds the credential callback shared by every network operation.
+///
+/// libgit2 asks again whenever the credentials it was given are refused, so a
+/// callback that always answers the same way loops forever against a bad
+/// token. Each credential kind is therefore offered at most once; after that
+/// the callback fails and the operation reports an authentication error.
+///
+/// The token is only offered to `github.com` over HTTPS, and it never leaves
+/// this function except into libgit2.
+pub(crate) fn callback() -> impl FnMut(&str, Option<&str>, CredentialType) -> Result<Cred, GitError>
+{
+    let mut offered_token = false;
+    let mut offered_ssh = false;
+    move |url, username, allowed| {
+        if allowed.contains(CredentialType::USER_PASS_PLAINTEXT)
+            && is_github_https(url)
+            && !offered_token
+        {
+            offered_token = true;
+            if let Ok(token) = read_token() {
+                return Cred::userpass_plaintext(&token, "");
+            }
+        }
+        if allowed.contains(CredentialType::SSH_KEY) && !offered_ssh {
+            offered_ssh = true;
+            if let Some(username) = username {
+                return Cred::ssh_key_from_agent(username);
+            }
+        }
+        Err(GitError::new(
+            ErrorCode::Auth,
+            ErrorClass::Http,
+            "no usable credentials for this remote",
+        ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_github_https;
+
+    #[test]
+    fn only_github_over_https_receives_the_token() {
+        for accepted in [
+            "https://github.com/owner/repo.git",
+            "https://GitHub.com/owner/repo",
+            "https://github.com",
+        ] {
+            assert!(is_github_https(accepted), "rejected {accepted}");
+        }
+        for rejected in [
+            "http://github.com/owner/repo.git",
+            "git@github.com:owner/repo.git",
+            "ssh://git@github.com/owner/repo.git",
+            "https://gitlab.com/owner/repo.git",
+            "https://github.com.evil.example/owner/repo.git",
+            "https://github.com@evil.example/owner/repo.git",
+            "https://user:pass@github.com/owner/repo.git",
+            "https://github.com:8443/owner/repo.git",
+            "https://api.github.com/owner/repo.git",
+            "https://evilgithub.com/owner/repo.git",
+            "file:///tmp/repo",
+            "",
+        ] {
+            assert!(!is_github_https(rejected), "accepted {rejected}");
+        }
     }
 }

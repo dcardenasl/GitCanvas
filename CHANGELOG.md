@@ -28,6 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Push confirmation** — the dialog now names the checked-out branch instead of the
   repository folder, and Push stays disabled on a detached HEAD.
+- **`clone_github_repository`** — every repository now gets its own cache entry
+  (`owner__name`), so two names that differed only by a separator no longer share a
+  folder and serve the wrong history. A cached entry cloned from another remote is
+  replaced, clones land atomically, and only `https://github.com` URLs that match the
+  repository are accepted.
 
 ### Changed
 

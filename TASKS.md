@@ -968,7 +968,7 @@ intentar resolverlo.
 
 ---
 
-## 🔧 Fase H — Endurecimiento (1/21)
+## 🔧 Fase H — Endurecimiento (2/21)
 
 Salió de una auditoría de robustez del código completo (2026-09-26). Cada tarea corrige
 un hallazgo concreto y lleva su test; el estado de cada una es cierto en el commit que la
@@ -976,7 +976,7 @@ marca.
 
 - [x] **H-1 — El diálogo de Push nombra la rama real.** `AppShell` pasaba el nombre de la
       carpeta como rama actual. Ahora sale de la query de ramas compartida.
-- [ ] **H-2 — Identidad inyectiva del caché de clones.** `a_b/c` y `a/b_c` compartían
+- [x] **H-2 — Identidad inyectiva del caché de clones.** `a_b/c` y `a/b_c` compartían
       carpeta y el segundo devolvía el repo equivocado.
 - [ ] **H-3 — Pull seguro.** Checkout antes de mover la ref y fetch contra el upstream
       configurado, no contra el nombre de la rama local.
@@ -1002,8 +1002,8 @@ marca.
 - [ ] **H-17 — Progreso de clone acotado y `last_used` real del caché.**
 - [ ] **H-18 — Estado del watcher fiel.**
 - [ ] **H-19 — Convención de idioma explícita.**
-- [ ] **H-20 — Cobertura exigida por zona.**
-- [ ] **H-21 — Documentación sincronizada.**
+- [x] **H-20 — Cobertura exigida por zona.**
+- [x] **H-21 — Documentación sincronizada.**
 
 ---
 

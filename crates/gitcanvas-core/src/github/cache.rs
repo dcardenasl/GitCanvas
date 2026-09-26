@@ -98,7 +98,8 @@ pub fn status(cache_root: &Path) -> Result<CacheStatus, AppError> {
         for entry in std::fs::read_dir(cache_root)? {
             let entry = entry?;
             let path = entry.path();
-            if !path.is_dir() {
+            // Dot-prefixed directories are in-flight clones, not cache entries.
+            if !path.is_dir() || entry.file_name().to_string_lossy().starts_with('.') {
                 continue;
             }
             entries.push(CacheEntry {
