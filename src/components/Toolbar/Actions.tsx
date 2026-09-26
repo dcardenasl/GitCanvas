@@ -1,112 +1,16 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-
-import type { CheckoutOutcome, DirtyPath } from "../../bindings";
-import {
-  checkoutBranch,
-  pullFastForward,
-  pushCurrentBranch,
-} from "../../lib/ipc";
-
 import { ConfirmDialog } from "./ConfirmDialog";
+import type { GitActions } from "./useGitActions";
 
 import "./Actions.css";
 
 export interface ActionsProps {
-  readonly repositoryPath: string;
+  readonly actions: GitActions;
   readonly currentBranch: string | null;
 }
 
-/** What the last action left for the user to read. */
-interface Notice {
-  readonly tone: "info" | "error";
-  readonly text: string;
-}
-
-/** Checkout, pull and push, with confirmation before anything destructive. */
-export function Actions({ repositoryPath, currentBranch }: ActionsProps) {
-  const queryClient = useQueryClient();
-  const [notice, setNotice] = useState<Notice | null>(null);
-  const [blocked, setBlocked] = useState<{
-    branch: string;
-    conflicts: DirtyPath[];
-  } | null>(null);
-  const [confirmPush, setConfirmPush] = useState(false);
-
-  const refresh = () => queryClient.invalidateQueries();
-
-  const checkout = useMutation({
-    mutationFn: ({ branch, force }: { branch: string; force: boolean }) =>
-      checkoutBranch(repositoryPath, branch, force),
-    onSuccess: (outcome: CheckoutOutcome, variables) => {
-      if (outcome.kind === "Blocked") {
-        setBlocked({ branch: variables.branch, conflicts: outcome.conflicts });
-        return;
-      }
-      setBlocked(null);
-      setNotice({ tone: "info", text: `En ${outcome.branch}.` });
-      void refresh();
-    },
-    onError: (error: Error) => {
-      setNotice({ tone: "error", text: error.message });
-    },
-  });
-
-  const pull = useMutation({
-    mutationFn: () => pullFastForward(repositoryPath),
-    onSuccess: (outcome) => {
-      switch (outcome.kind) {
-        case "UpToDate":
-          setNotice({ tone: "info", text: "Ya está al día." });
-          break;
-        case "FastForwarded":
-          setNotice({
-            tone: "info",
-            text: `Avanzó ${String(outcome.commits)} commits.`,
-          });
-          void refresh();
-          break;
-        case "DivergedRequiresMerge":
-          setNotice({
-            tone: "error",
-            text: `${outcome.local} y ${outcome.remote} divergieron. Hace falta un merge, que se resuelve desde la línea de comandos.`,
-          });
-          break;
-        case "NoUpstream":
-          setNotice({
-            tone: "error",
-            text: "Esta rama no tiene upstream configurado.",
-          });
-          break;
-      }
-    },
-    onError: (error: Error) => {
-      setNotice({ tone: "error", text: error.message });
-    },
-  });
-
-  const push = useMutation({
-    mutationFn: () => pushCurrentBranch(repositoryPath),
-    onSuccess: (outcome) => {
-      if (outcome.kind === "RejectedNonFastForward") {
-        setNotice({
-          tone: "error",
-          text: `El remoto rechazó el push de ${outcome.branch}: tiene commits que no están acá. Tráelos con pull antes de hacer push.`,
-        });
-        return;
-      }
-      setNotice({
-        tone: "info",
-        text: `${outcome.branch} enviada a ${outcome.remote}.`,
-      });
-      void refresh();
-    },
-    onError: (error: Error) => {
-      setNotice({ tone: "error", text: error.message });
-    },
-  });
-
-  const busy = checkout.isPending || pull.isPending || push.isPending;
+/** Pull and push buttons, and the confirmations and notices every action uses. */
+export function Actions({ actions, currentBranch }: ActionsProps) {
+  const { notice, blocked, busy } = actions;
 
   return (
     <>
@@ -114,21 +18,17 @@ export function Actions({ repositoryPath, currentBranch }: ActionsProps) {
         type="button"
         className="button"
         disabled={busy}
-        onClick={() => {
-          pull.mutate();
-        }}
+        onClick={actions.pull}
       >
-        {pull.isPending ? "Pull…" : "Pull"}
+        {actions.pulling ? "Pull…" : "Pull"}
       </button>
       <button
         type="button"
         className="button"
         disabled={busy || currentBranch === null}
-        onClick={() => {
-          setConfirmPush(true);
-        }}
+        onClick={actions.requestPush}
       >
-        {push.isPending ? "Push…" : "Push"}
+        {actions.pushing ? "Push…" : "Push"}
       </button>
 
       {notice !== null && (
@@ -144,7 +44,7 @@ export function Actions({ repositoryPath, currentBranch }: ActionsProps) {
         </p>
       )}
 
-      {confirmPush && currentBranch !== null && (
+      {actions.confirmingPush && currentBranch !== null && (
         <ConfirmDialog
           title="Enviar cambios"
           body={
@@ -155,13 +55,8 @@ export function Actions({ repositoryPath, currentBranch }: ActionsProps) {
             </p>
           }
           confirmLabel="Enviar"
-          onCancel={() => {
-            setConfirmPush(false);
-          }}
-          onConfirm={() => {
-            setConfirmPush(false);
-            push.mutate();
-          }}
+          onCancel={actions.cancelPush}
+          onConfirm={actions.confirmPush}
         />
       )}
 
@@ -192,14 +87,8 @@ export function Actions({ repositoryPath, currentBranch }: ActionsProps) {
             </>
           }
           confirmLabel="Descartar y cambiar"
-          onCancel={() => {
-            setBlocked(null);
-          }}
-          onConfirm={() => {
-            const branch = blocked.branch;
-            setBlocked(null);
-            checkout.mutate({ branch, force: true });
-          }}
+          onCancel={actions.cancelBlocked}
+          onConfirm={actions.confirmDiscardAndCheckout}
         />
       )}
     </>

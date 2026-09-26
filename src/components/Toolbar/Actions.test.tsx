@@ -21,6 +21,25 @@ vi.mock("../../lib/ipc", () => ({
 }));
 
 const { Actions } = await import("./Actions");
+const { useGitActions } = await import("./useGitActions");
+
+/** Wires the actions the way the shell does, plus a control that switches branch. */
+function Harness() {
+  const actions = useGitActions("/tmp/repo");
+  return (
+    <>
+      <Actions actions={actions} currentBranch="dev" />
+      <button
+        type="button"
+        onClick={() => {
+          actions.checkout("side");
+        }}
+      >
+        switch
+      </button>
+    </>
+  );
+}
 
 function renderActions() {
   const client = new QueryClient({
@@ -28,7 +47,7 @@ function renderActions() {
   });
   render(
     <QueryClientProvider client={client}>
-      <Actions repositoryPath="/tmp/repo" currentBranch="dev" />
+      <Harness />
     </QueryClientProvider>,
   );
 }
@@ -116,5 +135,53 @@ describe("Actions", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("upstream");
+  });
+
+  it("switches branch without force first", async () => {
+    checkoutBranch.mockResolvedValue({ kind: "Switched", branch: "side" });
+    renderActions();
+
+    await userEvent.click(screen.getByRole("button", { name: "switch" }));
+
+    await waitFor(() => {
+      expect(checkoutBranch).toHaveBeenCalledWith("/tmp/repo", "side", false);
+    });
+    expect((await screen.findByRole("status")).textContent).toContain("side");
+  });
+
+  it("asks before discarding work, and only then forces the checkout", async () => {
+    checkoutBranch.mockResolvedValueOnce({
+      kind: "Blocked",
+      conflicts: [{ path: "a.txt", staged: false }],
+    });
+    renderActions();
+
+    await userEvent.click(screen.getByRole("button", { name: "switch" }));
+    expect(await screen.findByText("Hay cambios sin guardar")).toBeDefined();
+    expect(screen.getByText("a.txt")).toBeDefined();
+    expect(checkoutBranch).toHaveBeenCalledTimes(1);
+
+    checkoutBranch.mockResolvedValueOnce({ kind: "Switched", branch: "side" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "Descartar y cambiar", hidden: true }),
+    );
+
+    await waitFor(() => {
+      expect(checkoutBranch).toHaveBeenLastCalledWith(
+        "/tmp/repo",
+        "side",
+        true,
+      );
+    });
+  });
+
+  it("does not start a checkout while another action is running", async () => {
+    pullFastForward.mockReturnValue(new Promise(() => undefined));
+    renderActions();
+
+    await userEvent.click(screen.getByRole("button", { name: "Pull" }));
+    await userEvent.click(screen.getByRole("button", { name: "switch" }));
+
+    expect(checkoutBranch).not.toHaveBeenCalled();
   });
 });

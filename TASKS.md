@@ -968,7 +968,7 @@ intentar resolverlo.
 
 ---
 
-## 🔧 Fase H — Endurecimiento (14/21)
+## 🔧 Fase H — Endurecimiento (15/21)
 
 Salió de una auditoría de robustez del código completo (2026-09-26). Cada tarea corrige
 un hallazgo concreto y lleva su test; el estado de cada una es cierto en el commit que la
@@ -1001,7 +1001,9 @@ marca.
       archivos más".
 - [x] **H-13 — Un único parseo de ids de commit.**
 - [ ] **H-14 — Fuera el código fantasma.**
-- [ ] **H-15 — Checkout accesible desde la UI.**
+- [x] **H-15 — Checkout accesible desde la UI.** Clic derecho sobre una rama local
+      → "Cambiar a …", con el mismo diálogo de confirmación antes de descartar trabajo.
+      Antes el backend, el diálogo y el comando existían pero nada los alcanzaba.
 - [ ] **H-16 — Sin efectos secundarios durante el render de la tabla.**
 - [ ] **H-17 — Progreso de clone acotado y `last_used` real del caché.**
 - [x] **H-18 — Estado del watcher fiel.**

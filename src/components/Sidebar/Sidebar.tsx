@@ -1,4 +1,7 @@
+import { useState } from "react";
+
 import { useBranches, useTags } from "../../state/refs";
+import { ContextMenu } from "../ContextMenu";
 import {
   selectedCommitId as getSelectedCommitId,
   useSession,
@@ -18,6 +21,8 @@ export interface RefTarget {
    */
   readonly commitId: string | null;
   readonly isHead?: boolean;
+  /** Set for local branches that can be checked out from this list. */
+  readonly checkoutBranch?: string;
 }
 
 export interface SidebarProps {
@@ -28,10 +33,15 @@ export interface SidebarProps {
    * every later one into the wrong column.
    */
   readonly hidden?: boolean;
+  /**
+   * Switches to a local branch. When omitted the list only navigates, and
+   * offers no checkout.
+   */
+  readonly onCheckout?: (branch: string) => void;
 }
 
 /** Branch and tag navigation for the open repository. */
-export function Sidebar({ hidden = false }: SidebarProps) {
+export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
   const repository = useSession((state) => state.repository);
   const selectedCommitId = useSession(getSelectedCommitId);
   const revealCommit = useSession((state) => state.revealCommit);
@@ -39,6 +49,15 @@ export function Sidebar({ hidden = false }: SidebarProps) {
 
   const branches = useBranches(path);
   const tags = useTags(path);
+
+  const [menu, setMenu] = useState<{
+    x: number;
+    y: number;
+    branch: string;
+  } | null>(null);
+  const openMenu = (x: number, y: number, branch: string) => {
+    setMenu({ x, y, branch });
+  };
 
   const local = (branches.data ?? []).filter((branch) => !branch.is_remote);
   const remote = (branches.data ?? []).filter((branch) => branch.is_remote);
@@ -51,9 +70,13 @@ export function Sidebar({ hidden = false }: SidebarProps) {
           name: branch.name,
           commitId: branch.target,
           isHead: branch.is_head,
+          ...(onCheckout !== undefined && !branch.is_head
+            ? { checkoutBranch: branch.name }
+            : {}),
         }))}
         selectedCommitId={selectedCommitId}
         onOpen={revealCommit}
+        onMenu={openMenu}
       />
 
       <RefGroup
@@ -76,6 +99,24 @@ export function Sidebar({ hidden = false }: SidebarProps) {
         selectedCommitId={selectedCommitId}
         onOpen={revealCommit}
       />
+
+      {menu !== null && onCheckout !== undefined && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          onClose={() => {
+            setMenu(null);
+          }}
+          items={[
+            {
+              label: `Cambiar a ${menu.branch}`,
+              onSelect: () => {
+                onCheckout(menu.branch);
+              },
+            },
+          ]}
+        />
+      )}
     </aside>
   );
 }
@@ -85,6 +126,8 @@ interface RefGroupProps {
   readonly refs: readonly RefTarget[];
   readonly selectedCommitId: string | null;
   readonly onOpen: (commitId: string) => void;
+  /** Opens the checkout menu for a branch, at the pointer. */
+  readonly onMenu?: (x: number, y: number, branch: string) => void;
   readonly monospace?: boolean;
 }
 
@@ -100,6 +143,7 @@ function RefGroup({
   refs,
   selectedCommitId,
   onOpen,
+  onMenu,
   monospace = false,
 }: RefGroupProps) {
   if (refs.length === 0) return null;
@@ -120,7 +164,11 @@ function RefGroup({
                 aria-current={current ? "true" : undefined}
                 title={
                   reachable
-                    ? `Ir al último commit de ${entry.name}`
+                    ? `Ir al último commit de ${entry.name}${
+                        entry.checkoutBranch === undefined
+                          ? ""
+                          : ". Clic derecho para cambiar a esta rama"
+                      }`
                     : `${entry.name} no apunta a un commit`
                 }
                 className={[
@@ -133,6 +181,16 @@ function RefGroup({
                   .join(" ")}
                 onClick={() => {
                   if (entry.commitId !== null) onOpen(entry.commitId);
+                }}
+                onContextMenu={(event) => {
+                  if (
+                    entry.checkoutBranch === undefined ||
+                    onMenu === undefined
+                  ) {
+                    return;
+                  }
+                  event.preventDefault();
+                  onMenu(event.clientX, event.clientY, entry.checkoutBranch);
                 }}
               >
                 <span className="sidebar__name">{entry.name}</span>

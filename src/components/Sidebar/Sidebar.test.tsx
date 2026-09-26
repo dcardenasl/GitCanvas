@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -32,13 +32,13 @@ function branch(overrides: Partial<BranchInfo> = {}): BranchInfo {
   };
 }
 
-function renderSidebar() {
+function renderSidebar(onCheckout?: (branch: string) => void) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
-      <Sidebar />
+      <Sidebar {...(onCheckout === undefined ? {} : { onCheckout })} />
     </QueryClientProvider>,
   );
 }
@@ -153,5 +153,51 @@ describe("Sidebar", () => {
     await screen.findByText("Local");
     expect(screen.queryByText("Remotas")).toBeNull();
     expect(screen.queryByText("Etiquetas")).toBeNull();
+  });
+
+  describe("checkout", () => {
+    it("offers to switch to a local branch that is not checked out", async () => {
+      const onCheckout = vi.fn();
+      renderSidebar(onCheckout);
+
+      fireEvent.contextMenu(
+        await screen.findByRole("button", { name: /^main/ }),
+      );
+      await userEvent.click(
+        await screen.findByRole("menuitem", { name: "Cambiar a main" }),
+      );
+
+      expect(onCheckout).toHaveBeenCalledWith("main");
+    });
+
+    it("offers nothing on the branch that is already checked out", async () => {
+      renderSidebar(vi.fn());
+
+      fireEvent.contextMenu(
+        await screen.findByRole("button", { name: /^dev/ }),
+      );
+
+      expect(screen.queryByRole("menu")).toBeNull();
+    });
+
+    it("offers nothing on remote branches or tags", async () => {
+      renderSidebar(vi.fn());
+
+      fireEvent.contextMenu(
+        await screen.findByRole("button", { name: /origin\/main/ }),
+      );
+
+      expect(screen.queryByRole("menu")).toBeNull();
+    });
+
+    it("offers no checkout when the caller cannot perform one", async () => {
+      renderSidebar();
+
+      fireEvent.contextMenu(
+        await screen.findByRole("button", { name: /^main/ }),
+      );
+
+      expect(screen.queryByRole("menu")).toBeNull();
+    });
   });
 });

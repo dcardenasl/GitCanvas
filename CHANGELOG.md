@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rejected, disk reads use a stable stat/read/stat policy, and binary, UTF-8,
   stale-read and resource-limit outcomes cross IPC as explicit errors.
 
+### Added
+
+- **Switch branch from the sidebar.** Right-click a local branch and choose "Cambiar a
+  …". A checkout that would lose local changes asks first, exactly as the backend
+  guard has always required.
+
 ### Fixed
 
 - **Push confirmation** — the dialog now names the checked-out branch instead of the

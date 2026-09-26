@@ -8,7 +8,7 @@ import { CommitSearch } from "../CommitSearch";
 import { FileDiffView } from "../FileDiffView";
 import { GitHubPicker } from "../GitHubPicker";
 import { Resizer } from "../Resizer";
-import { Actions } from "../Toolbar";
+import { Actions, useGitActions } from "../Toolbar";
 import { ThemeSelector } from "../ThemeSelector/ThemeSelector";
 import { INSPECTOR, SIDEBAR, useLayout } from "../../state/layout";
 import { LIVE_QUERIES, useLiveRepository } from "../../state/liveRepository";
@@ -40,6 +40,7 @@ export function AppShell() {
 
   const watcher = useLiveRepository(repository?.path ?? null);
   const currentBranch = useCurrentBranch(repository?.path ?? null);
+  const gitActions = useGitActions(repository?.path ?? null);
   const [sidebarPinned, setSidebarPinned] = useState(false);
   const revealCommit = useSession((state) => state.revealCommit);
   const setRepository = useSession((state) => state.openRepository);
@@ -119,10 +120,7 @@ export function AppShell() {
         <div className="toolbar__spacer" />
         <ThemeSelector />
         {repository !== null && (
-          <Actions
-            repositoryPath={repository.path}
-            currentBranch={currentBranch}
-          />
+          <Actions actions={gitActions} currentBranch={currentBranch} />
         )}
         <button
           type="button"
@@ -174,7 +172,7 @@ export function AppShell() {
             } as React.CSSProperties
           }
         >
-          <Sidebar hidden={collapseSidebar} />
+          <Sidebar hidden={collapseSidebar} onCheckout={gitActions.checkout} />
           <Resizer
             label="Ancho de la barra lateral"
             width={layout.sidebar}
