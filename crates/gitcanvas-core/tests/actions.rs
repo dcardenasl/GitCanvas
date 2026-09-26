@@ -251,15 +251,15 @@ fn push_from(repo: &Repository, refspec: &str) {
 /// A local repository tracking `origin/main` on a bare remote, plus a peer
 /// clone of the same remote.
 fn remotes() -> Remotes {
-    let bare = tempfile::tempdir().unwrap();
-    let remote = Repository::init_bare(bare.path()).unwrap();
+    let remote_dir = tempfile::tempdir().unwrap();
+    let remote = Repository::init_bare(remote_dir.path()).unwrap();
     remote.set_head("refs/heads/main").unwrap();
 
     let local = Fixture::new();
     let base = local.commit_files("refs/heads/main", "base", &[], 1_000, &[("a.txt", b"a\n")]);
     local.repo.set_head("refs/heads/main").unwrap();
     checkout_force(&local.repo);
-    local.repo.remote("origin", &url(&bare)).unwrap();
+    local.repo.remote("origin", &url(&remote_dir)).unwrap();
 
     assert!(matches!(
         push_current_branch(&open(&local)).unwrap(),
@@ -279,10 +279,10 @@ fn remotes() -> Remotes {
         .unwrap();
 
     let peer_dir = tempfile::tempdir().unwrap();
-    let peer = Repository::clone(&url(&bare), peer_dir.path()).unwrap();
+    let peer = Repository::clone(&url(&remote_dir), peer_dir.path()).unwrap();
     Remotes {
         local,
-        bare,
+        bare: remote_dir,
         peer_dir,
         peer,
         base,
