@@ -1,14 +1,14 @@
 # GitCanvas: Snapshot
-> Actualizado: 2026-09-11 · Detalle completo: [ASSET.md](ASSET.md)
+> Actualizado: 2026-09-26 · Detalle completo: [ASSET.md](ASSET.md)
 
 ## ⚡ Retomar en 30 segundos
 
 | Campo | Valor |
 |---|---|
 | **Etapa** | 🛠️ MVP implementado; endurecimiento en curso |
-| **Última sesión** | 2026-09-11 |
-| **¿Dónde quedé?** | Graph, historial, GitHub, acciones básicas, diffs de commits y cambios locales staged/unstaged/untracked están implementados. El contrato local usa snapshots acotados, detalles bajo demanda, confinamiento de rutas y fallback por fingerprint. |
-| **Próximo paso** | Completar la matriz de validación macOS y mantener los contratos generados sin drift |
+| **Última sesión** | 2026-09-26 |
+| **¿Dónde quedé?** | Auditoría de robustez completa y corregida (Fase H de `TASKS.md`): pull/push seguros contra remotos reales, token acotado a github.com, CSP, scheduling separado de lecturas y escrituras, caché de historia, layout incremental, paginado de cambios locales y checkout desde el sidebar. Antes: graph, historial, GitHub, acciones básicas, diffs de commits y cambios locales staged/unstaged/untracked están implementados. El contrato local usa snapshots acotados, detalles bajo demanda, confinamiento de rutas y fallback por fingerprint. |
+| **Próximo paso** | Cerrar la release v0.1.0 (R-4 a R-6 de `TASKS.md`, requieren la aprobación de David) y volver a correr la suite E2E completa |
 | **Bloqueante activo** | Ninguno |
 | **Decisión pendiente** | Ninguna: todas las decisiones técnicas de esta sesión quedaron cerradas |
 
