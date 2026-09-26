@@ -62,12 +62,6 @@ export interface VisibleWindow {
   readonly totalHeight: number;
 }
 
-/**
- * The commit history, virtualized.
- *
- * Only the rows in view plus an overscan margin are mounted, so a repository
- * with a hundred thousand commits costs the same as one with fifty.
- */
 /** A spoken description of a row: what it is, who wrote it, and when. */
 function rowLabel(
   commit: CommitInfo,
@@ -83,6 +77,12 @@ function rowLabel(
   return parts.join(". ");
 }
 
+/**
+ * The commit history, virtualized.
+ *
+ * Only the rows in view plus an overscan margin are mounted, so a repository
+ * with a hundred thousand commits costs the same as one with fifty.
+ */
 export function CommitTable({
   commits,
   selectedId,
@@ -145,11 +145,20 @@ export function CommitTable({
   const first = items[0];
   const last = items[items.length - 1];
 
-  // Ask for the next page once the tail is within the overscan margin, so the
-  // rows are already there by the time the user scrolls into them.
-  if (last !== undefined && onReachEnd && last.index >= commits.length - 1) {
-    queueMicrotask(onReachEnd);
-  }
+  // Ask for the next page once the last row is mounted, which the overscan
+  // margin makes happen before the user gets there. Done in an effect: asking
+  // is a side effect, and a render must be free to run twice or be discarded
+  // without triggering a request each time.
+  const reachedEnd = last !== undefined && last.index >= commits.length - 1;
+  const onReachEndRef = useRef(onReachEnd);
+  useEffect(() => {
+    onReachEndRef.current = onReachEnd;
+  });
+  useEffect(() => {
+    // Also re-runs when a page arrives, so a viewport taller than the rows
+    // loaded so far keeps asking until it is full or the history ends.
+    if (reachedEnd) onReachEndRef.current?.();
+  }, [reachedEnd, commits.length]);
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>, index: number) => {

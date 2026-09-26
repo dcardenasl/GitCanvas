@@ -123,6 +123,47 @@ describe("CommitTable", () => {
     });
   });
 
+  it("asks once per arrival, not once per render", () => {
+    withViewport(ROW_HEIGHT * 10);
+    const onReachEnd = vi.fn();
+    const props = {
+      selectedId: null,
+      onSelect: () => undefined,
+      maxLanes: 1,
+      onReachEnd,
+    };
+    const first = makeCommits(5);
+
+    const { rerender } = render(<CommitTable commits={first} {...props} />);
+    expect(onReachEnd).toHaveBeenCalledTimes(1);
+
+    // Rendering again with the same rows must not repeat the request.
+    rerender(<CommitTable commits={first} {...props} />);
+    rerender(<CommitTable commits={first} {...props} />);
+    expect(onReachEnd).toHaveBeenCalledTimes(1);
+
+    // A new page arriving while the tail is still in view asks for the next.
+    rerender(<CommitTable commits={makeCommits(8)} {...props} />);
+    expect(onReachEnd).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not ask while the tail is far below the viewport", () => {
+    withViewport(ROW_HEIGHT * 10);
+    const onReachEnd = vi.fn();
+
+    render(
+      <CommitTable
+        commits={makeCommits(5000)}
+        selectedId={null}
+        onSelect={() => undefined}
+        maxLanes={1}
+        onReachEnd={onReachEnd}
+      />,
+    );
+
+    expect(onReachEnd).not.toHaveBeenCalled();
+  });
+
   it("offsets the rows past the graph column instead of padding the list", () => {
     // Rows are absolutely positioned, and an absolutely positioned box resolves
     // `left` against the padding box — so padding on the list is ignored and the
