@@ -968,7 +968,7 @@ intentar resolverlo.
 
 ---
 
-## 🔧 Fase H — Endurecimiento (6/21)
+## 🔧 Fase H — Endurecimiento (8/21)
 
 Salió de una auditoría de robustez del código completo (2026-09-26). Cada tarea corrige
 un hallazgo concreto y lleva su test; el estado de cada una es cierto en el commit que la
@@ -985,9 +985,9 @@ marca.
 - [x] **H-5 — El token solo viaja a github.com.** Credenciales acotadas por host, con un
       solo intento, y `clone_url` validada.
 - [x] **H-6 — CSP definida y sin seam de entorno en producción.**
-- [ ] **H-7 — Clasificación tipada de `Too many open files`.** Una sola definición en
+- [x] **H-7 — Clasificación tipada de `Too many open files`.** Una sola definición en
       lugar de cuatro comparaciones de texto.
-- [ ] **H-8 — Gates separados y reintentos solo donde son seguros.** Las operaciones de
+- [x] **H-8 — Gates separados y reintentos solo donde son seguros.** Las operaciones de
       red no bloquean las lecturas; clone/push/pull no se reintentan.
 - [ ] **H-9 — Caché de historia completo hasta 2M de commits.** Evita repetir el toposort
       en cada página.

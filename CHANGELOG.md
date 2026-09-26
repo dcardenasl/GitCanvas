@@ -44,6 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Content security policy** — the window now ships a strict CSP (no inline or remote
   scripts, only the IPC bridge as a network target), and the GitHub API address can no
   longer be redirected through an environment variable.
+- **`Too many open files`** — reported as a typed `ResourceExhausted` error and retried
+  from one place, instead of four copies matching on message text.
+- **Git operation scheduling** — pushes, pulls and clones no longer share a gate with
+  history reads, so a slow network operation cannot freeze the window, and only
+  idempotent reads are retried.
 
 ### Changed
 

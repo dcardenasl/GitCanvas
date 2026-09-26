@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::{path::PathBuf, sync::Arc};
 
-use super::repository::blocking;
+use super::runtime::{read, write};
 
 /// Progress for an in-flight clone, emitted as it advances.
 #[derive(Debug, Clone, Serialize, Deserialize, Type, tauri_specta::Event)]
@@ -44,7 +44,7 @@ pub struct ProgressEmitter(pub Arc<dyn Fn(CloneProgressEvent) + Send + Sync>);
 #[tauri::command]
 #[specta::specta]
 pub async fn store_github_token(token: String) -> Result<GitHubAccount, AppError> {
-    blocking("store_github_token", move || {
+    write("store_github_token", move || {
         // Verified before it is stored, so a token that cannot work never
         // becomes the reason a later clone fails for no visible reason.
         let account = GitHubClient::new(token.clone()).verify()?;
@@ -58,21 +58,21 @@ pub async fn store_github_token(token: String) -> Result<GitHubAccount, AppError
 #[tauri::command]
 #[specta::specta]
 pub async fn has_github_token() -> Result<bool, AppError> {
-    blocking("has_github_token", || Ok(credentials::has_token())).await
+    read("has_github_token", || Ok(credentials::has_token())).await
 }
 
 /// Removes the stored token.
 #[tauri::command]
 #[specta::specta]
 pub async fn forget_github_token() -> Result<(), AppError> {
-    blocking("forget_github_token", credentials::delete_token).await
+    write("forget_github_token", credentials::delete_token).await
 }
 
 /// Lists the repositories the stored token can reach.
 #[tauri::command]
 #[specta::specta]
 pub async fn list_github_repositories() -> Result<Vec<GitHubRepository>, AppError> {
-    blocking("list_github_repositories", || {
+    write("list_github_repositories", || {
         GitHubClient::from_stored_token()?.list_repositories()
     })
     .await
@@ -93,7 +93,7 @@ pub async fn clone_github_repository(
     // than after the transfer.
     let entry = clone::cache_entry_name(&full_name)?;
 
-    let cloned = blocking("clone_github_repository", move || {
+    let cloned = write("clone_github_repository", move || {
         clone::clone_repository(&clone_url, &full_name, &destination, |progress| {
             publish(CloneProgressEvent {
                 full_name: full_name.clone(),
@@ -107,7 +107,7 @@ pub async fn clone_github_repository(
 
     // Retention runs after the clone, protecting the one that just arrived.
     let destination = root.0.clone();
-    blocking("enforce_cache_retention", move || {
+    write("enforce_cache_retention", move || {
         cache::enforce_retention(&destination, Some(&entry))
     })
     .await?;
@@ -122,7 +122,7 @@ pub async fn get_clone_cache_status(
     root: tauri::State<'_, CacheRoot>,
 ) -> Result<CacheStatus, AppError> {
     let destination = root.0.clone();
-    blocking("get_clone_cache_status", move || {
+    read("get_clone_cache_status", move || {
         cache::status(&destination)
     })
     .await

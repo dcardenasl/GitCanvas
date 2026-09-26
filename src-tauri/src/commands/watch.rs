@@ -13,7 +13,7 @@ use gitcanvas_core::{error::AppError, repository::ActiveRepo, watch};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use super::repository::blocking;
+use super::runtime::read;
 
 /// Announces a scoped change in the generation currently shown by the window.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -82,7 +82,7 @@ pub async fn watch_repository(
     let reported_path = request.path.clone();
     let generation = request.generation;
 
-    let watcher = blocking("watch_repository", move || {
+    let watcher = read("watch_repository", move || {
         let active = ActiveRepo::validate(&request.path)?;
         let publish = publish.clone();
         let reported_path = reported_path.clone();
@@ -105,10 +105,7 @@ pub async fn watch_repository(
     })
     .await;
 
-    let watcher = match watcher {
-        Ok(watcher) => watcher,
-        Err(error) => return Err(error),
-    };
+    let watcher = watcher?;
 
     // An older asynchronous start must never replace a newer repository watch.
     match current.active.lock() {

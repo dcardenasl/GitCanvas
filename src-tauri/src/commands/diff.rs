@@ -13,7 +13,7 @@ use gitcanvas_core::{
     },
 };
 
-use super::repository::blocking;
+use super::runtime::read;
 
 /// Reads a commit's changes against its first parent.
 ///
@@ -22,7 +22,7 @@ use super::repository::blocking;
 #[tauri::command]
 #[specta::specta]
 pub async fn get_commit_diff(path: String, request: DiffRequest) -> Result<CommitDiff, AppError> {
-    blocking("get_commit_diff", move || {
+    read("get_commit_diff", move || {
         diff::get_commit_diff(&ActiveRepo::validate(&path)?, &request)
     })
     .await
@@ -38,7 +38,7 @@ pub async fn get_file_content(
     path: String,
     request: FileContentRequest,
 ) -> Result<FileContent, AppError> {
-    blocking("get_file_content", move || {
+    read("get_file_content", move || {
         blob::get_file_content(&ActiveRepo::validate(&path)?, &request)
     })
     .await
@@ -51,7 +51,7 @@ pub async fn get_commit_tree_page(
     path: String,
     request: CommitTreeRequest,
 ) -> Result<CommitTreePage, AppError> {
-    blocking("get_commit_tree_page", move || {
+    read("get_commit_tree_page", move || {
         commit_tree::get_commit_tree_page(&ActiveRepo::validate(&path)?, &request)
     })
     .await
@@ -64,7 +64,7 @@ pub async fn get_worktree_snapshot(
     path: String,
     request: WorktreeSnapshotRequest,
 ) -> Result<WorktreeSnapshot, AppError> {
-    blocking("get_worktree_snapshot", move || {
+    read("get_worktree_snapshot", move || {
         worktree::get_worktree_snapshot(&ActiveRepo::validate(&path)?, &request)
     })
     .await
@@ -77,7 +77,7 @@ pub async fn get_worktree_file_diff(
     path: String,
     request: WorktreeFileDiffRequest,
 ) -> Result<WorktreeFileDiff, AppError> {
-    blocking("get_worktree_file_diff", move || {
+    read("get_worktree_file_diff", move || {
         worktree::get_worktree_file_diff(&ActiveRepo::validate(&path)?, &request)
     })
     .await
@@ -90,7 +90,7 @@ pub async fn get_worktree_file_content(
     path: String,
     request: WorktreeFileContentRequest,
 ) -> Result<WorktreeFileContent, AppError> {
-    blocking("get_worktree_file_content", move || {
+    read("get_worktree_file_content", move || {
         worktree::get_worktree_file_content(&ActiveRepo::validate(&path)?, &request)
     })
     .await
@@ -100,7 +100,7 @@ pub async fn get_worktree_file_content(
 #[tauri::command]
 #[specta::specta]
 pub async fn get_worktree_fingerprint(path: String) -> Result<WorktreeFingerprint, AppError> {
-    blocking("get_worktree_fingerprint", move || {
+    read("get_worktree_fingerprint", move || {
         worktree::get_worktree_fingerprint(&ActiveRepo::validate(&path)?)
     })
     .await

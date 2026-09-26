@@ -10,7 +10,7 @@ use gitcanvas_core::{
     repository::ActiveRepo,
 };
 
-use super::repository::blocking;
+use super::runtime::write;
 
 /// Checks out a local branch, refusing by default when work would be lost.
 #[tauri::command]
@@ -20,7 +20,7 @@ pub async fn checkout_branch(
     branch: String,
     force: bool,
 ) -> Result<CheckoutOutcome, AppError> {
-    blocking("checkout_branch", move || {
+    write("checkout_branch", move || {
         actions::checkout_branch(&ActiveRepo::validate(&path)?, &branch, force)
     })
     .await
@@ -30,7 +30,7 @@ pub async fn checkout_branch(
 #[tauri::command]
 #[specta::specta]
 pub async fn pull_fast_forward(path: String) -> Result<PullOutcome, AppError> {
-    blocking("pull_fast_forward", move || {
+    write("pull_fast_forward", move || {
         actions::pull_fast_forward(&ActiveRepo::validate(&path)?)
     })
     .await
@@ -40,7 +40,7 @@ pub async fn pull_fast_forward(path: String) -> Result<PullOutcome, AppError> {
 #[tauri::command]
 #[specta::specta]
 pub async fn push_current_branch(path: String) -> Result<PushOutcome, AppError> {
-    blocking("push_current_branch", move || {
+    write("push_current_branch", move || {
         actions::push_current_branch(&ActiveRepo::validate(&path)?)
     })
     .await
