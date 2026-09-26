@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rejected, disk reads use a stable stat/read/stat policy, and binary, UTF-8,
   stale-read and resource-limit outcomes cross IPC as explicit errors.
 
+### Fixed
+
+- **Push confirmation** — the dialog now names the checked-out branch instead of the
+  repository folder, and Push stays disabled on a detached HEAD.
+
 ### Changed
 
 - **Live repository reads and watchers.** Transient `Too many open files` errors

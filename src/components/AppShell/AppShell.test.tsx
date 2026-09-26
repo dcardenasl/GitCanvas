@@ -1,12 +1,19 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { CommitDiff, CommitInfo, HistoryPage } from "../../bindings";
+import type {
+  BranchInfo,
+  CommitDiff,
+  CommitInfo,
+  HistoryPage,
+} from "../../bindings";
 
 const getCommits = vi.fn<() => Promise<HistoryPage>>();
 const getCommitDiff = vi.fn<() => Promise<CommitDiff>>();
+const getBranches = vi.fn<() => Promise<BranchInfo[]>>();
 
 vi.mock("../../lib/ipc", () => ({
   getCommits: () => getCommits(),
@@ -35,7 +42,7 @@ vi.mock("../../lib/ipc", () => ({
     }),
   getWorktreeFingerprint: () => Promise.resolve({ revision: "revision" }),
   getWorktreeFileContent: () => Promise.resolve(null),
-  getBranches: () => Promise.resolve([]),
+  getBranches: () => getBranches(),
   getTags: () => Promise.resolve([]),
   getStartupRepository: () => Promise.resolve(null),
   getFileContent: () => Promise.resolve(null),
@@ -88,6 +95,8 @@ beforeEach(() => {
     next_cursor: null,
     roots: [],
   });
+  HTMLDialogElement.prototype.showModal = vi.fn();
+  getBranches.mockResolvedValue([]);
   getCommitDiff.mockResolvedValue({
     commit_id: COMMIT.id,
     parent_id: null,
@@ -177,5 +186,37 @@ describe("AppShell layout", () => {
     const body = container.querySelector<HTMLElement>(".app-shell__body");
     expect(body?.style.getPropertyValue("--sidebar-width")).toBe("0px");
     expect(body?.style.getPropertyValue("--sidebar-divider")).toBe("0px");
+  });
+});
+
+describe("AppShell push confirmation", () => {
+  it("names the checked-out branch, not the repository folder", async () => {
+    getBranches.mockResolvedValue([
+      {
+        name: "feature/login",
+        full_name: "refs/heads/feature/login",
+        target: COMMIT.id,
+        is_remote: false,
+        is_head: true,
+        is_symbolic: false,
+      },
+    ]);
+    renderShell();
+
+    const push = await screen.findByRole("button", { name: "Push" });
+    await waitFor(() => {
+      expect(push).toHaveProperty("disabled", false);
+    });
+    await userEvent.click(push);
+
+    const dialog = await screen.findByText(/Se van a enviar los commits de/);
+    expect(dialog.querySelector("strong")?.textContent).toBe("feature/login");
+  });
+
+  it("keeps push disabled while no branch is checked out", async () => {
+    renderShell();
+
+    const push = await screen.findByRole("button", { name: "Push" });
+    expect(push).toHaveProperty("disabled", true);
   });
 });

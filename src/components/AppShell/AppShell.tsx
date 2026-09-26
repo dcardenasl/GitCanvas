@@ -15,6 +15,7 @@ import { LIVE_QUERIES, useLiveRepository } from "../../state/liveRepository";
 import { Sidebar } from "../Sidebar";
 import { WorkingTreeDetailPanel } from "../WorkingTreeDetailPanel";
 import { useHistory } from "../../state/history";
+import { useCurrentBranch } from "../../state/refs";
 import {
   selectedCommitId as getSelectedCommitId,
   selectedFilePath as getSelectedFilePath,
@@ -38,6 +39,7 @@ export function AppShell() {
   const queryClient = useQueryClient();
 
   const watcher = useLiveRepository(repository?.path ?? null);
+  const currentBranch = useCurrentBranch(repository?.path ?? null);
   const [sidebarPinned, setSidebarPinned] = useState(false);
   const revealCommit = useSession((state) => state.revealCommit);
   const setRepository = useSession((state) => state.openRepository);
@@ -119,7 +121,7 @@ export function AppShell() {
         {repository !== null && (
           <Actions
             repositoryPath={repository.path}
-            currentBranch={repository.name}
+            currentBranch={currentBranch}
           />
         )}
         <button

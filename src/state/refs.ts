@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
+import type { BranchInfo, TagInfo } from "../bindings";
 import { getBranches, getTags } from "../lib/ipc";
 
 /** A ref that can be shown as a badge on the commit it points at. */
@@ -20,6 +21,50 @@ const ORDER: Record<RefBadge["kind"], number> = {
 };
 
 /**
+ * Branches of the open repository.
+ *
+ * The one place the branch query is defined: the sidebar, the row badges and
+ * the toolbar all read it, so they share a cache entry and can never disagree
+ * about which branch is checked out.
+ */
+export function useBranches(path: string | null) {
+  return useQuery<BranchInfo[]>({
+    queryKey: ["branches", path],
+    enabled: path !== null,
+    queryFn: () => {
+      if (path === null) throw new Error("No repository is open");
+      return getBranches(path);
+    },
+  });
+}
+
+/** Tags of the open repository. See {@link useBranches}. */
+export function useTags(path: string | null) {
+  return useQuery<TagInfo[]>({
+    queryKey: ["tags", path],
+    enabled: path !== null,
+    queryFn: () => {
+      if (path === null) throw new Error("No repository is open");
+      return getTags(path);
+    },
+  });
+}
+
+/**
+ * The checked-out local branch, or `null` while unknown or on a detached HEAD.
+ *
+ * Deliberately not derived from the repository's folder name: a folder says
+ * nothing about which branch a push would send.
+ */
+export function useCurrentBranch(path: string | null): string | null {
+  const branches = useBranches(path);
+  const head = branches.data?.find(
+    (branch) => branch.is_head && !branch.is_remote,
+  );
+  return head?.name ?? null;
+}
+
+/**
  * Refs grouped by the commit they point at.
  *
  * Built from the branch and tag queries the sidebar already runs, so showing
@@ -29,23 +74,8 @@ const ORDER: Record<RefBadge["kind"], number> = {
 export function useRefsByCommit(
   path: string | null,
 ): ReadonlyMap<string, readonly RefBadge[]> {
-  const branches = useQuery({
-    queryKey: ["branches", path],
-    enabled: path !== null,
-    queryFn: () => {
-      if (path === null) throw new Error("No repository is open");
-      return getBranches(path);
-    },
-  });
-
-  const tags = useQuery({
-    queryKey: ["tags", path],
-    enabled: path !== null,
-    queryFn: () => {
-      if (path === null) throw new Error("No repository is open");
-      return getTags(path);
-    },
-  });
+  const branches = useBranches(path);
+  const tags = useTags(path);
 
   return useMemo(() => {
     const byCommit = new Map<string, RefBadge[]>();

@@ -968,6 +968,45 @@ intentar resolverlo.
 
 ---
 
+## 🔧 Fase H — Endurecimiento (1/21)
+
+Salió de una auditoría de robustez del código completo (2026-09-26). Cada tarea corrige
+un hallazgo concreto y lleva su test; el estado de cada una es cierto en el commit que la
+marca.
+
+- [x] **H-1 — El diálogo de Push nombra la rama real.** `AppShell` pasaba el nombre de la
+      carpeta como rama actual. Ahora sale de la query de ramas compartida.
+- [ ] **H-2 — Identidad inyectiva del caché de clones.** `a_b/c` y `a/b_c` compartían
+      carpeta y el segundo devolvía el repo equivocado.
+- [ ] **H-3 — Pull seguro.** Checkout antes de mover la ref y fetch contra el upstream
+      configurado, no contra el nombre de la rama local.
+- [ ] **H-4 — Push detecta el rechazo del remoto.** Vía `push_update_reference`, no solo
+      por el código de error local.
+- [ ] **H-5 — El token solo viaja a github.com.** Credenciales acotadas por host, con un
+      solo intento, y `clone_url` validada.
+- [ ] **H-6 — CSP definida y sin seam de entorno en producción.**
+- [ ] **H-7 — Clasificación tipada de `Too many open files`.** Una sola definición en
+      lugar de cuatro comparaciones de texto.
+- [ ] **H-8 — Gates separados y reintentos solo donde son seguros.** Las operaciones de
+      red no bloquean las lecturas; clone/push/pull no se reintentan.
+- [ ] **H-9 — Caché de historia completo hasta 2M de commits.** Evita repetir el toposort
+      en cada página.
+- [ ] **H-10 — Layout incremental y calculado una sola vez.**
+- [ ] **H-11 — Polling del fingerprint adaptativo.**
+- [ ] **H-12 — Cursor de local changes ligado a su revisión.** Regla 8 aclarada para
+      árboles inmutables.
+- [ ] **H-13 — Un único parseo de ids de commit.**
+- [ ] **H-14 — Fuera el código fantasma.**
+- [ ] **H-15 — Checkout accesible desde la UI.**
+- [ ] **H-16 — Sin efectos secundarios durante el render de la tabla.**
+- [ ] **H-17 — Progreso de clone acotado y `last_used` real del caché.**
+- [ ] **H-18 — Estado del watcher fiel.**
+- [ ] **H-19 — Convención de idioma explícita.**
+- [ ] **H-20 — Cobertura exigida por zona.**
+- [ ] **H-21 — Documentación sincronizada.**
+
+---
+
 ## 🔴 En progreso — Release v0.1.0
 
 > Ejecutado con el skill `/release`. Ver `CLAUDE.md` para el procedimiento completo.

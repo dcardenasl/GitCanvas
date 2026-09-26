@@ -1,6 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { getBranches, getTags } from "../../lib/ipc";
+import { useBranches, useTags } from "../../state/refs";
 import {
   selectedCommitId as getSelectedCommitId,
   useSession,
@@ -39,23 +37,8 @@ export function Sidebar({ hidden = false }: SidebarProps) {
   const revealCommit = useSession((state) => state.revealCommit);
   const path = repository?.path ?? null;
 
-  const branches = useQuery({
-    queryKey: ["branches", path],
-    enabled: path !== null,
-    queryFn: () => {
-      if (path === null) throw new Error("No repository is open");
-      return getBranches(path);
-    },
-  });
-
-  const tags = useQuery({
-    queryKey: ["tags", path],
-    enabled: path !== null,
-    queryFn: () => {
-      if (path === null) throw new Error("No repository is open");
-      return getTags(path);
-    },
-  });
+  const branches = useBranches(path);
+  const tags = useTags(path);
 
   const local = (branches.data ?? []).filter((branch) => !branch.is_remote);
   const remote = (branches.data ?? []).filter((branch) => branch.is_remote);
