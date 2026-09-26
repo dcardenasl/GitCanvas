@@ -73,21 +73,9 @@ pub async fn forget_github_token() -> Result<(), AppError> {
 #[specta::specta]
 pub async fn list_github_repositories() -> Result<Vec<GitHubRepository>, AppError> {
     blocking("list_github_repositories", || {
-        GitHubClient::new(credentials_token()?).list_repositories()
+        GitHubClient::from_stored_token()?.list_repositories()
     })
     .await
-}
-
-fn credentials_token() -> Result<String, AppError> {
-    // Reading the token inside the domain crate keeps it out of this layer's
-    // stack frames; this indirection exists only to give a clear error.
-    if credentials::has_token() {
-        gitcanvas_core::github::api_token()
-    } else {
-        Err(AppError::InvalidInput(
-            "no GitHub token is stored".to_owned(),
-        ))
-    }
 }
 
 /// Clones a repository into the application cache, emitting progress as it goes.

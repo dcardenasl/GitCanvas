@@ -200,6 +200,40 @@ mod tests {
         super::normalize_generated_bindings(std::path::Path::new("../src/bindings.ts")).unwrap();
     }
 
+    /// The shipped window has a content security policy, and a strict one.
+    ///
+    /// It was `null` once, which leaves a window that holds a GitHub token and
+    /// renders repository text with nothing limiting what it may load or run.
+    /// The development policy may be looser for the dev server, so only the
+    /// production one is held to this.
+    #[test]
+    fn the_production_csp_is_restrictive() {
+        let config: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let csp = config["app"]["security"]["csp"]
+            .as_str()
+            .expect("the production CSP must be set");
+        let directive = |name: &str| {
+            csp.split(';')
+                .map(str::trim)
+                .find_map(|part| part.strip_prefix(name).map(str::trim))
+                .unwrap_or_default()
+                .to_owned()
+        };
+        assert!(csp.contains("default-src 'self'"));
+        for name in ["script-src ", "style-src ", "default-src "] {
+            let value = directive(name);
+            assert!(!value.contains("'unsafe-inline'"), "{name}{value}");
+            assert!(!value.contains("'unsafe-eval'"), "{name}{value}");
+            assert!(!value.split(' ').any(|token| token == "*"), "{name}{value}");
+        }
+        assert_eq!(directive("object-src "), "'none'");
+        assert!(
+            !csp.contains("http://") || csp.matches("http://").count() == 1,
+            "only the IPC bridge may be reached over http: {csp}"
+        );
+    }
+
     /// The dialog plugin is actually registered, not merely depended on.
     ///
     /// It was silently missing once: the crate was in `Cargo.toml`, so it

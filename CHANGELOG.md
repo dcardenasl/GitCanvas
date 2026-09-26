@@ -41,6 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   outcome or an error. A branch pushes to the name it tracks.
 - **GitHub token** — offered only to `https://github.com`, once per kind, so a remote
   on another host never receives it and a rejected token cannot loop.
+- **Content security policy** — the window now ships a strict CSP (no inline or remote
+  scripts, only the IPC bridge as a network target), and the GitHub API address can no
+  longer be redirected through an environment variable.
 
 ### Changed
 

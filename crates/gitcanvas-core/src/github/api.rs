@@ -8,9 +8,11 @@
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::error::AppError;
+use crate::{error::AppError, github::credentials};
 
-/// Base URL, overridable so tests can point at a local server.
+/// The GitHub REST API. Only [`GitHubClient::with_base_url`] can point a client
+/// elsewhere, and only tests call it: reading the address from the environment
+/// would let anything that can set a variable redirect the token.
 const DEFAULT_BASE_URL: &str = "https://api.github.com";
 /// GitHub requires a User-Agent and rejects requests without one.
 const USER_AGENT: &str = concat!("GitCanvas/", env!("CARGO_PKG_VERSION"));
@@ -63,12 +65,23 @@ impl GitHubClient {
     pub fn new(token: String) -> Self {
         Self {
             token,
-            base_url: std::env::var("GITCANVAS_GITHUB_API")
-                .unwrap_or_else(|_| DEFAULT_BASE_URL.to_owned()),
+            base_url: DEFAULT_BASE_URL.to_owned(),
         }
     }
 
-    /// Builds a client pointed at a specific base URL, for tests.
+    /// Builds a client from the token in the OS keychain.
+    ///
+    /// The secret is read here, inside the crate, so callers never hold it.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AppError::InvalidInput`] when no token is stored.
+    pub fn from_stored_token() -> Result<Self, AppError> {
+        credentials::read_token().map(Self::new)
+    }
+
+    /// Builds a client pointed at a specific base URL, for tests against a local
+    /// server.
     #[must_use]
     pub fn with_base_url(token: String, base_url: String) -> Self {
         Self { token, base_url }
