@@ -1,3 +1,4 @@
+import { errorKind } from "./errors";
 import { IpcError } from "./ipc";
 
 /** How many times a transient failure is retried before it is reported. */
@@ -25,4 +26,22 @@ export function shouldRetryQuery(
 /** Backoff between retries: 100 ms, 200 ms, 400 ms, capped at one second. */
 export function queryRetryDelay(attemptIndex: number): number {
   return Math.min(100 * 2 ** attemptIndex, 1000);
+}
+
+/**
+ * Retry policy for reads of the local changes.
+ *
+ * On top of descriptor exhaustion, a listing torn by an edit that landed while
+ * it was being read (`WorktreeChanged`) is worth reading again: a second read
+ * sees a settled tree. A snapshot that gave up on the first tear would leave the
+ * view on the previous revision until something else happened to change.
+ */
+export function shouldRetryLocalRead(
+  failureCount: number,
+  error: unknown,
+): boolean {
+  return (
+    shouldRetryQuery(failureCount, error) ||
+    (errorKind(error) === "WorktreeChanged" && failureCount < MAX_RETRIES)
+  );
 }

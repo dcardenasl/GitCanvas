@@ -35,7 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Reading a local file** — editing the file (or staging it) while its diff was open
   closed the view, because the read was refused as stale and any failure closed it. The
   view now takes the new revision and reads again, and closes only when the file really
-  cannot be shown.
+  cannot be shown. A local-changes listing torn by an edit that lands while it is being
+  read is read again instead of leaving the view on the previous revision.
 - **Error messages** — failures from the engine are introduced by a Spanish summary of
   their kind instead of appearing as raw English text in an otherwise Spanish interface.
 - **Push confirmation** — the dialog now names the checked-out branch instead of the

@@ -420,6 +420,83 @@ describe("FileDiffView", () => {
       });
     });
 
+    it("closes once the re-read finds the file is gone", async () => {
+      getWorktreeSnapshot.mockResolvedValueOnce(worktreeSnapshot([local()]));
+      getWorktreeFileDiff.mockRejectedValueOnce(
+        Object.assign(new Error("repository revision is stale"), {
+          kind: "WorktreeChanged",
+        }),
+      );
+      // By the next revision the file has been deleted.
+      getWorktreeSnapshot.mockResolvedValue({
+        ...worktreeSnapshot([]),
+        revision: "newer",
+      });
+      getWorktreeFileDiff.mockRejectedValue(
+        Object.assign(new Error("local.ts"), {
+          kind: "WorktreeFileUnavailable",
+        }),
+      );
+      open();
+
+      await vi.waitFor(() => {
+        expect(useSession.getState().selection).toEqual({ kind: "history" });
+      });
+    });
+
+    it("closes when the file is deleted while it is showing", async () => {
+      // The real order of events: it is on screen, then the watcher reports a
+      // change and every local query is invalidated at once. The open file's
+      // read is repeated with the old revision and refused; the snapshot comes
+      // back with a new one under which the file no longer exists.
+      getWorktreeSnapshot.mockResolvedValueOnce(worktreeSnapshot([local()]));
+      getWorktreeFileDiff.mockResolvedValueOnce({
+        side: "unstaged",
+        revision: "revision",
+        file: local(),
+      });
+      useSession.setState({
+        selection: { kind: "worktree", side: "unstaged", filePath: "local.ts" },
+      });
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      render(
+        <QueryClientProvider client={client}>
+          <FileDiffView
+            repositoryPath="/tmp/repo"
+            path="local.ts"
+            worktree={{ side: "unstaged" }}
+          />
+        </QueryClientProvider>,
+      );
+      expect(await screen.findByText("const b = 3;")).toBeDefined();
+
+      getWorktreeSnapshot.mockResolvedValue({
+        ...worktreeSnapshot([]),
+        revision: "newer",
+      });
+      getWorktreeFileDiff.mockImplementation((_path, request) =>
+        Promise.reject(
+          Object.assign(new Error("gone"), {
+            kind:
+              (request as { expected_revision: string }).expected_revision ===
+              "newer"
+                ? "WorktreeFileUnavailable"
+                : "WorktreeChanged",
+          }),
+        ),
+      );
+      await client.invalidateQueries({ queryKey: ["worktree", "/tmp/repo"] });
+      await client.invalidateQueries({
+        queryKey: ["worktree-file-diff", "/tmp/repo"],
+      });
+
+      await vi.waitFor(() => {
+        expect(useSession.getState().selection).toEqual({ kind: "history" });
+      });
+    });
+
     it("closes when the file can no longer be shown", async () => {
       getWorktreeSnapshot.mockResolvedValue(worktreeSnapshot([local()]));
       getWorktreeFileDiff.mockRejectedValue(

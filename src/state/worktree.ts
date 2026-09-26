@@ -9,6 +9,7 @@ import type {
   WorktreeSnapshot,
   WorktreeSnapshotRequest,
 } from "../bindings";
+import { shouldRetryLocalRead } from "../lib/query-retry";
 import {
   getWorktreeFileDiff,
   getWorktreeFingerprint,
@@ -40,6 +41,7 @@ export function useWorktreeSnapshot(
     },
     placeholderData: keepPreviousData,
     staleTime: 1_000,
+    retry: shouldRetryLocalRead,
   });
 }
 
@@ -232,6 +234,7 @@ export function useWorktreeFingerprint(
       return fingerprint;
     },
     staleTime: 0,
+    retry: shouldRetryLocalRead,
     refetchInterval: () =>
       pollInterval(
         degraded ? DEGRADED_POLL_INTERVAL : POLL_INTERVAL,

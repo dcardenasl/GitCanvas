@@ -453,3 +453,68 @@ fn rejects_unresolved_index_conflicts() {
     .unwrap_err();
     assert!(matches!(error, AppError::WorktreeFileUnavailable(_)));
 }
+
+#[test]
+fn a_staged_file_that_is_then_removed_reads_as_unavailable_not_stale() {
+    // The order an editor and `git` produce: stage a new file, change and
+    // re-stage it, then delete it and stage the deletion.
+    let fixture = Fixture::new();
+    let commit = fixture.commit_files(
+        "refs/heads/main",
+        "initial",
+        &[],
+        1_000,
+        &[("a.txt", b"one\n")],
+    );
+    clean_checkout(&fixture, commit);
+    let file = fixture.dir.path().join("staged.txt");
+    fs::write(&file, "before\n").unwrap();
+    let mut index = fixture.repo.index().unwrap();
+    index.add_path(Path::new("staged.txt")).unwrap();
+    index.write().unwrap();
+    fs::write(&file, "after\n").unwrap();
+    index.add_path(Path::new("staged.txt")).unwrap();
+    index.write().unwrap();
+
+    let repository = active(&fixture);
+    let request = |expected: &str| WorktreeFileDiffRequest {
+        side: WorktreeSide::Staged,
+        path: "staged.txt".into(),
+        expected_revision: Some(expected.to_owned()),
+        expand: false,
+    };
+    let snapshot = |repository: &ActiveRepo| {
+        get_worktree_snapshot(
+            repository,
+            &WorktreeSnapshotRequest {
+                staged_cursor: None,
+                unstaged_cursor: None,
+                limit: None,
+                expected_revision: None,
+            },
+        )
+        .unwrap()
+    };
+    let before = snapshot(&repository);
+    assert!(get_worktree_file_diff(&repository, &request(&before.revision)).is_ok());
+
+    fs::remove_file(&file).unwrap();
+    let mut index = fixture.repo.index().unwrap();
+    index.remove_path(Path::new("staged.txt")).unwrap();
+    index.write().unwrap();
+
+    // The old revision is refused as stale...
+    let stale = get_worktree_file_diff(&repository, &request(&before.revision)).unwrap_err();
+    assert!(matches!(stale, AppError::WorktreeChanged(_)), "{stale:?}");
+    // ...and under the new one the file is simply gone. This is what lets the
+    // interface close the view instead of retrying forever.
+    let after = snapshot(&repository);
+    assert_ne!(after.revision, before.revision);
+    let gone = get_worktree_file_diff(&repository, &request(&after.revision)).unwrap_err();
+    assert!(
+        matches!(gone, AppError::WorktreeFileUnavailable(_)),
+        "{gone:?}"
+    );
+    // And the revision is stable while nothing changes.
+    assert_eq!(snapshot(&repository).revision, after.revision);
+}

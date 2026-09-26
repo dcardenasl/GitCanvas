@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { IpcError } from "./ipc";
-import { queryRetryDelay, shouldRetryQuery } from "./query-retry";
+import {
+  queryRetryDelay,
+  shouldRetryLocalRead,
+  shouldRetryQuery,
+} from "./query-retry";
 
 describe("shouldRetryQuery", () => {
   const exhausted = new IpcError({
@@ -29,5 +33,27 @@ describe("shouldRetryQuery", () => {
     expect([0, 1, 2, 3, 4].map(queryRetryDelay)).toEqual([
       100, 200, 400, 800, 1000,
     ]);
+  });
+});
+
+describe("shouldRetryLocalRead", () => {
+  const torn = new IpcError({
+    kind: "WorktreeChanged",
+    message: "changed while reading",
+  });
+
+  it("also retries a listing torn by a concurrent edit, a bounded number of times", () => {
+    expect(shouldRetryLocalRead(0, torn)).toBe(true);
+    expect(shouldRetryLocalRead(3, torn)).toBe(false);
+  });
+
+  it("keeps the general policy for everything else", () => {
+    const exhausted = new IpcError({ kind: "ResourceExhausted", message: "x" });
+    expect(shouldRetryLocalRead(0, exhausted)).toBe(true);
+    expect(
+      shouldRetryLocalRead(0, new IpcError({ kind: "Git", message: "x" })),
+    ).toBe(false);
+    // The general policy does not retry a torn read: only local reads do.
+    expect(shouldRetryQuery(0, torn)).toBe(false);
   });
 });
