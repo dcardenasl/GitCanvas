@@ -968,7 +968,7 @@ intentar resolverlo.
 
 ---
 
-## 🔧 Fase H — Endurecimiento (8/21)
+## 🔧 Fase H — Endurecimiento (9/21)
 
 Salió de una auditoría de robustez del código completo (2026-09-26). Cada tarea corrige
 un hallazgo concreto y lleva su test; el estado de cada una es cierto en el commit que la
@@ -989,7 +989,7 @@ marca.
       lugar de cuatro comparaciones de texto.
 - [x] **H-8 — Gates separados y reintentos solo donde son seguros.** Las operaciones de
       red no bloquean las lecturas; clone/push/pull no se reintentan.
-- [ ] **H-9 — Caché de historia completo hasta 2M de commits.** Evita repetir el toposort
+- [x] **H-9 — Caché de historia completo hasta 2M de commits.** Evita repetir el toposort
       en cada página.
 - [ ] **H-10 — Layout incremental y calculado una sola vez.**
 - [ ] **H-11 — Polling del fingerprint adaptativo.**

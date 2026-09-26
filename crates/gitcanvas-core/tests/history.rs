@@ -9,7 +9,7 @@ mod support;
 
 use gitcanvas_core::{
     error::AppError,
-    history::{get_commits, HistoryRequest},
+    history::{get_commits, HistoryReader, HistoryRequest},
     repository::ActiveRepo,
 };
 use support::Fixture;
@@ -247,4 +247,75 @@ fn cached_walk_matches_uncached_pages_and_ref_updates() {
         reader.get_commits(&active, &next).unwrap().commits[0].id,
         side.to_string()
     );
+}
+
+/// Walks a whole history page by page and returns every commit id in order.
+fn page_through(
+    read: impl Fn(&HistoryRequest) -> gitcanvas_core::history::HistoryPage,
+    limit: u16,
+) -> Vec<String> {
+    let mut ids = Vec::new();
+    let mut next = request(limit);
+    loop {
+        let page = read(&next);
+        ids.extend(page.commits.iter().map(|commit| commit.id.clone()));
+        match page.next_cursor {
+            Some(cursor) => {
+                next = HistoryRequest {
+                    limit,
+                    cursor: Some(cursor),
+                    roots: Some(page.roots),
+                };
+            }
+            None => return ids,
+        }
+    }
+}
+
+#[test]
+fn every_way_of_reading_history_yields_the_same_order() {
+    // Two branches that merge, so the order is a real topological decision and
+    // not a straight line every strategy would get right.
+    let fixture = Fixture::new();
+    let root = fixture.commit("refs/heads/main", "root", &[], 1);
+    let left = fixture.commit("refs/heads/main", "left", &[root], 2);
+    let right = fixture.commit("refs/heads/side", "right", &[root], 3);
+    let merge = fixture.commit("refs/heads/main", "merge", &[left, right], 4);
+    let mut tip = merge;
+    for time in 5..12 {
+        tip = fixture.commit("refs/heads/main", "more", &[tip], time);
+    }
+    fixture.repo.set_head("refs/heads/main").unwrap();
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+
+    let uncached = page_through(|req| get_commits(&active, req).unwrap(), 3);
+    let cached_reader = HistoryReader::default();
+    let cached = page_through(|req| cached_reader.get_commits(&active, req).unwrap(), 3);
+    // A budget smaller than the history forces the streaming path that very
+    // large repositories take.
+    let streaming_reader = HistoryReader::with_budget(4);
+    let streamed = page_through(|req| streaming_reader.get_commits(&active, req).unwrap(), 3);
+
+    assert_eq!(uncached.len(), 11);
+    assert_eq!(cached, uncached);
+    assert_eq!(streamed, uncached);
+    let unique: std::collections::HashSet<_> = uncached.iter().collect();
+    assert_eq!(unique.len(), uncached.len(), "no commit appears twice");
+}
+
+#[test]
+fn a_continuation_cannot_carry_an_unbounded_number_of_roots() {
+    let fixture = Fixture::new();
+    fixture.commit("HEAD", "root", &[], 1);
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let error = get_commits(
+        &active,
+        &HistoryRequest {
+            limit: 1,
+            cursor: None,
+            roots: Some(vec!["a".repeat(40); 10_001]),
+        },
+    )
+    .unwrap_err();
+    assert!(matches!(error, AppError::InvalidInput(_)));
 }

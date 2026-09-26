@@ -44,8 +44,19 @@ pub struct HistoryPage {
     pub roots: Vec<String>,
 }
 
-const MAX_CACHED_COMMITS: usize = 100_000;
+/// Commit IDs retained across all cached walks: 2,000,000 IDs, about 40 MB.
+///
+/// libgit2 cannot hand out a topological walk lazily. Before it yields the
+/// first commit it has to visit the whole history to know each commit's
+/// children, so resuming a walk costs a full traversal no matter which page is
+/// wanted. Caching the ordered IDs turns every later page into a slice; a
+/// history longer than this still works, but each of its pages repeats the
+/// traversal. The budget covers the largest repositories in common use.
+const MAX_CACHED_COMMITS: usize = 2_000_000;
 const MAX_CACHED_SNAPSHOTS: usize = 8;
+/// Walk roots a continuation may carry. Roots are branches, tags and HEAD, so
+/// this is far above any real repository while still bounding a hostile request.
+const MAX_WALK_ROOTS: usize = 10_000;
 
 type WalkIds = Arc<[Oid]>;
 
@@ -59,13 +70,30 @@ struct Snapshot {
 ///
 /// Reusing a reader avoids walking every ancestor again for each page. Identity
 /// includes the canonical path and frozen roots; ref changes naturally miss the
-/// cache. At most 100,000 IDs and eight snapshots are retained across repositories.
-#[derive(Default)]
+/// cache. At most 2,000,000 IDs and eight snapshots are retained across repositories.
 pub struct HistoryReader {
     snapshots: Mutex<VecDeque<Snapshot>>,
+    max_commits: usize,
+}
+
+impl Default for HistoryReader {
+    fn default() -> Self {
+        Self::with_budget(MAX_CACHED_COMMITS)
+    }
 }
 
 impl HistoryReader {
+    /// A reader that retains at most `max_commits` IDs, so the path taken by
+    /// histories larger than the budget can be exercised without millions of
+    /// commits.
+    #[must_use]
+    pub fn with_budget(max_commits: usize) -> Self {
+        Self {
+            snapshots: Mutex::default(),
+            max_commits,
+        }
+    }
+
     /// Reads a bounded page, reusing only immutable commit IDs from prior walks.
     ///
     /// # Errors
@@ -105,7 +133,7 @@ impl HistoryReader {
         entries.retain(|entry| entry.path != active.path() || entry.roots != roots);
         while entries.len() >= MAX_CACHED_SNAPSHOTS
             || entries.iter().map(|entry| entry.ids.len()).sum::<usize>() + ids.len()
-                > MAX_CACHED_COMMITS
+                > self.max_commits
         {
             entries.pop_front();
         }
@@ -148,7 +176,7 @@ fn read_page(
     let repo = active.open()?;
     let roots = match &request.roots {
         Some(roots) => {
-            if roots.len() > MAX_CACHED_COMMITS {
+            if roots.len() > MAX_WALK_ROOTS {
                 return Err(AppError::InvalidInput("Too many history roots".into()));
             }
             roots
@@ -184,9 +212,9 @@ fn read_page(
     if let Some(reader) = reader {
         let prefix = walk
             .by_ref()
-            .take(MAX_CACHED_COMMITS + 1)
+            .take(reader.max_commits + 1)
             .collect::<Result<Vec<_>, _>>()?;
-        if prefix.len() <= MAX_CACHED_COMMITS {
+        if prefix.len() <= reader.max_commits {
             let ids: WalkIds = prefix.into();
             reader.insert(active, &roots, Arc::clone(&ids))?;
             return page_from_walk(
@@ -306,10 +334,12 @@ mod cache_tests {
         Repository::init(dir.path()).unwrap();
         let active = ActiveRepo::validate(dir.path()).unwrap();
         let reader = HistoryReader::default();
+        // Each snapshot takes a fifth of the budget, so only five fit.
+        let chunk = MAX_CACHED_COMMITS / 5;
         for value in 0..10 {
             let id = Oid::from_str(&format!("{value:040x}")).unwrap();
             reader
-                .insert(&active, &[id], vec![id; 20_000].into())
+                .insert(&active, &[id], vec![id; chunk].into())
                 .unwrap();
         }
         let entries = reader.snapshots.lock().unwrap();

@@ -49,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Git operation scheduling** — pushes, pulls and clones no longer share a gate with
   history reads, so a slow network operation cannot freeze the window, and only
   idempotent reads are retried.
+- **`get_commits`** — the ordered history is cached up to 2,000,000 commits (it was
+  100,000), so paging through a large repository slices a list instead of repeating
+  libgit2's full traversal for every page.
 
 ### Changed
 
