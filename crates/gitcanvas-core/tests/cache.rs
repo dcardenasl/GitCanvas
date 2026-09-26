@@ -13,7 +13,7 @@ use std::{
 };
 
 use gitcanvas_core::github::{
-    cache::{enforce_retention, status, MAX_REPOSITORIES},
+    cache::{enforce_retention, status, touch, touch_if_cached, MAX_REPOSITORIES},
     clone::cache_entry_name,
 };
 
@@ -121,4 +121,68 @@ fn in_flight_clones_are_not_counted_as_cache_entries() {
 
     assert_eq!(status.entries.len(), 1);
     assert_eq!(status.entries[0].name, "real");
+}
+
+/// A cache entry that looks like a clone: a `.git` directory inside a folder.
+fn seed_clone(root: &Path, name: &str, age: Duration) {
+    // `.git` first: creating it after `seed` would bump the directory's mtime
+    // and undo the age `seed` just set.
+    fs::create_dir_all(root.join(name).join(".git")).unwrap();
+    seed(root, name, 10, age);
+}
+
+#[test]
+fn using_a_clone_makes_it_the_most_recent() {
+    let root = tempfile::tempdir().unwrap();
+    seed_clone(root.path(), "old", Duration::from_hours(14));
+    seed_clone(root.path(), "new", Duration::from_secs(10));
+    assert_eq!(status(root.path()).unwrap().entries[0].name, "new");
+
+    assert!(touch(&root.path().join("old")));
+
+    let names: Vec<_> = status(root.path())
+        .unwrap()
+        .entries
+        .into_iter()
+        .map(|entry| entry.name)
+        .collect();
+    assert_eq!(names[0], "old", "a used clone is not the one evicted first");
+}
+
+#[test]
+fn a_used_clone_survives_retention_over_a_newer_unused_one() {
+    let root = tempfile::tempdir().unwrap();
+    seed_clone(root.path(), "oldest-but-used", Duration::from_hours(25));
+    for index in 0..MAX_REPOSITORIES {
+        seed_clone(
+            root.path(),
+            &format!("repo{index}"),
+            Duration::from_secs(1_000 + u64::try_from(index).unwrap()),
+        );
+    }
+    assert!(touch(&root.path().join("oldest-but-used")));
+
+    let evicted = enforce_retention(root.path(), None).unwrap();
+
+    assert!(
+        !evicted.contains(&"oldest-but-used".to_owned()),
+        "{evicted:?}"
+    );
+    assert_eq!(evicted.len(), 1);
+}
+
+#[test]
+fn only_repositories_inside_the_cache_are_marked() {
+    let root = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    seed_clone(root.path(), "owner__repo", Duration::from_secs(10));
+    fs::create_dir_all(outside.path().join(".git")).unwrap();
+    let canonical = root.path().canonicalize().unwrap();
+
+    assert!(touch_if_cached(root.path(), &canonical.join("owner__repo")));
+    assert!(canonical
+        .join("owner__repo/.git/gitcanvas-last-used")
+        .exists());
+    assert!(!touch_if_cached(root.path(), outside.path()));
+    assert!(!outside.path().join(".git/gitcanvas-last-used").exists());
 }

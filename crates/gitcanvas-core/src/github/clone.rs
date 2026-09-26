@@ -4,13 +4,19 @@
 //! shape of history is the entire point of this application: a truncated graph
 //! would be visually convincing and wrong, which is worse than refusing.
 
-use std::path::Path;
+use std::{
+    path::Path,
+    time::{Duration, Instant},
+};
 
 use git2::{build::RepoBuilder, FetchOptions, RemoteCallbacks, Repository};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::{error::AppError, github::credentials};
+use crate::{
+    error::AppError,
+    github::{cache, credentials},
+};
 
 /// How far along a clone is.
 ///
@@ -29,6 +35,33 @@ pub struct CloneProgress {
 pub struct ClonedRepository {
     pub path: String,
     pub full_name: String,
+}
+
+/// Longest a clone may go without reporting progress.
+const PROGRESS_INTERVAL: Duration = Duration::from_millis(100);
+
+/// Limits how often progress is reported.
+///
+/// libgit2 calls back for every chunk it receives, which on a fast connection
+/// is thousands of times a second. Each report crosses the IPC boundary and
+/// re-renders the interface, so frames are dropped rather than delivered: at
+/// most one per interval, plus always the last one so the display ends at 100%.
+struct ProgressThrottle {
+    last: Option<Instant>,
+}
+
+impl ProgressThrottle {
+    fn admit(&mut self, now: Instant, complete: bool) -> bool {
+        let due = self
+            .last
+            .is_none_or(|last| now.saturating_duration_since(last) >= PROGRESS_INTERVAL);
+        if due || complete {
+            self.last = Some(now);
+            true
+        } else {
+            false
+        }
+    }
 }
 
 /// The two halves of a GitHub `owner/name`, validated and case-folded.
@@ -169,6 +202,7 @@ fn clone_into_cache(
         // entry whose origin is somewhere else was not put there by a clone of
         // `url`, and serving it would show the wrong history.
         if origin_matches(&destination, url) {
+            let _recorded = cache::touch(&destination);
             return Ok(cloned());
         }
         // The cache is application-owned, so an unusable or foreign entry is
@@ -189,13 +223,18 @@ fn clone_into_cache(
 
     let mut callbacks = RemoteCallbacks::new();
     callbacks.credentials(credentials::callback());
+    let mut throttle = ProgressThrottle { last: None };
     callbacks.transfer_progress(move |stats| {
-        on_progress(CloneProgress {
-            received_objects: u32::try_from(stats.received_objects()).unwrap_or(u32::MAX),
-            total_objects: u32::try_from(stats.total_objects()).unwrap_or(u32::MAX),
-            indexed_objects: u32::try_from(stats.indexed_objects()).unwrap_or(u32::MAX),
-            received_bytes: stats.received_bytes() as u64,
-        });
+        let complete =
+            stats.total_objects() > 0 && stats.received_objects() == stats.total_objects();
+        if throttle.admit(Instant::now(), complete) {
+            on_progress(CloneProgress {
+                received_objects: u32::try_from(stats.received_objects()).unwrap_or(u32::MAX),
+                total_objects: u32::try_from(stats.total_objects()).unwrap_or(u32::MAX),
+                indexed_objects: u32::try_from(stats.indexed_objects()).unwrap_or(u32::MAX),
+                received_bytes: stats.received_bytes() as u64,
+            });
+        }
         true
     });
 
@@ -210,6 +249,7 @@ fn clone_into_cache(
         Ok(repo) => {
             drop(repo);
             std::fs::rename(&partial, &destination)?;
+            let _recorded = cache::touch(&destination);
             Ok(cloned())
         }
         Err(error) => {
@@ -241,6 +281,26 @@ mod tests {
         repo.commit(Some("HEAD"), &signature, &signature, "root", &tree, &[])
             .unwrap();
         dir.to_str().unwrap().to_owned()
+    }
+
+    #[test]
+    fn progress_is_reported_at_most_once_per_interval_and_always_at_the_end() {
+        let mut throttle = ProgressThrottle { last: None };
+        let start = Instant::now();
+        let step = |ms: u64| start + Duration::from_millis(ms);
+
+        assert!(
+            throttle.admit(step(0), false),
+            "the first report always goes"
+        );
+        assert!(!throttle.admit(step(10), false));
+        assert!(!throttle.admit(step(99), false));
+        assert!(throttle.admit(step(100), false));
+        assert!(!throttle.admit(step(150), false));
+        assert!(
+            throttle.admit(step(151), true),
+            "completion is never dropped, so the display can reach 100%"
+        );
     }
 
     #[test]
@@ -310,6 +370,13 @@ mod tests {
         assert!(Path::new(&first.path).ends_with("owner__repo"));
         assert!(Repository::open(&first.path).is_ok());
         assert!(!root.path().join(".partial-owner__repo").exists());
+        assert!(
+            Path::new(&first.path)
+                .join(".git")
+                .join("gitcanvas-last-used")
+                .exists(),
+            "a new clone counts as used"
+        );
 
         // A marker proves the second call reuses the directory rather than
         // recloning over it.

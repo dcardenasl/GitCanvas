@@ -65,13 +65,54 @@ fn directory_size(path: &Path) -> u64 {
     total
 }
 
-fn last_used(path: &Path) -> SystemTime {
-    // Access time is not reliably updated on every filesystem, so modification
-    // time is used instead: touching a clone by fetching updates it, and a
-    // never-fetched clone keeps the time it was created.
+/// Marker written inside a clone's `.git` directory each time it is used.
+///
+/// Neither the access time (not reliably updated) nor the top-level directory's
+/// modification time (unchanged by a fetch, which only touches `.git`) says when
+/// a clone was last opened, and the retention policy needs exactly that. The
+/// marker lives inside `.git` so it never shows up as an untracked file.
+const LAST_USED_MARKER: &str = "gitcanvas-last-used";
+
+fn modified(path: &Path) -> Option<SystemTime> {
     std::fs::metadata(path)
         .and_then(|metadata| metadata.modified())
-        .unwrap_or(SystemTime::UNIX_EPOCH)
+        .ok()
+}
+
+fn last_used(path: &Path) -> SystemTime {
+    let created = modified(path);
+    let used = modified(&path.join(".git").join(LAST_USED_MARKER));
+    created.max(used).unwrap_or(SystemTime::UNIX_EPOCH)
+}
+
+/// Records that the clone at `entry` was just used, so retention evicts the
+/// clones nobody opens rather than the one just opened.
+///
+/// Best effort: failing to record a use must never fail the operation that
+/// prompted it, so the outcome is reported to the caller only as a `bool`.
+#[must_use]
+pub fn touch(entry: &Path) -> bool {
+    let marker = entry.join(".git").join(LAST_USED_MARKER);
+    let now = unix_seconds(SystemTime::now()).to_string();
+    std::fs::write(marker, now).is_ok()
+}
+
+/// Records a use for whichever cache entry contains `repository`, if any.
+///
+/// Anything outside `cache_root` is left alone: repositories the user opened
+/// from their own folders are not the cache's to mark.
+#[must_use]
+pub fn touch_if_cached(cache_root: &Path, repository: &Path) -> bool {
+    let root = cache_root
+        .canonicalize()
+        .unwrap_or_else(|_| cache_root.to_path_buf());
+    let Ok(relative) = repository.strip_prefix(&root) else {
+        return false;
+    };
+    match relative.components().next() {
+        Some(entry) => touch(&root.join(entry)),
+        None => false,
+    }
 }
 
 /// Parses a decimal string back to bytes, treating malformed input as zero.

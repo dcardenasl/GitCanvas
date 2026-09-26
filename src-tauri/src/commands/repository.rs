@@ -3,19 +3,28 @@
 
 use gitcanvas_core::{
     error::AppError,
+    github::cache,
     history::{HistoryPage, HistoryReader, HistoryRequest},
     refs::{self, BranchInfo, TagInfo},
     repository::{ActiveRepo, RepositoryInfo},
 };
 
-use super::runtime::read;
+use super::{github::CacheRoot, runtime::read};
 
 /// Validates and opens a local repository, returning its canonical identity.
 #[tauri::command]
 #[specta::specta]
-pub async fn open_repository(path: String) -> Result<RepositoryInfo, AppError> {
+pub async fn open_repository(
+    path: String,
+    cache: tauri::State<'_, CacheRoot>,
+) -> Result<RepositoryInfo, AppError> {
+    let cache_root = cache.0.clone();
     read("open_repository", move || {
-        ActiveRepo::validate(&path)?.info()
+        let active = ActiveRepo::validate(&path)?;
+        // Opening a cached clone counts as using it, which is what keeps the
+        // retention policy from evicting a clone that is in regular use.
+        let _recorded = cache::touch_if_cached(&cache_root, active.path());
+        active.info()
     })
     .await
 }

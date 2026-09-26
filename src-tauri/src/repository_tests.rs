@@ -6,6 +6,9 @@ use tauri::test::{get_ipc_response, mock_builder, MockRuntime, INVOKE_KEY};
 fn webview() -> tauri::WebviewWindow<MockRuntime> {
     let builder = super::specta_builder();
     let app = mock_builder()
+        .manage(crate::commands::github::CacheRoot(
+            std::env::temp_dir().join("gitcanvas-test-cache"),
+        ))
         .manage(std::sync::Arc::new(
             gitcanvas_core::history::HistoryReader::default(),
         ))
