@@ -59,6 +59,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the last one took, so a very large working tree no longer keeps the machine busy
   checking it every five seconds. The watcher status also follows the repository it
   belongs to instead of carrying over from the previous one.
+- **`get_worktree_snapshot`** — pagination cursors are bound to the revision they were
+  read from and are refused as stale once the changes move on.
+- **Local changes over 250 files** — the inspector listed only the first page and
+  counted only what it had loaded. It now shows the real totals and loads the rest on
+  request.
 
 ### Changed
 

@@ -4,7 +4,11 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { FileDiff, WorktreeSnapshot } from "../../bindings";
+import type {
+  FileDiff,
+  FileDiffSummary,
+  WorktreeSnapshot,
+} from "../../bindings";
 
 const getWorktreeSnapshot =
   vi.fn<(path: string, request: unknown) => Promise<WorktreeSnapshot>>();
@@ -173,5 +177,103 @@ describe("WorkingTreeDetailPanel", () => {
         .getByRole("button", { name: "test, 1 archivo modificado" })
         .getAttribute("aria-expanded"),
     ).toBe("true");
+  });
+
+  describe("when there are more files than one page", () => {
+    /** A listing whose unstaged side has three files but shows only the first. */
+    function truncated(): WorktreeSnapshot {
+      const all = local(
+        [],
+        [
+          file({ path: "one.ts", insertions: 1, deletions: 0 }),
+          file({ path: "two.ts", insertions: 2, deletions: 0 }),
+          file({ path: "three.ts", insertions: 3, deletions: 0 }),
+        ],
+      );
+      return {
+        ...all,
+        unstaged: {
+          ...all.unstaged,
+          files: all.unstaged.files.slice(0, 1),
+          next_cursor: "revision:1",
+        },
+      };
+    }
+
+    const summary = (path: string): FileDiffSummary => ({
+      path,
+      old_path: null,
+      change: "Modified",
+      insertions: 1,
+      deletions: 0,
+      omitted: null,
+    });
+
+    it("reports the real totals and offers the rest", async () => {
+      getWorktreeSnapshot.mockResolvedValue(truncated());
+
+      renderPanel();
+
+      const section = await screen.findByRole("region", {
+        name: "Sin preparar",
+      });
+      // Three files and six added lines exist, however many are loaded.
+      expect(section.textContent).toContain("3");
+      expect(section.textContent).toContain("+6");
+      expect(
+        within(section).getByRole("button", { name: "Cargar 2 archivos más" }),
+      ).toBeDefined();
+    });
+
+    it("loads the next page from the cursor, in the same revision", async () => {
+      const first = truncated();
+      getWorktreeSnapshot.mockResolvedValueOnce(first);
+      renderPanel();
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Cargar 2 archivos más" }),
+      );
+
+      getWorktreeSnapshot.mockResolvedValueOnce({
+        ...first,
+        unstaged: {
+          ...first.unstaged,
+          files: [summary("two.ts"), summary("three.ts")],
+          next_cursor: null,
+        },
+      });
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Cargar 2 archivos más" }),
+      );
+
+      expect(getWorktreeSnapshot).toHaveBeenLastCalledWith("/tmp/repo", {
+        staged_cursor: null,
+        unstaged_cursor: "revision:1",
+        limit: null,
+        expected_revision: "revision",
+      });
+      expect(await screen.findByText("three.ts")).toBeDefined();
+      expect(screen.getByText("one.ts")).toBeDefined();
+      expect(
+        screen.queryByRole("button", { name: /Cargar \d+ archivos más/ }),
+      ).toBeNull();
+    });
+
+    it("says so and starts over when the changes moved on", async () => {
+      getWorktreeSnapshot.mockResolvedValueOnce(truncated());
+      renderPanel();
+      const button = await screen.findByRole("button", {
+        name: "Cargar 2 archivos más",
+      });
+
+      getWorktreeSnapshot.mockRejectedValueOnce(
+        new Error("local changes changed since this page was loaded"),
+      );
+      getWorktreeSnapshot.mockResolvedValue(truncated());
+      await userEvent.click(button);
+
+      expect((await screen.findByRole("alert")).textContent).toContain(
+        "changed since this page was loaded",
+      );
+    });
   });
 });

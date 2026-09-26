@@ -1,6 +1,5 @@
-import type { FileDiffSummary } from "../../bindings";
 import { useSession, type FileSource } from "../../state/session";
-import { useWorktreeSnapshot } from "../../state/worktree";
+import { useWorktreeFiles, type LocalSide } from "../../state/worktree";
 import {
   ChangedFilesBrowser,
   type ChangedFilesGroup,
@@ -18,21 +17,42 @@ export function WorkingTreeDetailPanel({
 }: WorkingTreeDetailPanelProps) {
   const selectFile = useSession((state) => state.selectFile);
   const selection = useSession((state) => state.selection);
-  const local = useWorktreeSnapshot(repositoryPath);
+  const {
+    snapshot: local,
+    staged,
+    unstaged,
+    loadMore,
+    loadingSide,
+    loadError,
+  } = useWorktreeFiles(repositoryPath);
+  const stagedFiles = staged?.files ?? [];
+  const unstagedFiles = unstaged?.files ?? [];
   const localData = local.data;
-  const stagedFiles = localData?.staged.files ?? [];
-  const unstagedFiles = localData?.unstaged.files ?? [];
   const selectedFilePath =
     selection.kind === "worktree" ? selection.filePath : null;
   const selectedFileSource: FileSource | null =
     selection.kind === "worktree" ? selection.side : null;
   const groups: ChangedFilesGroup[] = [];
 
-  if (stagedFiles.length > 0) {
-    groups.push(localFileGroup("Preparados", stagedFiles, "staged"));
+  if (staged !== null && staged.files.length > 0) {
+    groups.push(
+      localFileGroup("Preparados", staged, "staged", {
+        loading: loadingSide === "staged",
+        onLoadMore: () => {
+          void loadMore("staged");
+        },
+      }),
+    );
   }
-  if (unstagedFiles.length > 0) {
-    groups.push(localFileGroup("Sin preparar", unstagedFiles, "unstaged"));
+  if (unstaged !== null && unstaged.files.length > 0) {
+    groups.push(
+      localFileGroup("Sin preparar", unstaged, "unstaged", {
+        loading: loadingSide === "unstaged",
+        onLoadMore: () => {
+          void loadMore("unstaged");
+        },
+      }),
+    );
   }
 
   return (
@@ -59,6 +79,12 @@ export function WorkingTreeDetailPanel({
           <p className="detail-panel__state">No hay cambios locales.</p>
         )}
 
+      {loadError !== null && (
+        <p className="detail-panel__state" role="alert">
+          {loadError.message}
+        </p>
+      )}
+
       {groups.length > 0 && (
         <ChangedFilesBrowser
           groups={groups}
@@ -75,14 +101,12 @@ export function WorkingTreeDetailPanel({
 
 function localFileGroup(
   label: string,
-  files: readonly FileDiffSummary[],
+  side: LocalSide,
   source: "staged" | "unstaged",
+  more: { readonly loading: boolean; readonly onLoadMore: () => void },
 ): ChangedFilesGroup {
-  const insertions = files.reduce((sum, file) => sum + file.insertions, 0);
-  const deletions = files.reduce((sum, file) => sum + file.deletions, 0);
-
   return {
-    files,
+    files: side.files,
     source,
     sectionLabel: label,
     listLabel: `Archivos ${label.toLowerCase()}`,
@@ -90,11 +114,24 @@ function localFileGroup(
       <div className="detail-panel__local-group-head">
         <span>{label}</span>
         <span className="detail-panel__local-count">
-          {files.length} ·{" "}
-          <span className="detail-panel__stat-add">+{insertions}</span>{" "}
-          <span className="detail-panel__stat-del">−{deletions}</span>
+          {side.totalFiles} ·{" "}
+          <span className="detail-panel__stat-add">+{side.insertions}</span>{" "}
+          <span className="detail-panel__stat-del">−{side.deletions}</span>
         </span>
       </div>
     ),
+    footer:
+      side.remaining > 0 ? (
+        <button
+          type="button"
+          className="file-tree__more"
+          disabled={more.loading}
+          onClick={more.onLoadMore}
+        >
+          {more.loading
+            ? "Cargando…"
+            : `Cargar ${String(side.remaining)} archivos más`}
+        </button>
+      ) : null,
   };
 }

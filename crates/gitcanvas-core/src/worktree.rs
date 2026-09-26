@@ -42,6 +42,9 @@ impl WorktreeSide {
 }
 
 /// A bounded page of local file summaries.
+///
+/// `next_cursor` is `"<revision>:<offset>"`: the position is bound to the listing
+/// it was read from and is refused as stale once the changes have moved on.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct WorktreeDiffPage {
     pub side: WorktreeSide,
@@ -290,10 +293,24 @@ fn page(
     cursor: Option<&str>,
     requested_limit: Option<u16>,
 ) -> Result<WorktreeDiffPage, AppError> {
-    let offset = cursor
-        .unwrap_or("0")
-        .parse::<usize>()
-        .map_err(|_| AppError::InvalidInput("invalid worktree cursor".into()))?;
+    let offset = match cursor {
+        None => 0,
+        Some(cursor) => {
+            let (cursor_revision, offset) = cursor
+                .split_once(':')
+                .ok_or_else(|| AppError::InvalidInput("invalid worktree cursor".into()))?;
+            // A position is only meaningful in the listing it was taken from. If
+            // the changes moved on, the same offset names a different file.
+            if cursor_revision != revision {
+                return Err(AppError::StaleCursor(
+                    "local changes changed since this page was loaded".into(),
+                ));
+            }
+            offset
+                .parse::<usize>()
+                .map_err(|_| AppError::InvalidInput("invalid worktree cursor".into()))?
+        }
+    };
     let limit = requested_limit
         .map_or(WORKTREE_PAGE_SIZE, usize::from)
         .clamp(1, WORKTREE_PAGE_SIZE);
@@ -308,7 +325,7 @@ fn page(
         .get(offset..end)
         .ok_or_else(|| AppError::StaleCursor("worktree page is no longer available".into()))?
         .to_vec();
-    let next_cursor = (end < files.len()).then(|| end.to_string());
+    let next_cursor = (end < files.len()).then(|| format!("{revision}:{end}"));
     let insertions = files
         .iter()
         .map(|file| file.insertions)

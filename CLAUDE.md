@@ -128,7 +128,10 @@ Cada una está hecha para fallar el build, no para depender de que alguien se ac
    `git2` es bloqueante; sin esto un repo grande congela la UI.
 7. **El estado nunca guarda un `git2::Repository` vivo.** Solo el path canónico
    validado (`ActiveRepo`); cada comando abre su propio handle.
-8. **Paginación por cursor, nunca por offset numérico.** Máximo 500 commits por página.
+8. **Paginación acotada, con cursor ligado a la revisión que lo emitió.** La historia usa
+   SHA + roots congelados; los cambios locales, `revisión:posición`, y rechazan un cursor
+   de otra revisión (`StaleCursor`). Solo el árbol de un commit, que es inmutable, pagina
+   por offset. Máximo 500 commits por página.
 9. **El layout del graph es reanudable.** Cargar la página N+1 no puede reordenar los
    carriles de las páginas anteriores.
 10. **El token de GitHub vive solo en el keychain del SO y solo se usa en Rust.**

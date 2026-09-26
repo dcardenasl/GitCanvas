@@ -12,6 +12,8 @@ export interface ChangedFilesGroup {
   readonly listLabel: string;
   readonly sectionLabel?: string;
   readonly heading?: ReactNode;
+  /** Shown after the list, for example a control that loads more files. */
+  readonly footer?: ReactNode;
 }
 
 export interface ChangedFilesBrowserProps {
@@ -179,6 +181,7 @@ export function ChangedFilesBrowser({
             return (
               <Fragment key={`${group.source}:${String(index)}`}>
                 {contents}
+                {group.footer}
               </Fragment>
             );
           }
@@ -191,6 +194,7 @@ export function ChangedFilesBrowser({
             >
               {group.heading}
               {contents}
+              {group.footer}
             </section>
           );
         })

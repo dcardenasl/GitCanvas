@@ -968,7 +968,7 @@ intentar resolverlo.
 
 ---
 
-## 🔧 Fase H — Endurecimiento (12/21)
+## 🔧 Fase H — Endurecimiento (13/21)
 
 Salió de una auditoría de robustez del código completo (2026-09-26). Cada tarea corrige
 un hallazgo concreto y lleva su test; el estado de cada una es cierto en el commit que la
@@ -993,8 +993,12 @@ marca.
       en cada página.
 - [x] **H-10 — Layout incremental y calculado una sola vez.**
 - [x] **H-11 — Polling del fingerprint adaptativo.**
-- [ ] **H-12 — Cursor de local changes ligado a su revisión.** Regla 8 aclarada para
+- [x] **H-12 — Cursor de local changes ligado a su revisión.** Regla 8 aclarada para
       árboles inmutables.
+      *Hallazgo durante la ejecución:* el frontend nunca pedía la segunda página de
+      cambios locales: con más de 250 archivos el resto no aparecía y los contadores
+      mostraban solo los cargados. Ahora los totales vienen del backend y hay "Cargar N
+      archivos más".
 - [ ] **H-13 — Un único parseo de ids de commit.**
 - [ ] **H-14 — Fuera el código fantasma.**
 - [ ] **H-15 — Checkout accesible desde la UI.**

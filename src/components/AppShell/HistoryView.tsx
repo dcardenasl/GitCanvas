@@ -57,8 +57,8 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
         </span>
         <span className="working-tree-row__title">Cambios locales</span>
         <span className="working-tree-row__summary">
-          {local.data.staged.files.length} preparados ·{" "}
-          {local.data.unstaged.files.length} sin preparar
+          {local.data.staged.total_files} preparados ·{" "}
+          {local.data.unstaged.total_files} sin preparar
         </span>
         <span className="working-tree-row__stats">
           <span className="detail-panel__stat-add">

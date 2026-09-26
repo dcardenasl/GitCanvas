@@ -218,7 +218,23 @@ fn loads_one_file_diff_only_when_requested_and_pages_summaries() {
     .unwrap();
     assert_eq!(page.unstaged.files.len(), 1);
     assert_eq!(page.unstaged.total_files, 2);
-    assert_eq!(page.unstaged.next_cursor.as_deref(), Some("1"));
+    let cursor = page.unstaged.next_cursor.clone().unwrap();
+    assert!(cursor.starts_with(&page.revision));
+
+    // Following the cursor reaches the second file, exactly once.
+    let next = get_worktree_snapshot(
+        &repository,
+        &WorktreeSnapshotRequest {
+            staged_cursor: None,
+            unstaged_cursor: Some(cursor.clone()),
+            limit: Some(1),
+            expected_revision: Some(page.revision.clone()),
+        },
+    )
+    .unwrap();
+    assert_eq!(next.unstaged.files.len(), 1);
+    assert_ne!(next.unstaged.files[0].path, page.unstaged.files[0].path);
+    assert!(next.unstaged.next_cursor.is_none());
 
     let detail = get_worktree_file_diff(
         &repository,
@@ -232,6 +248,20 @@ fn loads_one_file_diff_only_when_requested_and_pages_summaries() {
     .unwrap();
     assert_eq!(detail.file.path, "a.txt");
     assert!(detail.file.patch.is_some());
+
+    // Once the changes move on, the same cursor no longer names the same file.
+    fs::write(fixture.dir.path().join("a.txt"), "changed again\n").unwrap();
+    let stale = get_worktree_snapshot(
+        &repository,
+        &WorktreeSnapshotRequest {
+            staged_cursor: None,
+            unstaged_cursor: Some(cursor),
+            limit: Some(1),
+            expected_revision: None,
+        },
+    )
+    .unwrap_err();
+    assert!(matches!(stale, AppError::StaleCursor(_)), "{stale:?}");
 }
 
 #[test]
