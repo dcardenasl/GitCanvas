@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 import { CommitTable } from "../CommitTable";
 import { GraphCanvas } from "../GraphCanvas";
-import { useHistory } from "../../state/history";
+import type { HistoryData } from "../../state/history";
 import { useRefsByCommit } from "../../state/refs";
 import {
   selectedCommitId as getSelectedCommitId,
@@ -10,8 +10,14 @@ import {
 } from "../../state/session";
 import { useWorktreeSnapshot } from "../../state/worktree";
 
-/** The history pane: the virtualized table with the graph drawn over it. */
-export function HistoryView() {
+/**
+ * The history pane: the virtualized table with the graph drawn over it.
+ *
+ * The history arrives as a prop. The shell needs the same commits for search
+ * and selection, so it loads them once and shares them; loading them here too
+ * would lay the whole graph out a second time on every page.
+ */
+export function HistoryView({ history }: { readonly history: HistoryData }) {
   const repository = useSession((state) => state.repository);
   const selection = useSession((state) => state.selection);
   const selectedCommitId = useSession(getSelectedCommitId);
@@ -20,7 +26,6 @@ export function HistoryView() {
   const revealCommitId = useSession((state) => state.revealCommitId);
   const clearReveal = useSession((state) => state.clearReveal);
 
-  const history = useHistory(repository?.path ?? null);
   const refsByCommit = useRefsByCommit(repository?.path ?? null);
   const local = useWorktreeSnapshot(repository?.path ?? null);
 

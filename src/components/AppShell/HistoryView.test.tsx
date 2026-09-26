@@ -19,6 +19,7 @@ vi.mock("../../lib/ipc", () => ({
 
 const { HistoryView } = await import("./HistoryView");
 const { useSession } = await import("../../state/session");
+const { useHistory } = await import("../../state/history");
 
 /** A merge history shaped like the reference mockup: dev merged into main. */
 function mergePage(): HistoryPage {
@@ -45,13 +46,20 @@ function mergePage(): HistoryPage {
   };
 }
 
+/** Loads the history the way the shell does, then hands it to the view. */
+function Harness() {
+  const repository = useSession((state) => state.repository);
+  const history = useHistory(repository?.path ?? null);
+  return <HistoryView history={history} />;
+}
+
 function renderView() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <HistoryView />
+      <Harness />
     </QueryClientProvider>,
   );
 }

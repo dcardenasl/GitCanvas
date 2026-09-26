@@ -3,7 +3,7 @@ import {
   type InfiniteData,
   type UseInfiniteQueryResult,
 } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useState } from "react";
 
 import type { CommitInfo, HistoryPage } from "../bindings";
 import { layout } from "../lib/graph-layout/layout";
@@ -22,7 +22,7 @@ interface HistoryCursor {
 const FIRST_PAGE: HistoryCursor = { cursor: null, roots: null };
 
 /** Everything the history view needs, derived once per page arrival. */
-export interface HistoryView {
+export interface HistoryData {
   readonly commits: readonly CommitInfo[];
   readonly rows: readonly GraphRow[];
   readonly maxLanes: number;
@@ -31,6 +31,89 @@ export interface HistoryView {
   readonly isLoading: boolean;
   readonly error: Error | null;
   readonly fetchNextPage: () => void;
+}
+
+/** Layout progress after one page, so the walk can resume from it. */
+interface Checkpoint {
+  readonly commitCount: number;
+  readonly rowCount: number;
+  readonly state: LayoutState;
+}
+
+/** Every loaded commit and its graph row, plus what is needed to extend them. */
+export interface HistoryLayout {
+  readonly commits: readonly CommitInfo[];
+  readonly rows: readonly GraphRow[];
+  readonly maxLanes: number;
+  readonly pages: readonly HistoryPage[];
+  readonly checkpoints: readonly Checkpoint[];
+}
+
+const EMPTY_LAYOUT: HistoryLayout = {
+  commits: [],
+  rows: [],
+  maxLanes: 0,
+  pages: [],
+  checkpoints: [],
+};
+
+/**
+ * Lays out every loaded page, doing work only for pages that are new.
+ *
+ * `previous` is the result for an earlier list of pages. The leading pages that
+ * are the very same objects keep their rows, because a page's layout depends
+ * only on itself and the pages before it; the first page that differs — a
+ * refetch after the repository changed, say — and everything after it is laid
+ * out again from the state the last shared page left behind. Appending a page
+ * therefore costs that page alone, not the whole history.
+ */
+export function layoutHistory(
+  pages: readonly HistoryPage[],
+  previous: HistoryLayout = EMPTY_LAYOUT,
+): HistoryLayout {
+  let shared = 0;
+  while (
+    shared < pages.length &&
+    shared < previous.pages.length &&
+    pages[shared] === previous.pages[shared]
+  ) {
+    shared += 1;
+  }
+  if (shared === pages.length && shared === previous.pages.length) {
+    return previous;
+  }
+
+  const resumeFrom = previous.checkpoints[shared - 1];
+  const commits = previous.commits.slice(0, resumeFrom?.commitCount ?? 0);
+  const rows = previous.rows.slice(0, resumeFrom?.rowCount ?? 0);
+  const checkpoints = previous.checkpoints.slice(0, shared);
+  let state = resumeFrom?.state;
+
+  for (const page of pages.slice(shared)) {
+    const result = layout(
+      page.commits.map((commit) => ({
+        id: commit.id,
+        parents: commit.parents,
+      })),
+      state,
+    );
+    commits.push(...page.commits);
+    rows.push(...result.rows);
+    state = result.state;
+    checkpoints.push({
+      commitCount: commits.length,
+      rowCount: rows.length,
+      state,
+    });
+  }
+
+  return {
+    commits,
+    rows,
+    maxLanes: state?.maxLanes ?? 0,
+    pages,
+    checkpoints,
+  };
 }
 
 export function historyQueryKey(path: string | null) {
@@ -45,7 +128,7 @@ export function historyQueryKey(path: string | null) {
  * lanes for commits already on screen and the graph would jump under the
  * cursor while the user is reading it.
  */
-export function useHistory(path: string | null): HistoryView {
+export function useHistory(path: string | null): HistoryData {
   const query: UseInfiniteQueryResult<InfiniteData<HistoryPage>> =
     useInfiniteQuery({
       queryKey: historyQueryKey(path),
@@ -76,34 +159,14 @@ export function useHistory(path: string | null): HistoryView {
 
   const pages = query.data?.pages;
 
-  const { commits, rows, maxLanes } = useMemo(() => {
-    if (pages === undefined) {
-      return { commits: [], rows: [], maxLanes: 0 };
-    }
-
-    const allCommits: CommitInfo[] = [];
-    const allRows: GraphRow[] = [];
-    let state: LayoutState | undefined;
-
-    for (const page of pages) {
-      allCommits.push(...page.commits);
-      const result = layout(
-        page.commits.map((commit) => ({
-          id: commit.id,
-          parents: commit.parents,
-        })),
-        state,
-      );
-      allRows.push(...result.rows);
-      state = result.state;
-    }
-
-    return {
-      commits: allCommits,
-      rows: allRows,
-      maxLanes: state?.maxLanes ?? 0,
-    };
-  }, [pages]);
+  // The previous layout is state rather than a ref so it can be read while
+  // rendering: `layoutHistory` reuses it and lays out only what is new. Storing
+  // the result while rendering is React's pattern for state derived from props.
+  const [laidOut, setLaidOut] = useState<HistoryLayout>(EMPTY_LAYOUT);
+  const current =
+    pages === undefined ? EMPTY_LAYOUT : layoutHistory(pages, laidOut);
+  if (current !== laidOut) setLaidOut(current);
+  const { commits, rows, maxLanes } = current;
 
   return {
     commits,

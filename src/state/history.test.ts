@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import type { CommitInfo, HistoryPage } from "../bindings";
 import { layout } from "../lib/graph-layout/layout";
 import type { GraphCommit } from "../lib/graph-layout/types";
+
+import { layoutHistory } from "./history";
 
 /**
  * The invariant the whole pagination design rests on.
@@ -59,5 +62,81 @@ describe("incremental history layout", () => {
     const reservedLane = first.state.lanes.indexOf("b");
     expect(reservedLane).toBeGreaterThanOrEqual(0);
     expect(second.rows[0]?.lane).toBe(reservedLane);
+  });
+});
+
+describe("layoutHistory", () => {
+  function commit(id: string, parents: string[]): CommitInfo {
+    return {
+      id,
+      parents,
+      summary: id,
+      message: id,
+      author_name: "A",
+      author_email: "a@example.com",
+      author_time: "0",
+      commit_time: "0",
+    };
+  }
+
+  function page(commits: CommitInfo[], next: string | null): HistoryPage {
+    return { commits, next_cursor: next, roots: [] };
+  }
+
+  const first = () =>
+    page([commit("m", ["a", "b"]), commit("a", ["base"])], "a");
+  const second = () => page([commit("b", ["base"]), commit("base", [])], null);
+
+  function whole(pages: HistoryPage[]) {
+    return layout(
+      pages.flatMap((p) =>
+        p.commits.map((c) => ({ id: c.id, parents: c.parents })),
+      ),
+    );
+  }
+
+  it("matches laying the whole history out in one pass", () => {
+    const pages = [first(), second()];
+    const result = layoutHistory(pages);
+    expect(result.rows).toEqual(whole(pages).rows);
+    expect(result.commits.map((c) => c.id)).toEqual(["m", "a", "b", "base"]);
+    expect(result.maxLanes).toBe(whole(pages).state.maxLanes);
+  });
+
+  it("keeps the rows of pages it already laid out when a page is appended", () => {
+    const one = first();
+    const before = layoutHistory([one]);
+    const after = layoutHistory([one, second()], before);
+
+    expect(after.rows.slice(0, 2)).toEqual(before.rows);
+    expect(after.rows[0]).toBe(before.rows[0]);
+    expect(after.rows).toEqual(whole([one, second()]).rows);
+  });
+
+  it("returns the previous result untouched when nothing changed", () => {
+    const pages = [first(), second()];
+    const before = layoutHistory(pages);
+    expect(layoutHistory([...pages], before)).toBe(before);
+  });
+
+  it("lays out again from the first page that differs", () => {
+    const one = first();
+    const before = layoutHistory([one, second()]);
+    // A refetch after a change replaces the later page but reuses the first.
+    const changed = page([commit("b", []), commit("z", [])], null);
+    const after = layoutHistory([one, changed], before);
+
+    expect(after.rows[0]).toBe(before.rows[0]);
+    expect(after.rows).toEqual(whole([one, changed]).rows);
+    expect(after.commits.map((c) => c.id)).toEqual(["m", "a", "b", "z"]);
+  });
+
+  it("does not mutate the previous result", () => {
+    const one = first();
+    const before = layoutHistory([one]);
+    const snapshot = structuredClone(before.rows);
+    layoutHistory([one, second()], before);
+    expect(before.rows).toEqual(snapshot);
+    expect(before.commits).toHaveLength(2);
   });
 });

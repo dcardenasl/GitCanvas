@@ -52,6 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`get_commits`** — the ordered history is cached up to 2,000,000 commits (it was
   100,000), so paging through a large repository slices a list instead of repeating
   libgit2's full traversal for every page.
+- **History graph** — the layout is computed once and extended page by page (it was
+  recomputed from the first commit twice per page), so scrolling deep into a large
+  repository stays smooth.
 
 ### Changed
 

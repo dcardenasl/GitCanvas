@@ -202,7 +202,7 @@ export function AppShell() {
                 worktree={{ side: worktreeFile.side }}
               />
             ) : (
-              <HistoryView />
+              <HistoryView history={history} />
             )}
           </main>
           <Resizer
