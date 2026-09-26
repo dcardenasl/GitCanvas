@@ -21,7 +21,9 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage --passWithNoTests",
-    "test:e2e": "npm run build && cargo build --release --features e2e,tauri/custom-protocol && bash scripts/run-e2e.sh"
+    "test:e2e": "npm run build && cargo build --release --features e2e,tauri/custom-protocol && bash scripts/run-e2e.sh",
+    "record:demo": "node scripts/record-demo.mjs",
+    "record:demo:vertical": "node scripts/create-vertical-demo.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.102.8",

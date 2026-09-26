@@ -23,6 +23,7 @@ src-tauri/gen/
 coverage/
 .vitest/
 /e2e-results/
+docs/videos/*.mp4
 
 # Editors and OS
 .DS_Store

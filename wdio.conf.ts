@@ -116,7 +116,7 @@ export const config: WebdriverIO.Config = {
   // plugin never ships in a release build — and a fresh relaunch does not hit
   // the same race twice in a row, which a retry of the whole spec file (a new
   // process, not just the failed assertion) is what actually clears it.
-  specFileRetries: 2,
+  specFileRetries: process.env.GITCANVAS_RECORDING_OUTPUT === undefined ? 2 : 0,
   specFileRetriesDelay: 2,
 
   capabilities: [

@@ -89,6 +89,31 @@ cargo test           # Rust unit and integration tests
 cargo clippy --all-targets -- -D warnings
 ```
 
+## Product walkthrough video
+
+Generate a narrated MP4 walkthrough of the desktop app with a temporary
+Atlas Storefront repository, meaningful branch history, and a live commit:
+
+```bash
+GITCANVAS_VIDEO_LANGUAGE=es npm run record:demo
+GITCANVAS_VIDEO_LANGUAGE=en npm run record:demo
+npm run record:demo:vertical
+```
+
+The output defaults to `../../bitacora-engine/registry/projects/gitcanvas-output/`
+as `atlas-storefront-walkthrough-es.mp4` and
+`atlas-storefront-walkthrough-en.mp4`. Set `GITCANVAS_RECORDING_OUTPUT` to
+choose another path. Install the `edge-tts` command or set `EDGE_TTS_COMMAND` to
+its executable path. Narration uses the neural Chilean Spanish voice
+`es-CL-CatalinaNeural` and conversational US English voice `en-US-EmmaNeural`,
+with short pauses between sections. The vertical command reframes the English
+video to 9:16, holds the centered GitCanvas logo at the opening, zooms from a
+laptop view into the app, and zooms back out to the laptop at the end. Between
+those bookends it follows the pointer between focused views of the history,
+local changes, refresh, and commit details. This uses the WebDriver capture
+adapter from `bitacora-engine`; Chrome-based recordings keep using the existing
+Puppeteer recorder.
+
 ## Known limitations
 
 Documented on purpose rather than discovered later:
