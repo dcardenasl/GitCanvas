@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (0/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (1/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -41,7 +41,7 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
 
 ### H2-0 — Desbloqueo del hook
 
-- [ ] **H2-0 — Excluir el artefacto de brag del análisis.** Añadir `brag-output/` a
+- [x] **H2-0 — Excluir el artefacto de brag del análisis.** Añadir `brag-output/` a
       `.gitignore`, `.prettierignore` y a `ignores` de `eslint.config.js` (o mover el
       artefacto fuera del repositorio si la configuración vigente lo aconseja). Confirmar
       que el hook `./pre-commit` pasa con el directorio generado presente.
