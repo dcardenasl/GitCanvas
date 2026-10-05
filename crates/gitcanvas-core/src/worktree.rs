@@ -362,7 +362,7 @@ fn read_index_content(
         .get_path(relative, 0)
         .ok_or_else(|| AppError::WorktreeFileUnavailable(path.to_owned()))?;
     let blob = repo.find_blob(entry.id)?;
-    blob::read_content(blob.content(), path, expand)
+    blob::read_blob_content(&blob, path, expand)
 }
 
 fn read_disk_content(

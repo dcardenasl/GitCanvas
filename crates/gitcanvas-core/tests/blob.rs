@@ -10,6 +10,7 @@ mod support;
 use gitcanvas_core::{
     blob::{get_file_content, FileContentRequest, LARGE_FILE_LINE_LIMIT},
     diff::DiffOmission,
+    error::AppError,
     repository::ActiveRepo,
 };
 use support::Fixture;
@@ -110,6 +111,36 @@ fn a_large_file_is_withheld_until_it_is_asked_for() {
         get_file_content(&active, &request(&commit.to_string(), "huge.txt", true)).unwrap();
     assert_eq!(expanded.omitted, None);
     assert!(expanded.text.is_some());
+}
+
+#[test]
+fn blob_size_limits_are_applied_before_content_is_returned() {
+    let fixture = Fixture::new();
+    let initial_limit = vec![b'x'; 2 * 1024 * 1024 + 1];
+    let expanded_limit = vec![b'y'; 32 * 1024 * 1024 + 1];
+    let commit = fixture.commit_files(
+        "refs/heads/main",
+        "bounded blobs",
+        &[],
+        1_000,
+        &[
+            ("initial.txt", &initial_limit),
+            ("expanded.txt", &expanded_limit),
+        ],
+    );
+    let active = open(&fixture);
+
+    let withheld =
+        get_file_content(&active, &request(&commit.to_string(), "initial.txt", false)).unwrap();
+    assert_eq!(withheld.bytes, initial_limit.len().to_string());
+    assert_eq!(withheld.omitted, Some(DiffOmission::TooLarge));
+    assert!(withheld.text.is_none());
+
+    let error =
+        get_file_content(&active, &request(&commit.to_string(), "expanded.txt", true)).unwrap_err();
+    assert!(matches!(error, AppError::ResourceLimitExceeded(_)));
+    assert!(error.to_string().contains("expanded.txt"));
+    assert!(error.to_string().contains("33554432"));
 }
 
 #[test]

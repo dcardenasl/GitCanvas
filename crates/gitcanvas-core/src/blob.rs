@@ -108,6 +108,21 @@ pub(crate) fn read_content(raw: &[u8], path: &str, expand: bool) -> Result<Conte
     })
 }
 
+/// Checks a Git blob's recorded size before asking libgit2 for its content.
+pub(crate) fn read_blob_content(
+    blob: &git2::Blob<'_>,
+    path: &str,
+    expand: bool,
+) -> Result<ContentRead, AppError> {
+    let byte_count = blob.size();
+    if byte_count > MAX_EXPANDED_CONTENT_BYTES
+        || (!expand && byte_count > MAX_INITIAL_CONTENT_BYTES)
+    {
+        return too_large_content(u64::try_from(byte_count).unwrap_or(u64::MAX), path, expand);
+    }
+    read_content(blob.content(), path, expand)
+}
+
 /// A file as it stands at one commit.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct FileContent {
@@ -159,7 +174,7 @@ pub fn get_file_content(
 
     // Lossy UTF-8 is intentional: a file with a stray invalid byte remains
     // useful, with a replacement character where the byte was.
-    let content = read_content(blob.content(), &request.path, request.expand)?;
+    let content = read_blob_content(&blob, &request.path, request.expand)?;
 
     Ok(FileContent {
         path: request.path.clone(),

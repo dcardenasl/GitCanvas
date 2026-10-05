@@ -192,6 +192,56 @@ fn reads_the_index_or_disk_version_of_a_local_file() {
 }
 
 #[test]
+fn staged_blob_limits_are_checked_before_reading_the_content() {
+    let fixture = Fixture::new();
+    let commit = fixture.commit_files(
+        "refs/heads/main",
+        "initial",
+        &[],
+        1_000,
+        &[("a.txt", b"base\n")],
+    );
+    clean_checkout(&fixture, commit);
+    let contents = vec![b'x'; 32 * 1024 * 1024 + 1];
+    fs::write(fixture.dir.path().join("huge.txt"), &contents).unwrap();
+    let mut index = fixture.repo.index().unwrap();
+    index.add_path(Path::new("huge.txt")).unwrap();
+    index.write().unwrap();
+
+    let repository = active(&fixture);
+    let withheld = get_worktree_file_content(
+        &repository,
+        &WorktreeFileContentRequest {
+            side: WorktreeSide::Staged,
+            path: "huge.txt".into(),
+            expected_revision: None,
+            expand: false,
+        },
+    )
+    .unwrap();
+    assert_eq!(withheld.bytes, contents.len().to_string());
+    assert_eq!(
+        withheld.omitted,
+        Some(gitcanvas_core::diff::DiffOmission::TooLarge)
+    );
+    assert!(withheld.text.is_none());
+
+    let error = get_worktree_file_content(
+        &repository,
+        &WorktreeFileContentRequest {
+            side: WorktreeSide::Staged,
+            path: "huge.txt".into(),
+            expected_revision: None,
+            expand: true,
+        },
+    )
+    .unwrap_err();
+    assert!(matches!(error, AppError::ResourceLimitExceeded(_)));
+    assert!(error.to_string().contains("huge.txt"));
+    assert!(error.to_string().contains("33554432"));
+}
+
+#[test]
 fn loads_one_file_diff_only_when_requested_and_pages_summaries() {
     let fixture = Fixture::new();
     let commit = fixture.commit_files(

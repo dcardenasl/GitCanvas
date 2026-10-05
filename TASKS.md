@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (6/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (7/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -88,9 +88,14 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       `cargo clippy -p gitcanvas-core --all-targets -- -D warnings`, binding regenerado,
       `npm run typecheck`, 40 tests Vitest de GitHubPicker/IPC y `./pre-commit`.
       → `fix(github): serialize clone cache mutations`
-- [ ] **H2-6 — Rechazar blobs demasiado grandes antes de leerlos.** Comprobar
-      `blob.size()` en `blob.rs` y `worktree.rs` antes de `content()`; verificar límites,
-      tipos y mensajes devueltos.
+- [x] **H2-6 — Rechazar blobs demasiado grandes antes de leerlos.** `blob.size()` se
+      comprueba antes de llamar a `content()` tanto para contenido de commit como de index;
+      la política compartida conserva la omisión `TooLarge` inicial y el error tipado al
+      exceder el tope de expansión, con ruta y límite en el mensaje.
+      *Verificado:* `cargo test -p gitcanvas-core --test blob` (6 tests),
+      `cargo test -p gitcanvas-core --test worktree` (9 tests, incluye staged por encima
+      del límite de expansión), `cargo clippy -p gitcanvas-core --all-targets -- -D warnings`
+      y `./pre-commit`.
       → `fix(core): check blob sizes before reading content`
 - [ ] **H2-7 — Centralizar errores del dominio.** Revisar M7: variantes `Auth`, `Network`
       y `Conflict`, conversiones centralizadas incluida `keyring::Error`, helper
