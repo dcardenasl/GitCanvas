@@ -112,7 +112,11 @@ hasta obtener evidencia dinámica de arranque y E2E en los tres sistemas operati
       del tema del sistema). Se añadieron pruebas; no se ejecutaron.
       → `perf(graph): bound canvas rendering and theme colors`
 - [ ] **H2-32 — Mejorar búsqueda y fechas.** Cachear `Intl.DateTimeFormat`, locale `es` con
-      año y `useDeferredValue` en búsqueda.
+      año y `useDeferredValue` en búsqueda. *Implementación parcial (2026-10-05):* se
+      reutilizan hasta ocho formateadores por locale (caché acotada), con español y año
+      como formato por defecto. La búsqueda calcula con `useDeferredValue`, indica el
+      estado pendiente y no navega con resultados obsoletos. Se añadió regresión de fecha;
+      las pruebas no se ejecutaron.
       → `perf(ui): defer search and reuse date formatters`
 - [ ] **H2-33 — Unificar límites de core y debounce.** Usar `diff.stats()` sin construir
       `Patch`, fingerprint barato, política común que rechaza páginas fuera de rango y

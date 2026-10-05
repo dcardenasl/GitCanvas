@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import type { CommitInfo } from "../../bindings";
 
@@ -23,6 +23,7 @@ export interface CommitSearchProps {
  */
 export function CommitSearch({ commits, onGo }: CommitSearchProps) {
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const inputRef = useRef<HTMLInputElement>(null);
 
   /*
@@ -33,9 +34,12 @@ export function CommitSearch({ commits, onGo }: CommitSearchProps) {
    * the wrong count.
    */
   const [cursor, setCursor] = useState({ query: "", position: 0 });
-  const position = cursor.query === query ? cursor.position : 0;
+  const position = cursor.query === deferredQuery ? cursor.position : 0;
 
-  const found = useMemo(() => findMatches(commits, query), [commits, query]);
+  const found = useMemo(
+    () => findMatches(commits, deferredQuery),
+    [commits, deferredQuery],
+  );
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -52,9 +56,9 @@ export function CommitSearch({ commits, onGo }: CommitSearchProps) {
   }, []);
 
   function go(step: number) {
-    if (found.length === 0) return;
+    if (query !== deferredQuery || found.length === 0) return;
     const next = (position + step + found.length) % found.length;
-    setCursor({ query, position: next });
+    setCursor({ query: deferredQuery, position: next });
 
     const index = found[next];
     const commit = index === undefined ? undefined : commits[index];
@@ -62,11 +66,13 @@ export function CommitSearch({ commits, onGo }: CommitSearchProps) {
   }
 
   const status =
-    query.trim() === ""
-      ? ""
-      : found.length === 0
-        ? "sin coincidencias"
-        : `${String(position + 1)} de ${String(found.length)}`;
+    query !== deferredQuery
+      ? "Buscando…"
+      : deferredQuery.trim() === ""
+        ? ""
+        : found.length === 0
+          ? "sin coincidencias"
+          : `${String(position + 1)} de ${String(found.length)}`;
 
   return (
     <div className="commit-search">
@@ -83,7 +89,7 @@ export function CommitSearch({ commits, onGo }: CommitSearchProps) {
         onKeyDown={(event) => {
           if (event.key === "Enter") {
             event.preventDefault();
-            go(event.shiftKey ? -1 : 1);
+            if (query === deferredQuery) go(event.shiftKey ? -1 : 1);
           }
           if (event.key === "Escape") {
             setQuery("");
@@ -94,7 +100,7 @@ export function CommitSearch({ commits, onGo }: CommitSearchProps) {
       {status !== "" && (
         <span
           className={
-            found.length === 0
+            query === deferredQuery && found.length === 0
               ? "commit-search__status commit-search__status--empty"
               : "commit-search__status"
           }

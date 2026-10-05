@@ -13,6 +13,10 @@ describe("shortId", () => {
 });
 
 describe("formatCommitTime", () => {
+  it("defaults to Spanish and includes the year", () => {
+    expect(formatCommitTime("1788815520")).toMatch(/2026/);
+  });
+
   it("formats decimal Unix seconds", () => {
     // 1788815520 is 2026-09-07T21:12:00Z. The rendered day depends on the
     // runner's zone, so both sides of midnight are accepted; what is being
