@@ -44,7 +44,9 @@ describe("open a repository and read a commit", () => {
 
   it("shows the diff of the commit that is selected", async () => {
     const rows = await $$('[role="option"]');
-    await rows[0].click();
+    const row = rows[0];
+    if (row === undefined) throw new Error("Expected a commit in history");
+    await row.click();
 
     const panel = await $('[aria-label="Detalle del commit"]');
     await expect(panel).toBeDisplayed();

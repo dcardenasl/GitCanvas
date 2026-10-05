@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 21/46 completadas · 25 pendientes · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 22/46 completadas · 24 pendientes · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -40,7 +40,7 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
 `dev`; la auditoría los tuvo en cuenta y no son tareas pendientes.
 
 Las tareas H2-0 a H2-19 están completadas y archivadas en [`ARCHIVES.md`](ARCHIVES.md).
-La siguiente tarea a ejecutar es H2-22; conserva su ID y mensaje de commit.
+La siguiente tarea a ejecutar es H2-23; conserva su ID y mensaje de commit.
 
 - [x] **H2-20 — Ampliar guardias Clippy.** `Cargo.toml` deniega `todo`, `unimplemented`,
       `dbg_macro`, `print_stdout/stderr`, `string_slice`, efectos aritméticos, métodos
@@ -65,10 +65,22 @@ La siguiente tarea a ejecutar es H2-22; conserva su ID y mensaje de commit.
       `./pre-commit`; sondas de ESLint rechazaron dinámico `import()`, import type,
       `require()` y una interfaz pública sin TSDoc.
       → `chore(ts): enforce graph imports and public api docs`
-- [ ] **H2-22 — Tipar y validar todos los proyectos TypeScript.** Incorporar e2e, WDIO y
-      configs a `typecheck:e2e`/`typecheck:node` o `tsc -b` en workflows; endurecer configs
-      con `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` y `no-floating-promises`
-      para e2e; quitar `--passWithNoTests`.
+- [x] **H2-22 — Tipar y validar todos los proyectos TypeScript.** Añadidos
+      `typecheck:e2e` y `typecheck:node`; ambos workflows de CI ejecutan los dos junto al
+      typecheck principal. E2E y `wdio.conf.ts` aplican `noUncheckedIndexedAccess` y
+      `exactOptionalPropertyTypes`; ESLint habilita `no-floating-promises` con el proyecto
+      E2E. Las configs Node incluyen y comprueban JS mediante `allowJs`/`checkJs`. Quitado
+      `--passWithNoTests` de tests y cobertura. Se corrigieron siete accesos E2E con
+      validación explícita antes de usarlos.
+      *Hallazgo durante la ejecución:* `e2e/recording/record-video.ts` no coincide con los
+      specs que WDIO ejecuta y depende de un checkout hermano (`bitacora-engine`), ausente
+      en CI. Se excluye explícitamente del proyecto E2E para conservar builds reproducibles;
+      H2-43 moverá y aislará esa herramienta manual.
+      *Verificado:* los tres scripts de typecheck, `npm run lint`, `npm run format:check`,
+      `./pre-commit`, `npm run test` y `npm run test:coverage` (38 archivos, 317 tests;
+      cobertura: statements 93,11 %, branches 86,31 %, functions 93,25 %, lines 93,89 %).
+      Una sonda confirmó que `no-floating-promises` rechaza un Promise WebDriver sin manejar
+      y acepta la misma llamada con `await`; búsqueda sin resultados de `--passWithNoTests`.
       → `ci: typecheck e2e and node projects`
 - [ ] **H2-23 — Hacer útil el hook de pre-commit y validar mensajes.** Ejecutar eslint y
       prettier solo sobre staged, mostrar diagnóstico original si falla; corregir cifra de

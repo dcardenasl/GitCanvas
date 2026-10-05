@@ -152,13 +152,30 @@ export default tseslint.config(
   },
 
   /*
-   * The end-to-end suite has its own tsconfig: it runs against a built binary
-   * through WebdriverIO's globals, not against the application's type graph.
-   * Type-aware rules would need the app's project service and would fail to
-   * resolve, so those are turned off here rather than the files being skipped.
+   * The end-to-end specs and WDIO config use their dedicated TypeScript
+   * project. Keep app-specific type-aware style rules out of the automation
+   * layer, while retaining no-floating-promises with that project's types.
    */
   {
-    files: ["e2e/**/*.ts", "wdio.conf.ts"],
+    files: ["e2e/**/*.spec.ts", "wdio.conf.ts"],
+    languageOptions: {
+      globals: globals.node,
+      parserOptions: {
+        project: "./tsconfig.e2e.json",
+        projectService: false,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      ...tseslint.configs.disableTypeChecked.rules,
+      "@typescript-eslint/no-floating-promises": "error",
+    },
+  },
+
+  // The manual recorder imports a local tool from a sibling checkout and is
+  // not part of the E2E specs run by WDIO. H2-43 moves it into tools/.
+  {
+    files: ["e2e/recording/**/*.ts"],
     languageOptions: { globals: globals.node },
     ...tseslint.configs.disableTypeChecked,
   },

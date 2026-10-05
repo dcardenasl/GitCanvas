@@ -41,7 +41,9 @@ describe("GitCanvas against its own history", () => {
 
   it("captures a commit with its file list", async () => {
     const rows = await $$('[role="option"]');
-    await rows[4].click();
+    const row = rows[4];
+    if (row === undefined) throw new Error("Expected at least five commits");
+    await row.click();
     await browser.pause(2500);
 
     await browser.saveScreenshot(`${OUT}/03-files.png`);
@@ -72,7 +74,11 @@ describe("GitCanvas against its own history", () => {
     const dividers = await $$('[role="separator"]');
     await expect(dividers).toBeElementsArrayOfSize({ gte: 2 });
 
-    await dividers[1].click();
+    const inspectorDivider = dividers[1];
+    if (inspectorDivider === undefined) {
+      throw new Error("Expected the inspector resize divider");
+    }
+    await inspectorDivider.click();
     for (let press = 0; press < 8; press += 1) {
       await browser.keys("ArrowLeft");
     }

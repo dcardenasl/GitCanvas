@@ -44,6 +44,8 @@ jobs:
       - run: npm ci
 
       - run: npm run typecheck
+      - run: npm run typecheck:e2e
+      - run: npm run typecheck:node
       - run: npm run lint
       - run: npm run format:check
       - run: npm run test

@@ -21,12 +21,16 @@ describe("reading a file with the sidebar collapsed", () => {
 
   it("gives the file view the room the sidebar released", async () => {
     const rows = await $$('[role="option"]');
-    await rows[4].click();
+    const row = rows[4];
+    if (row === undefined) throw new Error("Expected at least five commits");
+    await row.click();
     await browser.pause(2000);
 
     const files = await $$('[aria-label="Archivos modificados"] button');
     await expect(files).toBeElementsArrayOfSize({ gte: 1 });
-    await files[0].click();
+    const file = files[0];
+    if (file === undefined) throw new Error("Expected a changed file");
+    await file.click();
     await browser.pause(2500);
 
     /*

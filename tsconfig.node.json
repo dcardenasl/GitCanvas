@@ -1,7 +1,10 @@
 {
   "compilerOptions": {
     "composite": true,
+    "tsBuildInfoFile": "node_modules/tsconfig.node.tsbuildinfo",
     "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,

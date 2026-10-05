@@ -92,7 +92,9 @@ describe("interface audit", () => {
 
   it("selects a commit and re-measures", async () => {
     const rows = await $$('[role="option"]');
-    await rows[2].click();
+    const row = rows[2];
+    if (row === undefined) throw new Error("Expected at least three commits");
+    await row.click();
     await browser.pause(2000);
 
     const layout = await browser.execute(() => {
@@ -114,7 +116,9 @@ describe("interface audit", () => {
       note("file list", "empty for this commit");
       return;
     }
-    await files[0].click();
+    const file = files[0];
+    if (file === undefined) throw new Error("Expected a changed file");
+    await file.click();
     await browser.pause(2000);
 
     const info = await browser.execute(() => {

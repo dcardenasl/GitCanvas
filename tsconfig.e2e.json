@@ -5,8 +5,10 @@
     "moduleResolution": "bundler",
     "skipLibCheck": true,
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
     "noEmit": true,
     "types": ["node", "@wdio/globals/types", "@wdio/mocha-framework"]
   },
-  "include": ["e2e/**/*.ts", "wdio.conf.ts"]
+  "include": ["e2e/**/*.spec.ts", "wdio.conf.ts"]
 }
