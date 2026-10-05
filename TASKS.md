@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 24/46 completadas · 22 pendientes · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-05
+**Estado:** H2 25/46 completadas · 21 pendientes (H2-25 a H2-45) · Release v0.1.0 pendiente (R-4 a R-6) · actualizado 2026-10-05
 
 ## Cómo se usa este archivo
 
@@ -40,7 +40,8 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
 `dev`; la auditoría los tuvo en cuenta y no son tareas pendientes.
 
 Las tareas H2-0 a H2-24 están completadas y archivadas en [`ARCHIVES.md`](ARCHIVES.md).
-La siguiente tarea a ejecutar es H2-25; conserva su ID y mensaje de commit.
+La siguiente tarea es H2-25. Está parcialmente implementada, pero permanece abierta
+hasta obtener evidencia dinámica de arranque y E2E en los tres sistemas operativos.
 
 - [ ] **H2-25 — Reducir permisos Tauri a los usados.** Reemplazar `core:default` por
       `core:event:default` y `dialog:allow-open`; confirmar arranque y E2E multiplataforma.

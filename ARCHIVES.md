@@ -1124,7 +1124,7 @@ marca.
 
 ---
 
-## ✅ Fase H2 — Endurecimiento post-auditoría (20/46)
+## ✅ Fase H2 — Endurecimiento post-auditoría (25/46)
 
 > Plan de referencia: [`docs/plan/2026-10-04-plan-de-endurecimiento.md`](docs/plan/2026-10-04-plan-de-endurecimiento.md).
 > Se conservan las descripciones, verificaciones y mensajes de commit registrados al
