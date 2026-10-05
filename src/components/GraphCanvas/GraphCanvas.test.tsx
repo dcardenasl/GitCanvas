@@ -1,14 +1,20 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { layout } from "../../lib/graph-layout/layout";
 import type { GraphCommit } from "../../lib/graph-layout/types";
 import { ROW_HEIGHT } from "../CommitTable/geometry";
+import { laneColor } from "../../lib/graph-layout/colors";
+import { useThemePreferences } from "../../state/themePreferences";
 
 import { GraphCanvas } from "./GraphCanvas";
 
 afterEach(cleanup);
+
+beforeEach(() => {
+  useThemePreferences.getState().setPreference("dark");
+});
 
 function linear(count: number): GraphCommit[] {
   return Array.from({ length: count }, (_, index) => ({
@@ -31,6 +37,7 @@ describe("GraphCanvas", () => {
     );
 
     expect(container.querySelectorAll("circle")).toHaveLength(10);
+    expect(container.querySelectorAll(".graph-canvas__row")).toHaveLength(10);
   });
 
   it("emits geometry only for the mounted rows, not the whole history", () => {
@@ -53,22 +60,26 @@ describe("GraphCanvas", () => {
     expect(container.querySelectorAll("circle")).toHaveLength(23);
   });
 
-  it("sizes the surface to the whole history so scrolling stays aligned", () => {
+  it("bounds the SVG to the virtual row window and offsets it in the history", () => {
     const { rows, state } = layout(linear(500));
     const totalHeight = 500 * ROW_HEIGHT;
 
     const { container } = render(
       <GraphCanvas
         rows={rows}
-        window={{ startIndex: 0, endIndex: 12, totalHeight }}
+        window={{ startIndex: 100, endIndex: 120, totalHeight }}
         maxLanes={state.maxLanes}
         selectedId={null}
       />,
     );
 
-    expect(container.querySelector("svg")?.getAttribute("height")).toBe(
-      String(totalHeight),
+    const svg = container.querySelector("svg");
+    expect(svg?.getAttribute("height")).toBe(String(23 * ROW_HEIGHT));
+    expect(svg?.style.top).toBe(String(99 * ROW_HEIGHT) + "px");
+    expect(svg?.getAttribute("viewBox")).toContain(
+      `0 ${String(99 * ROW_HEIGHT)} `,
     );
+    expect(Number(svg?.getAttribute("height"))).toBeLessThan(totalHeight);
   });
 
   it("draws the merge fork as a curve", () => {
@@ -110,6 +121,23 @@ describe("GraphCanvas", () => {
     expect(
       container.querySelectorAll(".graph-canvas__node--selected"),
     ).toHaveLength(1);
+  });
+
+  it("uses the lane palette for the active theme", () => {
+    const { rows, state } = layout(linear(2));
+    useThemePreferences.getState().setPreference("light");
+    const { container } = render(
+      <GraphCanvas
+        rows={rows}
+        window={{ startIndex: 0, endIndex: 1, totalHeight: 2 * ROW_HEIGHT }}
+        maxLanes={state.maxLanes}
+        selectedId={null}
+      />,
+    );
+
+    expect(container.querySelector("path")?.getAttribute("stroke")).toBe(
+      laneColor(0, "light"),
+    );
   });
 
   it("stays out of the accessibility tree; the table carries the semantics", () => {

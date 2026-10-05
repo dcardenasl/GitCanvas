@@ -9,17 +9,18 @@
   pointer-events: none;
 }
 
+.graph-canvas__row {
+  filter: drop-shadow(0 0 1.25px var(--graph-outline));
+}
+
 .graph-canvas__edge {
   fill: none;
   stroke-width: 2;
   stroke-linecap: round;
-  /* Preserve stable lane hues while separating them from both theme surfaces. */
-  filter: drop-shadow(0 0 1.25px var(--graph-outline));
 }
 
 .graph-canvas__node {
   stroke-width: 1.5;
-  filter: drop-shadow(0 0 1.25px var(--graph-outline));
 }
 
 .graph-canvas__node--selected {

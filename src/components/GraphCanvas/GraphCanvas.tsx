@@ -1,7 +1,13 @@
 import type { VisibleWindow } from "../CommitTable";
-import { graphWidth, laneCenterX, rowCenterY } from "../CommitTable/geometry";
+import {
+  graphWidth,
+  laneCenterX,
+  ROW_HEIGHT,
+  rowCenterY,
+} from "../CommitTable/geometry";
 import { laneColor } from "../../lib/graph-layout/colors";
 import type { GraphRow } from "../../lib/graph-layout/types";
+import { useThemePreferences } from "../../state/themePreferences";
 
 import { edgePath, incomingPath } from "./path";
 
@@ -26,9 +32,9 @@ const SELECTED_RADIUS = 6;
 /**
  * The commit graph, drawn over the virtualized rows.
  *
- * Renders into a surface as tall as the whole history but emits geometry only
- * for the mounted rows plus one on each side. One extra row is enough because
- * no edge spans more than a single row, so nothing visible can be missing.
+ * Emits a bounded SVG surface for the mounted rows plus one on each side.
+ * One extra row is enough because no edge spans more than a single row, so
+ * nothing visible can be missing while the surface stays viewport-sized.
  */
 export function GraphCanvas({
   rows,
@@ -36,8 +42,11 @@ export function GraphCanvas({
   maxLanes,
   selectedId,
 }: GraphCanvasProps) {
+  const theme = useThemePreferences((state) => state.resolvedTheme);
   const first = Math.max(window.startIndex - 1, 0);
   const last = Math.min(window.endIndex + 1, rows.length - 1);
+  const offsetY = first * ROW_HEIGHT;
+  const canvasHeight = Math.max(last - first + 1, 0) * ROW_HEIGHT;
 
   const visible: GraphRow[] = [];
   for (let index = first; index <= last; index += 1) {
@@ -51,48 +60,45 @@ export function GraphCanvas({
     <svg
       className="graph-canvas"
       width={width}
-      height={window.totalHeight}
-      viewBox={`0 0 ${String(width)} ${String(window.totalHeight)}`}
+      height={canvasHeight}
+      viewBox={`0 ${String(offsetY)} ${String(width)} ${String(canvasHeight)}`}
+      style={{ top: offsetY }}
       aria-hidden="true"
       focusable="false"
     >
-      {visible.map((row) => (
-        <g key={`edges-${row.id}`}>
-          {row.incoming.map((lane) => (
-            <path
-              key={`in-${String(lane)}`}
-              className="graph-canvas__edge"
-              d={incomingPath(row.index, lane)}
-              stroke={laneColor(lane)}
-            />
-          ))}
-          {row.outgoing.map((edge) => (
-            <path
-              key={`out-${String(edge.from)}-${String(edge.to)}`}
-              className="graph-canvas__edge"
-              d={edgePath(row.index, edge.from, edge.to)}
-              stroke={laneColor(edge.colorLane)}
-            />
-          ))}
-        </g>
-      ))}
-
       {visible.map((row) => {
         const selected = row.id === selectedId;
         return (
-          <circle
-            key={`node-${row.id}`}
-            className={
-              selected
-                ? "graph-canvas__node graph-canvas__node--selected"
-                : "graph-canvas__node"
-            }
-            cx={laneCenterX(row.lane)}
-            cy={rowCenterY(row.index)}
-            r={selected ? SELECTED_RADIUS : NODE_RADIUS}
-            fill={selected ? "var(--surface)" : laneColor(row.lane)}
-            stroke={laneColor(row.lane)}
-          />
+          <g key={row.id} className="graph-canvas__row">
+            {row.incoming.map((lane) => (
+              <path
+                key={`in-${String(lane)}`}
+                className="graph-canvas__edge"
+                d={incomingPath(row.index, lane)}
+                stroke={laneColor(lane, theme)}
+              />
+            ))}
+            {row.outgoing.map((edge) => (
+              <path
+                key={`out-${String(edge.from)}-${String(edge.to)}`}
+                className="graph-canvas__edge"
+                d={edgePath(row.index, edge.from, edge.to)}
+                stroke={laneColor(edge.colorLane, theme)}
+              />
+            ))}
+            <circle
+              className={
+                selected
+                  ? "graph-canvas__node graph-canvas__node--selected"
+                  : "graph-canvas__node"
+              }
+              cx={laneCenterX(row.lane)}
+              cy={rowCenterY(row.index)}
+              r={selected ? SELECTED_RADIUS : NODE_RADIUS}
+              fill={selected ? "var(--surface)" : laneColor(row.lane, theme)}
+              stroke={laneColor(row.lane, theme)}
+            />
+          </g>
         );
       })}
     </svg>

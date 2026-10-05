@@ -27,14 +27,17 @@ function resolveTheme(preference: ThemePreference): ResolvedTheme {
     : "dark";
 }
 
-function applyTheme(preference: ThemePreference): void {
-  if (typeof document === "undefined") return;
+function applyTheme(preference: ThemePreference): ResolvedTheme {
   const theme = resolveTheme(preference);
-  document.documentElement.dataset.theme = theme;
+  if (typeof document !== "undefined") {
+    document.documentElement.dataset.theme = theme;
+  }
+  return theme;
 }
 
 interface ThemePreferences {
   readonly preference: ThemePreference;
+  readonly resolvedTheme: ResolvedTheme;
   setPreference: (preference: ThemePreference) => void;
 }
 
@@ -44,18 +47,19 @@ export const useThemePreferences = create<ThemePreferences>((set) => {
   const preference = readPreference();
   // The store is created while the entry module is evaluated, before React
   // renders, so a saved light preference is applied without a dark flash.
-  applyTheme(preference);
+  const resolvedTheme = applyTheme(preference);
 
   return {
     preference,
+    resolvedTheme,
     setPreference: (next) => {
       try {
         localStorage.setItem(STORAGE_KEY, next);
       } catch {
         // The selected appearance still works for this session.
       }
-      applyTheme(next);
-      set({ preference: next });
+      const nextResolvedTheme = applyTheme(next);
+      set({ preference: next, resolvedTheme: nextResolvedTheme });
     },
   };
 });
@@ -64,6 +68,9 @@ if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
   const systemAppearance = window.matchMedia("(prefers-color-scheme: light)");
   systemAppearance.addEventListener("change", () => {
     const { preference } = useThemePreferences.getState();
-    if (preference === "system") applyTheme(preference);
+    if (preference === "system") {
+      const resolvedTheme = applyTheme(preference);
+      useThemePreferences.setState({ resolvedTheme });
+    }
   });
 }

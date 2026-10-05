@@ -46,6 +46,7 @@ afterEach(() => {
 describe("theme preferences", () => {
   it("defaults to dark and applies it to the document root", () => {
     expect(useThemePreferences.getState().preference).toBe("dark");
+    expect(useThemePreferences.getState().resolvedTheme).toBe("dark");
     expect(document.documentElement.dataset.theme).toBe("dark");
   });
 
@@ -59,12 +60,14 @@ describe("theme preferences", () => {
   it("follows system changes only while system mode is selected", () => {
     choose("system");
     expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(useThemePreferences.getState().resolvedTheme).toBe("dark");
 
     systemPrefersLight = true;
     for (const listener of listeners) {
       listener({ matches: true } as MediaQueryListEvent);
     }
     expect(document.documentElement.dataset.theme).toBe("light");
+    expect(useThemePreferences.getState().resolvedTheme).toBe("light");
 
     choose("dark");
     systemPrefersLight = false;

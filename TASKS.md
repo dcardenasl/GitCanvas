@@ -105,7 +105,11 @@ hasta obtener evidencia dinámica de arranque y E2E en los tres sistemas operati
       → `fix(ui): restore focus and keyboard control behavior`
 - [ ] **H2-31 — Acotar y tematizar GraphCanvas.** Un solo `filter` por `<g>`, altura limitada
       o virtualización; paleta de `graph-layout/colors.ts` por tema y test de contraste para
-      ambos temas.
+      ambos temas. *Implementación parcial (2026-10-05):* GraphCanvas combina aristas y nodo
+      en un `<g>` por fila con un único filtro; el SVG se limita a las filas visibles y sus
+      vecinas, desplazado a su posición dentro del historial. Se añadieron paletas oscuras
+      y claras con contraste mínimo de 4.5:1, conectadas al tema resuelto (incluidos cambios
+      del tema del sistema). Se añadieron pruebas; no se ejecutaron.
       → `perf(graph): bound canvas rendering and theme colors`
 - [ ] **H2-32 — Mejorar búsqueda y fechas.** Cachear `Intl.DateTimeFormat`, locale `es` con
       año y `useDeferredValue` en búsqueda.
