@@ -182,9 +182,11 @@ David.
       líneas), typecheck de app/E2E/Node, lint, formato, `cargo fmt`, `cargo test --workspace`
       (150 tests) y Clippy `-D warnings`. Node 20 del shell no cumple `engines >=22` y produce
       un fallo de arranque en undici/jsdom; no usarlo para validar. El smoke de arranque y dos
-      corridas E2E de macOS también pasan. La PR #1 sigue en `7f24bb6`, con checks fallidos
-      del 2026-09-26; aún no hay CI sobre `437ff07`. Falta validar H2-25/H2-42 en los tres
-      sistemas antes de cerrar H2.
+      corridas E2E de macOS también pasan. En el checkout actual también pasaron
+      `npm audit --omit=dev --audit-level=high`, `cargo deny check`, `cargo audit` (8 avisos
+      permitidos) y `npm run tauri build -- --ci` en macOS, que produjo `.app` y `.dmg`. La
+      PR #1 sigue en `7f24bb6`, con checks fallidos del 2026-09-26; aún no hay CI sobre el
+      código local. Falta validar H2-25/H2-42 en los tres sistemas antes de cerrar H2.
       → `docs(tasks): close post-audit hardening`
 
 **Criterio de cierre:** H2-0 a H2-45 completadas o hallazgos explícitamente descartados
