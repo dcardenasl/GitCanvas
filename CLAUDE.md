@@ -136,8 +136,10 @@ Cada una está hecha para fallar el build, no para depender de que alguien se ac
    por offset. Máximo 500 commits por página.
 9. **El layout del graph es reanudable.** Cargar la página N+1 no puede reordenar los
    carriles de las páginas anteriores.
-10. **El token de GitHub vive solo en el keychain del SO y solo se usa en Rust.**
-    Nunca cruza el IPC, nunca se escribe en un archivo plano.
+10. **El PAT entra por IPC una sola vez**, como argumento de
+    `store_github_token`; Rust lo recorta, verifica y guarda en el keychain del SO. El
+    backend nunca lo devuelve: las llamadas REST y el callback de `git2` lo leen dentro
+    de Rust. Nunca se escribe en un archivo plano.
 
 ## Convenciones de código
 

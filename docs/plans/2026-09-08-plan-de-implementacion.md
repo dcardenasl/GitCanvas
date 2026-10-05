@@ -48,7 +48,7 @@ Diez cambios. Ninguno altera el diseño del producto; todos hacen cumplir por m�
 | # | El documento dice | El plan hace | Por qué |
 |---|---|---|---|
 | **D1** | `git/` "no sabe que existe Tauri" como convención de carpetas | **Cargo workspace**: `crates/gitcanvas-core/` sin `tauri` en sus dependencias | Un `use tauri::…` dentro de core deja de compilar. La regla la aplica el grafo de dependencias, no la revisión |
-| **D2** | Tokens en "Stronghold o el plugin de keychain del SO" | Crate **`keyring` v3** directo en Rust | Stronghold **está deprecado y se elimina en Tauri v3**. Además, con `keyring` en el backend el token **nunca cruza el IPC**: el frontend jamás lo ve |
+| **D2** | Tokens en "Stronghold o el plugin de keychain del SO" | Crate **`keyring` v3** directo en Rust | Stronghold **está deprecado y se elimina en Tauri v3**. El PAT entra una vez por IPC como argumento de escritura; Rust lo verifica y guarda, pero nunca lo devuelve al frontend |
 | **D3** | "Cero `unwrap`/`expect`/`panic!`" | `#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]` a nivel de crate, con `cfg_attr(test, allow(…))` | El principio pasa de aspiración a error de compilación |
 | **D4** | Layout recorre la lista y asigna carriles | Layout **reanudable**: `layout(commits, prevState) -> { rows, state }` | Con paginación por cursor, recalcular desde cero al cargar la página 2 **reordena los carriles de la página 1** y el graph "salta" bajo el cursor. Es un bug garantizado, no hipotético |
 | **D5** | SVG "sincronizado con el scroll de la tabla" | **Un solo contenedor de scroll**: el SVG es una capa absoluta dentro del mismo contenedor virtualizado | Dos contenedores sincronizados por JS producen jitter de un frame en cada scroll. Con uno solo, el código de sincronización no existe y por lo tanto no puede fallar |
@@ -250,7 +250,7 @@ docs(changelog): record the commit detail panel and diff viewer
 ## Fase 4 — Integración con GitHub
 
 - **Nunca clone shallow.** Un historial truncado contradice el valor central del producto. Clone completo a un directorio de caché bajo el app data dir, con progreso reportado al frontend por un evento Tauri tipado (`CloneProgress`, vía `collect_events!`).
-- **Token en el keychain nativo del SO vía el crate `keyring` v3** (**D2**), con las features por plataforma explícitas: `apple-native`, `windows-native`, `sync-secret-service` (el crate no tiene features por defecto). El token **vive y se usa solo en Rust**: alimenta el callback de credenciales de `git2` y las llamadas REST. El frontend nunca lo recibe, ni siquiera enmascarado.
+- **Token en el keychain nativo del SO vía el crate `keyring` v3** (**D2**), con las features por plataforma explícitas: `apple-native`, `windows-native`, `sync-secret-service` (el crate no tiene features por defecto). El frontend lo envía una sola vez como argumento a `store_github_token`; Rust lo normaliza, verifica y almacena. El backend nunca lo devuelve y, después de esa entrada, solo se usa dentro de Rust para el callback de credenciales de `git2` y las llamadas REST.
 - **La API REST de GitHub se usa solo para dos cosas:** validar el token y listar repos accesibles. Toda la data del graph sale siempre del clone local vía `git2`. Un solo camino de datos, no dos.
 - **Retención de caché:** límite de 10 repositorios o 5GB (lo que se cumpla primero), con expulsión LRU.
 
@@ -438,7 +438,7 @@ Al cerrar cada fase te reporto: commits en `dev`, estado de CI, y qué quedó ve
 | El layout no se ve prolijo con muchas ramas paralelas | **Aceptado explícitamente** (decisión ya tomada en tu sesión de diseño): se optimiza el caso común, no el patológico |
 | Compilación nativa de libgit2 por SO | `vendored-libgit2` + `vendored-openssl`: sin dependencias del sistema en ninguna de las tres plataformas |
 | Diffs binarios o gigantes cuelgan el render | Guards explícitos en Fase 3 |
-| Fuga del token de GitHub | Keychain del SO vía `keyring`, y el token nunca cruza el IPC |
+| Fuga del token de GitHub | El PAT entra una vez por IPC, se almacena en el keychain vía `keyring`, y el backend nunca lo devuelve |
 | Caché de clones creciendo sin control | Política LRU: 10 repos o 5GB |
 | Historial completo de un repo enorme cargado de una vez | Paginación por cursor desde la Fase 1, y layout reanudable desde la Fase 2 |
 | E2E en macOS | `@wdio/tauri-service` con servidor embebido; además la puerta E2E de CI corre en ubuntu |

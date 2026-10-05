@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (13/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (14/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -145,10 +145,12 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       *Verificado:* 3 tests de credenciales, bindings actualizados, `npm run typecheck`,
       41 tests Vitest GitHubPicker/IPC, Clippy core y Tauri, `./pre-commit`.
       → `fix(github): trim tokens and propagate keyring errors`
-- [ ] **H2-13 — Alinear reglas de secretos y repositorios.** Reformular regla 10 para
-      expresar el flujo real del token (nunca sale del backend; solo entra una vez) y
-      regla 7 según la solución adoptada en H2-11. Mantener consistencia con arquitectura
-      y ADRs.
+- [x] **H2-13 — Alinear reglas de secretos y repositorios.** Reglas 7 y 10 de `CLAUDE.md`
+      describen la allowlist y la única entrada IPC del PAT. `ARCHITECTURE.md`, ADR 0003 y
+      el plan rector reflejan el mismo límite; eliminadas las afirmaciones de que el token
+      nunca cruza IPC.
+      *Verificado:* búsqueda de afirmaciones contradictorias en reglas, arquitectura,
+      ADRs y planes; revisión del diff documental y `git diff --check`.
       → `docs: clarify repository and token boundary rules`
 - [ ] **H2-14 — Corregir parsing de hunks.** En `DiffViewer/parse.ts`, ignorar cabeceras
       solo antes del primer `@@`; test con contenido `-- x` posterior al inicio del hunk.

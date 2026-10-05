@@ -87,16 +87,19 @@ a changed command signature breaks one file instead of every call site.
   pull, push, clone, keychain changes — has a separate gate and runs exactly
   once. Separate gates matter: a clone can take minutes, and sharing a gate with
   history reads would freeze the window until it finished.
-- **State holds a validated path, never a live `git2::Repository`.**
-  `Repository` is not safely shareable across threads, and forcing it behind a
-  lock buys contention and bugs. Opening a repository is cheap — it reads refs,
-  not history — so each command opens its own handle. An invalid path is
-  unrepresentable rather than "validated somewhere".
+- **State holds authorized canonical paths, never a live `git2::Repository`.**
+  `AllowedRepos` records paths admitted by `open_repository`, startup selection or
+  clone. The 14 commands that operate on a repository go through `with_repo`, which
+  checks that allowlist and builds a new `ActiveRepo`. `Repository` is not safely
+  shareable across threads, and forcing it behind a lock buys contention and bugs.
+  Each command opens its own handle.
 
 ## Secrets and the network
 
-The GitHub token lives in the OS keychain and is read only inside
-`gitcanvas-core`. Two rules keep it from leaking:
+The interface submits the personal access token once as input to
+`store_github_token`. Rust trims and verifies it before storing it in the OS keychain;
+the backend never returns it. Later REST calls and Git credential callbacks read it
+inside `gitcanvas-core`. Two rules keep it from leaking:
 
 - **It is offered only to `https://github.com`.** The credential callback shared
   by clone, pull and push checks the URL's host before answering, and offers each
