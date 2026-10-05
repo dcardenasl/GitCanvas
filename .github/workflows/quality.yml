@@ -44,10 +44,12 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - name: Install the Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v7
         with:
-          components: rustfmt, clippy
+          python-version: "3.13"
+
+      - name: Install the Rust toolchain
+        run: python scripts/install-rust-toolchain.py
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -70,6 +72,7 @@ jobs:
             libxdo-dev \
             libdbus-1-dev \
             pkg-config \
+            rpm \
             webkit2gtk-driver
 
       - run: npm ci
@@ -122,11 +125,11 @@ jobs:
       # and signing setup for a check that verifies wiring, not platform
       # behaviour, and the wiring is identical on all three.
       #
-      # Built with `--features e2e`, which is the only configuration that
-      # carries the embedded WebDriver server. The released binary has none.
+      # Reuses the frontend built by the bundle step and compiles only the E2E
+      # Rust variant with `--features e2e`; the released binary has no WebDriver.
       - name: Run the end-to-end suite
         if: matrix.os == 'ubuntu-latest'
-        run: xvfb-run --auto-servernum npm run test:e2e
+        run: xvfb-run --auto-servernum npm run test:e2e:run
 
       # The feature must never reach a release build, so this asserts it rather
       # than trusting that nobody adds it to the default set.
@@ -137,3 +140,37 @@ jobs:
             echo "::error::the default build pulls in the embedded WebDriver server"
             exit 1
           fi
+
+  dependency-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install the Rust toolchain
+        run: python scripts/install-rust-toolchain.py
+
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/cargo-deny
+            ~/.cargo/bin/cargo-audit
+          key: rust-security-tools-${{ runner.os }}-deny-0.20.2-audit-0.22.2
+
+      - name: Install Rust dependency audit tools
+        run: |
+          if ! cargo deny --version | grep -Fq 'cargo-deny 0.20.2'; then
+            cargo install --locked --force cargo-deny --version 0.20.2
+          fi
+          if ! cargo audit --version | grep -Fq 'cargo-audit-audit 0.22.2'; then
+            cargo install --locked --force cargo-audit --version 0.22.2
+          fi
+
+      - name: Check Rust dependency policies
+        run: cargo deny check
+
+      - name: Audit Rust dependencies for known vulnerabilities
+        run: cargo audit

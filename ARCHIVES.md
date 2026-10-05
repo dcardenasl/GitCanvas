@@ -1334,3 +1334,28 @@ marca.
       trailers y cuerpos multilinea. Caso sin staged validado en Bash 3.2. La cifra
       histórica de 2,05 s quedó etiquetada como medida del hook original.
       → `chore(hooks): validate staged files and commit messages`
+- [x] **H2-24 — Endurecer workflows y releases.** Añadidos `deny.toml`, comprobaciones
+      `cargo deny` y `cargo audit` con herramientas fijadas/cacheadas, y actualizaciones
+      semanales de Cargo, npm y GitHub Actions mediante Dependabot. Los workflows instalan
+      el toolchain desde `rust-toolchain.toml`; `scripts/install-rust-toolchain.py` comprueba
+      que la versión fijada (1.98.1) pertenece a la línea declarada en `rust-version`.
+      `release.yml` exige que el commit del tag sea ancestro de `main` antes de crear el
+      borrador, y el validador comprueba semver y coincidencia de las tres versiones. Notas
+      temporales usan `$RUNNER_TEMP`; la configuración declara formatos y macOS mínimo
+      (10.13). El E2E de CI reutiliza el frontend ya compilado y solo recompila el binario
+      Rust con la feature de WebDriver; el build independiente mantiene su paso de frontend.
+      *Hallazgos:* `cargo audit` encontró RUSTSEC-2026-0285 en `rustls`; Cargo.lock se
+      actualizó a 0.23.45 y la auditoría ya no reporta vulnerabilidades. Persisten ocho
+      avisos transitive (siete crates sin mantenimiento en la cadena de `specta`, Tauri/GTK
+      y `urlpattern`, y una advertencia de solidez en GTK); se mantienen visibles, sin
+      excepciones. Intentar
+      actualizar `tauri-utils` a 2.10.1 hizo fallar el test interno de Tauri 2.11.5 por la
+      nueva propiedad `AppConfig.app_directories_override`; se conserva 2.9.3, compatible,
+      hasta alinear la versión de Tauri.
+      *Verificado:* `cargo fmt --all -- --check`, `cargo test --workspace` (todos pasan;
+      2 comparaciones manuales ignoradas por diseño), `cargo clippy --workspace --all-targets
+      --all-features -- -D warnings`, `cargo deny check` (advisories, bans, licenses y
+      sources pasan), `cargo audit` (532 dependencias, 0 vulnerabilidades), lint/typechecks/
+      formato npm, validador de tag (válido e inválido), YAML de workflows/dependabot y
+      `tauri build --ci` (genera `.app` y `.dmg` con targets explícitos).
+      → `ci: validate dependencies and release metadata`

@@ -4,9 +4,8 @@ name: release
 # create a GitHub Release with those notes, and attach an installer for each
 # operating system.
 #
-# The version in the tag must already exist as a `## [<version>]` heading in
-# CHANGELOG.md, so `chore: release vX.Y.Z` is the last commit on `dev` before
-# the merge to `main`.
+# Release tags must point to commits already merged into `main`. The version
+# must match all application manifests and have a section in CHANGELOG.md.
 #
 # Code signing is deliberately out of scope for now. The bundle step is where
 # it will go: adding the signing secrets to that job is the whole change, with
@@ -18,10 +17,37 @@ on:
       - "v*.*.*"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  validate-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Validate tag ancestry and release versions
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          TAG_REF: ${{ github.ref }}
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          TAG_SHA="$(git rev-parse "${TAG_REF}^{commit}")"
+          if ! git merge-base --is-ancestor "${TAG_SHA}" refs/remotes/origin/main; then
+            echo "::error::${RELEASE_TAG} does not point to a commit reachable from main."
+            exit 1
+          fi
+          python scripts/validate-release.py "${RELEASE_TAG}"
+
   create-release:
+    needs: validate-release
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     outputs:
       release_id: ${{ steps.create.outputs.release_id }}
@@ -46,11 +72,11 @@ jobs:
 
           # Pull the body between `## [VERSION]` and the next `## [`,
           # excluding the heading line itself.
-          NOTES=$(awk -v ver="${VERSION}" '
+          NOTES=$(awk -v heading="## [${VERSION}]" '
             BEGIN { capture = 0 }
             /^## \[/ {
               if (capture) { exit }
-              if ($0 ~ "^## \\[" ver "\\]") { capture = 1; next }
+              if ($0 == heading) { capture = 1; next }
             }
             capture { print }
           ' CHANGELOG.md)
@@ -60,10 +86,11 @@ jobs:
             exit 1
           fi
 
+          delimiter="$(python -c 'import uuid; print("RELEASE_NOTES_" + uuid.uuid4().hex)')"
           {
-            echo 'notes<<EOF_RELEASE_NOTES'
-            echo "${NOTES}"
-            echo 'EOF_RELEASE_NOTES'
+            echo "notes<<${delimiter}"
+            printf '%s\n' "${NOTES}"
+            echo "${delimiter}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Create the draft release
@@ -73,17 +100,17 @@ jobs:
           RELEASE_NOTES: ${{ steps.notes.outputs.notes }}
         run: |
           # Write notes to a file to avoid shell injection from CHANGELOG content.
-          printf '%s' "${RELEASE_NOTES}" > /tmp/release_notes.md
+          printf '%s' "${RELEASE_NOTES}" > "${RUNNER_TEMP}/release-notes.md"
 
           # Draft until every installer has been attached, so nobody downloads
           # a release that is missing their platform.
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             echo "Release ${GITHUB_REF_NAME} already exists; updating notes."
-            gh release edit "${GITHUB_REF_NAME}" --notes-file /tmp/release_notes.md --draft
+            gh release edit "${GITHUB_REF_NAME}" --notes-file "${RUNNER_TEMP}/release-notes.md" --draft
           else
             gh release create "${GITHUB_REF_NAME}" \
               --title "${GITHUB_REF_NAME}" \
-              --notes-file /tmp/release_notes.md \
+              --notes-file "${RUNNER_TEMP}/release-notes.md" \
               --draft
           fi
 
@@ -92,17 +119,23 @@ jobs:
 
   bundle:
     needs: create-release
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: macos-latest
+            target: aarch64-apple-darwin
             args: "--target aarch64-apple-darwin"
           - os: macos-latest
+            target: x86_64-apple-darwin
             args: "--target x86_64-apple-darwin"
           - os: ubuntu-latest
+            target: ""
             args: ""
           - os: windows-latest
+            target: ""
             args: ""
     runs-on: ${{ matrix.os }}
 
@@ -114,10 +147,12 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - name: Install the Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v7
         with:
-          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          python-version: "3.13"
+
+      - name: Install the Rust toolchain
+        run: python scripts/install-rust-toolchain.py ${{ matrix.target }}
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -135,7 +170,8 @@ jobs:
             patchelf \
             libxdo-dev \
             libdbus-1-dev \
-            pkg-config
+            pkg-config \
+            rpm
 
       - run: npm ci
 
@@ -149,6 +185,8 @@ jobs:
 
   publish:
     needs: [create-release, bundle]
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

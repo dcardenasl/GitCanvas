@@ -23,7 +23,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "npm run build && cargo build --release --features e2e,tauri/custom-protocol && bash scripts/run-e2e.sh",
+    "test:e2e": "npm run build && npm run test:e2e:run",
+    "test:e2e:run": "cargo build --release --features e2e,tauri/custom-protocol && bash scripts/run-e2e.sh",
     "record:demo": "node scripts/record-demo.mjs",
     "record:demo:vertical": "node scripts/create-vertical-demo.mjs"
   },
