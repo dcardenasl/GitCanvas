@@ -1124,7 +1124,7 @@ marca.
 
 ---
 
-## ✅ Fase H2 — Endurecimiento post-auditoría (25/46)
+## ✅ Fase H2 — Endurecimiento post-auditoría (42/46 implementadas; 33 cierres con commit)
 
 > Plan de referencia: [`docs/plan/2026-10-04-plan-de-endurecimiento.md`](docs/plan/2026-10-04-plan-de-endurecimiento.md).
 > Se conservan las descripciones, verificaciones y mensajes de commit registrados al
@@ -1312,9 +1312,10 @@ marca.
       typecheck principal. E2E y `wdio.conf.ts` aplican `noUncheckedIndexedAccess` y
       `exactOptionalPropertyTypes`; ESLint habilita `no-floating-promises` para E2E. Las
       configs Node comprueban JS mediante `allowJs`/`checkJs`. Quitado `--passWithNoTests`.
-      *Hallazgo:* el grabador manual `e2e/recording/record-video.ts` depende de un checkout
-      hermano de `bitacora-engine`, ausente en CI; se excluye del proyecto E2E y H2-43 lo
-      aislará. Se corrigieron siete accesos E2E con validación explícita.
+      *Hallazgo:* el grabador manual, ahora en `tools/demo/record-video.ts`, depende de un
+      checkout hermano de `bitacora-engine`, ausente en CI; H2-43 lo aisló del proyecto E2E
+      y de las comprobaciones automáticas. Se corrigieron siete accesos E2E con validación
+      explícita.
       *Verificado:* los tres typechecks, `npm run lint`, `npm run format:check`,
       `./pre-commit`, `npm run test` y `npm run test:coverage` (38 archivos, 317 tests;
       cobertura statements 93,11 %, branches 86,31 %, functions 93,25 %, lines 93,89 %).
@@ -1359,3 +1360,265 @@ marca.
       formato npm, validador de tag (válido e inválido), YAML de workflows/dependabot y
       `tauri build --ci` (genera `.app` y `.dmg` con targets explícitos).
       → `ci: validate dependencies and release metadata`
+
+### UX y rendimiento
+
+### H2-26 — Acotar invalidación de queries y avisos
+
+- [x] **H2-26 — Acotar invalidación de queries y avisos.** Las acciones Git invalidan solo
+      `LIVE_QUERIES` del repositorio afectado; los avisos se pueden cerrar y se limpian al
+      cambiar de repositorio, incluso si una operación anterior termina tarde. El resultado
+      de pull distingue `commit`/`commits`.
+      *Verificado en sandbox aislado y offline:* `Actions.test.tsx` (13 tests); junto con las
+      demás suites de H2-26 a H2-32, 153 tests Vitest aprobados y `npm run typecheck`.
+      → `fix(ui): scope live query invalidation`
+
+### H2-27 — Centralizar query keys y refresh en vivo
+
+- [x] **H2-27 — Centralizar query keys y refresh en vivo.** Las claves de historial, refs,
+      worktree, diffs, archivos, árboles y GitHub viven en `queryKeys`; `invalidateLive()`
+      aplica alcance metadata/worktree/ambos y prefijos para todas las páginas locales.
+      Watcher, actualización manual y acciones Git usan el helper.
+      *Verificado en sandbox aislado y offline:* `queryKeys.test.ts` (4 tests), las suites
+      relacionadas del frontend y `npm run typecheck`; 153 tests Vitest aprobaron en total.
+      → `refactor(ui): centralize query keys and live invalidation`
+
+### H2-28 — Reducir trabajo de paginación de historial
+
+- [x] **H2-28 — Reducir trabajo de paginación de historial.** Al invalidar metadata se
+      conserva la página punta y las páginas antiguas vuelven a cargarse bajo demanda.
+      `useHistory` mantiene un índice memoizado por SHA, compartido por AppShell, HistoryView
+      y CommitTable; `fetchNextPage` conserva identidad mientras sus condiciones no cambien.
+      *Verificado en sandbox aislado y offline:* `HistoryView.test.tsx` (6),
+      `CommitTable.test.tsx` (19), `AppShell.test.tsx` (16) y `queryKeys.test.ts` (4);
+      la ejecución combinada de H2-26 a H2-32 aprobó 153 tests y typecheck.
+      → `perf(history): bound pages and index commits`
+
+### H2-29 — Evitar selecciones obsoletas de AppShell
+
+- [x] **H2-29 — Evitar selecciones obsoletas de AppShell.** La búsqueda del repositorio de
+      inicio se ignora si la selección cambió mientras esperaba y se cancela al desmontar.
+      Un reveal agotado limpia la selección huérfana sin borrar una selección más nueva.
+      *Verificado en sandbox aislado y offline:* `AppShell.test.tsx` (16) y
+      `session.test.ts` (16); 153 tests Vitest y `npm run typecheck` aprobados en conjunto.
+      → `fix(ui): ignore stale repository and reveal selections`
+
+### H2-30 — Corregir teclado y ergonomía de controles
+
+- [x] **H2-30 — Corregir teclado y ergonomía de controles.** Resizer restaura el `userSelect`
+      previo incluso al desmontar, filtra botones y punteros ajenos y restablece su tamaño
+      inicial. ContextMenu mantiene el callback actual, navega con flechas/Home/End y devuelve
+      el foco al opener; Escape cierra FileDiffView.
+      *Verificado en sandbox aislado y offline:* `Resizer.test.tsx` (11),
+      `ContextMenu.test.tsx` (8) y `FileDiffView.test.tsx` (19); 153 tests Vitest y
+      `npm run typecheck` aprobados en conjunto.
+      → `fix(ui): restore focus and keyboard control behavior`
+
+### H2-31 — Acotar y tematizar GraphCanvas
+
+- [x] **H2-31 — Acotar y tematizar GraphCanvas.** GraphCanvas limita el SVG a las filas
+      visibles y vecinas, con un filtro por grupo de fila. Las paletas clara y oscura mantienen
+      contraste mínimo 4.5:1 y siguen el tema resuelto, incluido el tema del sistema.
+      *Verificado en sandbox aislado y offline:* `GraphCanvas.test.tsx` (7),
+      `colors.test.ts` (4) y `themePreferences.test.ts` (4); 153 tests Vitest y
+      `npm run typecheck` aprobados en conjunto.
+      → `perf(graph): bound canvas rendering and theme colors`
+
+### H2-32 — Mejorar búsqueda y fechas
+
+- [x] **H2-32 — Mejorar búsqueda y fechas.** Los formateadores `Intl.DateTimeFormat` se
+      reutilizan en una caché acotada; el formato español muestra el año. La búsqueda usa
+      `useDeferredValue`, expone el estado pendiente y no navega con resultados obsoletos.
+      Se corrigió la aserción de locale `en-GB` para aceptar el año que incluye la salida.
+      *Verificado en sandbox aislado y offline:* `format.test.ts` (10),
+      `CommitSearch.test.tsx` (7) y `match.test.ts` (9); 153 tests Vitest y
+      `npm run typecheck` aprobados en conjunto.
+      → `perf(ui): defer search and reuse date formatters`
+
+### H2-33 — Unificar límites de core y debounce
+
+- [x] **H2-33 — Unificar límites de core y debounce.** `get_commit_diff` obtiene los totales
+      con `diff.stats()` y calcula las métricas por archivo sin materializar `Patch`; solo el
+      parche solicitado se construye. El fingerprint incorpora incrementalmente HEAD, índice,
+      status y metadatos, sin crear un buffer proporcional al repositorio. Historial y
+      worktree comparten el rechazo tipado de límites inválidos; el watcher usa settle de
+      250 ms con máximo de 2 s. Se eliminaron conversiones redundantes y resta temporal no
+      comprobada que Clippy encontró durante la verificación.
+      *Verificado en sandbox aislado y offline:* 34 tests unitarios de core, 8 de diff,
+      10 de historial y 11 de worktree; `cargo clippy -p gitcanvas-core --all-targets
+      --offline --locked -- -D warnings`; `cargo fmt --all -- --check`.
+      *Reconciliado:* commit local `03077dd`. Verificación aislada de ese snapshot:
+      formato, 34 tests unitarios, 8 de diff, 6 de watcher, 11 de worktree y Clippy
+      `--all-targets -- -D warnings` pasaron en offline.
+      → `perf(core): bound fingerprints and watcher debounce`
+
+### H2-34 — Completar idioma del frontend
+
+- [x] **H2-34 — Completar idioma del frontend.** RepositoryPicker delega en `userMessage()`
+      y elimina su tabla local de errores; los mensajes de error comparten `KIND_SUMMARY`.
+      Acciones, pull/push, árbol de trabajo y GitHub usan etiquetas en español.
+      *Verificado en sandbox aislado y offline:* `RepositoryPicker.test.tsx` (8),
+      `GitHubPicker.test.tsx` (15), `Actions.test.tsx` (13),
+      `WorkingTreeDetailPanel.test.tsx` (7), `errors.test.ts` (8), `ipc/index.test.ts` (24);
+      `npm run typecheck`. 75 tests aprobados.
+      → `fix(i18n): align remaining frontend messages`
+
+### H2-35 — Consolidar modelos y helpers de frontend
+
+- [x] **H2-35 — Consolidar modelos y helpers de frontend.** `ChangedFile` y `compareNames`
+      tienen una definición compartida; tabla y grafo comparten geometría e intervalos
+      visibles; `safeStorage` absorbe fallos de storage; las vistas usan `DiffStat`,
+      `FolderIcon` y `RetryError`; los paneles comparten `selectedFileSource`. Se retiraron
+      exports sin consumidores e imports duplicados. `InspectorEmpty` no existía en el árbol.
+      Al confirmarse que no tenían consumidores frontend, se eliminaron `validateRepository`
+      y `getCloneCacheStatus` de la UI, IPC, comandos Tauri, registro, tests y bindings.
+      Los bindings se regeneraron con la prueba Rust; no se editaron manualmente.
+      *Verificado en sandbox aislado y offline:* 53 tests de siete suites frontend específicas
+      (incluidos tests nuevos de `safeStorage`), y 121 tests de 12 suites al repetir junto con
+      H2-34; `npm run typecheck`; `cargo test -p gitcanvas --lib` (23 tests, incluidos
+      despacho IPC y bindings); `cargo fmt --all -- --check`; `cargo clippy -p gitcanvas
+      --all-targets --offline --locked -- -D warnings`.
+      Se corrigieron mocks de paginación que disparaban consultas `undefined` o repetían
+      elementos, y sus regresiones quedaron sin warnings en la ejecución limpia.
+      → `refactor(ui): consolidate file and display helpers`
+
+### H2-36 — Compartir tokens y primitivos de estilo
+
+- [x] **H2-36 — Compartir tokens y primitivos de estilo.** `App.css` define tokens comunes
+      de espacio, radio, tipografía y foco; `src/styles/primitives.css` centraliza `.button`
+      y `.state`. Los estilos de árbol/lista se separaron de `CommitDetailPanel.css` a
+      `ChangedFilesBrowser.css`. Las anchuras iniciales 220/310 se derivan de `SIDEBAR` y
+      `INSPECTOR` en `state/layout.ts`, inyectadas siempre como variables CSS. Los valores
+      visuales existentes se conservaron al sustituirlos por tokens.
+      *Verificado en sandbox aislado y offline:* 121 tests Vitest de 12 suites del conjunto
+      H2-34/35; `npm run typecheck`, `npm run typecheck:e2e`, `npm run typecheck:node`,
+      `npm run lint` y `npm run format:check`.
+      → `refactor(styles): centralize design tokens and primitives`
+
+### H2-37 — Reducir duplicación y superficie pública de core
+
+- [x] **H2-37 — Reducir duplicación y superficie pública de core.** `FileDiff` reutiliza
+      `FileDiffSummary`; `FileContent` y `WorktreeFileContent` comparten
+      `FileContentFields`. Los campos compartidos se aplanan en JSON y el test de bindings
+      genera las intersecciones TypeScript sin editar a mano `bindings.ts`. Los resultados
+      de inserciones/borrados del working tree usan un solo fold saturado; `ContentRead` y
+      `DiffOmission::TooLarge` ya compartían la omisión de contenido y se mantuvieron como
+      una sola representación. La explicación de los outcomes internamente etiquetados vive
+      en la documentación del módulo `actions`. Se estrechó visibilidad de helpers usados
+      solo dentro de core y se mantuvo público lo requerido por Tauri o integración.
+      Se eliminó el `clone_url` redundante del flujo GitHub → UI → IPC → Tauri; el backend
+      deriva y valida la URL canónica desde `full_name`. Se quitó `serde_json` duplicado de
+      `dev-dependencies` (sigue como dependencia normal) y push usa una conexión sin una
+      consulta previa separada al remoto; conserva el rechazo no fast-forward y no fuerza.
+      *Hallazgos:* `get_commit_diff`/`get_commits` son consumidos por Tauri y no son solo
+      helpers de tests. `HistoryReader::with_budget` también se usa desde una prueba de
+      integración; `cfg(test)` sobre él haría que esa prueba no compile. Se mantuvo
+      documentado y disponible para esos consumidores.
+      *Verificado en sandbox aislado y offline:* 37 tests unitarios de core, 6 de contenido,
+      8 de diff, 11 de worktree, 17 de acciones, 12 de caché y 23 de Tauri; 52 tests Vitest,
+      `npm run typecheck`, regeneración de bindings, `cargo fmt --all -- --check` y
+      `cargo clippy -p gitcanvas-core --all-targets --offline --locked -- -D warnings`.
+      La suite completa de core se intentó; 10 tests de `github_api` no pudieron abrir
+      sockets locales porque el sandbox de seguridad los deniega. Las suites focalizadas
+      que ejercitan este cambio sí pasaron.
+      → `refactor(core): consolidate diff types and internal APIs`
+
+### H2-38 — Completar documentación de API
+
+- [x] **H2-38 — Completar documentación de API.** Se documentaron los estados, acciones,
+      invariantes de selección y helpers exportados en `src/state/session.ts`, incluidos sus
+      parámetros y resultados. `src/components/ChangedFilesBrowser/tree.ts` explica los
+      discriminadores, rutas relativas, orden estable, ids y conteos de archivos, además del
+      contrato de `buildFileTree`. Los helpers compartidos e IPC ya tienen TSDoc específico.
+      La raíz del workspace mantiene `missing_docs = deny`, que exige Rustdoc en cada API y
+      campo público del core.
+      *Verificado en sandbox aislado y offline:* `npm run lint`, `npm run typecheck` y
+      `npm run format:check`; `cargo clippy -p gitcanvas-core --all-targets --offline
+      --locked -- -D warnings` comprueba también el lint Rust `missing_docs`.
+      → `docs(api): document public rust and typescript interfaces`
+
+
+### H2-39 — Compartir utilidades de tests frontend
+
+- [x] **H2-39 — Compartir utilidades de tests frontend.** `src/test/test-utils.tsx`
+      centraliza un QueryClient sin reintentos, su wrapper/render helper y mocks IPC
+      tipados. Se adoptó en suites de AppShell, historial, selectores de repositorio,
+      paneles de commit/diff, GitHub, Sidebar, Actions y estado; todos los tests que crean
+      QueryClient ahora comparten la configuración. Las suites afectadas consultan controles
+      por roles/nombres accesibles y verifican elementos, estado accesible, valores y
+      resultados concretos en vez de clases o `toBeDefined()` débiles. La estructura de
+      `GraphCanvas` conserva consultas DOM para validar sus paths SVG decorativos con
+      `aria-hidden`; `ConfirmDialog` conserva una comprobación de clase para validar
+      explícitamente el estilo destructivo.
+      *Verificado en sandbox aislado y offline:* `npm run typecheck`, `npm run lint`,
+      `npm run format:check`; 16 suites Vitest focalizadas, 155 tests aprobados. También
+      pasó `git diff --check`.
+      → `test(ui): share accessible component test utilities`
+
+
+### H2-40 — Cubrir flujos frontend y límites omitidos
+
+- [x] **H2-40 — Cubrir flujos frontend y límites omitidos.** `useLiveRepository` ahora
+      tiene tests que comprueban el intervalo de reintento degradado de 30 s y la
+      invalidación de queries cuando cambia la revisión del fingerprint del working tree.
+      `CommitTable` prueba el éxito y rechazo del portapapeles desde el menú y el anuncio
+      accesible correspondiente. Se confirmaron las pruebas existentes de estado `Degraded`
+      y reintento manual de AppShell, Resizer, reveal de historial, `parseHunks`, expansión
+      del árbol de trabajo y límite de 1000 repositorios/10 páginas.
+      La paginación GitHub se aisló en `collect_pages`, conservando la llamada HTTP y la
+      conversión de respuestas en `list_repositories`; tests sin red verifican el tope
+      `MAX_PAGES`, el corte al recibir una página corta y la propagación de errores.
+      *Verificado en sandbox aislado y offline:* `npm run typecheck`, `npm run lint`,
+      `npm run format:check`; 9 suites frontend focalizadas, 100 tests aprobados;
+      3 tests unitarios de paginación; `cargo fmt --all -- --check` y
+      `cargo clippy -p gitcanvas-core --all-targets --offline --locked -- -D warnings`.
+      La prueba HTTP existente `reports_when_the_thousand_repository_cap_truncates_the_listing`
+      se intentó ejecutar, pero el sandbox denegó `TcpListener::bind` con `PermissionDenied`
+      en `github_api.rs:40`; no se registra como aprobada y queda disponible para CI.
+      → `test(ui): cover live repository and navigation edge cases`
+
+
+### H2-41 — Corregir pruebas Rust que dan señal falsa
+
+- [x] **H2-41 — Corregir pruebas Rust que dan señal falsa.** Las aserciones de errores de
+      push (HEAD separado y remoto ausente), pull separado y payload GitHub inválido ahora
+      comprueban variantes `AppError` con `matches!`, sin inspeccionar representaciones
+      Debug ni limitarse a `is_err()`. La prueba de límite de blobs del worktree conserva
+      el tipo `ResourceLimitExceeded` y comprueba ruta y límite en su mensaje.
+      El test de watcher espera que el canal del callback se desconecte al soltar el handle,
+      drena eventos anteriores y luego verifica que no se emita otro; el rechazo de una
+      ruta que no es repositorio comprueba `InvalidRepository`. La auditoría de fuentes no
+      encontró `is_err()` sueltos ni sleeps fijos de test: las únicas pausas restantes son
+      el backoff de producción de `retry.rs` y el debounce de watcher.
+      El comparador manual de historial y la medición de latencia salieron de
+      `tests/history_verification.rs` y ahora son el target explícito
+      `benches/history_verification.rs`, fuera de `cargo test` rutinario.
+      *Verificado en sandbox aislado y offline:* `cargo fmt --all -- --check`, 40 tests
+      unitarios de core, 17 de acciones, 6 de watcher y 11 de worktree; `cargo clippy
+      -p gitcanvas-core --all-targets --offline --locked -- -D warnings`; y compilación
+      del benchmark con `cargo bench -p gitcanvas-core --bench history_verification --no-run
+      --offline --locked`. El benchmark compiló; `rust-objcopy` emitió una advertencia de
+      entorno al intentar eliminar símbolos porque faltaba `libLLVM.dylib`.
+      La prueba de integración de `github_api` se compiló, pero no pudo ejecutarse porque
+      el sandbox denegó `TcpListener::bind` con `PermissionDenied`; no se registra como
+      aprobada y queda para CI.
+      → `test(core): assert typed outcomes and remove timing races`
+
+
+### H2-43 — Aislar las herramientas de demo
+
+- [x] **H2-43 — Sacar herramientas de demo del CI/typecheck.** Los dos generadores y el
+      recorder WDIO viven en `tools/demo/`; los comandos npm apuntan a sus nuevas rutas y
+      calculan la raíz del workspace sin depender del directorio `scripts/` o `e2e/`.
+      ESLint y Prettier ignoran el directorio opcional, y los proyectos TypeScript de la app,
+      Node y E2E no incluyen el recorder que depende del checkout hermano `bitacora-engine`.
+      `GITCANVAS_VIDEO_DIR` configura la carpeta de salida de ambos generadores; el destino
+      del recorder es una variable interna (`GITCANVAS_CAPTURE_OUTPUT`). Los errores de
+      herramientas están en inglés. README documenta `bitacora-engine`, `edge-tts` (con
+      acceso a red para sintetizar voz), `ffmpeg`, `ffprobe`, ImageMagick `magick` y que la
+      composición vertical requiere la fuente Arial disponible en macOS.
+      *Verificado en sandbox aislado y offline:* `npm run typecheck`, `npm run typecheck:e2e`,
+      `npm run typecheck:node`, `npm run lint`, `npm run format:check`; `node --check` de los
+      dos `.mjs`; transpilación TypeScript con diagnósticos sintácticos del recorder; y
+      comprobación de que los comandos npm apuntan a los tres archivos bajo `tools/demo/`.
+      → `chore(demo): isolate recorder tooling and document prerequisites`

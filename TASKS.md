@@ -1,11 +1,53 @@
 # TASKS — GitCanvas
 
-> Fuente de verdad de ejecución. El plan rector está en
-> [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
-> Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
-> Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
+> Fuente de verdad para el trabajo pendiente. El plan rector de H2 está en
+> [`docs/plan/2026-10-04-plan-de-endurecimiento.md`](docs/plan/2026-10-04-plan-de-endurecimiento.md);
+> el plan general está en [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
+> Convenciones y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
+> Tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 25/46 completadas · 21 pendientes (H2-25 a H2-45) · Release v0.1.0 pendiente (R-4 a R-6) · actualizado 2026-10-05
+**Estado al 2026-10-05:** 42 de las 46 tareas H2 están completadas y en
+[`ARCHIVES.md`](ARCHIVES.md); quedan H2-25, H2-42, H2-44 y H2-45. De las completadas,
+33 tienen un commit local dedicado. H2-34–41 y H2-43 están implementadas y verificadas,
+pero no tienen commits individuales; H2-45 debe reconciliar esa divergencia. El release
+v0.1.0 también sigue abierto: PR #1 está abierta y R-4, R-5 y R-6 están pendientes.
+
+**Punto de partida del checkout:** rama `dev`, HEAD `03077dd`, `origin/dev` en `7f24bb6`
+(39 commits locales por delante). El working tree contiene 122 rutas modificadas o nuevas,
+con cambios mezclados de varias tareas. No asumir que esos cambios están integrados en el
+PR ni crear un commit que mezcle tareas; antes de editar, inspeccionar `git status` y
+comparar los archivos con los criterios y la evidencia de abajo.
+
+## Siguiente paso
+
+Retomar **H2-25**: la allowlist, el arranque local y E2E en macOS ya se verificaron. Para
+cerrarla, hace falta que una corrida de `quality` evalúe el código actual y pase E2E en
+Linux, macOS y Windows; los runs remotos anotados en la tarea son de un SHA anterior y
+fallaron antes de ejecutar pasos, así que no cuentan como evidencia. Luego, cerrar H2-42
+con evidencia de CI multiplataforma, terminar y confirmar H2-44, y por último reconciliar
+commits y trazabilidad en H2-45. El release sigue su flujo separado de `CLAUDE.md`.
+
+Antes de empezar, revisar `git status`: el working tree puede incluir cambios de varias
+tareas. Comparar cada cambio con los criterios de aceptación y la evidencia de esta lista.
+Mover una tarea a [`ARCHIVES.md`](ARCHIVES.md) solo cuando todos sus criterios y su
+verificación estén completos; registrar su commit dedicado cuando corresponda.
+
+## Cola de trabajo
+
+1. **H2-25 — Permisos y validación multiplataforma.** Obtener una corrida de CI sobre el
+   código vigente; confirmar arranque y E2E en Linux, macOS y Windows. No cerrar con los
+   resultados antiguos documentados en la tarea.
+2. **H2-42 — Suite E2E.** El suite pasa localmente en macOS (4 specs/8 tests), con un
+   reintento configurado. Completar evidencia CI Linux/Windows, revisar si ese reintento
+   sigue justificado y registrar el warning conocido de `@wdio/tauri-service` sin ocultarlo.
+3. **H2-44 — Documentación.** El contenido ya está actualizado en el working tree; revisar
+   el diff y enlaces, terminar su commit dedicado y actualizar estado/evidencia en ese
+   mismo cambio.
+4. **H2-45 — Cierre H2.** Reconciliar H2-34–41 y H2-43 con el historial sin perder cambios;
+   cerrar conteos, evidencia integrada y divergencias solo cuando las tareas previas estén
+   cerradas.
+5. **R-4 a R-6 — Release independiente.** Seguir `CLAUDE.md`; R-4 requiere CI verde y
+   aprobación explícita de David antes del merge.
 
 ## Cómo se usa este archivo
 
@@ -20,28 +62,20 @@
 
 ---
 
-## 🧭 Fase H2 — Endurecimiento post-auditoría (en curso)
+## Fase H2 — Endurecimiento post-auditoría
 
-Plan de trabajo derivado de la auditoría estática completa del 2026-10-04:
-[`docs/plan/2026-10-04-plan-de-endurecimiento.md`](docs/plan/2026-10-04-plan-de-endurecimiento.md).
-Ese documento contiene los hallazgos, ubicaciones, criterios técnicos, orden de fases y
-verificación manual completos; leerlo antes de ejecutar cada tarea. La auditoría inicial
-indica que se respetan las decisiones rectoras, pero sus hallazgos deben verificarse en
-el código antes de modificarlos. Si no se reproducen, descartar el hallazgo y dejar la
-evidencia aquí.
+Plan rector: [`docs/plan/2026-10-04-plan-de-endurecimiento.md`](docs/plan/2026-10-04-plan-de-endurecimiento.md).
+Leer el contexto, los hallazgos y los criterios de aceptación de la tarea antes de
+implementarla; validar hallazgos en el código y registrar aquí si no se reproducen. Las 42
+tareas cerradas están en
+[`ARCHIVES.md`](ARCHIVES.md). Los commits `c954492` (branding) y `7f24bb6` (grabador de
+demo) ya existen en `dev` y no son pendientes.
 
-**Convenciones:** trabajar en `dev`; una unidad verificable y un commit por tarea; mensaje
-de commit de una línea en inglés, sin trailers ni menciones a IA; nombrar explícitamente
-los archivos tocados; actualizar esta tarea en el mismo commit que la implementación.
-Actualizar `CHANGELOG.md` solo para `feat`, `fix` o `perf`. Ejecutar las comprobaciones
-pertinentes del plan y registrar resultados/hallazgos. No iniciar publicación a `main`:
-la sigue controlando exclusivamente `/release` y requiere aprobación de David.
-Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presentes en
-`dev`; la auditoría los tuvo en cuenta y no son tareas pendientes.
-
-Las tareas H2-0 a H2-24 están completadas y archivadas en [`ARCHIVES.md`](ARCHIVES.md).
-La siguiente tarea es H2-25. Está parcialmente implementada, pero permanece abierta
-hasta obtener evidencia dinámica de arranque y E2E en los tres sistemas operativos.
+**Convenciones:** trabajar en `dev`; una unidad verificable y un commit por tarea; usar el
+mensaje indicado en cada tarea; actualizar su estado y evidencia en el mismo commit de
+implementación. Actualizar `CHANGELOG.md` solo para `feat`, `fix` o `perf`. No publicar a
+`main` desde esta fase: la publicación corresponde a `/release` y requiere aprobación de
+David.
 
 - [ ] **H2-25 — Reducir permisos Tauri a los usados.** Reemplazar `core:default` por
       `core:event:default` y `dialog:allow-open`; confirmar arranque y E2E multiplataforma.
@@ -51,137 +85,114 @@ hasta obtener evidencia dinámica de arranque y E2E en los tres sistemas operati
       en Linux, macOS y Windows, usando Xvfb solo en Linux; las capturas usan `os.tmpdir()`
       para no asumir `/tmp` en Windows. Se añadió un test de regresión que exige que la
       allowlist sea exactamente esos dos permisos. El JSON y los usos se verificaron por
-      inspección estática; el nuevo test aún no se ha ejecutado. Pendiente la primera
-      evidencia dinámica de arranque/E2E en los tres OS: la
-      skill `security-audit` prohíbe ejecutar builds/tests del proyecto sin sandbox aislado,
-      que esta sesión no proporciona. Mantener H2-25 abierta hasta obtener esos resultados.
+      inspección estática. *Verificado en sandbox aislado y offline:* `cargo test -p gitcanvas
+      --lib default_capability_contains_only_required_permissions --offline --locked` (1 test
+      passed; reejecutado en el working tree actual el 2026-10-05, 1 passed). *Smoke local
+      (2026-10-05):* la app arrancó con el código actual mediante `tauri dev`, usando
+      identificador y `HOME` temporales para aislarla de la instalación abierta; Vite quedó
+      listo y el proceso nativo siguió activo hasta su cierre limpio. Queda pendiente la
+      evidencia E2E de CI en Linux, macOS y Windows. Las últimas ejecuciones remotas
+      disponibles (2026-09-26, SHA
+      `7f24bb6`) de [quality](https://github.com/dcardenasl/gitcanvas/actions/runs/36265828914)
+      y [dev-check](https://github.com/dcardenasl/gitcanvas/actions/runs/36265828257)
+      fallaron antes de registrar pasos y GitHub no tiene logs (`log not found`); no prueban
+      el estado del código ni cuentan como resultado multiplataforma. El PR sigue apuntando
+      a `7f24bb6`; `dev` local está en `03077dd` y 39 commits por delante de
+      `origin/dev`. El working tree actual contiene 122 rutas modificadas o nuevas, así que
+      CI del PR no ha evaluado este estado integrado.
       → `chore(tauri): narrow application capabilities`
-
-### Estado, rendimiento y UX
-
-- [ ] **H2-26 — Acotar invalidación de queries y avisos.** Invalidar por alcance
-      `LIVE_QUERIES`, permitir cerrar notice, limpiarlo al cambiar repo y corregir singular
-      y plural. *Implementación parcial (2026-10-05):* las acciones Git invalidan solo
-      `LIVE_QUERIES` del repositorio que cambió; sus avisos se pueden cerrar y se limpian
-      al cambiar de repositorio, incluso si una operación anterior termina tarde. El
-      resultado de pull distingue `commit`/`commits`. Se añadieron pruebas de regresión
-      para alcance, cierre, cambio de repositorio y número; aún no ejecutadas por la
-      restricción de `security-audit` documentada en H2-25.
-      → `fix(ui): scope live query invalidation`
-- [ ] **H2-27 — Centralizar query keys y refresh en vivo.** Módulo único `queryKeys` y
-      `invalidateLive()`; retirar duplicación en tres archivos, con pruebas de alcance.
-      *Implementación parcial (2026-10-05):* se centralizaron las claves de historial,
-      refs, worktree, diffs, archivos, árboles y GitHub. `invalidateLive()` aplica el
-      alcance metadata/worktree o ambos, con claves prefijo para invalidar todas las
-      páginas locales. Watcher, actualización manual y acciones Git usan el helper; se
-      añadieron pruebas de aislamiento por alcance y repositorio. No se ejecutaron.
-      → `refactor(ui): centralize query keys and live invalidation`
-- [ ] **H2-28 — Reducir trabajo de paginación de historial.** Aplicar `maxPages` o refrescar
-      solo primera página según comportamiento; indexar commits con `Map`/`useMemo` y
-      estabilizar `fetchNextPage`. *Implementación parcial (2026-10-05):* invalidar
-      metadata recorta el historial cacheado a su página de punta antes del refetch; las
-      páginas antiguas se vuelven a cargar bajo demanda, sin descartar silenciosamente
-      contenido al avanzar por `maxPages`. `useHistory` crea un índice memoizado por SHA,
-      compartido con AppShell, HistoryView y CommitTable; `fetchNextPage` ahora conserva su
-      identidad mientras sus condiciones no cambien. Se añadió una prueba del recorte; no
-      se ejecutó.
-      → `perf(history): bound pages and index commits`
-- [ ] **H2-29 — Evitar selecciones obsoletas de AppShell.** Ignorar respuesta tardía de
-      startup repository y resolver selección huérfana de `revealCommit`.
-      *Implementación parcial (2026-10-05):* la búsqueda startup solo se aplica si no
-      había repositorio al iniciarse ni hubo un cambio de selección mientras esperaba;
-      también se cancela al desmontar la ventana. Un reveal agotado limpia la selección
-      huérfana sin borrar una selección más nueva. Se añadieron pruebas para ambas carreras;
-      no se ejecutaron.
-      → `fix(ui): ignore stale repository and reveal selections`
-- [ ] **H2-30 — Corregir teclado y ergonomía de controles.** Resizer: limpiar `userSelect`,
-      doble clic vuelve al valor inicial y filtrar botones; ContextMenu: callback actualizado,
-      flechas y retorno del foco; Escape cierra `FileDiffView`. *Implementación parcial
-      (2026-10-05):* Resizer conserva/restaura el `userSelect` anterior incluso al desmontar,
-      ignora botones y punteros ajenos y restablece el ancho inicial. ContextMenu usa el
-      callback más reciente, navegación Arrow/Home/End y devuelve el foco al opener en
-      Escape/selección; Escape del menú no se propaga hasta cerrar FileDiffView. Se
-      añadieron regresiones; aún no ejecutadas.
-      → `fix(ui): restore focus and keyboard control behavior`
-- [ ] **H2-31 — Acotar y tematizar GraphCanvas.** Un solo `filter` por `<g>`, altura limitada
-      o virtualización; paleta de `graph-layout/colors.ts` por tema y test de contraste para
-      ambos temas. *Implementación parcial (2026-10-05):* GraphCanvas combina aristas y nodo
-      en un `<g>` por fila con un único filtro; el SVG se limita a las filas visibles y sus
-      vecinas, desplazado a su posición dentro del historial. Se añadieron paletas oscuras
-      y claras con contraste mínimo de 4.5:1, conectadas al tema resuelto (incluidos cambios
-      del tema del sistema). Se añadieron pruebas; no se ejecutaron.
-      → `perf(graph): bound canvas rendering and theme colors`
-- [ ] **H2-32 — Mejorar búsqueda y fechas.** Cachear `Intl.DateTimeFormat`, locale `es` con
-      año y `useDeferredValue` en búsqueda. *Implementación parcial (2026-10-05):* se
-      reutilizan hasta ocho formateadores por locale (caché acotada), con español y año
-      como formato por defecto. La búsqueda calcula con `useDeferredValue`, indica el
-      estado pendiente y no navega con resultados obsoletos. Se añadió regresión de fecha;
-      las pruebas no se ejecutaron.
-      → `perf(ui): defer search and reuse date formatters`
-- [ ] **H2-33 — Unificar límites de core y debounce.** Usar `diff.stats()` sin construir
-      `Patch`, fingerprint barato, política común que rechaza páginas fuera de rango y
-      debounce del watcher con tope máximo; tests de límites.
-      → `perf(core): bound fingerprints and watcher debounce`
-- [ ] **H2-34 — Completar idioma del frontend.** Traducir textos restantes al español y
-      consolidar `messageFor` con `KIND_SUMMARY`.
-      → `fix(i18n): align remaining frontend messages`
-
-### Duplicación y código muerto
-
-- [ ] **H2-35 — Consolidar modelos y helpers de frontend.** Tipo `ChangedFile`, comparador
-      de nombres, `DiffStat`, `RetryError`, `FolderIcon`, `safeStorage`, geometría compartida;
-      retirar `InspectorEmpty` vacío, `selectedFileSource` duplicado, exports sin usos y
-      validadores/estado de caché de clone solo si se confirma que no tienen consumidores.
-      Eliminar imports duplicados de `FileDiffView.tsx`.
-      → `refactor(ui): consolidate file and display helpers`
-- [ ] **H2-36 — Compartir tokens y primitivos de estilo.** Tokens de espaciado, radio,
-      tipografía y foco; `.button`/`.state` comunes; dividir `CommitDetailPanel.css` y
-      centralizar anchos 220/310.
-      → `refactor(styles): centralize design tokens and primitives`
-- [ ] **H2-37 — Reducir duplicación y superficie pública de core.** Bases comunes para
-      `FileDiff`/`FileDiffSummary` y contenidos; fold único de stats y `ContentRead::TooLarge`;
-      unificar docs de acciones; `pub(crate)` donde baste; cfg/test-doc para métodos solo
-      test; retirar `clone_url` decorativo, dev-dep redundante y conexión duplicada de push.
-      → `refactor(core): consolidate diff types and internal APIs`
-- [ ] **H2-38 — Completar documentación de API.** Rustdoc de campos/tipos públicos y TSDoc
-      en `session.ts`, `tree.ts` y APIs públicas identificadas.
-      → `docs(api): document public rust and typescript interfaces`
 
 ### Calidad de pruebas
 
-- [ ] **H2-39 — Compartir utilidades de tests frontend.** Crear `test-utils` para
-      QueryClient, mock IPC y wrapper; reemplazar selectores/clases por roles y fortalecer
-      aserciones débiles.
-      → `test(ui): share accessible component test utilities`
-- [ ] **H2-40 — Cubrir flujos frontend y límites omitidos.** Tests de `Degraded` y timer 30s,
-      fingerprint modificado, portapapeles, Resizer, reveal de HistoryView, `parseHunks`,
-      expansión del working tree y `MAX_PAGES`.
-      → `test(ui): cover live repository and navigation edge cases`
-- [ ] **H2-41 — Corregir pruebas Rust que dan señal falsa.** Preferir `matches!` a comparar
-      debug strings; eliminar `.is_err()` sin aserción; corregir tests señalados de watcher,
-      worktree y GitHub API; sustituir sleeps fijos por espera con condición; mover
-      `history_verification` a benches/examples.
-      → `test(core): assert typed outcomes and remove timing races`
 - [ ] **H2-42 — Hacer E2E determinista y relevante.** Helper `waitForHistory()`, quitar
       `browser.pause`, usar `os.tmpdir()`, retirar/fusionar specs sin aserciones, desacoplar
       `local-changes` y reducir reintentos conforme a evidencia.
+      *Progreso (2026-10-05):* helper común adoptado por los specs de regresión; se
+      eliminaron todas las pausas fijas de `e2e/`. `audit.spec.ts` se retiró porque solo
+      imprimía observaciones; `screenshots.spec.ts` pasó a `e2e/manual/`, fuera del glob CI,
+      conservando capturas mediante esperas observables. `local-changes` recibe por el runner
+      un repositorio temporal mínimo propio e ignora `GITCANVAS_E2E_REPO`, evitando modificar
+      por accidente el repositorio del usuario. `npm run typecheck:e2e`, ESLint de E2E,
+      Prettier y `bash -n scripts/run-e2e.sh` pasan en sandbox aislado. En la revisión
+      (2026-10-05) se encontró que un
+      `GITCANVAS_E2E_FIXTURE` heredado sin procedencia confiable podía usarse como destino
+      de escritura y borrado. `wdio.conf.ts` ahora exige que el hand-off apunte a un hijo
+      directo de `os.tmpdir()` con marcador aleatorio dentro de `.git`; la creación limpia
+      el temporal ante fallos y el cierre solo elimina un fixture cuyo marcador y token
+      coinciden. El token debe tener el formato de UUID y el marcador su tamaño exacto
+      antes de leerlo, para rechazar entradas malformadas y evitar lecturas sin límite.
+      Cualquier `GITCANVAS_E2E_REPO` externo sigue ignorado en el caso
+      `local-changes`. *Verificado (2026-10-05):* `npm run typecheck:e2e` y
+      `prettier --check wdio.conf.ts` pasan. `npm run test:e2e:run` pasó en macOS usando
+      binario E2E con `HOME` e identificador Tauri temporales: los cuatro specs CI
+      (`collapse`, `commit-tree`, `critical-path`, `local-changes`) aprobaron sus 8 tests.
+      La spec `local-changes` ahora comprueba el contrato de `FileDiffView`: conserva la
+      selección y muestra el error localizado cuando un archivo staged desaparece. Sondas
+      de comportamiento confirman que el runner no reutiliza una ruta heredada aun cuando
+      su marcador y token tienen formato válido, deja intacto ese directorio no propio y
+      elimina su fixture temporal al cerrar.
+      La validación del hand-off worker conserva los controles de IPC/ID de WDIO y el
+      marcador; la sonda previa confirmó que el worker reutiliza el fixture creado por el
+      runner. `@wdio/tauri-service` todavía registra un warning no fatal al limpiar mocks
+      después de perder el `sessionId`. El código upstream en `afterSession` intenta restaurar
+      mocks sin comprobar si la sesión sigue activa; la última versión publicada consultada
+      (1.4.0, 2026-10-05) mantiene ese comportamiento. Se deja visible para reevaluarlo al
+      actualizar el servicio, sin silenciar otros diagnósticos.
+      ([paquete](https://www.npmjs.com/package/%40wdio/tauri-service),
+      [código upstream](https://github.com/webdriverio/desktop-mobile/blob/main/packages/tauri-service/src/service.ts)).
+      Se corrigió además la comparación de rutas canónicas de macOS (`/var` frente a
+      `/private/var`), que impedía limpiar fixtures propios.
+      `specFileRetries` se redujo de 2 a 1: el runner separa los specs por proceso WDIO y la
+      corrida completa de macOS volvió a pasar con este valor, con una recuperación disponible
+      para la carrera de IPC documentada. Queda pendiente E2E en CI para Linux y Windows y
+      medir si otros sistemas permiten retirar el reintento. La ejecución remota más reciente
+      consultable ([quality](https://github.com/dcardenasl/gitcanvas/actions/runs/36265828914),
+      2026-09-26, SHA `7f24bb6`) falló sin pasos ni logs, así que no permite atribuir el
+      fallo a la suite ni justificar cambiar el número de reintentos.
       → `test(e2e): replace fixed waits with observable conditions`
-- [ ] **H2-43 — Sacar herramientas de demo del CI/typecheck.** Mover scripts y recorder a
-      `tools/`, consolidar variable de entorno, mensajes en inglés, documentar
-      `bitacora-engine`, ffmpeg y magick.
-      → `chore(demo): isolate recorder tooling and document prerequisites`
-
 ### Documentación y cierre
 
 - [ ] **H2-44 — Sincronizar documentos de arquitectura y producto.** Actualizar `CONTEXT.md`
       y ADR 0001 para explicar watcher de metadata versus fingerprint de árbol y acotar
       “read-only” dado que existen checkout/pull/push; sincronizar README, CHANGELOG,
       DESIGN, PRODUCT, `docs/ASSET.md`, `docs/SNAPSHOT.md` y el índice/reglas de `CLAUDE.md`.
+      *Progreso (2026-10-05):* reconstruidos `CONTEXT.md` y ADR 0001 desde el watcher,
+      fingerprint, límites y acciones Git reales. README ahora registra rutas de logs por
+      plataforma, release pendiente, comandos de CI y requisitos de demo; CHANGELOG tiene
+      una sola sección `Added` por versión y enlaces de comparación. DESIGN/PRODUCT y las
+      fichas ASSET/SNAPSHOT describen la plataforma desktop, la UI y el estado H2/release.
+      `CLAUDE.md` indexa los documentos e iguala las reglas 7/10 y verificación a los
+      comandos y flujos actuales. `git diff --check` pasó y se revisaron manualmente los
+      enlaces relativos añadidos. Markdown está excluido intencionalmente de Prettier por
+      `.prettierignore`; falta registrar el cambio en su commit dedicado antes de marcarla
+      completa.
       → `docs: align architecture and product documentation`
 - [ ] **H2-45 — Cerrar trazabilidad de H2.** Revisar conteo/estado de tareas, documentar
       divergencias verificadas frente al plan, commits ya registrados y evidencia final.
       Ejecutar la verificación local definida por el plan y las comprobaciones manuales
       aplicables; registrar fallos ambientales sin declararlos verdes.
+      *Hallazgo (2026-10-05):* H2-33 quedó reconciliada con el commit local `03077dd`
+      (`perf(core): bound fingerprints and watcher debounce`). Siguen sin commit dedicado
+      los mensajes archivados de H2-34 a H2-41 y H2-43; sus implementaciones siguen en el
+      working tree. El código y sus verificaciones parciales están presentes,
+      pero el invariante “una tarea = un commit” no se cumplió en ese tramo. No cerrar H2-45
+      hasta reconciliar el historial por tarea, conservar cualquier cambio y actualizar
+      TASKS/ARCHIVES con los commits efectivamente creados.
+      *Evidencia integrada actual (2026-10-05):* pasaron `cargo fmt --all --check`,
+      `cargo clippy --all-targets --all-features --offline --locked -- -D warnings` y
+      `cargo test --workspace --offline --locked` (150 tests: 23 Tauri, 40 unitarios core y
+      87 de integración). `npm run test:coverage` pasó 40 suites/343 tests con 94,75% de
+      statements, 88,08% de branches, 94,05% de funciones y 95,85% de líneas. También
+      pasaron `npm run typecheck`, `typecheck:e2e`, `typecheck:node`, `lint` y `format:check`.
+      También pasaron `npm audit --omit=dev --audit-level=high` (sin vulnerabilidades),
+      `cargo deny check` y `cargo audit`; `cargo audit` reportó 8 avisos permitidos de
+      dependencias sin mantenimiento o un advisory de soundness configurados en la política.
+      La primera ejecución completa detectó que `touch_if_cached` canonizaba la raíz pero
+      no el repositorio, fallando bajo la ruta `/var` alias de macOS; ambos caminos ahora se
+      canonizan y los 12 tests del cache y la suite workspace completa vuelven a pasar.
+      El smoke de arranque y E2E de macOS también pasan; esta verificación integrada no
+      sustituye la reconciliación de commits individuales ni la evidencia E2E multiplataforma
+      pendiente de H2-25/H2-42.
       → `docs(tasks): close post-audit hardening`
 
 **Criterio de cierre:** H2-0 a H2-45 completadas o hallazgos explícitamente descartados
@@ -197,6 +208,12 @@ sin divergencias. La publicación sigue el proceso `/release` por separado.
 
 - [ ] **R-4 — PR `dev → main`.** Abrir, esperar `quality` verde, **esperar aprobación de
       David**, y mergear con `--merge` (nunca squash ni rebase).
+      *Estado remoto (2026-10-05):* [PR #1](https://github.com/dcardenasl/gitcanvas/pull/1)
+      ya está abierta. El último `dev-check` y la matriz `quality` (2026-09-26, SHA
+      `7f24bb6`) terminaron en fallo en los primeros 2–6 segundos, sin registrar pasos; GitHub
+      no ofrece logs. No se puede inferir una causa de código ni aprobar el merge con esta
+      evidencia. Cuando la rama del PR contenga los arreglos requeridos y CI genere nuevos
+      resultados, esperar `quality` verde y aprobación de David antes del merge.
 
 - [ ] **R-5 — Tag y GitHub Release.** `v0.1.0` solo sobre `main`; `release.yml` crea el
       Release extrayendo la sección del CHANGELOG. Nunca `gh release create` a mano.
