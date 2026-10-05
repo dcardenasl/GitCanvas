@@ -258,8 +258,13 @@ pub fn pull_fast_forward(active: &ActiveRepo) -> Result<PullOutcome, AppError> {
                 AppError::from(error)
             }
         })?;
-    let mut reference = repo.find_reference(&head_name)?;
-    reference.set_target(target.id(), "pull: fast-forward")?;
+    repo.reference_matching(
+        &head_name,
+        target.id(),
+        true,
+        local_oid,
+        "pull: fast-forward",
+    )?;
 
     Ok(PullOutcome::FastForwarded {
         commits: ahead,

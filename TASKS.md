@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (8/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (9/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -105,9 +105,13 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       limitado a las tres variantes; `npm run typecheck`, 46 tests Vitest focalizados,
       `cargo clippy -p gitcanvas-core --all-targets -- -D warnings` y `./pre-commit`.
       → `refactor(errors): centralize domain error mapping`
-- [ ] **H2-8 — Corregir acciones y límites latentes del core.** Pull con
-      `reference_matching`; añadir guarda a `history::insert` contra el bucle señalado y
-      saturar el shift de `retry.rs`; tests de regresión enfocados.
+- [x] **H2-8 — Corregir acciones y límites latentes del core.** Pull actualiza la rama con
+      `reference_matching` contra el OID que leyó; `history::insert` omite snapshots que
+      no caben (preservando la entrada válida previa), y el shift del backoff satura con
+      `checked_shl` antes de multiplicar la duración.
+      *Verificado:* `cargo test -p gitcanvas-core --lib` (28 tests, incluye presupuesto 0,
+      reemplazo sobredimensionado y 40 reintentos), `cargo test -p gitcanvas-core --test
+      actions` (17 tests, fast-forward incluido), Clippy core y `./pre-commit`.
       → `fix(core): guard history insertion and retry shifts`
 - [ ] **H2-9 — Corregir ciclo de vida del watcher.** En `commands/watch.rs`, liberar watcher
       dentro de `runtime::write`/`spawn_blocking`; `unwatch` debe invalidar

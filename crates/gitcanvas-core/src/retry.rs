@@ -25,7 +25,8 @@ pub fn retry_transient<T>(
     loop {
         match operation() {
             Err(error) if error.is_transient() && attempt < retries => {
-                thread::sleep(base.saturating_mul(1 << attempt));
+                let multiplier = 1u32.checked_shl(attempt).unwrap_or(u32::MAX);
+                thread::sleep(base.saturating_mul(multiplier));
                 attempt += 1;
             }
             other => return other,
@@ -80,5 +81,16 @@ mod tests {
         });
         assert!(matches!(result, Err(AppError::Git(_))));
         assert_eq!(calls.get(), 1);
+    }
+
+    #[test]
+    fn exponential_backoff_shift_saturates_after_the_integer_width() {
+        let calls = Cell::new(0);
+        let result: Result<(), _> = retry_transient(40, NO_WAIT, || {
+            calls.set(calls.get() + 1);
+            Err(exhausted())
+        });
+        assert!(result.unwrap_err().is_transient());
+        assert_eq!(calls.get(), 41);
     }
 }

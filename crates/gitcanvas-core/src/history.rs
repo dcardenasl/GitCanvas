@@ -129,13 +129,22 @@ impl HistoryReader {
     }
 
     fn insert(&self, active: &ActiveRepo, roots: &[Oid], ids: WalkIds) -> Result<(), AppError> {
+        // Oversized walks are streamed by the caller and must never enter the
+        // cache: evicting every entry cannot make an oversized snapshot fit.
+        if self.max_commits == 0 || ids.len() > self.max_commits {
+            return Ok(());
+        }
         let mut entries = self
             .snapshots
             .lock()
             .map_err(|_| AppError::Internal("History cache is unavailable".into()))?;
         entries.retain(|entry| entry.path != active.path() || entry.roots != roots);
         while entries.len() >= MAX_CACHED_SNAPSHOTS
-            || entries.iter().map(|entry| entry.ids.len()).sum::<usize>() + ids.len()
+            || entries
+                .iter()
+                .map(|entry| entry.ids.len())
+                .fold(0usize, usize::saturating_add)
+                .saturating_add(ids.len())
                 > self.max_commits
         {
             entries.pop_front();
@@ -376,5 +385,33 @@ mod cache_tests {
         assert!(reader.find(&active, &[first_id]).unwrap().is_some());
         let evicted = Oid::from_str(&format!("{:040x}", 1)).unwrap();
         assert!(reader.find(&active, &[evicted]).unwrap().is_none());
+    }
+
+    #[test]
+    fn cache_skips_zero_budget_and_oversized_snapshots_without_evicting_valid_data() {
+        let dir = tempfile::tempdir().unwrap();
+        Repository::init(dir.path()).unwrap();
+        let active = ActiveRepo::validate(dir.path()).unwrap();
+        let zero_budget = HistoryReader::with_budget(0);
+        let first = Oid::from_str(&format!("{:040x}", 1)).unwrap();
+        zero_budget
+            .insert(&active, &[first], vec![first].into())
+            .unwrap();
+        assert!(zero_budget.snapshots.lock().unwrap().is_empty());
+
+        let reader = HistoryReader::with_budget(2);
+        reader
+            .insert(&active, &[first], vec![first].into())
+            .unwrap();
+        let oversized = Oid::from_str(&format!("{:040x}", 2)).unwrap();
+        reader
+            .insert(&active, &[first], vec![oversized; 3].into())
+            .unwrap();
+        assert_eq!(reader.snapshots.lock().unwrap().len(), 1);
+        assert_eq!(
+            reader.find(&active, &[first]).unwrap().unwrap().as_ref(),
+            &[first],
+            "an oversized replacement must not evict the prior valid snapshot"
+        );
     }
 }
