@@ -1124,7 +1124,7 @@ marca.
 
 ---
 
-## ✅ Fase H2 — Endurecimiento post-auditoría (43/46 implementadas; 34 cierres con commit)
+## ✅ Fase H2 — Endurecimiento post-auditoría (43/46 implementadas; 35 cierres con commit)
 
 > Plan de referencia: [`docs/plan/2026-10-04-plan-de-endurecimiento.md`](docs/plan/2026-10-04-plan-de-endurecimiento.md).
 > Se conservan las descripciones, verificaciones y mensajes de commit registrados al
@@ -1622,6 +1622,8 @@ marca.
       dos `.mjs`; transpilación TypeScript con diagnósticos sintácticos del recorder; y
       comprobación de que los comandos npm apuntan a los tres archivos bajo `tools/demo/`.
       → `chore(demo): isolate recorder tooling and document prerequisites`
+      *Reconciliado (2026-10-05):* el tooling y sus configuraciones quedan en el commit
+      dedicado `chore(demo): isolate recorder tooling and document prerequisites`.
 
 ### H2-44 — Sincronizar documentos de arquitectura y producto
 

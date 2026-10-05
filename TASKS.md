@@ -7,9 +7,9 @@
 > Tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
 **Estado al 2026-10-05:** 43 de las 46 tareas H2 están completadas y en
-[`ARCHIVES.md`](ARCHIVES.md); quedan H2-25, H2-42 y H2-45. De las completadas, 34 tienen
-un commit local dedicado. H2-34–41 y H2-43 están implementadas y verificadas, pero no
-tienen commits individuales; H2-45 debe reconciliar esa divergencia. El release v0.1.0
+[`ARCHIVES.md`](ARCHIVES.md); quedan H2-25, H2-42 y H2-45. De las completadas, 35 tienen
+un commit local dedicado. H2-34–41 están implementadas y verificadas, pero no tienen
+commits individuales; H2-45 debe reconciliar esa divergencia. El release v0.1.0
 sigue abierto: PR #1 está abierta y R-4, R-5 y R-6 están pendientes.
 
 **Estado del checkout:** la PR #1 sigue en el SHA remoto `7f24bb6`; el checkout `dev` tiene
@@ -39,7 +39,7 @@ verificación estén completos; registrar su commit dedicado cuando corresponda.
 2. **H2-42 — Suite E2E.** Dos corridas locales en macOS pasaron sin reintentos (4 specs/8
    tests cada una). Completar evidencia CI Linux/Windows y mantener visible el warning
    conocido de `@wdio/tauri-service`.
-3. **H2-45 — Cierre H2.** Reconciliar H2-34–41 y H2-43 con el historial sin perder cambios;
+3. **H2-45 — Cierre H2.** Reconciliar H2-34–41 con el historial sin perder cambios;
    cerrar conteos, evidencia integrada y divergencias solo cuando las tareas previas estén
    cerradas.
 4. **R-4 a R-6 — Release independiente.** Seguir `CLAUDE.md`; R-4 requiere CI verde y
@@ -154,11 +154,10 @@ David.
       Ejecutar la verificación local definida por el plan y las comprobaciones manuales
       aplicables; registrar fallos ambientales sin declararlos verdes.
       *Hallazgo (2026-10-05):* H2-33 quedó reconciliada con el commit local `03077dd`
-      (`perf(core): bound fingerprints and watcher debounce`). Siguen sin commit dedicado
-      los mensajes archivados de H2-34 a H2-41 y H2-43; sus implementaciones siguen en el
-      working tree. El código y sus verificaciones parciales están presentes,
-      pero el invariante “una tarea = un commit” no se cumplió en ese tramo. No cerrar H2-45
-      hasta reconciliar el historial por tarea, conservar cualquier cambio y actualizar
+      (`perf(core): bound fingerprints and watcher debounce`). H2-34–41 siguen sin commits
+      dedicados y sus implementaciones permanecen en el working tree. H2-43 ya cuenta con un
+      commit dedicado. El invariante “una tarea = un commit” no se cumplió para H2-34–41.
+      No cerrar H2-45 hasta reconciliar ese historial, conservar los cambios y actualizar
       TASKS/ARCHIVES con los commits efectivamente creados.
       *Evidencia integrada actual (2026-10-05):* pasaron `cargo fmt --all --check`,
       `cargo clippy --all-targets --all-features --offline --locked -- -D warnings` y

@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const outputDir = path.resolve(
   process.env.GITCANVAS_VIDEO_DIR ??
     path.join(
@@ -57,9 +57,15 @@ const sections = [
 
 function run(command, args) {
   const result = spawnSync(command, args, { cwd: root, stdio: "inherit" });
-  if (result.error) throw result.error;
+  if (result.error) {
+    throw new Error(`Could not start ${command}: ${result.error.message}`, {
+      cause: result.error,
+    });
+  }
   if (result.status !== 0) {
-    throw new Error(`${command} exited with code ${result.status}`);
+    throw new Error(
+      `${command} exited with code ${String(result.status)}${result.signal === null ? "" : ` (signal ${result.signal})`}`,
+    );
   }
 }
 

@@ -33,7 +33,7 @@ read-only; véase [`CONTEXT.md`](../CONTEXT.md) y el [ADR 0001](adr/0001-working
 | Watcher de metadata y recuperación degradada | Implementado; falta validar E2E multiplataforma en CI sobre el código vigente |
 | GitHub: credencial en keychain, listado y clone | Implementado |
 | Checkout, pull fast-forward y push | Implementado con guardias |
-| Endurecimiento H2 | 43 de 46 implementaciones archivadas; 34 cierres con commit. H2-34–41 y H2-43 requieren reconciliar commits; H2-25, H2-42 y H2-45 siguen abiertas |
+| Endurecimiento H2 | 43 de 46 implementaciones archivadas; 35 cierres con commit. H2-34–41 requieren reconciliar commits; H2-25, H2-42 y H2-45 siguen abiertas |
 | Publicación v0.1.0 | PR [#1](https://github.com/dcardenasl/gitcanvas/pull/1) abierta en SHA `7f24bb6`; el checkout `dev` tiene commits y cambios locales posteriores que la PR aún no evalúa. El último CI visible es de 2026-09-26 y falló antes de ejecutar pasos; aprobación/merge, tag y publicación siguen pendientes |
 
 ## Próximo paso

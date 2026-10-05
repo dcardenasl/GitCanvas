@@ -7,7 +7,7 @@
 | Campo | Estado |
 |---|---|
 | Etapa | MVP implementado; endurecimiento H2 en curso |
-| H2 | 43/46 implementadas y archivadas; 34 cierres con commit; H2-34–41 y H2-43 requieren reconciliar commits |
+| H2 | 43/46 implementadas y archivadas; 35 cierres con commit; H2-34–41 requieren reconciliar commits |
 | Release | PR [#1](https://github.com/dcardenasl/gitcanvas/pull/1) abierta en SHA `7f24bb6`; el checkout `dev` tiene commits y cambios locales posteriores que la PR aún no evalúa. Los checks visibles son de 2026-09-26 y fallaron antes de ejecutar pasos; aprobación/merge y R-5/R-6 pendientes |
 | Siguiente tarea | H2-25: confirmar arranque y E2E en Linux, macOS y Windows |
 | Fuente de trabajo | [`TASKS.md`](../TASKS.md), criterios detallados en el plan H2 |
@@ -26,10 +26,10 @@ completas. La suite E2E pasó en macOS local (4 specs/8 tests); aún falta evide
 Linux/macOS/Windows para los cambios actuales. No declarar verde lo que no se haya ejecutado
 sobre el código vigente.
 
-`ARCHIVES.md` declara H2-34–H2-41 y H2-43 completadas, pero esas entradas no tienen
-commits dedicados; sus cambios siguen en el working tree. H2-33 sí está reconciliada con
-`03077dd`. H2-45 está abierta para reconciliar la divergencia con la convención de un
-commit por tarea.
+`ARCHIVES.md` declara H2-34–H2-41 completadas, pero esas entradas no tienen commits
+dedicados; sus cambios siguen en el working tree. H2-33 está reconciliada con `03077dd` y
+H2-43 con un commit propio. H2-45 está abierta para reconciliar la divergencia restante con
+la convención de un commit por tarea.
 
 ## Documentos
 

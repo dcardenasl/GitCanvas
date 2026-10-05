@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { browser, $, $$ } from "@wdio/globals";
 import { WebDriverVideoRecorder } from "../../../../bitacora-engine/core/video/adapters/wdio.mjs";
 
-const output = process.env.GITCANVAS_RECORDING_OUTPUT;
+const output = process.env.GITCANVAS_CAPTURE_OUTPUT;
 const audio = process.env.GITCANVAS_RECORDING_AUDIO;
 const repository = process.env.GITCANVAS_E2E_REPO;
 const language = process.env.GITCANVAS_VIDEO_LANGUAGE ?? "es";
@@ -34,7 +34,7 @@ describe("GitCanvas product walkthrough recording", () => {
     const outputPath = output;
     if (outputPath === undefined)
       throw new Error(
-        "GITCANVAS_RECORDING_OUTPUT is required for the recording",
+        "GITCANVAS_CAPTURE_OUTPUT is required for the recording",
       );
 
     const recorder = new WebDriverVideoRecorder({

@@ -4,9 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const output = path.resolve(
-  process.env.GITCANVAS_RECORDING_OUTPUT ??
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const outputDir = path.resolve(
+  process.env.GITCANVAS_VIDEO_DIR ??
     path.join(
       root,
       "..",
@@ -15,15 +15,18 @@ const output = path.resolve(
       "registry",
       "projects",
       "gitcanvas-output",
-      `atlas-storefront-walkthrough-${process.env.GITCANVAS_VIDEO_LANGUAGE ?? "es"}.mp4`,
     ),
+);
+const language = process.env.GITCANVAS_VIDEO_LANGUAGE ?? "es";
+const output = path.join(
+  outputDir,
+  `atlas-storefront-walkthrough-${language}.mp4`,
 );
 const tempRoot = fs.mkdtempSync(
   path.join(os.tmpdir(), "gitcanvas-product-video-"),
 );
 const repository = path.join(tempRoot, "atlas-storefront");
 const narrationPath = path.join(tempRoot, "narration.wav");
-const language = process.env.GITCANVAS_VIDEO_LANGUAGE ?? "es";
 const voice = language === "en" ? "en-US-EmmaNeural" : "es-CL-CatalinaNeural";
 const speakingRate = "-5%";
 const narration =
@@ -43,9 +46,16 @@ const narration =
 
 function run(command, args, env = process.env) {
   const result = spawnSync(command, args, { cwd: root, env, stdio: "inherit" });
-  if (result.error) throw result.error;
-  if (result.status !== 0)
-    throw new Error(`${command} terminó con código ${result.status}`);
+  if (result.error) {
+    throw new Error(`Could not start ${command}: ${result.error.message}`, {
+      cause: result.error,
+    });
+  }
+  if (result.status !== 0) {
+    throw new Error(
+      `${command} exited with code ${String(result.status)}${result.signal === null ? "" : ` (signal ${result.signal})`}`,
+    );
+  }
 }
 
 function git(...args) {
@@ -146,7 +156,7 @@ function createDemoRepository() {
 
 function synthesizeNarration() {
   if (language !== "en" && language !== "es") {
-    throw new Error('GITCANVAS_VIDEO_LANGUAGE debe ser "en" o "es".');
+    throw new Error('GITCANVAS_VIDEO_LANGUAGE must be "en" or "es".');
   }
   const voiceFiles = narration.map((text, index) => {
     const file = path.join(tempRoot, `voice-${index + 1}.mp3`);
@@ -209,6 +219,7 @@ function synthesizeNarration() {
 }
 
 try {
+  fs.mkdirSync(outputDir, { recursive: true });
   createDemoRepository();
   const segmentDurations = synthesizeNarration();
   if (process.env.GITCANVAS_SKIP_APP_BUILD !== "1") {
@@ -227,12 +238,12 @@ try {
       "run",
       "./wdio.conf.ts",
       "--spec",
-      "./e2e/recording/record-video.ts",
+      "./tools/demo/record-video.ts",
     ],
     {
       ...process.env,
       GITCANVAS_E2E_REPO: repository,
-      GITCANVAS_RECORDING_OUTPUT: output,
+      GITCANVAS_CAPTURE_OUTPUT: output,
       GITCANVAS_RECORDING_AUDIO: narrationPath,
       GITCANVAS_NARRATION_DURATIONS: JSON.stringify(segmentDurations),
       GITCANVAS_VIDEO_LANGUAGE: language,
