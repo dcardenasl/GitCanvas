@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (16/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (17/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -165,8 +165,10 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       conserva la tabla y permite reintentar desde un banner.
       *Verificado:* `npm run typecheck`; `npx vitest run src/components/FileDiffView/FileDiffView.test.tsx src/components/AppShell/HistoryView.test.tsx` (25 tests); `./pre-commit`.
       → `fix(ui): preserve diff and history data on page errors`
-- [ ] **H2-16 — Añadir frontera de error global localizada.** Incorporar `ErrorBoundary`
-      en `App.tsx`/`main.tsx` con mensaje español y prueba del fallback.
+- [x] **H2-16 — Añadir frontera de error global localizada.** `main.tsx` monta un
+      `ErrorBoundary` por fuera de `StrictMode`; los errores de render muestran un fallback
+      en español con reinicio y sin exponer el error interno.
+      *Verificado:* `npm run typecheck`, `npx vitest run src/components/ErrorBoundary/ErrorBoundary.test.tsx` (1 test), `./pre-commit`.
       → `feat(ui): add a localized application error boundary`
 - [ ] **H2-17 — Hacer fiable la inicialización del repositorio en vivo.** Usar
       `userMessage` al mostrar estado `Degraded`; mover generación a nivel módulo; registrar

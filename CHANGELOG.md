@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Localized application error fallback.** A render failure now shows a Spanish recovery screen with a restart action instead of leaving the window blank.
 - **GitCanvas branding** — the toolbar shows the mark beside the repository name, the
   empty state shows the full logo, and the application icons are the new ones.
 - **Choose dark, light or system appearance.** The window-level preference is
