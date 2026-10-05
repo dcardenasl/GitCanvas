@@ -316,6 +316,43 @@ fn loads_one_file_diff_only_when_requested_and_pages_summaries() {
 }
 
 #[test]
+fn rejects_invalid_worktree_page_sizes_instead_of_clamping() {
+    let fixture = Fixture::new();
+    let repository = active(&fixture);
+    for limit in [0, 251] {
+        let error = get_worktree_snapshot(
+            &repository,
+            &WorktreeSnapshotRequest {
+                staged_cursor: None,
+                unstaged_cursor: None,
+                limit: Some(limit),
+                expected_revision: None,
+            },
+        )
+        .unwrap_err();
+        assert!(matches!(error, AppError::InvalidInput(_)), "{error:?}");
+    }
+}
+
+#[test]
+fn fingerprint_changes_when_worktree_metadata_changes() {
+    let fixture = Fixture::new();
+    let repository = active(&fixture);
+    let path = fixture.dir.path().join("fingerprint.txt");
+
+    fs::write(&path, "one").unwrap();
+    let first = get_worktree_fingerprint(&repository).unwrap();
+    assert_eq!(
+        first.revision,
+        get_worktree_fingerprint(&repository).unwrap().revision
+    );
+    fs::write(&path, "a longer value").unwrap();
+    let second = get_worktree_fingerprint(&repository).unwrap();
+
+    assert_ne!(first.revision, second.revision);
+}
+
+#[test]
 fn rejects_traversal_absolute_paths_and_external_symlinks() {
     let fixture = Fixture::new();
     let commit = fixture.commit_files(

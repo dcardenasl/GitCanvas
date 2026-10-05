@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
     sync::mpsc,
     thread::{self, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -17,6 +17,8 @@ use crate::{
 };
 
 const SETTLE: Duration = Duration::from_millis(250);
+// A continuous stream of metadata events must not postpone refresh indefinitely.
+const MAX_DEBOUNCE: Duration = Duration::from_secs(2);
 const WATCH_RETRIES: u32 = 3;
 const WATCH_BACKOFF: Duration = Duration::from_millis(100);
 const INTERESTING_METADATA: [&str; 5] = ["HEAD", "refs", "packed-refs", "ORIG_HEAD", "MERGE_HEAD"];
@@ -43,6 +45,23 @@ enum Message {
     Changed(ChangeScope),
     Degraded(String),
     Stop,
+}
+
+fn merge_scope(pending: ChangeScope, next: ChangeScope) -> ChangeScope {
+    match (pending, next) {
+        (ChangeScope::Metadata, _) | (_, ChangeScope::Metadata) => ChangeScope::Metadata,
+        _ => ChangeScope::Worktree,
+    }
+}
+
+fn debounce_expired(first: Instant, last: Instant, now: Instant) -> bool {
+    now.duration_since(last) >= SETTLE || now.duration_since(first) >= MAX_DEBOUNCE
+}
+
+fn debounce_wait(first: Instant, last: Instant, now: Instant) -> Duration {
+    SETTLE
+        .saturating_sub(now.duration_since(last))
+        .min(MAX_DEBOUNCE.saturating_sub(now.duration_since(first)))
 }
 
 /// A live watch that owns both native subscriptions and its worker thread.
@@ -184,27 +203,42 @@ pub fn watch_repository(
     }
     let worker = thread::spawn(move || {
         while let Ok(message) = message_rx.recv() {
-            let mut pending = None;
-            match message {
+            let mut pending = match message {
+                Message::Changed(scope) => Some(scope),
                 Message::Stop => return,
-                Message::Changed(scope) => pending = Some(scope),
-                Message::Degraded(error) => on_event(WatchEvent::Degraded(error)),
+                Message::Degraded(error) => {
+                    on_event(WatchEvent::Degraded(error));
+                    None
+                }
+            };
+            let first_change = Instant::now();
+            let mut last_change = first_change;
+            if pending.is_none() {
+                continue;
             }
 
             loop {
-                match message_rx.recv_timeout(SETTLE) {
+                let now = Instant::now();
+                if debounce_expired(first_change, last_change, now) {
+                    break;
+                }
+                match message_rx.recv_timeout(debounce_wait(first_change, last_change, now)) {
                     Ok(Message::Changed(scope)) => {
-                        pending = Some(match (pending, scope) {
-                            (Some(ChangeScope::Metadata), _) | (_, ChangeScope::Metadata) => {
-                                ChangeScope::Metadata
-                            }
-                            _ => ChangeScope::Worktree,
+                        pending = Some(match pending {
+                            Some(pending_scope) => merge_scope(pending_scope, scope),
+                            None => scope,
                         });
+                        last_change = Instant::now();
                     }
                     Ok(Message::Degraded(error)) => {
                         on_event(WatchEvent::Degraded(error));
                     }
-                    Err(mpsc::RecvTimeoutError::Timeout) => break,
+                    Err(mpsc::RecvTimeoutError::Timeout) => {
+                        let now = Instant::now();
+                        if debounce_expired(first_change, last_change, now) {
+                            break;
+                        }
+                    }
                     Ok(Message::Stop) | Err(mpsc::RecvTimeoutError::Disconnected) => return,
                 }
             }
@@ -224,14 +258,19 @@ pub fn watch_repository(
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::{
+        path::PathBuf,
+        time::{Duration, Instant},
+    };
 
     use notify::{
         event::{DataChange, ModifyKind},
         Event, EventKind,
     };
 
-    use super::{classify, ChangeScope};
+    use super::{
+        classify, debounce_expired, debounce_wait, merge_scope, ChangeScope, MAX_DEBOUNCE, SETTLE,
+    };
 
     #[test]
     fn classifies_only_components_relative_to_the_metadata_directory() {
@@ -252,6 +291,32 @@ mod tests {
         assert_eq!(
             classify(&event("index.lock"), std::slice::from_ref(&metadata)),
             Some(ChangeScope::Worktree)
+        );
+    }
+
+    #[test]
+    fn debounce_settles_quiet_events_and_has_a_hard_maximum() {
+        let first = Instant::now();
+        let recent = first + MAX_DEBOUNCE.saturating_sub(Duration::from_millis(1));
+
+        assert!(!debounce_expired(first, recent, recent));
+        assert_eq!(
+            debounce_wait(first, recent, recent),
+            Duration::from_millis(1)
+        );
+        assert!(debounce_expired(first, recent, first + MAX_DEBOUNCE));
+        assert!(debounce_expired(first, first, first + SETTLE));
+    }
+
+    #[test]
+    fn metadata_changes_take_precedence_when_debounced_together() {
+        assert_eq!(
+            merge_scope(ChangeScope::Worktree, ChangeScope::Metadata),
+            ChangeScope::Metadata
+        );
+        assert_eq!(
+            merge_scope(ChangeScope::Worktree, ChangeScope::Worktree),
+            ChangeScope::Worktree
         );
     }
 }

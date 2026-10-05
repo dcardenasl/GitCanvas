@@ -12,6 +12,7 @@ use specta::Type;
 
 use crate::{
     error::AppError,
+    pagination::validate_page_size,
     repository::{parse_commit_id, ActiveRepo},
 };
 
@@ -189,11 +190,7 @@ fn read_page(
     request: &HistoryRequest,
     reader: Option<&HistoryReader>,
 ) -> Result<HistoryPage, AppError> {
-    if request.limit == 0 || request.limit > MAX_PAGE_SIZE {
-        return Err(AppError::InvalidInput(format!(
-            "Page size must be between 1 and {MAX_PAGE_SIZE}"
-        )));
-    }
+    validate_page_size(usize::from(request.limit), usize::from(MAX_PAGE_SIZE))?;
     if request.cursor.is_some() && request.roots.is_none() {
         return Err(AppError::InvalidInput(
             "A cursor requires its original walk roots".into(),

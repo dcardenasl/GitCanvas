@@ -26,6 +26,7 @@ pub mod diff;
 pub mod error;
 pub mod github;
 pub mod history;
+mod pagination;
 pub mod refs;
 pub mod repository;
 pub mod retry;

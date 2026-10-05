@@ -6,7 +6,9 @@
 //! rather than approximated: showing a merge's changes against one side while
 //! implying it covers both would be worse than not showing them.
 
-use git2::{Delta, DiffOptions};
+use std::collections::HashMap;
+
+use git2::{Delta, DiffFormat, DiffOptions};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
@@ -189,6 +191,7 @@ pub fn get_commit_diff(active: &ActiveRepo, request: &DiffRequest) -> Result<Com
     // pure rename reads as one entry instead of an unrelated add and delete.
     diff.find_similar(None)?;
 
+    let totals = diff.stats()?;
     let files = collect_files(
         &diff,
         request.file_path.as_deref(),
@@ -203,21 +206,12 @@ pub fn get_commit_diff(active: &ActiveRepo, request: &DiffRequest) -> Result<Com
             "requested path is not changed by this commit".to_owned(),
         ));
     }
-    let insertions = files
-        .iter()
-        .map(|file| file.insertions)
-        .fold(0, u32::saturating_add);
-    let deletions = files
-        .iter()
-        .map(|file| file.deletions)
-        .fold(0, u32::saturating_add);
-
     Ok(CommitDiff {
         commit_id: commit.id().to_string(),
         parent_id: parent.map(|parent| parent.id().to_string()),
         files,
-        insertions,
-        deletions,
+        insertions: u32::try_from(totals.insertions()).unwrap_or(u32::MAX),
+        deletions: u32::try_from(totals.deletions()).unwrap_or(u32::MAX),
         is_merge: commit.parent_count() > 1,
     })
 }
@@ -264,6 +258,11 @@ fn collect_files_internal(
     only_path: Option<&str>,
     include_patch: bool,
 ) -> Result<Vec<FileDiff>, AppError> {
+    let file_stats = if only_path.is_none() {
+        Some(collect_file_stats(diff)?)
+    } else {
+        None
+    };
     let mut files = Vec::new();
 
     for index in 0..diff.deltas().len() {
@@ -287,18 +286,30 @@ fn collect_files_internal(
             .map(|old| old.to_string_lossy().into_owned())
             .filter(|old| *old != path);
 
-        let hunks = git2::Patch::from_diff(diff, index)?;
-        let (_, insertions, deletions) = hunks
-            .as_ref()
-            .map_or(Ok((0, 0, 0)), git2::Patch::line_stats)?;
+        let mut requested_hunks = None;
+        let stats = if let Some(file_stats) = &file_stats {
+            file_stats.get(&path).copied().unwrap_or_default()
+        } else {
+            let hunks = git2::Patch::from_diff(diff, index)?;
+            let (_, insertions, deletions) = hunks
+                .as_ref()
+                .map_or(Ok((0, 0, 0)), git2::Patch::line_stats)?;
+            let patch_bytes = hunks
+                .as_ref()
+                .map_or(0, |hunks| hunks.size(true, true, true));
+            requested_hunks = hunks;
+            FileDiffStats {
+                insertions: u32::try_from(insertions).unwrap_or(u32::MAX),
+                deletions: u32::try_from(deletions).unwrap_or(u32::MAX),
+                patch_bytes,
+            }
+        };
+        let insertions = stats.insertions;
+        let deletions = stats.deletions;
 
         let binary = delta.new_file().is_binary() || delta.old_file().is_binary();
-        let lines = u32::try_from(insertions)
-            .unwrap_or(u32::MAX)
-            .saturating_add(u32::try_from(deletions).unwrap_or(u32::MAX));
-        let patch_bytes = hunks
-            .as_ref()
-            .map_or(0, |patch| patch.size(true, true, true));
+        let lines = insertions.saturating_add(deletions);
+        let patch_bytes = stats.patch_bytes;
         let expanded = expand_path == Some(path.as_str());
         let oversized =
             (lines > LARGE_DIFF_LINE_LIMIT || patch_bytes > MAX_INITIAL_DIFF_BYTES) && !expanded;
@@ -313,24 +324,75 @@ fn collect_files_internal(
             None
         };
 
-        let text = match (omitted, hunks) {
-            (None, Some(mut hunks)) if include_patch && requested_patch => {
-                Some(String::from_utf8_lossy(hunks.to_buf()?.as_ref()).into_owned())
+        let text = if omitted.is_none() && include_patch && requested_patch {
+            let hunks = match requested_hunks {
+                Some(hunks) => Some(hunks),
+                None => git2::Patch::from_diff(diff, index)?,
+            };
+            match hunks {
+                Some(mut hunks) => {
+                    Some(String::from_utf8_lossy(hunks.to_buf()?.as_ref()).into_owned())
+                }
+                None => None,
             }
-            _ => None,
+        } else {
+            None
         };
         files.push(FileDiff {
             path,
             old_path,
             change: FileChange::from(delta.status()),
-            insertions: u32::try_from(insertions).unwrap_or(u32::MAX),
-            deletions: u32::try_from(deletions).unwrap_or(u32::MAX),
+            insertions,
+            deletions,
             omitted,
             patch: text,
         });
     }
 
     Ok(files)
+}
+
+#[derive(Clone, Copy, Default)]
+struct FileDiffStats {
+    insertions: u32,
+    deletions: u32,
+    patch_bytes: usize,
+}
+
+fn collect_file_stats(diff: &git2::Diff<'_>) -> Result<HashMap<String, FileDiffStats>, AppError> {
+    let mut stats: HashMap<String, FileDiffStats> = HashMap::new();
+    for delta in diff.deltas() {
+        let path = delta
+            .new_file()
+            .path()
+            .or_else(|| delta.old_file().path())
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        stats.entry(path).or_default();
+    }
+
+    diff.print(DiffFormat::Patch, |delta, _, line| {
+        let path = delta
+            .new_file()
+            .path()
+            .or_else(|| delta.old_file().path())
+            .map(|path| path.to_string_lossy());
+        if let Some(file_stats) = path.and_then(|path| stats.get_mut(path.as_ref())) {
+            match line.origin() {
+                '+' => file_stats.insertions = file_stats.insertions.saturating_add(1),
+                '-' => file_stats.deletions = file_stats.deletions.saturating_add(1),
+                _ => {}
+            }
+            let line_bytes = line.content().len().saturating_add(1);
+            file_stats.patch_bytes = file_stats
+                .patch_bytes
+                .saturating_add(line_bytes)
+                .min(MAX_COMMIT_DIFF_BYTES.saturating_add(1));
+        }
+        true
+    })?;
+
+    Ok(stats)
 }
 
 #[cfg(test)]

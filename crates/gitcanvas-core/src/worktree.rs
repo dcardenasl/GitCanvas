@@ -7,12 +7,13 @@
 
 use std::{
     fs::{self, File, Metadata, OpenOptions},
+    hash::{DefaultHasher, Hash, Hasher},
     io::Read,
     path::{Component, Path, PathBuf},
     time::UNIX_EPOCH,
 };
 
-use git2::{DiffOptions, Index, ObjectType, Repository, StatusOptions};
+use git2::{DiffOptions, Index, Repository, StatusOptions};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
@@ -20,6 +21,7 @@ use crate::{
     blob::{self, ContentRead},
     diff::{self, FileDiff, FileDiffSummary},
     error::AppError,
+    pagination::resolve_page_size,
     repository::ActiveRepo,
 };
 
@@ -163,6 +165,7 @@ pub fn get_worktree_snapshot(
     active: &ActiveRepo,
     request: &WorktreeSnapshotRequest,
 ) -> Result<WorktreeSnapshot, AppError> {
+    let limit = resolve_page_size(request.limit, WORKTREE_PAGE_SIZE, WORKTREE_PAGE_SIZE)?;
     let repo = active.open()?;
     let index = repo.index()?;
     let before = revision(&repo, &index)?;
@@ -182,14 +185,14 @@ pub fn get_worktree_snapshot(
             before.clone(),
             &staged_files,
             request.staged_cursor.as_deref(),
-            request.limit,
+            limit,
         )?,
         unstaged: page(
             WorktreeSide::Unstaged,
             before,
             &unstaged_files,
             request.unstaged_cursor.as_deref(),
-            request.limit,
+            limit,
         )?,
     })
 }
@@ -329,7 +332,7 @@ fn page(
     revision: String,
     files: &[FileDiffSummary],
     cursor: Option<&str>,
-    requested_limit: Option<u16>,
+    limit: usize,
 ) -> Result<WorktreeDiffPage, AppError> {
     let offset = match cursor {
         None => 0,
@@ -349,9 +352,6 @@ fn page(
                 .map_err(|_| AppError::InvalidInput("invalid worktree cursor".into()))?
         }
     };
-    let limit = requested_limit
-        .map_or(WORKTREE_PAGE_SIZE, usize::from)
-        .clamp(1, WORKTREE_PAGE_SIZE);
     if offset > files.len() {
         return Err(AppError::StaleCursor(
             "worktree page is no longer available".into(),
@@ -581,16 +581,22 @@ fn validate_relative_path(path: &str) -> Result<PathBuf, AppError> {
 }
 
 fn revision(repo: &Repository, index: &Index) -> Result<String, AppError> {
-    let mut fingerprint = Vec::new();
+    // This opaque token is compared within one app session; it is not a durable or
+    // cryptographic identifier. Hash fields incrementally to avoid a repository-sized buffer.
+    let mut fingerprint = DefaultHasher::new();
     if let Ok(head) = repo.head() {
         if let Some(target) = head.target() {
-            fingerprint.extend_from_slice(target.as_bytes());
+            1u8.hash(&mut fingerprint);
+            target.as_bytes().hash(&mut fingerprint);
         }
+    } else {
+        0u8.hash(&mut fingerprint);
     }
+    index.len().hash(&mut fingerprint);
     for entry in index.iter() {
-        fingerprint.extend_from_slice(entry.path.as_ref());
-        fingerprint.extend_from_slice(entry.id.as_bytes());
-        fingerprint.extend_from_slice(&entry.mode.to_le_bytes());
+        entry.path.as_slice().hash(&mut fingerprint);
+        entry.id.as_bytes().hash(&mut fingerprint);
+        entry.mode.hash(&mut fingerprint);
     }
 
     let mut statuses = StatusOptions::new();
@@ -599,30 +605,43 @@ fn revision(repo: &Repository, index: &Index) -> Result<String, AppError> {
         .recurse_untracked_dirs(true)
         .include_ignored(false)
         .exclude_submodules(true);
-    for entry in repo.statuses(Some(&mut statuses))?.iter() {
-        fingerprint.extend_from_slice(&entry.status().bits().to_le_bytes());
+    let statuses = repo.statuses(Some(&mut statuses))?;
+    statuses.len().hash(&mut fingerprint);
+    for entry in statuses.iter() {
+        entry.status().bits().hash(&mut fingerprint);
         if let Ok(path) = entry.path() {
-            fingerprint.extend_from_slice(path.as_bytes());
+            path.hash(&mut fingerprint);
             if let Some(workdir) = repo.workdir() {
                 let file = workdir.join(path);
                 if let Ok(metadata) = fs::symlink_metadata(file) {
+                    1u8.hash(&mut fingerprint);
                     append_metadata(&mut fingerprint, &metadata);
+                } else {
+                    0u8.hash(&mut fingerprint);
                 }
             }
+        } else {
+            None::<&str>.hash(&mut fingerprint);
         }
     }
 
-    Ok(git2::Oid::hash_object(ObjectType::Blob, &fingerprint)?.to_string())
+    Ok(format!("{:016x}", fingerprint.finish()))
 }
 
-fn append_metadata(output: &mut Vec<u8>, metadata: &Metadata) {
-    output.extend_from_slice(&metadata.len().to_le_bytes());
-    if let Ok(modified) = metadata.modified() {
-        if let Ok(duration) = modified.duration_since(UNIX_EPOCH) {
-            output.extend_from_slice(&duration.as_secs().to_le_bytes());
-            output.extend_from_slice(&duration.subsec_nanos().to_le_bytes());
-        }
-    }
+fn append_metadata(output: &mut impl Hasher, metadata: &Metadata) {
+    metadata.len().hash(output);
+    metadata.is_file().hash(output);
+    metadata.is_dir().hash(output);
+    metadata.file_type().is_symlink().hash(output);
+    modified_stamp(metadata).hash(output);
+}
+
+fn modified_stamp(metadata: &Metadata) -> Option<(u64, u32)> {
+    metadata
+        .modified()
+        .ok()
+        .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| (duration.as_secs(), duration.subsec_nanos()))
 }
 
 fn file_stamp(path: &Path) -> Result<(u64, u64, u32), AppError> {

@@ -97,6 +97,9 @@ fn commit_diff_returns_summaries_and_only_materializes_the_requested_patch() {
 
     let summary = get_commit_diff(&active, &request(&second.to_string())).unwrap();
     assert_eq!(summary.files.len(), 2);
+    assert_eq!(summary.insertions, 2);
+    assert_eq!(summary.deletions, 0);
+    assert!(summary.files.iter().all(|file| file.insertions == 1));
     assert!(summary.files.iter().all(|file| file.patch.is_none()));
 
     let detailed = get_commit_diff(
