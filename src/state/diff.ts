@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import type { CommitDiff } from "../bindings";
 import { getCommitDiff } from "../lib/ipc";
+import { queryKeys } from "./queryKeys";
 
 /**
  * One commit's diff, shared by every view that needs it.
@@ -18,7 +19,12 @@ export function useCommitDiff(
   filePath: string | null = null,
 ) {
   return useQuery<CommitDiff>({
-    queryKey: ["diff", repositoryPath, commitId, filePath, expandPath],
+    queryKey: queryKeys.commitDiff(
+      repositoryPath,
+      commitId,
+      filePath,
+      expandPath,
+    ),
     enabled: repositoryPath !== null && commitId !== null,
     queryFn: () => {
       if (repositoryPath === null || commitId === null) {

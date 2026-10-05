@@ -3,6 +3,7 @@ import { useMemo } from "react";
 
 import type { BranchInfo, TagInfo } from "../bindings";
 import { getBranches, getTags } from "../lib/ipc";
+import { queryKeys } from "./queryKeys";
 
 /** A ref that can be shown as a badge on the commit it points at. */
 export interface RefBadge {
@@ -27,7 +28,7 @@ const ORDER: Record<RefBadge["kind"], number> = {
  */
 export function useBranches(path: string | null) {
   return useQuery<BranchInfo[]>({
-    queryKey: ["branches", path],
+    queryKey: queryKeys.branches(path),
     enabled: path !== null,
     queryFn: () => {
       if (path === null) throw new Error("No repository is open");
@@ -39,7 +40,7 @@ export function useBranches(path: string | null) {
 /** Tags of the open repository. See {@link useBranches}. */
 export function useTags(path: string | null) {
   return useQuery<TagInfo[]>({
-    queryKey: ["tags", path],
+    queryKey: queryKeys.tags(path),
     enabled: path !== null,
     queryFn: () => {
       if (path === null) throw new Error("No repository is open");

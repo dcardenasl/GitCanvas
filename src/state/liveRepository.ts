@@ -7,13 +7,8 @@ import {
   unwatchRepository,
   watchRepository,
 } from "../lib/ipc";
+import { invalidateLive } from "./queryKeys";
 import { useWorktreeFingerprint } from "./worktree";
-
-/** Queries that a change to refs, tags or branches can stale. */
-const METADATA_QUERIES = ["history", "branches", "tags"] as const;
-
-/** Queries that a change to the index or the working tree can stale. */
-const WORKTREE_QUERIES = ["worktree", "worktree-file-diff"] as const;
 
 // A module-level sequence gives every hook instance and StrictMode remount a
 // distinct backend generation. A component-local ref could restart at zero.
@@ -27,19 +22,6 @@ function nextGeneration(): number {
   }
   return generationSequence;
 }
-
-/**
- * Query families that describe the repository as it is right now.
- *
- * A commit's own diff and contents are excluded deliberately: those really are
- * immutable once written, so discarding them on every change would re-read
- * work that cannot have changed.
- */
-export const LIVE_QUERIES = [
-  ...METADATA_QUERIES,
-  ...WORKTREE_QUERIES,
-  "worktree-fingerprint",
-] as const;
 
 /**
  * Keeps the open repository in step with what is on disk.
@@ -82,9 +64,7 @@ export function useLiveRepository(path: string | null): {
     // different revision, and that is not a change worth reacting to.
     const previous = previousFingerprint.current;
     if (previous?.path === path && previous.revision !== revision) {
-      for (const key of WORKTREE_QUERIES) {
-        void queryClient.invalidateQueries({ queryKey: [key, path] });
-      }
+      void invalidateLive(queryClient, path, "worktree");
     }
     previousFingerprint.current = { path, revision };
   }, [fingerprint.data?.revision, path, queryClient]);
@@ -98,10 +78,7 @@ export function useLiveRepository(path: string | null): {
     const isCancelled = () => lifecycle.cancelled;
     const generation = nextGeneration();
     const invalidate = (scope: "metadata" | "worktree") => {
-      const keys = scope === "metadata" ? METADATA_QUERIES : WORKTREE_QUERIES;
-      for (const key of keys) {
-        void queryClient.invalidateQueries({ queryKey: [key, path] });
-      }
+      void invalidateLive(queryClient, path, scope);
     };
 
     const listening = onRepositoryChanged(({ payload }) => {

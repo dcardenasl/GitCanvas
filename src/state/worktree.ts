@@ -15,9 +15,7 @@ import {
   getWorktreeFingerprint,
   getWorktreeSnapshot,
 } from "../lib/ipc";
-
-/** Stable prefix shared by React Query entries for local repository changes. */
-export const WORKTREE_QUERY_KEY = "worktree";
+import { queryKeys } from "./queryKeys";
 
 const INITIAL_WORKTREE_REQUEST: WorktreeSnapshotRequest = {
   staged_cursor: null,
@@ -32,7 +30,7 @@ export function useWorktreeSnapshot(
   request: WorktreeSnapshotRequest = INITIAL_WORKTREE_REQUEST,
 ) {
   return useQuery<WorktreeSnapshot>({
-    queryKey: [WORKTREE_QUERY_KEY, repositoryPath, request],
+    queryKey: queryKeys.worktree(repositoryPath, request),
     enabled: repositoryPath !== null,
     queryFn: () => {
       if (repositoryPath === null) {
@@ -177,7 +175,7 @@ export function useWorktreeFileDiff(
   request: WorktreeFileDiffRequest | null,
 ) {
   return useQuery<WorktreeFileDiff>({
-    queryKey: ["worktree-file-diff", repositoryPath, request],
+    queryKey: queryKeys.worktreeFileDiff(repositoryPath, request),
     enabled: repositoryPath !== null && request !== null,
     queryFn: () => {
       if (repositoryPath === null || request === null) {
@@ -223,7 +221,7 @@ export function useWorktreeFingerprint(
   degraded = false,
 ) {
   return useQuery<WorktreeFingerprint>({
-    queryKey: ["worktree-fingerprint", repositoryPath],
+    queryKey: queryKeys.worktreeFingerprint(repositoryPath),
     enabled: repositoryPath !== null,
     queryFn: async () => {
       if (repositoryPath === null) {

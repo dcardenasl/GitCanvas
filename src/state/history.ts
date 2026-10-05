@@ -9,6 +9,7 @@ import type { CommitInfo, HistoryPage } from "../bindings";
 import { layout } from "../lib/graph-layout/layout";
 import type { GraphRow, LayoutState } from "../lib/graph-layout/types";
 import { getCommits } from "../lib/ipc";
+import { queryKeys } from "./queryKeys";
 
 /** Commits requested per page. Matches the engine's bounded page size. */
 const PAGE_SIZE = 500;
@@ -116,11 +117,6 @@ export function layoutHistory(
   };
 }
 
-/** React Query cache identity for a repository's commit history. */
-export function historyQueryKey(path: string | null) {
-  return ["history", path] as const;
-}
-
 /**
  * Loads history one page at a time and lays out the graph incrementally.
  *
@@ -132,7 +128,7 @@ export function historyQueryKey(path: string | null) {
 export function useHistory(path: string | null): HistoryData {
   const query: UseInfiniteQueryResult<InfiniteData<HistoryPage>> =
     useInfiniteQuery({
-      queryKey: historyQueryKey(path),
+      queryKey: queryKeys.history(path),
       enabled: path !== null,
       initialPageParam: FIRST_PAGE,
       queryFn: ({ pageParam }) => {

@@ -8,7 +8,7 @@ import {
   pullFastForward,
   pushCurrentBranch,
 } from "../../lib/ipc";
-import { LIVE_QUERIES } from "../../state/liveRepository";
+import { invalidateLive } from "../../state/queryKeys";
 
 /** What the last action left for the user to read. */
 export interface Notice {
@@ -75,12 +75,7 @@ export function useGitActions(repositoryPath: string | null): GitActions {
     if (path !== currentRepositoryPath.current) return;
     setNoticeState({ repositoryPath: path, notice: next });
   };
-  const refresh = (path: string) =>
-    Promise.all(
-      LIVE_QUERIES.map((key) =>
-        queryClient.invalidateQueries({ queryKey: [key, path] }),
-      ),
-    );
+  const refresh = (path: string) => invalidateLive(queryClient, path);
   const requirePath = (): string => {
     if (repositoryPath === null) throw new Error("No repository is open");
     return repositoryPath;

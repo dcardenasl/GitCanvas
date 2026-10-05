@@ -70,6 +70,11 @@ hasta obtener evidencia dinámica de arranque y E2E en los tres sistemas operati
       → `fix(ui): scope live query invalidation`
 - [ ] **H2-27 — Centralizar query keys y refresh en vivo.** Módulo único `queryKeys` y
       `invalidateLive()`; retirar duplicación en tres archivos, con pruebas de alcance.
+      *Implementación parcial (2026-10-05):* se centralizaron las claves de historial,
+      refs, worktree, diffs, archivos, árboles y GitHub. `invalidateLive()` aplica el
+      alcance metadata/worktree o ambos, con claves prefijo para invalidar todas las
+      páginas locales. Watcher, actualización manual y acciones Git usan el helper; se
+      añadieron pruebas de aislamiento por alcance y repositorio. No se ejecutaron.
       → `refactor(ui): centralize query keys and live invalidation`
 - [ ] **H2-28 — Reducir trabajo de paginación de historial.** Aplicar `maxPages` o refrescar
       solo primera página según comportamiento; indexar commits con `Map`/`useMemo` y

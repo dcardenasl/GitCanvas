@@ -8,6 +8,7 @@ import type {
 } from "../../bindings";
 import { userMessage } from "../../lib/errors";
 import { getCommitTreePage } from "../../lib/ipc";
+import { queryKeys } from "../../state/queryKeys";
 import { ChangedFileRow } from "../ChangedFileRow/ChangedFileRow";
 
 type ChangedFile = FileDiff | FileDiffSummary;
@@ -63,7 +64,7 @@ export function CommitTreeBrowser({
     return counts;
   }, [changedFiles]);
   const tree = useInfiniteQuery({
-    queryKey: ["commit-tree", repositoryPath, commitId, null],
+    queryKey: queryKeys.commitTree(repositoryPath, commitId, null),
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       getCommitTreePage(repositoryPath, {
@@ -229,7 +230,7 @@ function TreeDirectory({
 }: TreeDirectoryProps) {
   const [expanded, setExpanded] = useState(false);
   const children = useInfiniteQuery({
-    queryKey: ["commit-tree", repositoryPath, commitId, entry.path],
+    queryKey: queryKeys.commitTree(repositoryPath, commitId, entry.path),
     enabled: expanded,
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>

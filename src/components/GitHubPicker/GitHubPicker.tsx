@@ -13,6 +13,7 @@ import {
   storeGithubToken,
 } from "../../lib/ipc";
 import { useSession } from "../../state/session";
+import { queryKeys } from "../../state/queryKeys";
 
 import "./GitHubPicker.css";
 
@@ -41,12 +42,12 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
   const [progress, setProgress] = useState<CloneProgressEvent | null>(null);
 
   const signedIn = useQuery({
-    queryKey: ["github", "token"],
+    queryKey: queryKeys.githubToken(),
     queryFn: hasGithubToken,
   });
 
   const repositories = useQuery({
-    queryKey: ["github", "repositories"],
+    queryKey: queryKeys.githubRepositories(),
     enabled: signedIn.data === true,
     queryFn: listGithubRepositories,
   });
@@ -68,13 +69,14 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
     mutationFn: (value: string) => storeGithubToken(value.trim()),
     onSuccess: () => {
       setToken("");
-      void queryClient.invalidateQueries({ queryKey: ["github"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.github() });
     },
   });
 
   const signOut = useMutation({
     mutationFn: forgetGithubToken,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["github"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.github() }),
   });
 
   const clone = useMutation({

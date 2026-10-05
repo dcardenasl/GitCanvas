@@ -12,6 +12,7 @@ import { errorKind } from "../../lib/errors";
 import { useCommitDiff } from "../../state/diff";
 import { useSession } from "../../state/session";
 import { useWorktreeFileDiff, useWorktreeSnapshot } from "../../state/worktree";
+import { queryKeys } from "../../state/queryKeys";
 import { shortId } from "../CommitTable/format";
 import { LineTable, parseWholeFile } from "../DiffViewer";
 import { DiffViewer } from "../DiffViewer";
@@ -100,14 +101,15 @@ export function FileDiffView(props: FileDiffViewProps) {
   }, [commitDiff.data, isSnapshot, path, selectFile]);
 
   const whole = useQuery<FileContent | WorktreeFileContent>({
-    queryKey: [
-      isWorktree ? "worktree-file" : "file",
+    queryKey: queryKeys.file(
       repositoryPath,
-      isWorktree ? props.worktree.side : props.commit.id,
+      isWorktree
+        ? { kind: "worktree", side: props.worktree.side }
+        : { kind: "commit", commitId: props.commit.id },
       path,
       expanded,
       localRevision,
-    ],
+    ),
     enabled:
       mode === "file" &&
       !deleted &&

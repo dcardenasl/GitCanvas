@@ -13,7 +13,7 @@ import { Resizer } from "../Resizer";
 import { Actions, useGitActions } from "../Toolbar";
 import { ThemeSelector } from "../ThemeSelector/ThemeSelector";
 import { INSPECTOR, SIDEBAR, useLayout } from "../../state/layout";
-import { LIVE_QUERIES, useLiveRepository } from "../../state/liveRepository";
+import { useLiveRepository } from "../../state/liveRepository";
 import { Sidebar } from "../Sidebar";
 import { WorkingTreeDetailPanel } from "../WorkingTreeDetailPanel";
 import { useHistory } from "../../state/history";
@@ -23,6 +23,7 @@ import {
   selectedFilePath as getSelectedFilePath,
   useSession,
 } from "../../state/session";
+import { invalidateLive } from "../../state/queryKeys";
 
 import { HistoryView } from "./HistoryView";
 import { RepositoryPicker } from "./RepositoryPicker";
@@ -93,11 +94,7 @@ export function AppShell() {
             className="button"
             title="Volver a leer el repositorio desde el disco"
             onClick={() => {
-              for (const key of LIVE_QUERIES) {
-                void queryClient.invalidateQueries({
-                  queryKey: [key, repository.path],
-                });
-              }
+              void invalidateLive(queryClient, repository.path);
             }}
           >
             Actualizar
