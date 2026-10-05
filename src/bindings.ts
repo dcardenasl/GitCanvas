@@ -249,10 +249,12 @@ export type DiffOmission =
 /**  The change is larger than `LARGE_DIFF_LINE_LIMIT` and was not requested. */
 "TooLarge";
 
-/**  Which file, if any, the caller wants in full regardless of its size. */
+/**  Bounds and selects the patch returned with commit change summaries. */
 export type DiffRequest = {
 	commit_id: string,
-	/**  Path to include in full even if it exceeds the size guard. */
+	/**  Changed path whose patch is requested; other files are summaries only. */
+	file_path: string | null,
+	/**  Path whose ordinary line and byte thresholds are bypassed, up to the hard cap. */
 	expand_path: string | null,
 };
 

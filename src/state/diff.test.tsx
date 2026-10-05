@@ -54,6 +54,7 @@ describe("useCommitDiff", () => {
     });
     expect(getCommitDiff).toHaveBeenCalledWith("/tmp/repo", {
       commit_id: DIFF.commit_id,
+      file_path: null,
       expand_path: "big.txt",
     });
   });

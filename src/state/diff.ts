@@ -15,9 +15,10 @@ export function useCommitDiff(
   repositoryPath: string | null,
   commitId: string | null,
   expandPath: string | null = null,
+  filePath: string | null = null,
 ) {
   return useQuery<CommitDiff>({
-    queryKey: ["diff", repositoryPath, commitId, expandPath],
+    queryKey: ["diff", repositoryPath, commitId, filePath, expandPath],
     enabled: repositoryPath !== null && commitId !== null,
     queryFn: () => {
       if (repositoryPath === null || commitId === null) {
@@ -25,6 +26,7 @@ export function useCommitDiff(
       }
       return getCommitDiff(repositoryPath, {
         commit_id: commitId,
+        file_path: filePath,
         expand_path: expandPath,
       });
     },

@@ -182,7 +182,7 @@ describe("FileDiffView", () => {
     });
     expect(getCommitDiff).toHaveBeenCalledWith(
       "/tmp/repo",
-      expect.objectContaining({ commit_id: COMMIT.id }),
+      expect.objectContaining({ commit_id: COMMIT.id, file_path: null }),
     );
   });
 
@@ -268,6 +268,7 @@ describe("FileDiffView", () => {
       name: "Ver diff completo",
     });
     expect(getCommitDiff.mock.calls[0]?.[1]).toMatchObject({
+      file_path: "bundle.js",
       expand_path: null,
     });
 
@@ -275,6 +276,7 @@ describe("FileDiffView", () => {
 
     expect(useSession.getState().expandedFilePath).toBe("bundle.js");
     expect(getCommitDiff.mock.calls.at(-1)?.[1]).toMatchObject({
+      file_path: "bundle.js",
       expand_path: "bundle.js",
     });
   });

@@ -27,6 +27,12 @@ pub const MAX_INITIAL_DIFF_BYTES: usize = 1024 * 1024;
 /// Hard maximum for a patch explicitly expanded by the user.
 pub const MAX_EXPANDED_DIFF_BYTES: usize = 16 * 1024 * 1024;
 
+/// Maximum number of changed paths accepted in one commit diff response.
+pub const MAX_COMMIT_DIFF_FILES: usize = 5_000;
+
+/// Maximum patch text bytes returned by one commit diff response.
+pub const MAX_COMMIT_DIFF_BYTES: usize = MAX_EXPANDED_DIFF_BYTES;
+
 /// How a path changed between two trees.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub enum FileChange {
@@ -116,11 +122,13 @@ pub struct CommitDiff {
     pub is_merge: bool,
 }
 
-/// Which file, if any, the caller wants in full regardless of its size.
+/// Bounds and selects the patch returned with commit change summaries.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct DiffRequest {
     pub commit_id: String,
-    /// Path to include in full even if it exceeds the size guard.
+    /// Changed path whose patch is requested; other files are summaries only.
+    pub file_path: Option<String>,
+    /// Path whose ordinary line and byte thresholds are bypassed, up to the hard cap.
     pub expand_path: Option<String>,
 }
 
@@ -152,11 +160,26 @@ pub fn get_commit_diff(active: &ActiveRepo, request: &DiffRequest) -> Result<Com
         Some(&commit.tree()?),
         Some(&mut options),
     )?;
+    ensure_file_count(diff.deltas().len())?;
+
     // Rename detection runs on the diff rather than during generation so a
     // pure rename reads as one entry instead of an unrelated add and delete.
     diff.find_similar(None)?;
 
-    let files = collect_files(&diff, request.expand_path.as_deref())?;
+    let files = collect_files(
+        &diff,
+        request.file_path.as_deref(),
+        request.expand_path.as_deref(),
+    )?;
+    if request
+        .file_path
+        .as_ref()
+        .is_some_and(|requested| !files.iter().any(|file| file.path == *requested))
+    {
+        return Err(AppError::InvalidInput(
+            "requested path is not changed by this commit".to_owned(),
+        ));
+    }
     let insertions = files
         .iter()
         .map(|file| file.insertions)
@@ -176,16 +199,26 @@ pub fn get_commit_diff(active: &ActiveRepo, request: &DiffRequest) -> Result<Com
     })
 }
 
+fn ensure_file_count(file_count: usize) -> Result<(), AppError> {
+    if file_count > MAX_COMMIT_DIFF_FILES {
+        return Err(AppError::ResourceLimitExceeded(format!(
+            "commit changes more than {MAX_COMMIT_DIFF_FILES} files"
+        )));
+    }
+    Ok(())
+}
+
 pub(crate) fn collect_files(
     diff: &git2::Diff<'_>,
+    patch_path: Option<&str>,
     expand_path: Option<&str>,
 ) -> Result<Vec<FileDiff>, AppError> {
-    collect_files_internal(diff, expand_path, None, true)
+    collect_files_internal(diff, patch_path, expand_path, None, true)
 }
 
 /// Collects file metadata without materializing patch text.
 pub(crate) fn collect_summaries(diff: &git2::Diff<'_>) -> Result<Vec<FileDiffSummary>, AppError> {
-    collect_files_internal(diff, None, None, false)
+    collect_files_internal(diff, None, None, None, false)
         .map(|files| files.iter().map(FileDiffSummary::from).collect::<Vec<_>>())
 }
 
@@ -197,11 +230,13 @@ pub(crate) fn collect_file(
     expand: bool,
 ) -> Result<Option<FileDiff>, AppError> {
     let expanded = expand.then_some(path);
-    collect_files_internal(diff, expanded, Some(path), true).map(|mut files| files.pop())
+    collect_files_internal(diff, Some(path), expanded, Some(path), true)
+        .map(|mut files| files.pop())
 }
 
 fn collect_files_internal(
     diff: &git2::Diff<'_>,
+    patch_path: Option<&str>,
     expand_path: Option<&str>,
     only_path: Option<&str>,
     include_patch: bool,
@@ -244,7 +279,8 @@ fn collect_files_internal(
         let expanded = expand_path == Some(path.as_str());
         let oversized =
             (lines > LARGE_DIFF_LINE_LIMIT || patch_bytes > MAX_INITIAL_DIFF_BYTES) && !expanded;
-        let beyond_hard_limit = patch_bytes > MAX_EXPANDED_DIFF_BYTES && expanded;
+        let beyond_hard_limit = patch_bytes > MAX_COMMIT_DIFF_BYTES && expanded;
+        let requested_patch = patch_path == Some(path.as_str());
 
         let omitted = if binary {
             Some(DiffOmission::Binary)
@@ -255,7 +291,7 @@ fn collect_files_internal(
         };
 
         let text = match (omitted, hunks) {
-            (None, Some(mut hunks)) if include_patch => {
+            (None, Some(mut hunks)) if include_patch && requested_patch => {
                 Some(String::from_utf8_lossy(hunks.to_buf()?.as_ref()).into_owned())
             }
             _ => None,
@@ -272,4 +308,19 @@ fn collect_files_internal(
     }
 
     Ok(files)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ensure_file_count, MAX_COMMIT_DIFF_FILES};
+    use crate::error::AppError;
+
+    #[test]
+    fn commit_file_count_is_bounded_before_rename_detection() {
+        assert_eq!(ensure_file_count(MAX_COMMIT_DIFF_FILES), Ok(()));
+        assert!(matches!(
+            ensure_file_count(MAX_COMMIT_DIFF_FILES + 1),
+            Err(AppError::ResourceLimitExceeded(_))
+        ));
+    }
 }

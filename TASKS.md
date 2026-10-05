@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (1/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (2/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -49,10 +49,14 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
 
 ### H2-1 — Correctitud y seguridad
 
-- [ ] **H2-1 — Acotar los diffs de commits.** Verificar el hallazgo A1 y limitar bytes y
-      archivos agregados de `get_commit_diff`; devolver estado `TooLarge`. Preferir
-      resumen `FileDiffSummary` y carga de parche por archivo cuando encaje con el contrato
-      vigente. Añadir cobertura de los límites y conservar compatibilidad IPC/bindings.
+- [x] **H2-1 — Acotar los diffs de commits.** `get_commit_diff` devuelve metadatos para
+      todos los archivos y solo materializa el parche del archivo seleccionado. Los diffs
+      con más de 5.000 rutas fallan de forma tipada antes de detectar renombres; las
+      expansiones respetan el límite duro de 16 MiB y se marcan `TooLarge` si lo exceden.
+      `FileDiffView` ya envía el archivo solicitado y los snapshots no piden un parche.
+      *Verificado:* `cargo test -p gitcanvas-core --test diff`, `cargo test -p gitcanvas-core
+      --lib`, binding exportado, `npm run typecheck`, tests Vitest de `diff`, `FileDiffView`
+      e IPC con Node 22 (48 tests), `./pre-commit`.
       → `fix(diff): bound commit diff reads`
 - [ ] **H2-2 — Asegurar lecturas del worktree.** Verificar A2; rechazar symlinks o
       representarlos como texto, excluir `.git`, revalidar tras abrir, usar `active.path()`

@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Commit diffs** — changed-file lists now return summaries and load only the selected patch, with explicit per-file and file-count limits for large commits.
 - **Reading a local file** — editing the file (or staging it) while its diff was open
   closed the view, because the read was refused as stale and any failure closed it. The
   view now takes the new revision and reads again, and closes only when the file really

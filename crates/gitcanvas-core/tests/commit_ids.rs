@@ -28,6 +28,7 @@ fn an_abbreviated_commit_id_is_refused_everywhere() {
         &active,
         &DiffRequest {
             commit_id: short.clone(),
+            file_path: None,
             expand_path: None,
         },
     )

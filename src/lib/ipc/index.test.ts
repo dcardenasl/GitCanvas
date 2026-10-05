@@ -67,9 +67,14 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
   ["getTags", () => ipc.getTags(PATH), "getTags", [PATH]],
   [
     "getCommitDiff",
-    () => ipc.getCommitDiff(PATH, { commit_id: "a", expand_path: null }),
+    () =>
+      ipc.getCommitDiff(PATH, {
+        commit_id: "a",
+        file_path: null,
+        expand_path: null,
+      }),
     "getCommitDiff",
-    [PATH, { commit_id: "a", expand_path: null }],
+    [PATH, { commit_id: "a", file_path: null, expand_path: null }],
   ],
   [
     "getCommitTreePage",

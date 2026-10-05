@@ -16,6 +16,7 @@ use support::Fixture;
 fn request(commit: &str) -> DiffRequest {
     DiffRequest {
         commit_id: commit.to_owned(),
+        file_path: None,
         expand_path: None,
     }
 }
@@ -78,6 +79,44 @@ fn reports_added_modified_and_deleted_paths() {
     assert_eq!(by_path("new.txt").change, FileChange::Added);
     assert_eq!(by_path("gone.txt").change, FileChange::Deleted);
     assert_eq!(diff.parent_id.as_deref(), Some(first.to_string().as_str()));
+}
+
+#[test]
+fn commit_diff_returns_summaries_and_only_materializes_the_requested_patch() {
+    let fixture = Fixture::new();
+    let first = fixture.commit_files("refs/heads/main", "first", &[], 1_000, &[]);
+    let second = fixture.commit_files(
+        "refs/heads/main",
+        "second",
+        &[first],
+        2_000,
+        &[("a.txt", b"one\n"), ("b.txt", b"two\n")],
+    );
+    let active = open(&fixture);
+
+    let summary = get_commit_diff(&active, &request(&second.to_string())).unwrap();
+    assert_eq!(summary.files.len(), 2);
+    assert!(summary.files.iter().all(|file| file.patch.is_none()));
+
+    let detailed = get_commit_diff(
+        &active,
+        &DiffRequest {
+            commit_id: second.to_string(),
+            file_path: Some("a.txt".to_owned()),
+            expand_path: None,
+        },
+    )
+    .unwrap();
+    assert!(detailed
+        .files
+        .iter()
+        .find(|file| file.path == "a.txt")
+        .is_some_and(|file| file.patch.is_some()));
+    assert!(detailed
+        .files
+        .iter()
+        .find(|file| file.path == "b.txt")
+        .is_some_and(|file| file.patch.is_none()));
 }
 
 #[test]
@@ -184,6 +223,7 @@ fn an_oversized_diff_is_withheld_until_it_is_asked_for() {
         &active,
         &DiffRequest {
             commit_id: second.to_string(),
+            file_path: Some("huge.txt".to_owned()),
             expand_path: Some("huge.txt".to_owned()),
         },
     )
@@ -216,9 +256,16 @@ fn a_file_without_a_trailing_newline_still_produces_a_patch() {
     );
 
     let active = open(&fixture);
-    let diff = get_commit_diff(&active, &request(&second.to_string())).unwrap();
-
-    let patch = diff.files[0].patch.as_deref().unwrap();
+    let detailed = get_commit_diff(
+        &active,
+        &DiffRequest {
+            commit_id: second.to_string(),
+            file_path: Some("a.txt".to_owned()),
+            expand_path: None,
+        },
+    )
+    .unwrap();
+    let patch = detailed.files[0].patch.as_deref().unwrap();
     assert!(patch.contains("\\ No newline at end of file"));
 }
 

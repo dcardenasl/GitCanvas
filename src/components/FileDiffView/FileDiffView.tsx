@@ -66,7 +66,8 @@ export function FileDiffView(props: FileDiffViewProps) {
   const commitDiff = useCommitDiff(
     repositoryPath,
     isWorktree ? null : props.commit.id,
-    expandPath,
+    expandPath === path ? expandPath : null,
+    isWorktree || isSnapshot ? null : path,
   );
   const localSnapshot = useWorktreeSnapshot(isWorktree ? repositoryPath : null);
   const localRevision = localSnapshot.data?.revision;
