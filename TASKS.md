@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (4/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (5/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -70,10 +70,14 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       ancestro se llama `refs`; `cargo test -p gitcanvas-core --lib` (22 tests) y
       `cargo clippy -p gitcanvas-core --all-targets -- -D warnings`.
       → `fix(watch): classify paths relative to metadata`
-- [ ] **H2-4 — Endurecer cliente REST de GitHub.** Configurar timeout global y de conexión
-      en `ureq::Agent`; diferenciar 403 con rate limit, 429 y 401; hacer explícito el
-      truncamiento de 1000 repositorios. Verificar y restringir `with_base_url` a
-      `test-support`/`doc(hidden)` y validar HTTPS, permitiendo loopback de tests.
+- [x] **H2-4 — Endurecer cliente REST de GitHub.** `ureq::Agent` fija timeout global de
+      30 s y conexión de 10 s; 401, falta de scopes, 403 por rate limit y 429 tienen
+      diagnósticos distintos. El límite de 1.000 repositorios devuelve `truncated` y se
+      explica en el selector. `with_base_url` está oculto en docs y valida HTTPS salvo IP
+      loopback/localhost.
+      *Verificado:* 9 tests de `github_api`, 24 tests core, contrato TypeScript regenerado,
+      typecheck y 40 tests de GitHubPicker/IPC; pruebas de timeout config, status, truncado
+      y rechazo de URLs HTTP externas.
       → `fix(github): bound requests and classify api limits`
 - [ ] **H2-5 — Hacer segura la concurrencia de clone y cache.** Verificar M2/M3/B11;
       locks por entrada, staging parcial único y retención que acumula errores sin borrar

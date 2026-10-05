@@ -17,6 +17,9 @@ use std::{
 
 use gitcanvas_core::github::api::GitHubClient;
 
+type Headers = Vec<(String, String)>;
+type CannedResponse = (u16, String, Headers);
+
 /// A single-threaded HTTP server that replies with canned responses in order.
 struct FakeGitHub {
     base_url: String,
@@ -25,17 +28,25 @@ struct FakeGitHub {
 
 impl FakeGitHub {
     fn start(responses: Vec<(u16, String)>) -> Self {
+        Self::start_with_headers(
+            responses
+                .into_iter()
+                .map(|(status, body)| (status, body, Vec::new()))
+                .collect(),
+        )
+    }
+
+    fn start_with_headers(responses: Vec<CannedResponse>) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
         let (tx, requests) = mpsc::channel();
 
         thread::spawn(move || {
-            for (index, (status, body)) in responses.into_iter().enumerate() {
+            for (status, body, headers) in responses {
                 let Ok((stream, _)) = listener.accept() else {
                     return;
                 };
-                let _ = index;
-                serve(stream, status, &body, &tx);
+                serve(stream, status, &body, &headers, &tx);
             }
         });
 
@@ -43,7 +54,7 @@ impl FakeGitHub {
     }
 
     fn client(&self, token: &str) -> GitHubClient {
-        GitHubClient::with_base_url(token.to_owned(), self.base_url.clone())
+        GitHubClient::with_base_url(token.to_owned(), self.base_url.clone()).unwrap()
     }
 
     fn next_request(&self) -> String {
@@ -53,7 +64,13 @@ impl FakeGitHub {
     }
 }
 
-fn serve(mut stream: TcpStream, status: u16, body: &str, tx: &mpsc::Sender<String>) {
+fn serve(
+    mut stream: TcpStream,
+    status: u16,
+    body: &str,
+    headers: &Headers,
+    tx: &mpsc::Sender<String>,
+) {
     let mut reader = BufReader::new(stream.try_clone().unwrap());
     let mut head = String::new();
     loop {
@@ -69,8 +86,13 @@ fn serve(mut stream: TcpStream, status: u16, body: &str, tx: &mpsc::Sender<Strin
     let _ = tx.send(head);
 
     let reason = if status == 200 { "OK" } else { "ERR" };
+    let mut response_headers = String::new();
+    for (name, value) in headers {
+        use std::fmt::Write as _;
+        write!(response_headers, "{name}: {value}\r\n").unwrap();
+    }
     let response = format!(
-        "HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        "HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\nContent-Length: {}\r\n{response_headers}Connection: close\r\n\r\n{body}",
         body.len()
     );
     let _ = stream.write_all(response.as_bytes());
@@ -132,6 +154,25 @@ fn missing_scopes_are_reported_the_same_way_as_a_bad_token() {
 }
 
 #[test]
+fn rate_limit_responses_are_distinct_from_bad_credentials_and_missing_scopes() {
+    let rate_limited = FakeGitHub::start_with_headers(vec![(
+        403,
+        r#"{"message":"API rate limit exceeded"}"#.to_owned(),
+        vec![("X-RateLimit-Remaining".to_owned(), "0".to_owned())],
+    )]);
+    let error = rate_limited.client("limited").verify().unwrap_err();
+    assert!(format!("{error:?}").contains("rate limit"));
+
+    let too_many_requests = FakeGitHub::start(vec![(429, "{}".to_owned())]);
+    let error = too_many_requests.client("limited").verify().unwrap_err();
+    assert!(format!("{error:?}").contains("rate limit"));
+
+    let invalid = FakeGitHub::start(vec![(401, "{}".to_owned())]);
+    let error = invalid.client("invalid").verify().unwrap_err();
+    assert!(format!("{error:?}").contains("InvalidInput"));
+}
+
+#[test]
 fn repositories_are_listed_with_the_fields_the_picker_needs() {
     let body = r#"[
       {"full_name":"dcardenasl/gitcanvas","clone_url":"https://github.com/dcardenasl/gitcanvas.git","private":true,"default_branch":"main","description":"Visual git client"},
@@ -141,11 +182,12 @@ fn repositories_are_listed_with_the_fields_the_picker_needs() {
 
     let repos = server.client("t").list_repositories().unwrap();
 
-    assert_eq!(repos.len(), 2);
-    assert_eq!(repos[0].full_name, "dcardenasl/gitcanvas");
-    assert!(repos[0].private);
+    assert_eq!(repos.repositories.len(), 2);
+    assert!(!repos.truncated);
+    assert_eq!(repos.repositories[0].full_name, "dcardenasl/gitcanvas");
+    assert!(repos.repositories[0].private);
     assert_eq!(
-        repos[1].default_branch, "main",
+        repos.repositories[1].default_branch, "main",
         "a repository without a default branch still needs a usable one"
     );
 }
@@ -166,11 +208,36 @@ fn pagination_stops_on_the_first_short_page() {
 
     let repos = server.client("t").list_repositories().unwrap();
 
-    assert_eq!(repos.len(), 100);
+    assert_eq!(repos.repositories.len(), 100);
+    assert!(!repos.truncated);
     let first = server.next_request();
     let second = server.next_request();
     assert!(first.contains("page=1"));
     assert!(second.contains("page=2"));
+}
+
+#[test]
+fn reports_when_the_thousand_repository_cap_truncates_the_listing() {
+    let page = || {
+        format!(
+            "[{}]",
+            (0..100)
+                .map(|index| format!(
+                    r#"{{"full_name":"o/r{index}","clone_url":"https://github.com/o/r{index}.git","private":false,"default_branch":"main","description":null}}"#
+                ))
+                .collect::<Vec<_>>()
+                .join(",")
+        )
+    };
+    let server = FakeGitHub::start((0..10).map(|_| (200, page())).collect());
+
+    let result = server.client("t").list_repositories().unwrap();
+
+    assert_eq!(result.repositories.len(), 1_000);
+    assert!(result.truncated);
+    for page in 1..=10 {
+        assert!(server.next_request().contains(&format!("page={page}")));
+    }
 }
 
 #[test]

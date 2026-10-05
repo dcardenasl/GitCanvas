@@ -7,7 +7,7 @@
 use gitcanvas_core::{
     error::AppError,
     github::{
-        api::{GitHubAccount, GitHubClient, GitHubRepository},
+        api::{GitHubAccount, GitHubClient, GitHubRepositoryList},
         cache::{self, CacheStatus},
         clone, credentials,
     },
@@ -71,7 +71,7 @@ pub async fn forget_github_token() -> Result<(), AppError> {
 /// Lists the repositories the stored token can reach.
 #[tauri::command]
 #[specta::specta]
-pub async fn list_github_repositories() -> Result<Vec<GitHubRepository>, AppError> {
+pub async fn list_github_repositories() -> Result<GitHubRepositoryList, AppError> {
     write("list_github_repositories", || {
         GitHubClient::from_stored_token()?.list_repositories()
     })

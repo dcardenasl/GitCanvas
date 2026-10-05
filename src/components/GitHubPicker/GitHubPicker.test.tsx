@@ -4,10 +4,10 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { GitHubRepository } from "../../bindings";
+import type { GitHubRepository, GitHubRepositoryList } from "../../bindings";
 
 const hasGithubToken = vi.fn<() => Promise<boolean>>();
-const listGithubRepositories = vi.fn<() => Promise<GitHubRepository[]>>();
+const listGithubRepositories = vi.fn<() => Promise<GitHubRepositoryList>>();
 const storeGithubToken =
   vi.fn<(token: string) => Promise<{ login: string; name: string | null }>>();
 const cloneGithubRepository =
@@ -41,6 +41,13 @@ const REPO: GitHubRepository = {
   default_branch: "main",
   description: "Visual git client",
 };
+
+function repositoryList(
+  repositories: GitHubRepository[] = [],
+  truncated = false,
+): GitHubRepositoryList {
+  return { repositories, truncated };
+}
 
 function renderPicker(onClose = vi.fn()) {
   const client = new QueryClient({
@@ -86,16 +93,26 @@ describe("GitHubPicker", () => {
 
   it("lists repositories once a token is stored", async () => {
     hasGithubToken.mockResolvedValue(true);
-    listGithubRepositories.mockResolvedValue([REPO]);
+    listGithubRepositories.mockResolvedValue(repositoryList([REPO]));
     renderPicker();
 
     expect(await screen.findByText("dcardenasl/gitcanvas")).toBeDefined();
     expect(screen.getByText("privado")).toBeDefined();
   });
 
+  it("explains when the API result was capped at one thousand repositories", async () => {
+    hasGithubToken.mockResolvedValue(true);
+    listGithubRepositories.mockResolvedValue(repositoryList([REPO], true));
+    renderPicker();
+
+    expect(
+      await screen.findByText(/primeros 1\.000 repositorios/),
+    ).toBeDefined();
+  });
+
   it("clones the chosen repository and opens it", async () => {
     hasGithubToken.mockResolvedValue(true);
-    listGithubRepositories.mockResolvedValue([REPO]);
+    listGithubRepositories.mockResolvedValue(repositoryList([REPO]));
     cloneGithubRepository.mockResolvedValue({
       path: "/cache/dcardenasl_gitcanvas",
       full_name: REPO.full_name,
@@ -135,7 +152,7 @@ describe("GitHubPicker", () => {
     const stop = vi.fn();
     onCloneProgress.mockImplementation(() => Promise.resolve(stop));
     hasGithubToken.mockResolvedValue(true);
-    listGithubRepositories.mockResolvedValue([]);
+    listGithubRepositories.mockResolvedValue(repositoryList());
 
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -156,7 +173,7 @@ describe("GitHubPicker", () => {
     it("sends the token, then lists repositories", async () => {
       hasGithubToken.mockResolvedValueOnce(false);
       storeGithubToken.mockResolvedValue({ login: "david", name: null });
-      listGithubRepositories.mockResolvedValue([REPO]);
+      listGithubRepositories.mockResolvedValue(repositoryList([REPO]));
       renderPicker();
 
       await userEvent.type(
@@ -190,7 +207,7 @@ describe("GitHubPicker", () => {
 
   it("signs out through the keychain", async () => {
     hasGithubToken.mockResolvedValue(true);
-    listGithubRepositories.mockResolvedValue([]);
+    listGithubRepositories.mockResolvedValue(repositoryList());
     forgetGithubToken.mockResolvedValue(null);
     renderPicker();
 
@@ -214,7 +231,7 @@ describe("GitHubPicker", () => {
         return Promise.resolve(() => undefined);
       });
       hasGithubToken.mockResolvedValue(true);
-      listGithubRepositories.mockResolvedValue([REPO]);
+      listGithubRepositories.mockResolvedValue(repositoryList([REPO]));
       cloneGithubRepository.mockReturnValue(new Promise(() => undefined));
       renderPicker();
       await userEvent.click(
@@ -259,7 +276,7 @@ describe("GitHubPicker", () => {
 
     it("reports a failed clone and lets the user try again", async () => {
       hasGithubToken.mockResolvedValue(true);
-      listGithubRepositories.mockResolvedValue([REPO]);
+      listGithubRepositories.mockResolvedValue(repositoryList([REPO]));
       cloneGithubRepository.mockRejectedValue(new Error("network down"));
       renderPicker();
 

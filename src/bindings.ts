@@ -67,7 +67,7 @@ export const commands = {
 	/**  Removes the stored token. */
 	forgetGithubToken: () => typedError<null, AppError>(__TAURI_INVOKE("forget_github_token")),
 	/**  Lists the repositories the stored token can reach. */
-	listGithubRepositories: () => typedError<GitHubRepository[], AppError>(__TAURI_INVOKE("list_github_repositories")),
+	listGithubRepositories: () => typedError<GitHubRepositoryList, AppError>(__TAURI_INVOKE("list_github_repositories")),
 	/**  Clones a repository into the application cache, emitting progress as it goes. */
 	cloneGithubRepository: (cloneUrl: string, fullName: string) => typedError<ClonedRepository, AppError>(__TAURI_INVOKE("clone_github_repository", { cloneUrl, fullName })),
 	/**  Reports what the clone cache holds and the limits it is held to. */
@@ -333,6 +333,12 @@ export type GitHubRepository = {
 	private: boolean,
 	default_branch: string,
 	description: string | null,
+};
+
+/**  The bounded repository listing and whether more repositories were available. */
+export type GitHubRepositoryList = {
+	repositories: GitHubRepository[],
+	truncated: boolean,
 };
 
 /**  A bounded page and the information needed to resume its exact traversal. */

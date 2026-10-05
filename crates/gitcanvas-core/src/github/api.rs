@@ -5,8 +5,12 @@
 //! graph displays comes from here — commits, branches and tags are always read
 //! from the local clone through libgit2. One data path, not two.
 
+use std::time::Duration;
+
 use serde::{Deserialize, Serialize};
 use specta::Type;
+use ureq::Agent;
+use url::{Host, Url};
 
 use crate::{error::AppError, github::credentials};
 
@@ -20,6 +24,8 @@ const USER_AGENT: &str = concat!("GitCanvas/", env!("CARGO_PKG_VERSION"));
 const PAGE_SIZE: u8 = 100;
 /// Pages to walk before stopping, so a huge account cannot hang the picker.
 const MAX_PAGES: u8 = 10;
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// The authenticated account.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -36,6 +42,13 @@ pub struct GitHubRepository {
     pub private: bool,
     pub default_branch: String,
     pub description: Option<String>,
+}
+
+/// The bounded repository listing and whether more repositories were available.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+pub struct GitHubRepositoryList {
+    pub repositories: Vec<GitHubRepository>,
+    pub truncated: bool,
 }
 
 #[derive(Deserialize)]
@@ -57,6 +70,7 @@ struct RawRepository {
 pub struct GitHubClient {
     token: String,
     base_url: String,
+    agent: Agent,
 }
 
 impl GitHubClient {
@@ -66,6 +80,7 @@ impl GitHubClient {
         Self {
             token,
             base_url: DEFAULT_BASE_URL.to_owned(),
+            agent: api_agent(),
         }
     }
 
@@ -80,16 +95,24 @@ impl GitHubClient {
         credentials::read_token().map(Self::new)
     }
 
-    /// Builds a client pointed at a specific base URL, for tests against a local
-    /// server.
-    #[must_use]
-    pub fn with_base_url(token: String, base_url: String) -> Self {
-        Self { token, base_url }
+    /// Builds a client pointed at a specific HTTPS endpoint or loopback test server.
+    ///
+    /// The URL is validated before the token can be sent to it.
+    #[doc(hidden)]
+    pub fn with_base_url(token: String, base_url: String) -> Result<Self, AppError> {
+        validate_base_url(&base_url)?;
+        Ok(Self {
+            token,
+            base_url,
+            agent: api_agent(),
+        })
     }
 
     fn get(&self, path: &str) -> Result<String, AppError> {
         let url = format!("{}{path}", self.base_url);
-        let response = ureq::get(&url)
+        let response = self
+            .agent
+            .get(&url)
             .header("Authorization", &format!("Bearer {}", self.token))
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
@@ -97,11 +120,27 @@ impl GitHubClient {
             .call();
 
         match response {
-            Ok(mut response) => response.body_mut().read_to_string().map_err(|error| {
-                AppError::Internal(format!("could not read the response: {error}"))
-            }),
-            Err(ureq::Error::StatusCode(401 | 403)) => Err(AppError::InvalidInput(
-                "the GitHub token is invalid or lacks the required scopes".to_owned(),
+            Ok(mut response) if response.status().is_success() => {
+                response.body_mut().read_to_string().map_err(|error| {
+                    AppError::Internal(format!("could not read the response: {error}"))
+                })
+            }
+            Ok(response) => Err(status_error(
+                response.status().as_u16(),
+                response
+                    .headers()
+                    .get("x-ratelimit-remaining")
+                    .and_then(|value| value.to_str().ok()),
+                response
+                    .headers()
+                    .get("retry-after")
+                    .and_then(|value| value.to_str().ok()),
+            )),
+            Err(ureq::Error::StatusCode(401)) => Err(AppError::InvalidInput(
+                "the GitHub token is invalid".to_owned(),
+            )),
+            Err(ureq::Error::StatusCode(403)) => Err(AppError::InvalidInput(
+                "the GitHub token lacks the required scopes".to_owned(),
             )),
             Err(ureq::Error::StatusCode(code)) => Err(AppError::Internal(format!(
                 "GitHub responded with status {code}"
@@ -133,8 +172,9 @@ impl GitHubClient {
     ///
     /// Returns [`AppError`] when the token is rejected, GitHub is unreachable,
     /// or a page cannot be parsed.
-    pub fn list_repositories(&self) -> Result<Vec<GitHubRepository>, AppError> {
+    pub fn list_repositories(&self) -> Result<GitHubRepositoryList, AppError> {
         let mut all = Vec::new();
+        let mut truncated = false;
 
         for page in 1..=MAX_PAGES {
             let body = self.get(&format!(
@@ -156,8 +196,96 @@ impl GitHubClient {
             if count < usize::from(PAGE_SIZE) {
                 break;
             }
+            if page == MAX_PAGES {
+                truncated = true;
+            }
         }
 
-        Ok(all)
+        Ok(GitHubRepositoryList {
+            repositories: all,
+            truncated,
+        })
+    }
+}
+
+fn api_agent() -> Agent {
+    Agent::new_with_config(
+        Agent::config_builder()
+            .timeout_global(Some(REQUEST_TIMEOUT))
+            .timeout_connect(Some(CONNECT_TIMEOUT))
+            .http_status_as_error(false)
+            .build(),
+    )
+}
+
+fn validate_base_url(base_url: &str) -> Result<(), AppError> {
+    let parsed = Url::parse(base_url)
+        .map_err(|_| AppError::InvalidInput("invalid GitHub API base URL".to_owned()))?;
+    let loopback = match parsed.host() {
+        Some(Host::Domain(host)) => host.eq_ignore_ascii_case("localhost"),
+        Some(Host::Ipv4(address)) => address.is_loopback(),
+        Some(Host::Ipv6(address)) => address.is_loopback(),
+        None => false,
+    };
+    let secure = parsed.scheme() == "https" || (parsed.scheme() == "http" && loopback);
+    if parsed.host().is_none()
+        || !secure
+        || parsed.username() != ""
+        || parsed.password().is_some()
+        || parsed.query().is_some()
+        || parsed.fragment().is_some()
+    {
+        return Err(AppError::InvalidInput(
+            "GitHub API base URL must use HTTPS, except for loopback test servers".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn status_error(status: u16, rate_remaining: Option<&str>, retry_after: Option<&str>) -> AppError {
+    match status {
+        401 => AppError::InvalidInput("the GitHub token is invalid".to_owned()),
+        403 if rate_remaining == Some("0") || retry_after.is_some() => AppError::Internal(
+            "GitHub API rate limit exceeded; wait before trying again".to_owned(),
+        ),
+        403 => AppError::InvalidInput("the GitHub token lacks the required scopes".to_owned()),
+        429 => AppError::Internal(
+            "GitHub API rate limit exceeded; wait before trying again".to_owned(),
+        ),
+        code => AppError::Internal(format!("GitHub responded with status {code}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::{validate_base_url, GitHubClient, CONNECT_TIMEOUT, REQUEST_TIMEOUT};
+    use crate::error::AppError;
+
+    #[test]
+    fn api_agent_has_global_and_connection_timeouts() {
+        let client = GitHubClient::new("test-token".to_owned());
+        let timeouts = client.agent.config().timeouts();
+
+        assert_eq!(timeouts.global, Some(REQUEST_TIMEOUT));
+        assert_eq!(timeouts.connect, Some(CONNECT_TIMEOUT));
+        assert_eq!(REQUEST_TIMEOUT, Duration::from_secs(30));
+        assert_eq!(CONNECT_TIMEOUT, Duration::from_secs(10));
+    }
+
+    #[test]
+    fn test_base_url_requires_https_or_a_loopback_http_server() {
+        assert!(validate_base_url("https://api.github.com").is_ok());
+        assert!(validate_base_url("http://127.0.0.1:4321").is_ok());
+        assert!(validate_base_url("http://[::1]:4321").is_ok());
+        assert!(matches!(
+            validate_base_url("http://api.github.com"),
+            Err(AppError::InvalidInput(_))
+        ));
+        assert!(matches!(
+            validate_base_url("https://user:secret@example.com"),
+            Err(AppError::InvalidInput(_))
+        ));
     }
 }

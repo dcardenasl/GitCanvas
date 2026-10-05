@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **GitHub repository discovery** — API calls have bounded connection and request times, rate limits are identified, and the picker says when the 1,000-repository cap is reached.
 - **Repository watcher classification** — metadata events are classified relative to the Git metadata directory, so a parent folder named `refs` cannot trigger a false refresh.
 - **Local worktree file reads** — symbolic links and `.git` paths are rejected, and the opened file identity and canonical location are checked before and after reading.
 - **Commit diffs** — changed-file lists now return summaries and load only the selected patch, with explicit per-file and file-count limits for large commits.

@@ -53,7 +53,8 @@ vi.mock("../../lib/ipc", () => ({
   forgetGithubToken: () => Promise.resolve(null),
   cloneGithubRepository: () => Promise.resolve(null),
   openRepository: () => Promise.resolve(null),
-  listGithubRepositories: () => Promise.resolve([]),
+  listGithubRepositories: () =>
+    Promise.resolve({ repositories: [], truncated: false }),
   onCloneProgress: () => Promise.resolve(() => undefined),
   getFileContent: () => Promise.resolve(null),
   checkoutBranch: () => Promise.resolve(null),

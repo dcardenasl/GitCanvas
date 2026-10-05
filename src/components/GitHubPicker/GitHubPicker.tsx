@@ -163,8 +163,15 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
         </p>
       )}
 
+      {repositories.data?.truncated === true && (
+        <p className="github-picker__hint" role="status">
+          Se muestran los primeros 1.000 repositorios. Refina la selección en
+          GitHub si el que buscas no aparece.
+        </p>
+      )}
+
       <ul className="github-picker__list">
-        {(repositories.data ?? []).map((repo) => (
+        {(repositories.data?.repositories ?? []).map((repo) => (
           <li key={repo.full_name} className="github-picker__item">
             <div className="github-picker__item-main">
               <span className="github-picker__name">{repo.full_name}</span>
