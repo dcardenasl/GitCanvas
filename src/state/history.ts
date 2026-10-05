@@ -3,7 +3,7 @@ import {
   type InfiniteData,
   type UseInfiniteQueryResult,
 } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import type { CommitInfo, HistoryPage } from "../bindings";
 import { layout } from "../lib/graph-layout/layout";
@@ -25,6 +25,7 @@ const FIRST_PAGE: HistoryCursor = { cursor: null, roots: null };
 /** Everything the history view needs, derived once per page arrival. */
 export interface HistoryData {
   readonly commits: readonly CommitInfo[];
+  readonly commitIndexById: ReadonlyMap<string, number>;
   readonly rows: readonly GraphRow[];
   readonly maxLanes: number;
   readonly hasNextPage: boolean;
@@ -164,19 +165,33 @@ export function useHistory(path: string | null): HistoryData {
     pages === undefined ? EMPTY_LAYOUT : layoutHistory(pages, laidOut);
   if (current !== laidOut) setLaidOut(current);
   const { commits, rows, maxLanes } = current;
+  const commitIndexById = useMemo(() => {
+    const index = new Map<string, number>();
+    commits.forEach((commit, position) => {
+      index.set(commit.id, position);
+    });
+    return index;
+  }, [commits]);
+  const {
+    fetchNextPage: requestNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = query;
+  const fetchNextPage = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      void requestNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, requestNextPage]);
 
   return {
     commits,
+    commitIndexById,
     rows,
     maxLanes,
-    hasNextPage: query.hasNextPage,
-    isFetchingNextPage: query.isFetchingNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     isLoading: query.isLoading,
     error: query.error,
-    fetchNextPage: () => {
-      if (query.hasNextPage && !query.isFetchingNextPage) {
-        void query.fetchNextPage();
-      }
-    },
+    fetchNextPage,
   };
 }

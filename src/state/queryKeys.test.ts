@@ -65,6 +65,31 @@ describe("queryKeys and invalidateLive", () => {
     client.clear();
   });
 
+  it("refreshes only the history tip page and leaves continuation to demand", async () => {
+    const client = makeClient();
+    const pages = [
+      { number: 1, commits: [], next_cursor: "cursor-1", roots: ["root"] },
+      { number: 2, commits: [], next_cursor: "cursor-2", roots: ["root"] },
+      { number: 3, commits: [], next_cursor: null, roots: ["root"] },
+    ];
+    const pageParams = [
+      { cursor: null, roots: null },
+      { cursor: "cursor-1", roots: ["root"] },
+      { cursor: "cursor-2", roots: ["root"] },
+    ];
+    client.setQueryData(queryKeys.history(PATH), { pages, pageParams });
+
+    await invalidateLive(client, PATH, "metadata");
+
+    expect(
+      client.getQueryData<{
+        pages: typeof pages;
+        pageParams: typeof pageParams;
+      }>(queryKeys.history(PATH)),
+    ).toEqual({ pages: [pages[0]], pageParams: [pageParams[0]] });
+    client.clear();
+  });
+
   it("invalidates every live family for one repository while preserving scope", async () => {
     const client = makeClient();
     seedLiveQueries(client);

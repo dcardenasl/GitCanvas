@@ -78,7 +78,13 @@ hasta obtener evidencia dinámica de arranque y E2E en los tres sistemas operati
       → `refactor(ui): centralize query keys and live invalidation`
 - [ ] **H2-28 — Reducir trabajo de paginación de historial.** Aplicar `maxPages` o refrescar
       solo primera página según comportamiento; indexar commits con `Map`/`useMemo` y
-      estabilizar `fetchNextPage`.
+      estabilizar `fetchNextPage`. *Implementación parcial (2026-10-05):* invalidar
+      metadata recorta el historial cacheado a su página de punta antes del refetch; las
+      páginas antiguas se vuelven a cargar bajo demanda, sin descartar silenciosamente
+      contenido al avanzar por `maxPages`. `useHistory` crea un índice memoizado por SHA,
+      compartido con AppShell, HistoryView y CommitTable; `fetchNextPage` ahora conserva su
+      identidad mientras sus condiciones no cambien. Se añadió una prueba del recorte; no
+      se ejecutó.
       → `perf(history): bound pages and index commits`
 - [ ] **H2-29 — Evitar selecciones obsoletas de AppShell.** Ignorar respuesta tardía de
       startup repository y resolver selección huérfana de `revealCommit`.

@@ -65,8 +65,14 @@ export function AppShell() {
       })
       .catch(() => undefined);
   }, [setRepository]);
+  const selectedIndex =
+    selectedCommitId === null
+      ? undefined
+      : history.commitIndexById.get(selectedCommitId);
   const selected =
-    history.commits.find((commit) => commit.id === selectedCommitId) ?? null;
+    selectedIndex === undefined
+      ? null
+      : (history.commits[selectedIndex] ?? null);
   const readingCommitFile = selected !== null && selectedFilePath !== null;
   const worktreeFile = selection.kind === "worktree" ? selection : null;
   const readingWorktreeFile =

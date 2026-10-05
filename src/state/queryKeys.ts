@@ -1,6 +1,11 @@
-import type { QueryClient, QueryKey } from "@tanstack/react-query";
+import type {
+  InfiniteData,
+  QueryClient,
+  QueryKey,
+} from "@tanstack/react-query";
 
 import type {
+  HistoryPage,
   WorktreeFileDiffRequest,
   WorktreeSnapshotRequest,
 } from "../bindings";
@@ -91,6 +96,29 @@ export function invalidateLive(
   repositoryPath: string,
   scope: LiveQueryScope = "all",
 ): Promise<void> {
+  if (scope !== "worktree") {
+    const historyKey = queryKeys.history(repositoryPath);
+    const history =
+      queryClient.getQueryData<InfiniteData<HistoryPage>>(historyKey);
+    const [firstPage] = history?.pages ?? [];
+    const [firstPageParam] = history?.pageParams ?? [];
+
+    // Refetching every loaded history page on each metadata change scales the
+    // cost of one refresh with how far the user has scrolled. The first page
+    // is the moving branch tip; older pages are loaded again on demand from it.
+    if (
+      history !== undefined &&
+      firstPage !== undefined &&
+      firstPageParam !== undefined
+    ) {
+      queryClient.setQueryData<InfiniteData<HistoryPage>>(historyKey, {
+        ...history,
+        pages: [firstPage],
+        pageParams: [firstPageParam],
+      });
+    }
+  }
+
   return Promise.all(
     liveKeys(repositoryPath, scope).map((queryKey) =>
       queryClient.invalidateQueries({ queryKey }),

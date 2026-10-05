@@ -2,6 +2,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -20,6 +21,7 @@ import "./CommitTable.css";
 /** History rows, selection, graph dimensions, and navigation callbacks. */
 export interface CommitTableProps {
   readonly commits: readonly CommitInfo[];
+  readonly commitIndexById?: ReadonlyMap<string, number>;
   readonly selectedId: string | null;
   readonly onSelect: (id: string) => void;
   /** Widest lane count seen so far; sizes the graph column. */
@@ -86,6 +88,7 @@ function rowLabel(
  */
 export function CommitTable({
   commits,
+  commitIndexById: suppliedCommitIndex,
   selectedId,
   onSelect,
   maxLanes,
@@ -95,6 +98,14 @@ export function CommitTable({
   onRevealed,
   refsByCommit,
 }: CommitTableProps) {
+  const commitIndexById = useMemo(() => {
+    if (suppliedCommitIndex !== undefined) return suppliedCommitIndex;
+    const index = new Map<string, number>();
+    commits.forEach((commit, position) => {
+      index.set(commit.id, position);
+    });
+    return index;
+  }, [commits, suppliedCommitIndex]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef(new Map<number, HTMLDivElement>());
   const pendingFocusIndex = useRef<number | null>(null);
@@ -124,14 +135,14 @@ export function CommitTable({
   useEffect(() => {
     if (revealCommitId === null) return;
 
-    const index = commits.findIndex((commit) => commit.id === revealCommitId);
+    const index = commitIndexById.get(revealCommitId);
     // Not loaded yet: the caller keeps fetching pages, and this runs again
     // when they arrive. Doing nothing here is what makes that safe to retry.
-    if (index < 0) return;
+    if (index === undefined) return;
 
     virtualizer.scrollToIndex(index, { align: "center" });
     onRevealed?.();
-  }, [revealCommitId, commits, virtualizer, onRevealed]);
+  }, [revealCommitId, commitIndexById, virtualizer, onRevealed]);
 
   const copy = useCallback(async (value: string, what: string) => {
     const ok = await copyText(value);
@@ -145,9 +156,7 @@ export function CommitTable({
   const items = virtualizer.getVirtualItems();
   const totalHeight = virtualizer.getTotalSize();
   const selectedIndex =
-    selectedId === null
-      ? -1
-      : commits.findIndex((commit) => commit.id === selectedId);
+    selectedId === null ? -1 : (commitIndexById.get(selectedId) ?? -1);
 
   const first = items[0];
   const last = items[items.length - 1];

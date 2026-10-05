@@ -32,8 +32,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
 
   const { commits, hasNextPage, isFetchingNextPage, fetchNextPage } = history;
   const loaded =
-    revealCommitId === null ||
-    commits.some((commit) => commit.id === revealCommitId);
+    revealCommitId === null || history.commitIndexById.has(revealCommitId);
 
   const localRow =
     local.data !== undefined &&
@@ -147,6 +146,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
       )}
       <CommitTable
         commits={commits}
+        commitIndexById={history.commitIndexById}
         selectedId={selectedCommitId}
         onSelect={selectCommit}
         maxLanes={history.maxLanes}
