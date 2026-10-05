@@ -51,7 +51,6 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
     tauri_specta::Builder::<R>::new()
         .commands(collect_commands![
             commands::repository::open_repository,
-            commands::repository::validate_repository,
             commands::repository::get_startup_repository,
             commands::repository::get_commits,
             commands::repository::get_branches,
@@ -68,7 +67,6 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::github::forget_github_token,
             commands::github::list_github_repositories,
             commands::github::clone_github_repository,
-            commands::github::get_clone_cache_status,
             commands::actions::checkout_branch,
             commands::actions::pull_fast_forward,
             commands::actions::push_current_branch,

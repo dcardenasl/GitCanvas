@@ -1,27 +1,15 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type {
-  CommitDiff,
-  CommitInfo,
-  CommitTreePage,
-  FileDiff,
-} from "../../bindings";
+import type { CommitDiff, CommitInfo, FileDiff } from "../../bindings";
+import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
 
-const getCommitDiff =
-  vi.fn<(path: string, request: unknown) => Promise<CommitDiff>>();
-const getCommitTreePage =
-  vi.fn<(path: string, request: unknown) => Promise<CommitTreePage>>();
+const mockIpc = createIpcMocks(["getCommitDiff", "getCommitTreePage"] as const);
+const { getCommitDiff, getCommitTreePage } = mockIpc;
 
-vi.mock("../../lib/ipc", () => ({
-  getCommitDiff: (path: string, request: unknown) =>
-    getCommitDiff(path, request),
-  getCommitTreePage: (path: string, request: unknown) =>
-    getCommitTreePage(path, request),
-}));
+vi.mock("../../lib/ipc", () => mockIpc);
 
 const { CommitDetailPanel } = await import("./CommitDetailPanel");
 const { useSession } = await import("../../state/session");
@@ -65,13 +53,8 @@ function diff(overrides: Partial<CommitDiff> = {}): CommitDiff {
 }
 
 function renderPanel() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={client}>
-      <CommitDetailPanel repositoryPath="/tmp/repo" commit={COMMIT} />
-    </QueryClientProvider>,
+  return renderWithQueryClient(
+    <CommitDetailPanel repositoryPath="/tmp/repo" commit={COMMIT} />,
   );
 }
 
@@ -92,16 +75,13 @@ describe("CommitDetailPanel", () => {
     getCommitDiff.mockResolvedValue(diff());
     renderPanel();
 
-    expect(screen.getByText(COMMIT.summary)).toBeDefined();
+    expect(screen.getByText(COMMIT.summary)).toBeInstanceOf(HTMLElement);
     expect(
       screen.getByText("More detail here.", { exact: false }),
-    ).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
     expect(
-      await screen.findByText(
-        (_, element) =>
-          (element?.className ?? "") === "detail-panel__files-label",
-      ),
-    ).toBeDefined();
+      (await screen.findByText(/archivos modificados/)).textContent,
+    ).toMatch(/\d+ archivos? modificados/);
   });
 
   it("says when a merge diff only covers the first parent", async () => {
@@ -112,7 +92,7 @@ describe("CommitDetailPanel", () => {
       await screen.findByText(
         "Commit de merge: se muestran los cambios contra el primer padre.",
       ),
-    ).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
   });
 
   it("lists the changed files as choices, not as inline diffs", async () => {
@@ -128,7 +108,7 @@ describe("CommitDetailPanel", () => {
     const list = await screen.findByRole("list", {
       name: "Archivos modificados",
     });
-    expect(list).toBeDefined();
+    expect(list).toBeInstanceOf(HTMLElement);
     expect(within(list).getAllByRole("button")).toHaveLength(2);
 
     // The panel is navigation now; the patch belongs to the centre view.
@@ -162,8 +142,8 @@ describe("CommitDetailPanel", () => {
     );
     renderPanel();
 
-    expect(await screen.findByText("binario")).toBeDefined();
-    expect(screen.getByText("grande")).toBeDefined();
+    expect(await screen.findByText("binario")).toBeInstanceOf(HTMLElement);
+    expect(screen.getByText("grande")).toBeInstanceOf(HTMLElement);
   });
 
   it("leads with the file name and follows with its directory", async () => {
@@ -209,7 +189,7 @@ describe("CommitDetailPanel", () => {
       name: "src, 1 archivo modificado",
     });
     expect(directory.getAttribute("aria-expanded")).toBe("true");
-    expect(within(list).getByText("index.ts")).toBeDefined();
+    expect(within(list).getByText("index.ts")).toBeInstanceOf(HTMLElement);
 
     await userEvent.click(directory);
     expect(directory.getAttribute("aria-expanded")).toBe("false");
@@ -261,7 +241,7 @@ describe("CommitDetailPanel", () => {
     });
     expect(
       within(unchanged).getByLabelText("Sin cambios en este commit"),
-    ).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
     await userEvent.click(unchanged);
     expect(useSession.getState().selection).toEqual({
       kind: "commit",
@@ -300,12 +280,12 @@ describe("CommitDetailPanel", () => {
     await userEvent.click(
       await screen.findByRole("checkbox", { name: "Ver todos los archivos" }),
     );
-    expect(await screen.findByText("file-000.txt")).toBeDefined();
+    expect(await screen.findByText("file-000.txt")).toBeInstanceOf(HTMLElement);
     await userEvent.click(
       await screen.findByRole("button", { name: "Cargar más entradas" }),
     );
 
-    expect(await screen.findByText("zz-last.txt")).toBeDefined();
+    expect(await screen.findByText("zz-last.txt")).toBeInstanceOf(HTMLElement);
     expect(getCommitTreePage).toHaveBeenNthCalledWith(
       2,
       "/tmp/repo",
@@ -322,13 +302,15 @@ describe("CommitDetailPanel", () => {
     );
     renderPanel();
 
-    expect(await screen.findByLabelText("Eliminado")).toBeDefined();
+    expect(await screen.findByLabelText("Eliminado")).toBeInstanceOf(
+      HTMLElement,
+    );
   });
 
   it("reports a diff failure instead of showing nothing", async () => {
     getCommitDiff.mockRejectedValue(new Error("no se pudo leer el diff"));
     renderPanel();
 
-    expect(await screen.findByRole("alert")).toBeDefined();
+    expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
   });
 });

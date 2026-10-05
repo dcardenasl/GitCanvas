@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,33 +9,29 @@ import type {
   FileContent,
   FileDiff,
   WorktreeSnapshot,
-  WorktreeFileContent,
-  WorktreeFileDiff,
 } from "../../bindings";
+import {
+  createIpcMocks,
+  createTestQueryClient,
+  renderWithQueryClient,
+} from "../../test/test-utils";
 
-const getCommitDiff =
-  vi.fn<(path: string, request: unknown) => Promise<CommitDiff>>();
-const getFileContent =
-  vi.fn<(path: string, request: unknown) => Promise<FileContent>>();
-const getWorktreeSnapshot =
-  vi.fn<(path: string, request: unknown) => Promise<WorktreeSnapshot>>();
-const getWorktreeFileDiff =
-  vi.fn<(path: string, request: unknown) => Promise<WorktreeFileDiff>>();
-const getWorktreeFileContent =
-  vi.fn<(path: string, request: unknown) => Promise<WorktreeFileContent>>();
+const mockIpc = createIpcMocks([
+  "getCommitDiff",
+  "getFileContent",
+  "getWorktreeSnapshot",
+  "getWorktreeFileDiff",
+  "getWorktreeFileContent",
+] as const);
+const {
+  getCommitDiff,
+  getFileContent,
+  getWorktreeSnapshot,
+  getWorktreeFileDiff,
+  getWorktreeFileContent,
+} = mockIpc;
 
-vi.mock("../../lib/ipc", () => ({
-  getCommitDiff: (path: string, request: unknown) =>
-    getCommitDiff(path, request),
-  getFileContent: (path: string, request: unknown) =>
-    getFileContent(path, request),
-  getWorktreeSnapshot: (path: string, request: unknown) =>
-    getWorktreeSnapshot(path, request),
-  getWorktreeFileDiff: (path: string, request: unknown) =>
-    getWorktreeFileDiff(path, request),
-  getWorktreeFileContent: (path: string, request: unknown) =>
-    getWorktreeFileContent(path, request),
-}));
+vi.mock("../../lib/ipc", () => mockIpc);
 
 const { FileDiffView } = await import("./FileDiffView");
 const { useSession } = await import("../../state/session");
@@ -113,19 +108,14 @@ function renderView(
   worktree?: { side: "staged" | "unstaged" },
   snapshot = false,
 ) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={client}>
-      <FileDiffView
-        repositoryPath="/tmp/repo"
-        path={path}
-        {...(worktree === undefined
-          ? { commit: COMMIT, snapshot }
-          : { worktree })}
-      />
-    </QueryClientProvider>,
+  return renderWithQueryClient(
+    <FileDiffView
+      repositoryPath="/tmp/repo"
+      path={path}
+      {...(worktree === undefined
+        ? { commit: COMMIT, snapshot }
+        : { worktree })}
+    />,
   );
 }
 
@@ -164,7 +154,7 @@ describe("FileDiffView", () => {
     );
     renderView();
 
-    expect(await screen.findByText("const b = 3;")).toBeDefined();
+    expect(await screen.findByText("const b = 3;")).toBeInstanceOf(HTMLElement);
     expect(screen.queryByText("other")).toBeNull();
   });
 
@@ -173,7 +163,7 @@ describe("FileDiffView", () => {
     getFileContent.mockResolvedValue(content({ path: "src/stable.ts" }));
     renderView("src/stable.ts", undefined, true);
 
-    expect(await screen.findByText("export {};")).toBeDefined();
+    expect(await screen.findByText("export {};")).toBeInstanceOf(HTMLElement);
     expect(screen.queryByRole("button", { name: "Cambios" })).toBeNull();
     expect(getFileContent.mock.calls[0]?.[1]).toMatchObject({
       commit_id: COMMIT.id,
@@ -199,7 +189,7 @@ describe("FileDiffView", () => {
     });
     renderView("src/stable.ts", undefined, true);
 
-    expect(await screen.findByText("const b = 3;")).toBeDefined();
+    expect(await screen.findByText("const b = 3;")).toBeInstanceOf(HTMLElement);
     expect(useSession.getState().selection).toEqual({
       kind: "commit",
       commitId: COMMIT.id,
@@ -234,7 +224,7 @@ describe("FileDiffView", () => {
 
     expect(
       await screen.findByText("Este commit no modifica does/not/exist.ts."),
-    ).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
   });
 
   it("explains a binary file instead of rendering an empty box", async () => {
@@ -247,7 +237,7 @@ describe("FileDiffView", () => {
       await screen.findByText(
         "Archivo binario. No hay diferencias de texto que mostrar.",
       ),
-    ).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
   });
 
   it("loads an oversized diff only when it is asked for", async () => {
@@ -285,7 +275,7 @@ describe("FileDiffView", () => {
     getCommitDiff.mockRejectedValue(new Error("no se pudo leer el diff"));
     renderView();
 
-    expect(await screen.findByRole("alert")).toBeDefined();
+    expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
   });
 
   it("numbers the lines of a patch on both sides", async () => {
@@ -308,7 +298,7 @@ describe("FileDiffView", () => {
       screen.getByRole("button", { name: "Archivo completo" }),
     );
 
-    expect(await screen.findByText("export {};")).toBeDefined();
+    expect(await screen.findByText("export {};")).toBeInstanceOf(HTMLElement);
     expect(getFileContent.mock.calls[0]?.[1]).toMatchObject({
       path: "src/app.ts",
       expand: false,
@@ -349,14 +339,13 @@ describe("FileDiffView", () => {
 
   it("toggles wrapping for long lines", async () => {
     getCommitDiff.mockResolvedValue(diff([file()]));
-    const { container } = renderView();
+    renderView();
     await screen.findByText("const b = 3;");
+    const wrap = screen.getByRole("button", { name: "Ajustar líneas" });
 
-    expect(container.querySelector(".diff-viewer--wrap")).toBeNull();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Ajustar líneas" }),
-    );
-    expect(container.querySelector(".diff-viewer--wrap")).not.toBeNull();
+    expect(wrap.getAttribute("aria-pressed")).toBe("false");
+    await userEvent.click(wrap);
+    expect(wrap.getAttribute("aria-pressed")).toBe("true");
   });
 
   it("renders an unstaged local file", async () => {
@@ -374,8 +363,10 @@ describe("FileDiffView", () => {
 
     renderView("local.ts", { side: "unstaged" });
 
-    expect(await screen.findByText("const b = 3;")).toBeDefined();
-    expect(screen.getByText(/cambios locales · sin preparar/)).toBeDefined();
+    expect(await screen.findByText("const b = 3;")).toBeInstanceOf(HTMLElement);
+    expect(screen.getByText(/cambios locales · sin preparar/)).toBeInstanceOf(
+      HTMLElement,
+    );
     expect(getWorktreeFileDiff.mock.calls[0]?.[1]).toMatchObject({
       side: "unstaged",
       expected_revision: "revision",
@@ -411,7 +402,9 @@ describe("FileDiffView", () => {
       });
       open();
 
-      expect(await screen.findByText("const b = 3;")).toBeDefined();
+      expect(await screen.findByText("const b = 3;")).toBeInstanceOf(
+        HTMLElement,
+      );
       expect(useSession.getState().selection).toEqual({
         kind: "worktree",
         side: "unstaged",
@@ -441,7 +434,7 @@ describe("FileDiffView", () => {
       );
       open();
 
-      expect(await screen.findByRole("alert")).toBeDefined();
+      expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
       expect(useSession.getState().selection).toMatchObject({
         kind: "worktree",
         filePath: "local.ts",
@@ -462,19 +455,18 @@ describe("FileDiffView", () => {
       useSession.setState({
         selection: { kind: "worktree", side: "unstaged", filePath: "local.ts" },
       });
-      const client = new QueryClient({
-        defaultOptions: { queries: { retry: false } },
-      });
-      render(
-        <QueryClientProvider client={client}>
-          <FileDiffView
-            repositoryPath="/tmp/repo"
-            path="local.ts"
-            worktree={{ side: "unstaged" }}
-          />
-        </QueryClientProvider>,
+      const client = createTestQueryClient();
+      renderWithQueryClient(
+        <FileDiffView
+          repositoryPath="/tmp/repo"
+          path="local.ts"
+          worktree={{ side: "unstaged" }}
+        />,
+        client,
       );
-      expect(await screen.findByText("const b = 3;")).toBeDefined();
+      expect(await screen.findByText("const b = 3;")).toBeInstanceOf(
+        HTMLElement,
+      );
 
       getWorktreeSnapshot.mockResolvedValue({
         ...worktreeSnapshot([]),
@@ -496,7 +488,7 @@ describe("FileDiffView", () => {
         queryKey: ["worktree-file-diff", "/tmp/repo"],
       });
 
-      expect(await screen.findByRole("alert")).toBeDefined();
+      expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
       expect(useSession.getState().selection).toMatchObject({
         kind: "worktree",
         filePath: "local.ts",
@@ -512,7 +504,7 @@ describe("FileDiffView", () => {
       );
       open();
 
-      expect(await screen.findByRole("alert")).toBeDefined();
+      expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
       expect(useSession.getState().selection).toMatchObject({
         kind: "worktree",
         filePath: "local.ts",

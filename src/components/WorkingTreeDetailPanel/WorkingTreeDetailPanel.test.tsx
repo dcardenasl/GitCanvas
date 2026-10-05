@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,14 +8,12 @@ import type {
   FileDiffSummary,
   WorktreeSnapshot,
 } from "../../bindings";
+import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
 
-const getWorktreeSnapshot =
-  vi.fn<(path: string, request: unknown) => Promise<WorktreeSnapshot>>();
+const mockIpc = createIpcMocks(["getWorktreeSnapshot"] as const);
+const { getWorktreeSnapshot } = mockIpc;
 
-vi.mock("../../lib/ipc", () => ({
-  getWorktreeSnapshot: (path: string, request: unknown) =>
-    getWorktreeSnapshot(path, request),
-}));
+vi.mock("../../lib/ipc", () => mockIpc);
 
 const { WorkingTreeDetailPanel } = await import("./WorkingTreeDetailPanel");
 const { useSession } = await import("../../state/session");
@@ -67,13 +64,8 @@ function local(
 }
 
 function renderPanel() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={client}>
-      <WorkingTreeDetailPanel repositoryPath="/tmp/repo" />
-    </QueryClientProvider>,
+  return renderWithQueryClient(
+    <WorkingTreeDetailPanel repositoryPath="/tmp/repo" />,
   );
 }
 
@@ -97,10 +89,12 @@ describe("WorkingTreeDetailPanel", () => {
 
     expect(
       await screen.findByRole("region", { name: "Preparados" }),
-    ).toBeDefined();
-    expect(screen.getByRole("region", { name: "Sin preparar" })).toBeDefined();
-    expect(screen.getByText("staged.ts")).toBeDefined();
-    expect(screen.getByText("local.ts")).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
+    expect(screen.getByRole("region", { name: "Sin preparar" })).toBeInstanceOf(
+      HTMLElement,
+    );
+    expect(screen.getByText("staged.ts")).toBeInstanceOf(HTMLElement);
+    expect(screen.getByText("local.ts")).toBeInstanceOf(HTMLElement);
   });
 
   it("opens a local file with the correct source", async () => {
@@ -139,8 +133,8 @@ describe("WorkingTreeDetailPanel", () => {
     });
     expect(
       within(tree).getByRole("button", { name: "src, 1 archivo modificado" }),
-    ).toBeDefined();
-    expect(within(tree).getByText("Button.tsx")).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
+    expect(within(tree).getByText("Button.tsx")).toBeInstanceOf(HTMLElement);
 
     await userEvent.click(within(tree).getByText("Button.tsx"));
     expect(useSession.getState().selection).toEqual({
@@ -167,7 +161,7 @@ describe("WorkingTreeDetailPanel", () => {
         .getByRole("button", { name: "src, 1 archivo modificado" })
         .getAttribute("aria-expanded"),
     ).toBe("false");
-    expect(screen.getByText("Expandir todo")).toBeDefined();
+    expect(screen.getByText("Expandir todo")).toBeInstanceOf(HTMLElement);
 
     await userEvent.click(
       screen.getByRole("button", { name: "Expandir todo" }),
@@ -222,18 +216,12 @@ describe("WorkingTreeDetailPanel", () => {
       expect(section.textContent).toContain("+6");
       expect(
         within(section).getByRole("button", { name: "Cargar 2 archivos más" }),
-      ).toBeDefined();
+      ).toBeInstanceOf(HTMLElement);
     });
 
     it("loads the next page from the cursor, in the same revision", async () => {
       const first = truncated();
-      getWorktreeSnapshot.mockResolvedValueOnce(first);
-      renderPanel();
-      await userEvent.click(
-        await screen.findByRole("button", { name: "Cargar 2 archivos más" }),
-      );
-
-      getWorktreeSnapshot.mockResolvedValueOnce({
+      getWorktreeSnapshot.mockResolvedValueOnce(first).mockResolvedValueOnce({
         ...first,
         unstaged: {
           ...first.unstaged,
@@ -241,6 +229,7 @@ describe("WorkingTreeDetailPanel", () => {
           next_cursor: null,
         },
       });
+      renderPanel();
       await userEvent.click(
         await screen.findByRole("button", { name: "Cargar 2 archivos más" }),
       );
@@ -251,8 +240,8 @@ describe("WorkingTreeDetailPanel", () => {
         limit: null,
         expected_revision: "revision",
       });
-      expect(await screen.findByText("three.ts")).toBeDefined();
-      expect(screen.getByText("one.ts")).toBeDefined();
+      expect(await screen.findByText("three.ts")).toBeInstanceOf(HTMLElement);
+      expect(screen.getByText("one.ts")).toBeInstanceOf(HTMLElement);
       expect(
         screen.queryByRole("button", { name: /Cargar \d+ archivos más/ }),
       ).toBeNull();

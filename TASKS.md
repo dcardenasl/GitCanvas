@@ -6,7 +6,7 @@
 > Convenciones y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado al 2026-10-05:** 43 de las 46 tareas H2 están completadas y en
+**Estado al 2026-10-05:** 43 de las 46 tareas H2 están completadas y archivadas en
 [`ARCHIVES.md`](ARCHIVES.md); quedan H2-25, H2-42 y H2-45. De las completadas, 35 tienen
 un commit local dedicado. H2-34–41 están implementadas y verificadas, pero no tienen
 commits individuales; H2-45 debe reconciliar esa divergencia. El release v0.1.0
@@ -92,10 +92,10 @@ David.
       `7f24bb6`) de [quality](https://github.com/dcardenasl/gitcanvas/actions/runs/36265828914)
       y [dev-check](https://github.com/dcardenasl/gitcanvas/actions/runs/36265828257)
       fallaron antes de registrar pasos y GitHub no tiene logs (`log not found`); no prueban
-      el estado del código ni cuentan como resultado multiplataforma. El PR sigue apuntando
-      a `7f24bb6`; `dev` local está en `03077dd` y 39 commits por delante de
-      `origin/dev`. El working tree actual contiene 122 rutas modificadas o nuevas, así que
-      CI del PR no ha evaluado este estado integrado.
+      el estado del código ni cuentan como resultado multiplataforma. La PR sigue apuntando
+      a `7f24bb6`; el checkout local de `dev` contiene commits y cambios posteriores que CI
+      todavía no evaluó. El E2E local macOS ha pasado dos veces con `specFileRetries: 0`
+      (4 specs/8 tests por corrida), pero no sustituye la evidencia CI en los tres sistemas.
       → `chore(tauri): narrow application capabilities`
 
 ### Calidad de pruebas
@@ -155,9 +155,10 @@ David.
       aplicables; registrar fallos ambientales sin declararlos verdes.
       *Hallazgo (2026-10-05):* H2-33 quedó reconciliada con el commit local `03077dd`
       (`perf(core): bound fingerprints and watcher debounce`). H2-34–41 siguen sin commits
-      dedicados y sus implementaciones permanecen en el working tree. H2-43 ya cuenta con un
-      commit dedicado. El invariante “una tarea = un commit” no se cumplió para H2-34–41.
-      No cerrar H2-45 hasta reconciliar ese historial, conservar los cambios y actualizar
+      dedicados y sus implementaciones permanecen en el working tree. H2-43 quedó reconciliada
+      con `5d47af3` (`chore(demo): isolate recorder tooling and document prerequisites`). El
+      invariante “una tarea = un commit” no se cumplió para H2-34–41. No cerrar H2-45 hasta
+      reconciliar ese historial, conservar los cambios y actualizar
       TASKS/ARCHIVES con los commits efectivamente creados.
       *Evidencia integrada actual (2026-10-05):* pasaron `cargo fmt --all --check`,
       `cargo clippy --all-targets --all-features --offline --locked -- -D warnings` y

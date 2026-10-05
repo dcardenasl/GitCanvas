@@ -22,7 +22,7 @@ describe("formatCommitTime", () => {
     // runner's zone, so both sides of midnight are accepted; what is being
     // asserted is that a real timestamp produces a real date.
     const formatted = formatCommitTime("1788815520", "en-GB");
-    expect(formatted).toMatch(/0[78] Sept?, \d{2}:\d{2}/);
+    expect(formatted).toMatch(/0[78] Sept? 2026, \d{2}:\d{2}/);
   });
 
   it("rejects blank input instead of rendering the Unix epoch", () => {

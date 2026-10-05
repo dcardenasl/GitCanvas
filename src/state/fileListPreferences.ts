@@ -1,16 +1,14 @@
 import { create } from "zustand";
 
+import { safeStorage } from "../lib/safeStorage";
+
 /** Presentation mode for changed-file navigation. */
 export type FileListView = "path" | "tree";
 
 const STORAGE_KEY = "gitcanvas.file-list-view";
 
 function readView(): FileListView {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === "tree" ? "tree" : "path";
-  } catch {
-    return "path";
-  }
+  return safeStorage.get(STORAGE_KEY) === "tree" ? "tree" : "path";
 }
 
 interface FileListPreferences {
@@ -23,10 +21,6 @@ export const useFileListPreferences = create<FileListPreferences>((set) => ({
   view: readView(),
   setView: (view) => {
     set({ view });
-    try {
-      localStorage.setItem(STORAGE_KEY, view);
-    } catch {
-      // The view remains usable for this session when storage is unavailable.
-    }
+    safeStorage.set(STORAGE_KEY, view);
   },
 }));

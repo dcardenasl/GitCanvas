@@ -3,8 +3,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppShell } from "./components/AppShell";
 import { queryRetryDelay, shouldRetryQuery } from "./lib/query-retry";
 
-import "./App.css";
-
 /**
  * One client for the whole application.
  *

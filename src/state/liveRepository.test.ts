@@ -1,9 +1,14 @@
 // @vitest-environment jsdom
-import { QueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { createElement, type ReactNode } from "react";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+  createIpcMocks,
+  createQueryClientWrapper,
+  createTestQueryClient,
+} from "../test/test-utils";
+import { queryKeys } from "./queryKeys";
 
 type Handler = (event: {
   payload: {
@@ -16,40 +21,46 @@ type Handler = (event: {
 let handler: Handler | null = null;
 const stop = vi.fn();
 const operationOrder: string[] = [];
-const watchRepository = vi.fn<(request: unknown) => Promise<null>>();
-const unwatchRepository = vi.fn<(generation: number) => Promise<null>>();
+const mockIpc = createIpcMocks([
+  "watchRepository",
+  "unwatchRepository",
+  "getWorktreeFingerprint",
+  "onRepositoryChanged",
+] as const);
+const {
+  watchRepository,
+  unwatchRepository,
+  getWorktreeFingerprint,
+  onRepositoryChanged,
+} = mockIpc;
 
-vi.mock("../lib/ipc", () => ({
-  watchRepository: (request: unknown) => {
-    operationOrder.push("watch");
-    return watchRepository(request);
-  },
-  unwatchRepository: (generation: number) => unwatchRepository(generation),
-  getWorktreeFingerprint: () => Promise.resolve({ revision: "revision" }),
-  onRepositoryChanged: (fn: Handler) => {
-    operationOrder.push("listen");
-    handler = fn;
-    return Promise.resolve(stop);
-  },
-}));
+vi.mock("../lib/ipc", () => mockIpc);
 
 const { useLiveRepository } = await import("./liveRepository");
 
 let client: QueryClient;
-
-function wrapper({ children }: { children: ReactNode }) {
-  return createElement(QueryClientProvider, { client }, children);
-}
+let wrapper: ReturnType<typeof createQueryClientWrapper>;
 
 beforeEach(() => {
   vi.clearAllMocks();
   handler = null;
   operationOrder.length = 0;
-  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  watchRepository.mockResolvedValue(null);
+  client = createTestQueryClient();
+  wrapper = createQueryClientWrapper(client);
+  watchRepository.mockImplementation(() => {
+    operationOrder.push("watch");
+    return Promise.resolve(null);
+  });
   unwatchRepository.mockResolvedValue(null);
+  getWorktreeFingerprint.mockResolvedValue({ revision: "revision" });
+  onRepositoryChanged.mockImplementation((fn) => {
+    operationOrder.push("listen");
+    handler = fn as Handler;
+    return Promise.resolve(stop);
+  });
 });
 afterEach(() => {
+  vi.restoreAllMocks();
   client.clear();
 });
 
@@ -198,6 +209,55 @@ describe("useLiveRepository", () => {
         kind: "degraded",
         message: "permission denied",
       });
+    });
+  });
+
+  it("schedules a degraded watcher retry after thirty seconds", async () => {
+    const timeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    watchRepository.mockRejectedValueOnce(new Error("too many watches"));
+    const { result } = renderHook(() => useLiveRepository("/tmp/repo"), {
+      wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.status.kind).toBe("degraded");
+    });
+    expect(timeoutSpy.mock.calls).toContainEqual([
+      expect.any(Function),
+      30_000,
+    ]);
+  });
+
+  it("invalidates local queries when the worktree fingerprint changes", async () => {
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const { worktreeFingerprint, worktree, worktreeFileDiff } = queryKeys;
+    const fingerprintKey = worktreeFingerprint("/tmp/repo");
+    const { result } = renderHook(() => useLiveRepository("/tmp/repo"), {
+      wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.status.kind).toBe("ready");
+      expect(client.getQueryData(fingerprintKey)).toEqual({
+        revision: "revision",
+      });
+    });
+
+    client.setQueryData(fingerprintKey, { revision: "changed" });
+
+    await waitFor(() => {
+      const keys = invalidate.mock.calls.map(
+        ([filters]) => filters?.queryKey?.[0],
+      );
+      expect(keys).toContain("worktree");
+      expect(keys).toContain("worktree-file-diff");
+      expect(keys).not.toContain("history");
+    });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: worktree("/tmp/repo"),
+    });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: worktreeFileDiff("/tmp/repo"),
     });
   });
 

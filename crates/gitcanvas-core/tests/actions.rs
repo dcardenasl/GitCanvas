@@ -148,7 +148,10 @@ fn checkout_of_a_branch_that_does_not_exist_is_an_error() {
     let fixture = Fixture::new();
     fixture.commit_files("refs/heads/main", "base", &[], 1_000, &[("a.txt", b"a\n")]);
 
-    assert!(checkout_branch(&open(&fixture), "nope", false).is_err());
+    assert!(matches!(
+        checkout_branch(&open(&fixture), "nope", false),
+        Err(AppError::Git(_))
+    ));
 }
 
 #[test]
@@ -172,7 +175,7 @@ fn push_without_a_branch_is_refused_with_a_clear_reason() {
 
     let error = push_current_branch(&open(&fixture)).unwrap_err();
     assert!(
-        format!("{error:?}").contains("InvalidInput"),
+        matches!(error, AppError::InvalidInput(_)),
         "a detached HEAD is a state to explain, not an internal failure: {error:?}"
     );
 }
@@ -185,10 +188,9 @@ fn push_to_a_missing_remote_is_an_error_not_a_silent_success() {
 
     let outcome = push_current_branch(&open(&fixture));
     assert!(
-        outcome.is_err(),
+        matches!(outcome, Err(AppError::Git(_))),
         "there is no `origin` configured, so this cannot report success: {outcome:?}"
     );
-    assert!(!matches!(outcome, Ok(PushOutcome::Pushed { .. })));
 }
 
 // --- Remotes -----------------------------------------------------------------
@@ -485,5 +487,5 @@ fn pull_on_a_detached_head_explains_itself() {
 
     let error = pull_fast_forward(&open(&fixture)).unwrap_err();
 
-    assert!(format!("{error:?}").contains("InvalidInput"), "{error:?}");
+    assert!(matches!(error, AppError::InvalidInput(_)), "{error:?}");
 }

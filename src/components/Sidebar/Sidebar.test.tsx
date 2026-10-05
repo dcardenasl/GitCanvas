@@ -1,18 +1,15 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BranchInfo, TagInfo } from "../../bindings";
+import type { BranchInfo } from "../../bindings";
+import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
 
-const getBranches = vi.fn<(path: string) => Promise<BranchInfo[]>>();
-const getTags = vi.fn<(path: string) => Promise<TagInfo[]>>();
+const mockIpc = createIpcMocks(["getBranches", "getTags"] as const);
+const { getBranches, getTags } = mockIpc;
 
-vi.mock("../../lib/ipc", () => ({
-  getBranches: (path: string) => getBranches(path),
-  getTags: (path: string) => getTags(path),
-}));
+vi.mock("../../lib/ipc", () => mockIpc);
 
 const { Sidebar } = await import("./Sidebar");
 const { useSession } = await import("../../state/session");
@@ -33,13 +30,8 @@ function branch(overrides: Partial<BranchInfo> = {}): BranchInfo {
 }
 
 function renderSidebar(onCheckout?: (branch: string) => void) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  render(
-    <QueryClientProvider client={client}>
-      <Sidebar {...(onCheckout === undefined ? {} : { onCheckout })} />
-    </QueryClientProvider>,
+  renderWithQueryClient(
+    <Sidebar {...(onCheckout === undefined ? {} : { onCheckout })} />,
   );
 }
 
@@ -87,9 +79,11 @@ describe("Sidebar", () => {
   it("separates local branches from remote ones", async () => {
     renderSidebar();
 
-    expect(await screen.findByText("Local")).toBeDefined();
-    expect(screen.getByText("Remotas")).toBeDefined();
-    expect(screen.getByRole("button", { name: /origin\/main/ })).toBeDefined();
+    expect(await screen.findByText("Local")).toBeInstanceOf(HTMLElement);
+    expect(screen.getByText("Remotas")).toBeInstanceOf(HTMLElement);
+    expect(screen.getByRole("button", { name: /origin\/main/ })).toBeInstanceOf(
+      HTMLElement,
+    );
   });
 
   it("marks the checked-out branch", async () => {

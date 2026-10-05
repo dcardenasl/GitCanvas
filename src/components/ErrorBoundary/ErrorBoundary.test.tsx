@@ -23,13 +23,13 @@ describe("ErrorBoundary", () => {
       </ErrorBoundary>,
     );
 
-    expect(screen.getByRole("alert")).toBeDefined();
+    expect(screen.getByRole("alert")).toBeInstanceOf(HTMLElement);
     expect(
       screen.getByRole("heading", { name: "GitCanvas encontró un problema" }),
-    ).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
     expect(
       screen.getByRole("button", { name: "Reiniciar GitCanvas" }),
-    ).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
     expect(
       screen.queryByText("internal repository path should not be shown"),
     ).toBeNull();

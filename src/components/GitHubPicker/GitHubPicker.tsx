@@ -80,8 +80,8 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
   });
 
   const clone = useMutation({
-    mutationFn: ({ url, name }: { url: string; name: string }) =>
-      cloneGithubRepository(url, name, activeRepositoryPath),
+    mutationFn: ({ name }: { name: string }) =>
+      cloneGithubRepository(name, activeRepositoryPath),
     onSuccess: async (cloned) => {
       setProgress(null);
       setRepository(await openRepository(cloned.path));
@@ -94,8 +94,8 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
       <div className="github-picker">
         <h2 className="github-picker__title">Conectar con GitHub</h2>
         <p className="github-picker__hint">
-          Pega un Personal Access Token con permiso <code>repo</code>. Se guarda
-          en el llavero del sistema y nunca sale del backend.
+          Pega un token de acceso personal con permiso <code>repo</code>. Se
+          guarda en el llavero del sistema y nunca sale del backend.
         </p>
         {signedIn.error !== null && (
           <p className="github-picker__error" role="alert">
@@ -114,7 +114,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
             type="password"
             value={token}
             placeholder="ghp_…"
-            aria-label="Personal Access Token"
+            aria-label="Token de acceso personal"
             onChange={(event) => {
               setToken(event.currentTarget.value);
             }}
@@ -199,7 +199,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
               className="button"
               disabled={clone.isPending}
               onClick={() => {
-                clone.mutate({ url: repo.clone_url, name: repo.full_name });
+                clone.mutate({ name: repo.full_name });
               }}
             >
               Clonar

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Every command the generated bindings expose, recorded by name so the wrapper
+ * Every application IPC adapter, recorded by command name so the wrapper
  * layer can be checked without a running application.
  */
 const calls: { command: string; args: unknown[] }[] = [];
@@ -52,12 +52,6 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
     [],
   ],
   [
-    "validateRepository",
-    () => ipc.validateRepository(PATH),
-    "validateRepository",
-    [PATH],
-  ],
-  [
     "getCommits",
     () => ipc.getCommits(PATH, { limit: 5, cursor: null, roots: null }),
     "getCommits",
@@ -103,15 +97,9 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
   ],
   [
     "cloneGithubRepository",
-    () => ipc.cloneGithubRepository("https://github.com/o/r.git", "o/r", null),
+    () => ipc.cloneGithubRepository("o/r", null),
     "cloneGithubRepository",
-    ["https://github.com/o/r.git", "o/r", null],
-  ],
-  [
-    "getCloneCacheStatus",
-    () => ipc.getCloneCacheStatus(),
-    "getCloneCacheStatus",
-    [],
+    ["o/r", null],
   ],
   [
     "checkoutBranch",

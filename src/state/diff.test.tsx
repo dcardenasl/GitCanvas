@@ -1,17 +1,18 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CommitDiff } from "../bindings";
+import {
+  createIpcMocks,
+  createQueryClientWrapper,
+  createTestQueryClient,
+} from "../test/test-utils";
 
-const getCommitDiff =
-  vi.fn<(path: string, request: unknown) => Promise<CommitDiff>>();
-vi.mock("../lib/ipc", () => ({
-  getCommitDiff: (path: string, request: unknown) =>
-    getCommitDiff(path, request),
-}));
+const mockIpc = createIpcMocks(["getCommitDiff"] as const);
+const { getCommitDiff } = mockIpc;
+vi.mock("../lib/ipc", () => mockIpc);
 
 const { useCommitDiff } = await import("./diff");
 
@@ -25,13 +26,12 @@ const DIFF: CommitDiff = {
 };
 
 let client: QueryClient;
-function wrapper({ children }: { children: ReactNode }) {
-  return createElement(QueryClientProvider, { client }, children);
-}
+let wrapper: ReturnType<typeof createQueryClientWrapper>;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client = createTestQueryClient();
+  wrapper = createQueryClientWrapper(client);
   getCommitDiff.mockResolvedValue(DIFF);
 });
 
@@ -71,8 +71,8 @@ describe("useCommitDiff", () => {
     );
 
     await waitFor(() => {
-      expect(first.result.current.data).toBeDefined();
-      expect(second.result.current.data).toBeDefined();
+      expect(first.result.current.data).toEqual(DIFF);
+      expect(second.result.current.data).toEqual(DIFF);
     });
     expect(getCommitDiff).toHaveBeenCalledTimes(1);
   });

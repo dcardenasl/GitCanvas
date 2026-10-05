@@ -1,10 +1,14 @@
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 
-import { CommitTreeBrowser } from "./CommitTreeBrowser";
+import type { ChangedFile } from "../../lib/changedFiles";
 import type { FileSource } from "../../state/session";
 import { useFileListPreferences } from "../../state/fileListPreferences";
+import { CommitTreeBrowser } from "./CommitTreeBrowser";
 import { ChangedFileRow } from "../ChangedFileRow/ChangedFileRow";
-import { buildFileTree, type ChangedFile, type FileTreeEntry } from "./tree";
+import { FolderIcon } from "../FolderIcon/FolderIcon";
+import { buildFileTree, type FileTreeEntry } from "./tree";
+
+import "./ChangedFilesBrowser.css";
 
 /** Files and presentation labels for one section of the changed-file list. */
 export interface ChangedFilesGroup {
@@ -259,16 +263,7 @@ function TreeEntries({
           <span className="file-tree__chevron" aria-hidden="true">
             ▸
           </span>
-          <span className="file-tree__folder" aria-hidden="true">
-            <svg viewBox="0 0 16 16" fill="none">
-              <path
-                d="M1.5 4.5h4l1.5 1.5h7.5v6a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1z"
-                stroke="currentColor"
-                strokeLinejoin="round"
-              />
-              <path d="M1.5 6h13" stroke="currentColor" />
-            </svg>
-          </span>
+          <FolderIcon />
           <span className="file-tree__name">{entry.name}</span>
           <span className="file-tree__count" aria-hidden="true">
             {entry.fileCount}

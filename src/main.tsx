@@ -1,6 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 
+import "./App.css";
+import "./styles/primitives.css";
+
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 

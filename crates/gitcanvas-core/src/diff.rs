@@ -83,20 +83,19 @@ pub enum DiffOmission {
 /// about whether there is something to render.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct FileDiff {
-    /// Current repository-relative path.
-    pub path: String,
-    /// Previous path for renames and copies.
-    pub old_path: Option<String>,
-    /// Kind of change represented by this file entry.
-    pub change: FileChange,
-    /// Number of inserted lines.
-    pub insertions: u32,
-    /// Number of deleted lines.
-    pub deletions: u32,
-    /// Why the patch is omitted, if applicable.
-    pub omitted: Option<DiffOmission>,
+    /// Shared path, change and line-count metadata.
+    #[serde(flatten)]
+    pub summary: FileDiffSummary,
     /// Unified patch text for this file alone, ready for a diff renderer.
     pub patch: Option<String>,
+}
+
+impl std::ops::Deref for FileDiff {
+    type Target = FileDiffSummary;
+
+    fn deref(&self) -> &Self::Target {
+        &self.summary
+    }
 }
 
 /// File metadata used by large listings before a patch is requested.
@@ -118,14 +117,7 @@ pub struct FileDiffSummary {
 
 impl From<&FileDiff> for FileDiffSummary {
     fn from(file: &FileDiff) -> Self {
-        Self {
-            path: file.path.clone(),
-            old_path: file.old_path.clone(),
-            change: file.change,
-            insertions: file.insertions,
-            deletions: file.deletions,
-            omitted: file.omitted,
-        }
+        file.summary.clone()
     }
 }
 
@@ -339,12 +331,14 @@ fn collect_files_internal(
             None
         };
         files.push(FileDiff {
-            path,
-            old_path,
-            change: FileChange::from(delta.status()),
-            insertions,
-            deletions,
-            omitted,
+            summary: FileDiffSummary {
+                path,
+                old_path,
+                change: FileChange::from(delta.status()),
+                insertions,
+                deletions,
+                omitted,
+            },
             patch: text,
         });
     }
@@ -397,7 +391,7 @@ fn collect_file_stats(diff: &git2::Diff<'_>) -> Result<HashMap<String, FileDiffS
 
 #[cfg(test)]
 mod tests {
-    use super::{ensure_file_count, MAX_COMMIT_DIFF_FILES};
+    use super::{ensure_file_count, FileChange, FileDiff, FileDiffSummary, MAX_COMMIT_DIFF_FILES};
     use crate::error::AppError;
 
     #[test]
@@ -407,5 +401,33 @@ mod tests {
             ensure_file_count(MAX_COMMIT_DIFF_FILES + 1),
             Err(AppError::ResourceLimitExceeded(_))
         ));
+    }
+
+    #[test]
+    fn file_diff_flattens_its_shared_summary_on_the_wire() {
+        let file = FileDiff {
+            summary: FileDiffSummary {
+                path: "src/main.rs".to_owned(),
+                old_path: None,
+                change: FileChange::Modified,
+                insertions: 2,
+                deletions: 1,
+                omitted: None,
+            },
+            patch: Some("@@ -1 +1,2 @@".to_owned()),
+        };
+
+        assert_eq!(
+            serde_json::to_value(file).unwrap(),
+            serde_json::json!({
+                "path": "src/main.rs",
+                "old_path": null,
+                "change": "Modified",
+                "insertions": 2,
+                "deletions": 1,
+                "omitted": null,
+                "patch": "@@ -1 +1,2 @@"
+            })
+        );
     }
 }

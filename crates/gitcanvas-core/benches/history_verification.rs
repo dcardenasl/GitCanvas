@@ -1,4 +1,5 @@
-//! Manual comparisons and latency measurements against a local reference repository.
+//! Manual comparisons and latency measurements, run only on explicit request:
+//! `cargo bench -p gitcanvas-core --bench history_verification -- compare|benchmark`.
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,
@@ -6,6 +7,7 @@
     clippy::indexing_slicing
 )]
 
+#[path = "../tests/support/mod.rs"]
 mod support;
 
 use gitcanvas_core::{
@@ -14,10 +16,19 @@ use gitcanvas_core::{
 };
 use std::{process::Command, time::Instant};
 
-#[test]
-#[ignore = "manual verification against a read-only local reference repository"]
-// This manual check intentionally uses Git itself as an independent ordering
-// oracle; it is never reachable from application code or routine tests.
+#[allow(clippy::print_stderr)]
+fn main() {
+    match std::env::args().nth(1).as_deref() {
+        Some("compare") => matches_git_log_for_reference_repository(),
+        Some("benchmark") => report_history_latency_for_ten_thousand_commits(),
+        _ => eprintln!(
+            "Usage: cargo bench -p gitcanvas-core --bench history_verification -- compare|benchmark"
+        ),
+    }
+}
+
+// Uses Git as an independent ordering oracle. This tool is not reachable from
+// application code or routine tests.
 #[allow(clippy::disallowed_methods, clippy::print_stdout)]
 fn matches_git_log_for_reference_repository() {
     let path = std::env::var("GITCANVAS_REFERENCE_REPO").expect("Set GITCANVAS_REFERENCE_REPO");
@@ -60,8 +71,6 @@ fn matches_git_log_for_reference_repository() {
     );
 }
 
-#[test]
-#[ignore = "manual latency measurement, deliberately no timing assertion"]
 // Repacking and reporting the benchmark require the Git CLI in this manual tool.
 #[allow(clippy::disallowed_methods, clippy::print_stdout)]
 fn report_history_latency_for_ten_thousand_commits() {

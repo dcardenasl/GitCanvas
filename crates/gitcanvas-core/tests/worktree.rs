@@ -238,8 +238,11 @@ fn staged_blob_limits_are_checked_before_reading_the_content() {
     )
     .unwrap_err();
     assert!(matches!(error, AppError::ResourceLimitExceeded(_)));
-    assert!(error.to_string().contains("huge.txt"));
-    assert!(error.to_string().contains("33554432"));
+    assert!(matches!(
+        error,
+        AppError::ResourceLimitExceeded(message)
+            if message.contains("huge.txt") && message.contains("33554432")
+    ));
 }
 
 #[test]

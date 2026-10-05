@@ -1622,8 +1622,9 @@ marca.
       dos `.mjs`; transpilación TypeScript con diagnósticos sintácticos del recorder; y
       comprobación de que los comandos npm apuntan a los tres archivos bajo `tools/demo/`.
       → `chore(demo): isolate recorder tooling and document prerequisites`
-      *Reconciliado (2026-10-05):* el tooling y sus configuraciones quedan en el commit
-      dedicado `chore(demo): isolate recorder tooling and document prerequisites`.
+      *Reconciliado (2026-10-05):* commit dedicado `5d47af3`. El primer intento fue rechazado
+      porque `.git/hooks/pre-commit` era una copia anterior a la exclusión de `tools/demo/`;
+      al sincronizar el hook oficial del repositorio, `./pre-commit` pasó sin omitirlo.
 
 ### H2-44 — Sincronizar documentos de arquitectura y producto
 

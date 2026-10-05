@@ -7,8 +7,6 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 export const commands = {
 	/**  Validates and opens a local repository, returning its canonical identity. */
 	openRepository: (path: string) => typedError<RepositoryInfo, AppError>(__TAURI_INVOKE("open_repository", { path })),
-	/**  Checks a candidate working-tree root without changing application selection. */
-	validateRepository: (path: string) => typedError<RepositoryInfo, AppError>(__TAURI_INVOKE("validate_repository", { path })),
 	/**
 	 *  The repository named on the command line, if the application was launched
 	 *  with one.
@@ -71,9 +69,7 @@ export const commands = {
 	/**  Lists the repositories the stored token can reach. */
 	listGithubRepositories: () => typedError<GitHubRepositoryList, AppError>(__TAURI_INVOKE("list_github_repositories")),
 	/**  Clones a repository into the application cache, emitting progress as it goes. */
-	cloneGithubRepository: (cloneUrl: string, fullName: string, activeRepositoryPath: string | null) => typedError<ClonedRepository, AppError>(__TAURI_INVOKE("clone_github_repository", { cloneUrl, fullName, activeRepositoryPath })),
-	/**  Reports what the clone cache holds and the limits it is held to. */
-	getCloneCacheStatus: () => typedError<CacheStatus, AppError>(__TAURI_INVOKE("get_clone_cache_status")),
+	cloneGithubRepository: (fullName: string, activeRepositoryPath: string | null) => typedError<ClonedRepository, AppError>(__TAURI_INVOKE("clone_github_repository", { fullName, activeRepositoryPath })),
 	/**  Checks out a local branch, refusing by default when work would be lost. */
 	checkoutBranch: (path: string, branch: string, force: boolean) => typedError<CheckoutOutcome, AppError>(__TAURI_INVOKE("checkout_branch", { path, branch, force })),
 	/**  Fetches and fast-forwards the current branch, reporting anything else. */
@@ -150,44 +146,7 @@ export type BranchInfo = {
 	is_symbolic: boolean,
 };
 
-/**  One cached clone. */
-export type CacheEntry = {
-	/**  Absolute path to the cached repository. */
-	path: string,
-	/**  Stable cache entry name. */
-	name: string,
-	/**
-	 *  Size in bytes, as a decimal string.
-	 *
-	 *  A directory can exceed what a JavaScript number represents exactly, and
-	 *  specta refuses to export 64-bit integers for that reason. The same
-	 *  convention as commit timestamps: cross the boundary as text, parse on
-	 *  the far side.
-	 */
-	bytes: string,
-	/**  Unix seconds of the most recent access, as a string for range safety. */
-	last_used: string,
-};
-
-/**  What the cache currently holds. */
-export type CacheStatus = {
-	/**  Cached clones currently retained. */
-	entries: CacheEntry[],
-	/**  Total size in bytes, as a decimal string. See [`CacheEntry::bytes`]. */
-	total_bytes: string,
-	/**  Maximum number of clones retained. */
-	max_repositories: number,
-	/**  Limit in bytes, as a decimal string. See [`CacheEntry::bytes`]. */
-	max_total_bytes: string,
-};
-
-/**
- *  The outcome of a checkout attempt.
- *  Serialized with an internal `kind` tag so TypeScript sees a discriminated
- *  union it can narrow with a `switch`, matching how `AppError` already
- *  crosses the boundary. The default external tagging generates a shape that
- *  needs a key lookup before anything can be read.
- */
+/**  The outcome of a checkout attempt. */
 export type CheckoutOutcome =
 /**  The branch is now checked out. */
 { kind: "Switched";
@@ -335,10 +294,14 @@ export type FileChange =
 
 /**  A file as it stands at one commit. */
 export type FileContent = {
-	/**  Repository-relative path of the file. */
-	path: string,
 	/**  Commit that supplies the file contents. */
 	commit_id: string,
+} & FileContentFields;
+
+/**  Shared repository-relative file content and read-limit metadata. */
+export type FileContentFields = {
+	/**  Repository-relative path of the file. */
+	path: string,
 	/**  Total lines, available even when the text itself is withheld. */
 	lines: number,
 	/**
@@ -369,21 +332,9 @@ export type FileContentRequest = {
  *  about whether there is something to render.
  */
 export type FileDiff = {
-	/**  Current repository-relative path. */
-	path: string,
-	/**  Previous path for renames and copies. */
-	old_path: string | null,
-	/**  Kind of change represented by this file entry. */
-	change: FileChange,
-	/**  Number of inserted lines. */
-	insertions: number,
-	/**  Number of deleted lines. */
-	deletions: number,
-	/**  Why the patch is omitted, if applicable. */
-	omitted: DiffOmission | null,
 	/**  Unified patch text for this file alone, ready for a diff renderer. */
 	patch: string | null,
-};
+} & FileDiffSummary;
 
 /**  File metadata used by large listings before a patch is requested. */
 export type FileDiffSummary = {
@@ -413,8 +364,6 @@ export type GitHubAccount = {
 export type GitHubRepository = {
 	/**  Owner and repository name separated by `/`. */
 	full_name: string,
-	/**  HTTPS URL used to clone this repository. */
-	clone_url: string,
 	/**  Whether the repository is private. */
 	private: boolean,
 	/**  Name of the repository's default branch. */
@@ -451,13 +400,7 @@ export type HistoryRequest = {
 	roots: string[] | null,
 };
 
-/**
- *  The outcome of a pull attempt.
- *  Serialized with an internal `kind` tag so TypeScript sees a discriminated
- *  union it can narrow with a `switch`, matching how `AppError` already
- *  crosses the boundary. The default external tagging generates a shape that
- *  needs a key lookup before anything can be read.
- */
+/**  The outcome of a pull attempt. */
 export type PullOutcome =
 /**  Already up to date; nothing was fetched that changes the branch. */
 { kind: "UpToDate" } |
@@ -476,13 +419,7 @@ remote: string } |
 /**  The branch has no upstream to pull from. */
 { kind: "NoUpstream" };
 
-/**
- *  The outcome of a push attempt.
- *  Serialized with an internal `kind` tag so TypeScript sees a discriminated
- *  union it can narrow with a `switch`, matching how `AppError` already
- *  crosses the boundary. The default external tagging generates a shape that
- *  needs a key lookup before anything can be read.
- */
+/**  The outcome of a push attempt. */
 export type PushOutcome =
 /**  Successfully pushed the checked-out branch. */
 { kind: "Pushed";
@@ -560,17 +497,7 @@ export type WorktreeFileContent = {
 	side: WorktreeSide,
 	/**  Revision from which the file was read. */
 	revision: string,
-	/**  Repository-relative file path. */
-	path: string,
-	/**  Number of text lines, when available. */
-	lines: number,
-	/**  File size in bytes represented as decimal text. */
-	bytes: string,
-	/**  Why text was omitted, if applicable. */
-	omitted: DiffOmission | null,
-	/**  File text, or `None` when omitted. */
-	text: string | null,
-};
+} & FileContentFields;
 
 /**  Reads a local file from the index or disk. */
 export type WorktreeFileContentRequest = {

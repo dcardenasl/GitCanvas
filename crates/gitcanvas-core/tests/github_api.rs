@@ -249,5 +249,8 @@ fn reports_when_the_thousand_repository_cap_truncates_the_listing() {
 #[test]
 fn a_malformed_payload_is_an_error_not_a_panic() {
     let server = FakeGitHub::start(vec![(200, "not json at all".to_owned())]);
-    assert!(server.client("t").verify().is_err());
+    assert!(matches!(
+        server.client("t").verify(),
+        Err(AppError::Internal(_))
+    ));
 }

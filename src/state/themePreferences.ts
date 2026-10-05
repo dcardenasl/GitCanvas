@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+import { safeStorage } from "../lib/safeStorage";
+
 /** User-selected appearance, optionally following the operating system. */
 export type ThemePreference = "dark" | "light" | "system";
 /** Concrete palette applied to the document after resolving system preference. */
@@ -8,14 +10,10 @@ export type ResolvedTheme = Exclude<ThemePreference, "system">;
 const STORAGE_KEY = "gitcanvas.theme.v1";
 
 function readPreference(): ThemePreference {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === "light" || stored === "system" || stored === "dark"
-      ? stored
-      : "dark";
-  } catch {
-    return "dark";
-  }
+  const stored = safeStorage.get(STORAGE_KEY);
+  return stored === "light" || stored === "system" || stored === "dark"
+    ? stored
+    : "dark";
 }
 
 function resolveTheme(preference: ThemePreference): ResolvedTheme {
@@ -53,11 +51,7 @@ export const useThemePreferences = create<ThemePreferences>((set) => {
     preference,
     resolvedTheme,
     setPreference: (next) => {
-      try {
-        localStorage.setItem(STORAGE_KEY, next);
-      } catch {
-        // The selected appearance still works for this session.
-      }
+      safeStorage.set(STORAGE_KEY, next);
       const nextResolvedTheme = applyTheme(next);
       set({ preference: next, resolvedTheme: nextResolvedTheme });
     },

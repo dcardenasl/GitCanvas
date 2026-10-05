@@ -194,16 +194,16 @@ describe("session selectors", () => {
     const state = () => useSession.getState();
     expect(selectedCommitId(state())).toBeNull();
     expect(selectedFilePath(state())).toBeNull();
-    expect(selectedFileSource(state())).toBeNull();
+    expect(selectedFileSource(state().selection)).toBeNull();
 
     state().selectCommit(COMMIT);
     state().selectFile("a.ts");
     expect(selectedCommitId(state())).toBe(COMMIT);
     expect(selectedFilePath(state())).toBe("a.ts");
-    expect(selectedFileSource(state())).toBe("commit");
+    expect(selectedFileSource(state().selection)).toBe("commit");
 
     state().selectFile("b.ts", "unstaged");
     expect(selectedCommitId(state())).toBeNull();
-    expect(selectedFileSource(state())).toBe("unstaged");
+    expect(selectedFileSource(state().selection)).toBe("unstaged");
   });
 });

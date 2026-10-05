@@ -67,7 +67,7 @@ impl AppError {
 
     /// Converts a libgit2 failure raised while contacting a remote.
     #[must_use]
-    pub fn from_git2_remote(error: git2::Error) -> Self {
+    pub(crate) fn from_git2_remote(error: git2::Error) -> Self {
         Self::from(error)
     }
 }
@@ -75,7 +75,7 @@ impl AppError {
 /// Whether an OS error means the process ran out of file descriptors:
 /// `EMFILE` and `ENFILE` on Unix, `ERROR_TOO_MANY_OPEN_FILES` on Windows.
 #[must_use]
-pub fn is_descriptor_exhaustion(error: &std::io::Error) -> bool {
+pub(crate) fn is_descriptor_exhaustion(error: &std::io::Error) -> bool {
     if cfg!(windows) {
         error.raw_os_error() == Some(4)
     } else {

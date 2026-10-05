@@ -138,13 +138,16 @@ export function useGitActions(repositoryPath: string | null): GitActions {
         case "DivergedRequiresMerge":
           setNotice(variables.path, {
             tone: "error",
-            text: `${outcome.local} y ${outcome.remote} divergieron. Hace falta un merge, que se resuelve desde la línea de comandos.`,
+            text: [
+              `${outcome.local} y ${outcome.remote} divergieron. Hace falta una fusión,`,
+              "que se resuelve desde la línea de comandos.",
+            ].join(" "),
           });
           break;
         case "NoUpstream":
           setNotice(variables.path, {
             tone: "error",
-            text: "Esta rama no tiene upstream configurado.",
+            text: "Esta rama no tiene configurada una rama de seguimiento remoto.",
           });
           break;
       }
@@ -160,7 +163,11 @@ export function useGitActions(repositoryPath: string | null): GitActions {
       if (outcome.kind === "RejectedNonFastForward") {
         setNotice(variables.path, {
           tone: "error",
-          text: `El remoto rechazó el push de ${outcome.branch}: tiene commits que no están acá. Tráelos con pull antes de hacer push.`,
+          text: [
+            `El remoto rechazó el envío de ${outcome.branch} porque tiene commits que`,
+            "faltan en la rama local.",
+            `Tráelos con «Traer cambios» antes de volver a enviarla.`,
+          ].join(" "),
         });
         return;
       }

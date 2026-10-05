@@ -16,7 +16,7 @@ afterEach(cleanup);
 function renderDialog(destructive = false) {
   const onConfirm = vi.fn();
   const onCancel = vi.fn();
-  const { container } = render(
+  render(
     <ConfirmDialog
       title="¿Seguro?"
       body={<p>Esto no se puede deshacer.</p>}
@@ -26,7 +26,7 @@ function renderDialog(destructive = false) {
       onCancel={onCancel}
     />,
   );
-  return { onConfirm, onCancel, container };
+  return { onConfirm, onCancel };
 }
 
 describe("ConfirmDialog", () => {
@@ -55,11 +55,14 @@ describe("ConfirmDialog", () => {
   });
 
   it("treats Escape as a cancel instead of closing the dialog itself", () => {
-    const { onCancel, container } = renderDialog();
-    const dialog = container.querySelector("dialog");
+    const { onCancel } = renderDialog();
+    const dialog = screen.getByRole("dialog", { hidden: true });
+    expect(
+      screen.getByRole("heading", { name: "¿Seguro?", hidden: true }),
+    ).toBeInstanceOf(HTMLElement);
 
     const event = new Event("cancel", { cancelable: true });
-    dialog?.dispatchEvent(event);
+    dialog.dispatchEvent(event);
 
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(event.defaultPrevented).toBe(true);

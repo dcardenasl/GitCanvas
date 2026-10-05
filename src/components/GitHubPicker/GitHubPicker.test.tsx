@@ -1,50 +1,37 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { GitHubRepository, GitHubRepositoryList } from "../../bindings";
+import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
 
-const hasGithubToken = vi.fn<() => Promise<boolean>>();
-const listGithubRepositories = vi.fn<() => Promise<GitHubRepositoryList>>();
-const storeGithubToken =
-  vi.fn<(token: string) => Promise<{ login: string; name: string | null }>>();
-const cloneGithubRepository =
-  vi.fn<
-    (
-      url: string,
-      name: string,
-      activePath: string | null,
-    ) => Promise<{ path: string; full_name: string }>
-  >();
-const openRepository =
-  vi.fn<(path: string) => Promise<{ path: string; name: string }>>();
-const forgetGithubToken = vi.fn<() => Promise<null>>();
-const onCloneProgress = vi.fn<(handler: unknown) => Promise<() => void>>(() =>
-  Promise.resolve(() => undefined),
-);
+const mockIpc = createIpcMocks([
+  "hasGithubToken",
+  "listGithubRepositories",
+  "storeGithubToken",
+  "cloneGithubRepository",
+  "openRepository",
+  "forgetGithubToken",
+  "onCloneProgress",
+] as const);
+const {
+  hasGithubToken,
+  listGithubRepositories,
+  storeGithubToken,
+  cloneGithubRepository,
+  openRepository,
+  forgetGithubToken,
+  onCloneProgress,
+} = mockIpc;
 
-vi.mock("../../lib/ipc", () => ({
-  hasGithubToken: () => hasGithubToken(),
-  listGithubRepositories: () => listGithubRepositories(),
-  storeGithubToken: (token: string) => storeGithubToken(token),
-  cloneGithubRepository: (
-    url: string,
-    name: string,
-    activePath: string | null,
-  ) => cloneGithubRepository(url, name, activePath),
-  openRepository: (path: string) => openRepository(path),
-  forgetGithubToken: () => forgetGithubToken(),
-  onCloneProgress: (handler: unknown) => onCloneProgress(handler),
-}));
+vi.mock("../../lib/ipc", () => mockIpc);
 
 const { GitHubPicker } = await import("./GitHubPicker");
 const { useSession } = await import("../../state/session");
 
 const REPO: GitHubRepository = {
   full_name: "dcardenasl/gitcanvas",
-  clone_url: "https://github.com/dcardenasl/gitcanvas.git",
   private: true,
   default_branch: "main",
   description: "Visual git client",
@@ -58,14 +45,7 @@ function repositoryList(
 }
 
 function renderPicker(onClose = vi.fn()) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  render(
-    <QueryClientProvider client={client}>
-      <GitHubPicker onClose={onClose} />
-    </QueryClientProvider>,
-  );
+  renderWithQueryClient(<GitHubPicker onClose={onClose} />);
   return onClose;
 }
 
@@ -81,14 +61,16 @@ describe("GitHubPicker", () => {
     hasGithubToken.mockResolvedValue(false);
     renderPicker();
 
-    expect(await screen.findByLabelText("Personal Access Token")).toBeDefined();
+    expect(
+      await screen.findByLabelText("Token de acceso personal"),
+    ).toBeInstanceOf(HTMLElement);
   });
 
   it("uses a password field so the token is never shown on screen", async () => {
     hasGithubToken.mockResolvedValue(false);
     renderPicker();
 
-    const input = await screen.findByLabelText("Personal Access Token");
+    const input = await screen.findByLabelText("Token de acceso personal");
     expect(input.getAttribute("type")).toBe("password");
   });
 
@@ -105,8 +87,10 @@ describe("GitHubPicker", () => {
     listGithubRepositories.mockResolvedValue(repositoryList([REPO]));
     renderPicker();
 
-    expect(await screen.findByText("dcardenasl/gitcanvas")).toBeDefined();
-    expect(screen.getByText("privado")).toBeDefined();
+    expect(await screen.findByText("dcardenasl/gitcanvas")).toBeInstanceOf(
+      HTMLElement,
+    );
+    expect(screen.getByText("privado")).toBeInstanceOf(HTMLElement);
   });
 
   it("explains when the API result was capped at one thousand repositories", async () => {
@@ -116,7 +100,7 @@ describe("GitHubPicker", () => {
 
     expect(
       await screen.findByText(/primeros 1\.000 repositorios/),
-    ).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
   });
 
   it("clones the chosen repository and opens it", async () => {
@@ -141,7 +125,6 @@ describe("GitHubPicker", () => {
 
     await waitFor(() => {
       expect(cloneGithubRepository).toHaveBeenCalledWith(
-        REPO.clone_url,
         REPO.full_name,
         "/cache/current",
       );
@@ -158,7 +141,7 @@ describe("GitHubPicker", () => {
     );
     renderPicker();
 
-    expect(await screen.findByRole("alert")).toBeDefined();
+    expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
   });
 
   it("stops listening for progress when it goes away", async () => {
@@ -167,13 +150,8 @@ describe("GitHubPicker", () => {
     hasGithubToken.mockResolvedValue(true);
     listGithubRepositories.mockResolvedValue(repositoryList());
 
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const { unmount } = render(
-      <QueryClientProvider client={client}>
-        <GitHubPicker onClose={vi.fn()} />
-      </QueryClientProvider>,
+    const { unmount } = renderWithQueryClient(
+      <GitHubPicker onClose={vi.fn()} />,
     );
     unmount();
 
@@ -190,14 +168,16 @@ describe("GitHubPicker", () => {
       renderPicker();
 
       await userEvent.type(
-        await screen.findByLabelText("Personal Access Token"),
+        await screen.findByLabelText("Token de acceso personal"),
         " ghp_secret ",
       );
       hasGithubToken.mockResolvedValue(true);
       await userEvent.click(screen.getByRole("button", { name: "Conectar" }));
 
       expect(storeGithubToken).toHaveBeenCalledWith("ghp_secret");
-      expect(await screen.findByText("dcardenasl/gitcanvas")).toBeDefined();
+      expect(await screen.findByText("dcardenasl/gitcanvas")).toBeInstanceOf(
+        HTMLElement,
+      );
     });
 
     it("shows a keychain read error instead of treating it as signed out", async () => {
@@ -215,7 +195,7 @@ describe("GitHubPicker", () => {
       renderPicker();
 
       await userEvent.type(
-        await screen.findByLabelText("Personal Access Token"),
+        await screen.findByLabelText("Token de acceso personal"),
         "nope",
       );
       await userEvent.click(screen.getByRole("button", { name: "Conectar" }));
@@ -223,7 +203,9 @@ describe("GitHubPicker", () => {
       expect((await screen.findByRole("alert")).textContent).toContain(
         "the token is invalid",
       );
-      expect(screen.getByLabelText("Personal Access Token")).toBeDefined();
+      expect(screen.getByLabelText("Token de acceso personal")).toBeInstanceOf(
+        HTMLElement,
+      );
     });
   });
 

@@ -10,6 +10,7 @@ import {
   useSession,
 } from "../../state/session";
 import { useWorktreeSnapshot } from "../../state/worktree";
+import { DiffStat } from "../DiffStat/DiffStat";
 
 /**
  * The history pane: the virtualized table with the graph drawn over it.
@@ -62,18 +63,20 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
           {local.data.unstaged.total_files} sin preparar
         </span>
         <span className="working-tree-row__stats">
-          <span className="detail-panel__stat-add">
-            +{local.data.staged.insertions + local.data.unstaged.insertions}
-          </span>{" "}
-          <span className="detail-panel__stat-del">
-            −{local.data.staged.deletions + local.data.unstaged.deletions}
-          </span>
+          <DiffStat
+            insertions={
+              local.data.staged.insertions + local.data.unstaged.insertions
+            }
+            deletions={
+              local.data.staged.deletions + local.data.unstaged.deletions
+            }
+          />
         </span>
       </button>
     ) : null;
   const localState =
     local.error !== null ? (
-      <p className="history-view__state" role="alert">
+      <p className="state history-view__state" role="alert">
         No se pudieron leer los cambios locales: {userMessage(local.error)}
       </p>
     ) : null;
@@ -101,7 +104,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
       <div className="history-view">
         {localRow}
         {localState}
-        <p className="history-view__state" role="alert">
+        <p className="state history-view__state" role="alert">
           {userMessage(history.error)}
         </p>
       </div>
@@ -113,7 +116,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
       <div className="history-view">
         {localRow}
         {localState}
-        <p className="history-view__state">Leyendo el historial…</p>
+        <p className="state history-view__state">Leyendo el historial…</p>
       </div>
     );
   }
@@ -123,7 +126,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
       <div className="history-view">
         {localRow}
         {localState}
-        <p className="history-view__state">
+        <p className="state history-view__state">
           Este repositorio no tiene commits.
         </p>
       </div>
@@ -135,7 +138,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
       {localRow}
       {localState}
       {history.error !== null && (
-        <p className="history-view__state" role="alert">
+        <p className="state history-view__state" role="alert">
           No se pudo cargar la siguiente página: {userMessage(history.error)}{" "}
           <button
             type="button"

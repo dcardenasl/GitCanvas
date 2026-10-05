@@ -1,20 +1,16 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { HistoryPage, WorktreeSnapshot } from "../../bindings";
+import type { HistoryPage } from "../../bindings";
+import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
 
-const getCommits =
-  vi.fn<(path: string, request: unknown) => Promise<HistoryPage>>();
-const getWorktreeSnapshot =
-  vi.fn<(path: string, request: unknown) => Promise<WorktreeSnapshot>>();
+const mockIpc = createIpcMocks(["getCommits", "getWorktreeSnapshot"] as const);
+const { getCommits, getWorktreeSnapshot } = mockIpc;
 
 vi.mock("../../lib/ipc", () => ({
-  getCommits: (path: string, request: unknown) => getCommits(path, request),
-  getWorktreeSnapshot: (path: string, request: unknown) =>
-    getWorktreeSnapshot(path, request),
+  ...mockIpc,
   IpcError: class extends Error {},
 }));
 
@@ -55,14 +51,7 @@ function Harness() {
 }
 
 function renderView() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={client}>
-      <Harness />
-    </QueryClientProvider>,
-  );
+  return renderWithQueryClient(<Harness />);
 }
 
 beforeEach(() => {
@@ -120,8 +109,10 @@ describe("HistoryView", () => {
 
     expect(
       await screen.findByText("Merge pull request #1 from dcardenasl/dev"),
-    ).toBeDefined();
-    expect(screen.getByText("chore: release v1.0.0")).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
+    expect(screen.getByText("chore: release v1.0.0")).toBeInstanceOf(
+      HTMLElement,
+    );
   });
 
   it("reports a failure instead of rendering an empty graph", async () => {
@@ -129,7 +120,7 @@ describe("HistoryView", () => {
 
     renderView();
 
-    expect(await screen.findByRole("alert")).toBeDefined();
+    expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
   });
 
   it("says so when the repository has no commits", async () => {
@@ -143,14 +134,14 @@ describe("HistoryView", () => {
 
     expect(
       await screen.findByText("Este repositorio no tiene commits."),
-    ).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
   });
 
   it("requests the next page when one is available", async () => {
     const page = mergePage();
     getCommits
       .mockResolvedValueOnce({ ...page, next_cursor: "cursor-1" })
-      .mockResolvedValueOnce(page);
+      .mockResolvedValueOnce({ ...page, commits: [] });
 
     renderView();
 
@@ -171,11 +162,11 @@ describe("HistoryView", () => {
 
     expect(
       await screen.findByText("Merge pull request #1 from dcardenasl/dev"),
-    ).toBeDefined();
-    expect(await screen.findByRole("alert")).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
+    expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
     expect(
       screen.getByText("Merge pull request #1 from dcardenasl/dev"),
-    ).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
 
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
 

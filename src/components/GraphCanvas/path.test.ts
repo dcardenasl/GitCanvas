@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ROW_HEIGHT, laneCenterX, rowCenterY } from "../CommitTable/geometry";
+import { ROW_HEIGHT, laneCenterX, rowCenterY } from "../../lib/historyGeometry";
 
 import { edgePath, incomingPath } from "./path";
 

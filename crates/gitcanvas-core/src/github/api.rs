@@ -41,8 +41,6 @@ pub struct GitHubAccount {
 pub struct GitHubRepository {
     /// Owner and repository name separated by `/`.
     pub full_name: String,
-    /// HTTPS URL used to clone this repository.
-    pub clone_url: String,
     /// Whether the repository is private.
     pub private: bool,
     /// Name of the repository's default branch.
@@ -69,7 +67,6 @@ struct RawUser {
 #[derive(Deserialize)]
 struct RawRepository {
     full_name: String,
-    clone_url: String,
     private: bool,
     default_branch: Option<String>,
     description: Option<String>,
@@ -185,38 +182,95 @@ impl GitHubClient {
     /// Returns [`AppError`] when the token is rejected, GitHub is unreachable,
     /// or a page cannot be parsed.
     pub fn list_repositories(&self) -> Result<GitHubRepositoryList, AppError> {
-        let mut all = Vec::new();
-        let mut truncated = false;
-
-        for page in 1..=MAX_PAGES {
+        let (raw, truncated) = collect_pages(|page| {
             let body = self.get(&format!(
                 "/user/repos?per_page={PAGE_SIZE}&page={page}&sort=pushed&affiliation=owner,collaborator,organization_member"
             ))?;
-            let raw: Vec<RawRepository> = serde_json::from_str(&body).map_err(|error| {
+            serde_json::from_str::<Vec<RawRepository>>(&body).map_err(|error| {
                 AppError::Internal(format!("unexpected /user/repos payload: {error}"))
-            })?;
+            })
+        })?;
 
-            let count = raw.len();
-            all.extend(raw.into_iter().map(|repo| GitHubRepository {
+        let repositories = raw
+            .into_iter()
+            .map(|repo| GitHubRepository {
                 full_name: repo.full_name,
-                clone_url: repo.clone_url,
                 private: repo.private,
                 default_branch: repo.default_branch.unwrap_or_else(|| "main".to_owned()),
                 description: repo.description,
-            }));
-
-            if count < usize::from(PAGE_SIZE) {
-                break;
-            }
-            if page == MAX_PAGES {
-                truncated = true;
-            }
-        }
+            })
+            .collect();
 
         Ok(GitHubRepositoryList {
-            repositories: all,
+            repositories,
             truncated,
         })
+    }
+}
+
+fn collect_pages<T>(
+    mut fetch_page: impl FnMut(u8) -> Result<Vec<T>, AppError>,
+) -> Result<(Vec<T>, bool), AppError> {
+    let mut all = Vec::new();
+    let mut truncated = false;
+
+    for page in 1..=MAX_PAGES {
+        let current = fetch_page(page)?;
+        let count = current.len();
+        all.extend(current);
+
+        if count < usize::from(PAGE_SIZE) {
+            break;
+        }
+        if page == MAX_PAGES {
+            truncated = true;
+        }
+    }
+
+    Ok((all, truncated))
+}
+
+#[cfg(test)]
+mod pagination_tests {
+    use super::{collect_pages, AppError, MAX_PAGES, PAGE_SIZE};
+
+    #[test]
+    fn bounded_page_collection_reports_truncation_at_the_cap() {
+        let mut requested_pages = Vec::new();
+        let (items, truncated) = collect_pages(|page| {
+            requested_pages.push(page);
+            Ok((0..PAGE_SIZE)
+                .map(|index| format!("{page}-{index}"))
+                .collect())
+        })
+        .unwrap();
+
+        assert_eq!(requested_pages, (1..=MAX_PAGES).collect::<Vec<_>>());
+        assert_eq!(items.len(), usize::from(PAGE_SIZE) * usize::from(MAX_PAGES));
+        assert!(truncated);
+    }
+
+    #[test]
+    fn bounded_page_collection_stops_after_a_short_page() {
+        let mut requested_pages = Vec::new();
+        let (items, truncated) = collect_pages(|page| {
+            requested_pages.push(page);
+            let count = if page == 1 { PAGE_SIZE } else { PAGE_SIZE - 1 };
+            Ok((0..count).map(|index| format!("{page}-{index}")).collect())
+        })
+        .unwrap();
+
+        assert_eq!(requested_pages, [1, 2]);
+        assert_eq!(items.len(), usize::from(PAGE_SIZE) * 2 - 1);
+        assert!(!truncated);
+    }
+
+    #[test]
+    fn bounded_page_collection_propagates_fetch_errors() {
+        let error =
+            collect_pages::<String>(|_| Err(AppError::Network("offline".to_owned()))).unwrap_err();
+
+        assert!(matches!(error, AppError::Network(message) if message == "offline"));
     }
 }
 

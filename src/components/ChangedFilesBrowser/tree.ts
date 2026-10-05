@@ -1,31 +1,42 @@
-import type { FileDiff, FileDiffSummary } from "../../bindings";
+import { compareNames, type ChangedFile } from "../../lib/changedFiles";
 
-/** A changed path represented either with its patch or summary metadata. */
-export type ChangedFile = FileDiff | FileDiffSummary;
-
-/** A directory node whose entries are ordered directories followed by files. */
+/**
+ * A directory node whose children list directories before files.
+ * Directories and files are each sorted with the shared natural name ordering.
+ */
 export interface FileTreeDirectory {
+  /** Discriminator used to narrow a tree entry. */
   readonly kind: "directory";
+  /** Name of this directory, without its parent path. */
   readonly name: string;
+  /** Repository-relative directory path, using `/` separators. */
   readonly path: string;
+  /** Sorted child directories and changed files. */
   readonly entries: readonly FileTreeEntry[];
+  /** Number of changed files at any depth below this directory. */
   readonly fileCount: number;
 }
 
-/** A leaf in the changed-file tree, retaining the source diff record. */
+/** A leaf in the changed-file tree that retains its source diff record. */
 export interface FileTreeFile {
+  /** Discriminator used to narrow a tree entry. */
   readonly kind: "file";
+  /** Stable unique id for this occurrence in the input list. */
   readonly id: string;
+  /** Basename of the changed file. */
   readonly name: string;
+  /** Original diff entry used to open the file. */
   readonly file: ChangedFile;
 }
 
 /** One directory or file node in the changed-file tree. */
 export type FileTreeEntry = FileTreeDirectory | FileTreeFile;
 
-/** Tree roots and every directory path available for expand/collapse controls. */
+/** Tree roots and directory paths available to expand/collapse controls. */
 export interface FileTree {
+  /** Sorted entries at the repository root. */
   readonly entries: readonly FileTreeEntry[];
+  /** Directory paths in tree traversal order, excluding the repository root. */
   readonly directoryPaths: readonly string[];
 }
 
@@ -34,18 +45,6 @@ interface MutableDirectory {
   readonly path: string;
   readonly directories: Map<string, MutableDirectory>;
   readonly files: ChangedFile[];
-}
-
-const NAME_ORDER = new Intl.Collator("en", {
-  numeric: true,
-  sensitivity: "base",
-});
-
-function compareNames(left: string, right: string): number {
-  return (
-    NAME_ORDER.compare(left, right) ||
-    (left < right ? -1 : left > right ? 1 : 0)
-  );
 }
 
 function sortedEntries(directory: MutableDirectory): FileTreeEntry[] {
@@ -80,7 +79,14 @@ function toDirectory(directory: MutableDirectory): FileTreeDirectory {
   };
 }
 
-/** Groups Git's slash-separated file paths without changing the path used to open them. */
+/**
+ * Groups Git's slash-separated file paths without changing the path used to open them.
+ * Directories and files are sorted naturally, with directories listed first at
+ * each level. Empty path segments are ignored.
+ *
+ * @param files - Changed-file records from a commit or working-tree listing.
+ * @returns A read-only tree and its directory paths in traversal order.
+ */
 export function buildFileTree(files: readonly ChangedFile[]): FileTree {
   const root: MutableDirectory = {
     name: "",

@@ -6,7 +6,7 @@ import {
   graphWidth,
   laneCenterX,
   rowCenterY,
-} from "./geometry";
+} from "./historyGeometry";
 
 describe("geometry", () => {
   it("spaces lanes evenly from the origin", () => {

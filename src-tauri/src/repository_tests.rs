@@ -72,13 +72,11 @@ fn repository_history_and_refs_round_trip_with_real_payloads() {
         .unwrap();
     let webview = test_webview();
     let path = dir.path().to_str().unwrap();
-    for command in ["open_repository", "validate_repository"] {
-        let response = invoke(&webview, command, json!({"path": path})).unwrap();
-        assert_eq!(
-            response["path"],
-            dir.path().canonicalize().unwrap().to_str().unwrap()
-        );
-    }
+    let response = invoke(&webview, "open_repository", json!({"path": path})).unwrap();
+    assert_eq!(
+        response["path"],
+        dir.path().canonicalize().unwrap().to_str().unwrap()
+    );
     let page = invoke(
         &webview,
         "get_commits",
@@ -101,12 +99,7 @@ fn command_failures_are_structured_and_invalid_limits_are_rejected() {
     let dir = tempfile::tempdir().unwrap();
     let webview = test_webview();
     let path = dir.path().to_str().unwrap();
-    for command in [
-        "open_repository",
-        "validate_repository",
-        "get_branches",
-        "get_tags",
-    ] {
+    for command in ["open_repository", "get_branches", "get_tags"] {
         let response = invoke(&webview, command, json!({"path": path})).unwrap_err();
         assert_eq!(response["kind"], "InvalidRepository");
         assert!(response["message"].is_string());

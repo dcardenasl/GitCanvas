@@ -3,12 +3,16 @@
 //! Everything here that can lose work refuses by default and reports what
 //! stands in the way. Forcing is always a separate, explicit decision made
 //! above this layer — nothing in this module silently discards anything.
+//!
+//! The operation outcome enums use an internal `kind` tag, so generated
+//! TypeScript exposes discriminated unions that can be narrowed with a
+//! `switch` instead of looking up an external variant key.
 
 use std::{cell::RefCell, rc::Rc};
 
 use git2::{
-    build::CheckoutBuilder, AnnotatedCommit, AutotagOption, BranchType, Direction, ErrorCode,
-    FetchOptions, PushOptions, RemoteCallbacks, Repository, StatusOptions,
+    build::CheckoutBuilder, AnnotatedCommit, AutotagOption, BranchType, ErrorCode, FetchOptions,
+    PushOptions, RemoteCallbacks, Repository, StatusOptions,
 };
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -25,10 +29,6 @@ pub struct DirtyPath {
 }
 
 /// The outcome of a checkout attempt.
-/// Serialized with an internal `kind` tag so TypeScript sees a discriminated
-/// union it can narrow with a `switch`, matching how `AppError` already
-/// crosses the boundary. The default external tagging generates a shape that
-/// needs a key lookup before anything can be read.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(tag = "kind")]
 pub enum CheckoutOutcome {
@@ -45,10 +45,6 @@ pub enum CheckoutOutcome {
 }
 
 /// The outcome of a pull attempt.
-/// Serialized with an internal `kind` tag so TypeScript sees a discriminated
-/// union it can narrow with a `switch`, matching how `AppError` already
-/// crosses the boundary. The default external tagging generates a shape that
-/// needs a key lookup before anything can be read.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(tag = "kind")]
 pub enum PullOutcome {
@@ -73,10 +69,6 @@ pub enum PullOutcome {
 }
 
 /// The outcome of a push attempt.
-/// Serialized with an internal `kind` tag so TypeScript sees a discriminated
-/// union it can narrow with a `switch`, matching how `AppError` already
-/// crosses the boundary. The default external tagging generates a shape that
-/// needs a key lookup before anything can be read.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(tag = "kind")]
 pub enum PushOutcome {
@@ -306,32 +298,16 @@ fn is_non_fast_forward(message: &str) -> bool {
     .any(|marker| message.contains(marker))
 }
 
-/// The commit a remote currently has at `reference`, if it has one.
-fn remote_tip(
-    remote: &mut git2::Remote<'_>,
-    reference: &str,
-) -> Result<Option<git2::Oid>, AppError> {
-    let connection = remote
-        .connect_auth(Direction::Push, Some(remote_callbacks()), None)
-        .map_err(AppError::from_git2_remote)?;
-    Ok(connection
-        .list()?
-        .iter()
-        .find(|head| head.name() == reference)
-        .map(git2::RemoteHead::oid))
-}
-
 /// Pushes the current branch to its remote.
 ///
 /// A non-fast-forward rejection is reported rather than retried with force: the
 /// remote having commits the local branch does not is exactly the case where
 /// forcing destroys someone else's work.
 ///
-/// libgit2 does not compare histories before pushing, and a remote's refusal
-/// arrives as a per-ref status rather than as a failed call. Both are handled
-/// explicitly: the remote's tip is compared with the local branch first, and
-/// any status the server returns is turned into an outcome or an error, so a
-/// push the remote refused can never be reported as pushed.
+/// libgit2 reports many update refusals as per-ref statuses rather than as a
+/// failed call. Those statuses are inspected explicitly so a refused push can
+/// never be reported as successful. The server checks the current remote tip
+/// during the same connection used to attempt the update.
 ///
 /// # Errors
 ///
@@ -344,25 +320,13 @@ pub fn push_current_branch(active: &ActiveRepo) -> Result<PushOutcome, AppError>
     let remote_name = upstream_remote(&repo, &head_name);
     let target_ref = upstream_ref(&repo, &branch_name);
 
-    let local_oid = repo
-        .find_reference(&head_name)?
-        .target()
-        .ok_or_else(|| AppError::Git("the current branch has no commit to push".to_owned()))?;
+    if repo.find_reference(&head_name)?.target().is_none() {
+        return Err(AppError::Git(
+            "the current branch has no commit to push".to_owned(),
+        ));
+    }
 
     let mut remote = repo.find_remote(&remote_name)?;
-
-    if let Some(remote_oid) = remote_tip(&mut remote, &target_ref)? {
-        // A tip this repository does not even have is, by definition, work the
-        // local branch has not seen.
-        let behind = remote_oid != local_oid
-            && (repo.find_commit(remote_oid).is_err()
-                || !repo.graph_descendant_of(local_oid, remote_oid)?);
-        if behind {
-            return Ok(PushOutcome::RejectedNonFastForward {
-                branch: branch_name,
-            });
-        }
-    }
 
     let refusal: Rc<RefCell<Option<String>>> = Rc::default();
     let mut callbacks = remote_callbacks();

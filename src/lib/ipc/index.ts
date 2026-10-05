@@ -17,41 +17,26 @@ export type {
   DirtyPath,
   PullOutcome,
   PushOutcome,
-  CacheEntry,
-  CacheStatus,
-  ClonedRepository,
   CloneProgressEvent,
-  GitHubAccount,
   GitHubRepository,
   CommitDiff,
   CommitTreeEntry,
-  CommitTreeEntryKind,
   CommitTreePage,
   CommitTreeRequest,
-  DiffOmission,
-  DiffRequest,
   FileChange,
   FileContent,
-  FileContentRequest,
   FileDiff,
   AppError,
   BranchInfo,
   CommitInfo,
   HistoryPage,
-  HistoryRequest,
-  RepositoryChangedEvent,
   RepositoryInfo,
   TagInfo,
-  WorktreeDiffPage,
   WorktreeFileDiff,
   WorktreeFileDiffRequest,
   WorktreeFileContent,
-  WorktreeFileContentRequest,
   WorktreeFingerprint,
   WorktreeSnapshot,
-  WorktreeSnapshotRequest,
-  WatchRequest,
-  RepositoryChangedKind,
 } from "../../bindings";
 
 /** A domain error with a stable category for actionable UI messages. */
@@ -81,9 +66,6 @@ export const openRepository = (path: string) =>
 /** The repository named on the command line, if there was one. */
 export const getStartupRepository = () =>
   result(commands.getStartupRepository());
-/** Validates a repository candidate without changing the UI selection. */
-export const validateRepository = (path: string) =>
-  result(commands.validateRepository(path));
 /** Reads the next bounded history page from its original snapshot. */
 export const getCommits = (path: string, request: HistoryRequest) =>
   result(commands.getCommits(path, request));
@@ -110,16 +92,9 @@ export const listGithubRepositories = () =>
   result(commands.listGithubRepositories());
 /** Clones a repository into the application cache. */
 export const cloneGithubRepository = (
-  cloneUrl: string,
   fullName: string,
   activeRepositoryPath: string | null = null,
-) =>
-  result(
-    commands.cloneGithubRepository(cloneUrl, fullName, activeRepositoryPath),
-  );
-/** Reports what the clone cache holds and the limits it is held to. */
-export const getCloneCacheStatus = () => result(commands.getCloneCacheStatus());
-
+) => result(commands.cloneGithubRepository(fullName, activeRepositoryPath));
 /** Subscribes to clone progress. Returns the unsubscribe function. */
 export const onCloneProgress = events.cloneProgressEvent.listen;
 

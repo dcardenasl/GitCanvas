@@ -123,13 +123,11 @@ pub(crate) fn read_blob_content(
     read_content(blob.content(), path, expand)
 }
 
-/// A file as it stands at one commit.
+/// Shared repository-relative file content and read-limit metadata.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
-pub struct FileContent {
+pub struct FileContentFields {
     /// Repository-relative path of the file.
     pub path: String,
-    /// Commit that supplies the file contents.
-    pub commit_id: String,
     /// Total lines, available even when the text itself is withheld.
     pub lines: u32,
     /// Size in bytes, as a decimal string; a blob can exceed a JavaScript
@@ -139,6 +137,24 @@ pub struct FileContent {
     pub omitted: Option<DiffOmission>,
     /// The text, or `None` whenever `omitted` is set.
     pub text: Option<String>,
+}
+
+/// A file as it stands at one commit.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+pub struct FileContent {
+    /// Shared file content and bounded-read metadata.
+    #[serde(flatten)]
+    pub fields: FileContentFields,
+    /// Commit that supplies the file contents.
+    pub commit_id: String,
+}
+
+impl std::ops::Deref for FileContent {
+    type Target = FileContentFields;
+
+    fn deref(&self) -> &Self::Target {
+        &self.fields
+    }
 }
 
 /// What the caller wants read.
@@ -182,11 +198,44 @@ pub fn get_file_content(
     let content = read_blob_content(&blob, &request.path, request.expand)?;
 
     Ok(FileContent {
-        path: request.path.clone(),
+        fields: FileContentFields {
+            path: request.path.clone(),
+            lines: content.lines,
+            bytes: content.bytes,
+            omitted: content.omitted,
+            text: content.text,
+        },
         commit_id: commit.id().to_string(),
-        lines: content.lines,
-        bytes: content.bytes,
-        omitted: content.omitted,
-        text: content.text,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{DiffOmission, FileContent, FileContentFields};
+
+    #[test]
+    fn file_content_flattens_shared_fields_on_the_wire() {
+        let content = FileContent {
+            fields: FileContentFields {
+                path: "README.md".to_owned(),
+                lines: 3,
+                bytes: "12".to_owned(),
+                omitted: Some(DiffOmission::TooLarge),
+                text: None,
+            },
+            commit_id: "abc123".to_owned(),
+        };
+
+        assert_eq!(
+            serde_json::to_value(content).unwrap(),
+            serde_json::json!({
+                "path": "README.md",
+                "commit_id": "abc123",
+                "lines": 3,
+                "bytes": "12",
+                "omitted": "TooLarge",
+                "text": null
+            })
+        );
+    }
 }

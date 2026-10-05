@@ -1,4 +1,4 @@
-import { ROW_HEIGHT, laneCenterX, rowCenterY } from "../CommitTable/geometry";
+import { ROW_HEIGHT, laneCenterX, rowCenterY } from "../../lib/historyGeometry";
 
 /**
  * SVG path for one outgoing edge.

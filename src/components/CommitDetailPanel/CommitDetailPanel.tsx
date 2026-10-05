@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import type { CommitInfo } from "../../bindings";
 import { userMessage } from "../../lib/errors";
 import { useCommitDiff } from "../../state/diff";
-import { useSession } from "../../state/session";
+import { selectedFileSource, useSession } from "../../state/session";
 import {
   ChangedFilesBrowser,
   type ChangedFilesGroup,
@@ -13,6 +13,7 @@ import {
   formatCommitTime,
   shortId,
 } from "../CommitTable/format";
+import { DiffStat } from "../DiffStat/DiffStat";
 
 import "./CommitDetailPanel.css";
 
@@ -26,9 +27,9 @@ export interface CommitDetailPanelProps {
  * Metadata for the selected commit and the files it changed.
  *
  * The list is navigation, not content: choosing a file opens it in the centre
- * panel, where there is room to read it. Rendering every diff inline in a
- * 310px column, which is what this used to do, made long files unreadable and
- * short ones hard to find.
+ * panel, where there is room to read it. Rendering every diff inline in the
+ * narrow inspector, which this used to do, made long files unreadable and short
+ * ones hard to find.
  */
 export function CommitDetailPanel({
   repositoryPath,
@@ -37,7 +38,7 @@ export function CommitDetailPanel({
   const selection = useSession((state) => state.selection);
   const selectedFilePath =
     selection.kind === "commit" ? selection.filePath : null;
-  const selectedFileSource = selection.kind === "commit" ? "commit" : null;
+  const fileSource = selectedFileSource(selection);
   const selectFile = useSession((state) => state.selectFile);
 
   const diff = useCommitDiff(repositoryPath, commit.id);
@@ -83,11 +84,11 @@ export function CommitDetailPanel({
       )}
 
       {diff.isPending && (
-        <p className="detail-panel__state">Leyendo los archivos…</p>
+        <p className="state detail-panel__state">Leyendo los archivos…</p>
       )}
 
       {diff.error !== null && (
-        <p className="detail-panel__state" role="alert">
+        <p className="state detail-panel__state" role="alert">
           {userMessage(diff.error)}
         </p>
       )}
@@ -104,12 +105,10 @@ export function CommitDetailPanel({
               ? "1 archivo modificado"
               : `${String(diff.data.files.length)} archivos modificados`}
             {" · "}
-            <span className="detail-panel__stat-add">
-              +{diff.data.insertions}
-            </span>{" "}
-            <span className="detail-panel__stat-del">
-              −{diff.data.deletions}
-            </span>
+            <DiffStat
+              insertions={diff.data.insertions}
+              deletions={diff.data.deletions}
+            />
           </p>
         </>
       )}
@@ -122,7 +121,7 @@ export function CommitDetailPanel({
         }}
         groups={changedGroups}
         selectedFilePath={selectedFilePath}
-        selectedFileSource={selectedFileSource}
+        selectedFileSource={fileSource}
         onOpen={(path, source, snapshot) => {
           selectFile(path, source, snapshot ? "snapshot" : "diff");
         }}

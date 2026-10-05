@@ -1,14 +1,13 @@
-import type { VisibleWindow } from "../CommitTable";
 import {
   graphWidth,
   laneCenterX,
   ROW_HEIGHT,
   rowCenterY,
-} from "../CommitTable/geometry";
+  type VisibleWindow,
+} from "../../lib/historyGeometry";
 import { laneColor } from "../../lib/graph-layout/colors";
 import type { GraphRow } from "../../lib/graph-layout/types";
 import { useThemePreferences } from "../../state/themePreferences";
-
 import { edgePath, incomingPath } from "./path";
 
 import "./GraphCanvas.css";

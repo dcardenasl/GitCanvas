@@ -1,14 +1,23 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CommitInfo } from "../../bindings";
 
 import { CommitTable } from "./CommitTable";
-import { ROW_HEIGHT, graphWidth } from "./geometry";
+import { ROW_HEIGHT, graphWidth } from "../../lib/historyGeometry";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 function makeCommits(count: number): CommitInfo[] {
   return Array.from({ length: count }, (_, index) => ({
@@ -165,7 +174,7 @@ describe("CommitTable", () => {
     screen.getAllByRole("option")[0]?.focus();
     await userEvent.keyboard("{Shift>}{F10}{/Shift}");
 
-    expect(await screen.findByRole("menu")).toBeDefined();
+    expect(await screen.findByRole("menu")).toBeInstanceOf(HTMLElement);
     expect(document.activeElement).toBe(
       screen.getByRole("menuitem", { name: "Copiar hash (0000000)" }),
     );
@@ -238,7 +247,7 @@ describe("CommitTable", () => {
     // graph ends up drawn through the commit messages. This shipped once.
     withViewport(ROW_HEIGHT * 10);
 
-    const { container } = render(
+    render(
       <CommitTable
         commits={makeCommits(5)}
         selectedId={null}
@@ -247,11 +256,11 @@ describe("CommitTable", () => {
       />,
     );
 
-    const list = container.querySelector<HTMLElement>(".commit-table__rows");
+    const list = screen.getByRole("listbox", { name: "Historial de commits" });
     const expected = `${String(graphWidth(4))}px`;
 
-    expect(list?.style.getPropertyValue("--graph-width")).toBe(expected);
-    expect(list?.style.paddingLeft).toBe("");
+    expect(list.style.getPropertyValue("--graph-width")).toBe(expected);
+    expect(list.style.paddingLeft).toBe("");
   });
 
   it("names each row for a listener instead of running fields together", () => {
@@ -288,13 +297,71 @@ describe("CommitTable", () => {
     if (row === undefined) throw new Error("no rows rendered");
     fireEvent.contextMenu(row);
 
-    expect(await screen.findByRole("menu")).toBeDefined();
+    expect(await screen.findByRole("menu")).toBeInstanceOf(HTMLElement);
     expect(
       screen.getByRole("menuitem", { name: /Copiar hash completo/ }),
-    ).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
     expect(
       screen.getByRole("menuitem", { name: "Copiar mensaje" }),
-    ).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
+  });
+
+  it("copies the selected commit hash and announces success", async () => {
+    withViewport(ROW_HEIGHT * 10);
+    const commits = makeCommits(3);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    render(
+      <CommitTable
+        commits={commits}
+        selectedId={null}
+        onSelect={() => undefined}
+        maxLanes={1}
+      />,
+    );
+
+    const row = screen.getAllByRole("option")[0];
+    if (row === undefined) throw new Error("no rows rendered");
+    fireEvent.contextMenu(row);
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Copiar hash completo" }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("status").textContent).toBe(
+        "hash completo copiado",
+      );
+    });
+    expect(writeText).toHaveBeenCalledWith(commits[0]?.id);
+  });
+
+  it("announces when the browser refuses to copy a commit hash", async () => {
+    withViewport(ROW_HEIGHT * 10);
+    const commits = makeCommits(3);
+    const writeText = vi.fn().mockRejectedValue(new Error("clipboard denied"));
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    render(
+      <CommitTable
+        commits={commits}
+        selectedId={null}
+        onSelect={() => undefined}
+        maxLanes={1}
+      />,
+    );
+
+    const row = screen.getAllByRole("option")[0];
+    if (row === undefined) throw new Error("no rows rendered");
+    fireEvent.contextMenu(row);
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Copiar hash completo" }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("status").textContent).toBe(
+        "no se pudo copiar el hash completo",
+      );
+    });
+    expect(writeText).toHaveBeenCalledWith(commits[0]?.id);
   });
 
   it("selects the row the context menu was opened on", () => {

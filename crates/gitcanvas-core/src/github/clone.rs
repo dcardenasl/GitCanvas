@@ -137,9 +137,8 @@ pub fn cache_entry_name(full_name: &str) -> Result<String, AppError> {
 
 /// Clones a repository into `cache_root`, reporting progress as it goes.
 ///
-/// `clone_url` must be the repository's own `https://github.com` URL: the
-/// stored token is sent to whatever host is cloned from, so accepting an
-/// arbitrary URL from the interface would hand the token to it.
+/// The remote URL is derived from the validated owner/name pair. Callers
+/// cannot choose a host that would receive the stored GitHub token.
 ///
 /// A private repository authenticates with the stored token; a public one needs
 /// no credentials, so a missing token is not an error until the server asks.
@@ -150,28 +149,12 @@ pub fn cache_entry_name(full_name: &str) -> Result<String, AppError> {
 /// destination cannot be prepared, credentials are rejected, or libgit2 fails
 /// the transfer.
 pub fn clone_repository(
-    clone_url: &str,
     full_name: &str,
     cache_root: &Path,
     on_progress: impl FnMut(CloneProgress),
 ) -> Result<ClonedRepository, AppError> {
     let name = RepositoryName::parse(full_name)?;
-    if !same_remote(clone_url, &name.https_url()) {
-        return Err(AppError::InvalidInput(format!(
-            "{clone_url:?} is not the GitHub URL of {full_name}"
-        )));
-    }
     clone_into_cache(&name.https_url(), &name, cache_root, on_progress)
-}
-
-/// Whether two remote URLs name the same repository, ignoring case, a trailing
-/// `.git` and a trailing slash.
-fn same_remote(left: &str, right: &str) -> bool {
-    fn normalize(url: &str) -> String {
-        let url = url.trim().trim_end_matches('/').to_ascii_lowercase();
-        url.strip_suffix(".git").map_or(url.clone(), str::to_owned)
-    }
-    normalize(left) == normalize(right)
 }
 
 /// Whether the repository at `path` opens and its `origin` is `url`.
@@ -182,7 +165,7 @@ fn origin_matches(path: &Path, url: &str) -> bool {
     let Ok(remote) = repo.find_remote("origin") else {
         return false;
     };
-    remote.url().is_ok_and(|origin| same_remote(origin, url))
+    remote.url().is_ok_and(|origin| origin == url)
 }
 
 /// The transfer itself, with the URL already trusted by the caller.
@@ -381,21 +364,9 @@ mod tests {
     }
 
     #[test]
-    fn a_clone_url_must_belong_to_the_repository_it_claims() {
-        let root = tempfile::tempdir().unwrap();
-        for url in [
-            "https://evil.example/owner/repo.git",
-            "https://github.com/other/repo.git",
-            "http://github.com/owner/repo.git",
-            "file:///tmp/anything",
-        ] {
-            let error = clone_repository(url, "owner/repo", root.path(), |_| {}).unwrap_err();
-            assert!(matches!(error, AppError::InvalidInput(_)), "{url}");
-        }
-        assert!(same_remote(
-            "https://github.com/Owner/Repo",
-            "https://github.com/owner/repo.git/"
-        ));
+    fn clone_url_is_derived_from_the_validated_repository_name() {
+        let name = RepositoryName::parse("Owner/Repo").unwrap();
+        assert_eq!(name.https_url(), "https://github.com/owner/repo.git");
     }
 
     #[test]
@@ -448,7 +419,7 @@ mod tests {
             .url()
             .unwrap()
             .to_owned();
-        assert!(same_remote(&origin, &wanted_url));
+        assert_eq!(origin, wanted_url);
     }
 
     #[test]

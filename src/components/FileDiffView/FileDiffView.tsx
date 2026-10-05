@@ -6,16 +6,15 @@ import type {
   FileContent,
   WorktreeFileContent,
 } from "../../bindings";
-import { userMessage } from "../../lib/errors";
+import { errorKind, userMessage } from "../../lib/errors";
 import { getFileContent, getWorktreeFileContent } from "../../lib/ipc";
-import { errorKind } from "../../lib/errors";
 import { useCommitDiff } from "../../state/diff";
 import { useSession } from "../../state/session";
 import { useWorktreeFileDiff, useWorktreeSnapshot } from "../../state/worktree";
 import { queryKeys } from "../../state/queryKeys";
 import { shortId } from "../CommitTable/format";
-import { LineTable, parseWholeFile } from "../DiffViewer";
-import { DiffViewer } from "../DiffViewer";
+import { DiffViewer, LineTable, parseWholeFile } from "../DiffViewer";
+import { DiffStat } from "../DiffStat/DiffStat";
 
 import "./FileDiffView.css";
 
@@ -239,8 +238,10 @@ export function FileDiffView(props: FileDiffViewProps) {
 
           {file !== undefined && mode === "diff" && (
             <span className="file-diff__stat">
-              <span className="detail-panel__stat-add">+{file.insertions}</span>{" "}
-              <span className="detail-panel__stat-del">−{file.deletions}</span>
+              <DiffStat
+                insertions={file.insertions}
+                deletions={file.deletions}
+              />
             </span>
           )}
           {mode === "file" && whole.data !== undefined && (
@@ -251,22 +252,22 @@ export function FileDiffView(props: FileDiffViewProps) {
 
       <div className="file-diff__body">
         {isWorktree && localSnapshot.error !== null && (
-          <p className="file-diff__state" role="alert">
+          <p className="state file-diff__state" role="alert">
             {userMessage(localSnapshot.error)}
           </p>
         )}
         {mode === "diff" ? (
           <>
             {diff.isPending && (
-              <p className="file-diff__state">Leyendo el diff…</p>
+              <p className="state file-diff__state">Leyendo el diff…</p>
             )}
             {diff.error !== null && (
-              <p className="file-diff__state" role="alert">
+              <p className="state file-diff__state" role="alert">
                 {userMessage(diff.error)}
               </p>
             )}
             {diff.data !== undefined && file === undefined && (
-              <p className="file-diff__state" role="alert">
+              <p className="state file-diff__state" role="alert">
                 {isWorktree
                   ? "Este archivo ya no forma parte de los cambios locales."
                   : `Este commit no modifica ${path}.`}
@@ -286,10 +287,10 @@ export function FileDiffView(props: FileDiffViewProps) {
         ) : (
           <>
             {whole.isPending && (
-              <p className="file-diff__state">Leyendo el archivo…</p>
+              <p className="state file-diff__state">Leyendo el archivo…</p>
             )}
             {whole.error !== null && (
-              <p className="file-diff__state" role="alert">
+              <p className="state file-diff__state" role="alert">
                 {userMessage(whole.error)}
               </p>
             )}
@@ -318,7 +319,7 @@ export function FileDiffView(props: FileDiffViewProps) {
               </div>
             )}
             {whole.data?.text === "" && (
-              <p className="file-diff__state">El archivo está vacío.</p>
+              <p className="state file-diff__state">El archivo está vacío.</p>
             )}
             {wholeLines.length > 0 && (
               <LineTable lines={wholeLines} wrap={wrap} />

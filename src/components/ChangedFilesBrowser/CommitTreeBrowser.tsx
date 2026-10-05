@@ -1,32 +1,20 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
-import type {
-  CommitTreeEntry,
-  FileDiff,
-  FileDiffSummary,
-} from "../../bindings";
-import { userMessage } from "../../lib/errors";
+import type { CommitTreeEntry } from "../../bindings";
+import { compareNames, type ChangedFile } from "../../lib/changedFiles";
 import { getCommitTreePage } from "../../lib/ipc";
 import { queryKeys } from "../../state/queryKeys";
 import { ChangedFileRow } from "../ChangedFileRow/ChangedFileRow";
-
-type ChangedFile = FileDiff | FileDiffSummary;
-
-const TREE_NAME_ORDER = new Intl.Collator("en", {
-  numeric: true,
-  sensitivity: "base",
-});
+import { FolderIcon } from "../FolderIcon/FolderIcon";
+import { RetryError } from "../RetryError/RetryError";
 
 function orderEntries(entries: readonly CommitTreeEntry[]): CommitTreeEntry[] {
   return [...entries].sort((left, right) => {
     const leftDirectory = left.kind === "Directory";
     const rightDirectory = right.kind === "Directory";
     if (leftDirectory !== rightDirectory) return leftDirectory ? -1 : 1;
-    return (
-      TREE_NAME_ORDER.compare(left.name, right.name) ||
-      (left.name < right.name ? -1 : left.name > right.name ? 1 : 0)
-    );
+    return compareNames(left.name, right.name);
   });
 }
 
@@ -84,23 +72,19 @@ export function CommitTreeBrowser({
   return (
     <div className="commit-tree-browser">
       {tree.isPending && (
-        <p className="file-tree__state">Leyendo archivos del commit…</p>
+        <p className="state file-tree__state">Leyendo archivos del commit…</p>
       )}
       {tree.error !== null && (
-        <div className="file-tree__state" role="alert">
-          <p>{userMessage(tree.error)}</p>
-          <button
-            type="button"
-            className="file-tree__retry"
-            disabled={tree.isFetching}
-            onClick={() => void tree.refetch()}
-          >
-            Reintentar
-          </button>
-        </div>
+        <RetryError
+          error={tree.error}
+          isRetrying={tree.isFetching}
+          onRetry={() => void tree.refetch()}
+        />
       )}
       {tree.data !== undefined && entries.length === 0 && (
-        <p className="file-tree__state">Este commit no contiene archivos.</p>
+        <p className="state file-tree__state">
+          Este commit no contiene archivos.
+        </p>
       )}
       {entries.length > 0 && (
         <ul className="file-tree" aria-label="Todos los archivos del commit">
@@ -263,16 +247,7 @@ function TreeDirectory({
         <span className="file-tree__chevron" aria-hidden="true">
           ▸
         </span>
-        <span className="file-tree__folder" aria-hidden="true">
-          <svg viewBox="0 0 16 16" fill="none">
-            <path
-              d="M1.5 4.5h4l1.5 1.5h7.5v6a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1z"
-              stroke="currentColor"
-              strokeLinejoin="round"
-            />
-            <path d="M1.5 6h13" stroke="currentColor" />
-          </svg>
-        </span>
+        <FolderIcon />
         <span className="file-tree__name">{entry.name}</span>
         {changedCount > 0 && (
           <span className="file-tree__count" aria-hidden="true">
@@ -283,23 +258,19 @@ function TreeDirectory({
       {expanded && (
         <div className="file-tree__contents">
           {children.isPending && (
-            <p className="file-tree__state">Leyendo carpeta…</p>
+            <p className="state file-tree__state">Leyendo carpeta…</p>
           )}
           {children.error !== null && (
-            <div className="file-tree__state" role="alert">
-              <p>{userMessage(children.error)}</p>
-              <button
-                type="button"
-                className="file-tree__retry"
-                disabled={children.isFetching}
-                onClick={() => void children.refetch()}
-              >
-                Reintentar
-              </button>
-            </div>
+            <RetryError
+              error={children.error}
+              isRetrying={children.isFetching}
+              onRetry={() => void children.refetch()}
+            />
           )}
           {children.data !== undefined && entries.length === 0 && (
-            <p className="file-tree__state">No hay archivos en esta carpeta.</p>
+            <p className="state file-tree__state">
+              No hay archivos en esta carpeta.
+            </p>
           )}
           {entries.length > 0 && (
             <ul className="file-tree file-tree__children">

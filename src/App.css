@@ -1,6 +1,36 @@
 :root {
   color-scheme: dark;
 
+  /* Reusable spacing, shape, and typography values for the interface. */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 10px;
+  --space-5: 12px;
+  --space-6: 14px;
+  --space-7: 16px;
+  --space-8: 18px;
+  --space-9: 20px;
+  --space-10: 24px;
+  --radius-sm: 4px;
+  --radius-tight: 5px;
+  --radius-md: 6px;
+  --radius-control: 7px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --font-size-micro: 8.5px;
+  --font-size-caption: 10px;
+  --font-size-caption-wide: 10.5px;
+  --font-size-small: 11px;
+  --font-size-small-wide: 11.5px;
+  --font-size-body: 12px;
+  --font-size-body-wide: 12.5px;
+  --font-size-ui: 13px;
+  --font-size-subheading: 14.5px;
+  --font-size-title: 15px;
+  --font-size-heading: 18px;
+  --focus-ring: 2px solid var(--accent);
+
   /* Tokens from DESIGN.md. */
   --surface: #10131a;
   --surface-sidebar: #14161d;
@@ -40,13 +70,9 @@
   --empty-brand-surface: #f4eef9;
   --graph-outline: #10131a;
   --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    sans-serif;
+  font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }

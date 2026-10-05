@@ -8,8 +8,7 @@ use gitcanvas_core::{
     error::AppError,
     github::{
         api::{GitHubAccount, GitHubClient, GitHubRepositoryList},
-        cache::{self, CacheStatus},
-        clone, credentials,
+        cache, clone, credentials,
     },
     repository::ActiveRepo,
 };
@@ -87,7 +86,6 @@ pub async fn list_github_repositories() -> Result<GitHubRepositoryList, AppError
 #[tauri::command]
 #[specta::specta]
 pub async fn clone_github_repository(
-    clone_url: String,
     full_name: String,
     active_repository_path: Option<String>,
     allowed: tauri::State<'_, AllowedRepos>,
@@ -105,7 +103,7 @@ pub async fn clone_github_repository(
         .and_then(|path| cache::cached_entry_name(&destination, std::path::Path::new(path)));
 
     let cloned = write("clone_github_repository", move || {
-        let cloned = clone::clone_repository(&clone_url, &full_name, &destination, |progress| {
+        let cloned = clone::clone_repository(&full_name, &destination, |progress| {
             publish(CloneProgressEvent {
                 full_name: full_name.clone(),
                 received_objects: progress.received_objects,
@@ -137,17 +135,4 @@ pub async fn clone_github_repository(
     });
 
     Ok(cloned)
-}
-
-/// Reports what the clone cache holds and the limits it is held to.
-#[tauri::command]
-#[specta::specta]
-pub async fn get_clone_cache_status(
-    root: tauri::State<'_, CacheRoot>,
-) -> Result<CacheStatus, AppError> {
-    let destination = root.0.clone();
-    read("get_clone_cache_status", move || {
-        cache::status(&destination)
-    })
-    .await
 }

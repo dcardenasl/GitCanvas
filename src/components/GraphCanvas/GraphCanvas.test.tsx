@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { layout } from "../../lib/graph-layout/layout";
 import type { GraphCommit } from "../../lib/graph-layout/types";
-import { ROW_HEIGHT } from "../CommitTable/geometry";
+import { ROW_HEIGHT } from "../../lib/historyGeometry";
 import { laneColor } from "../../lib/graph-layout/colors";
 import { useThemePreferences } from "../../state/themePreferences";
 

@@ -1,6 +1,7 @@
-import { QueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
+import { createTestQueryClient } from "../test/test-utils";
 import { invalidateLive, queryKeys } from "./queryKeys";
 
 const PATH = "/repo";
@@ -19,9 +20,7 @@ const FILE_DIFF_REQUEST = {
 };
 
 function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  return createTestQueryClient();
 }
 
 function seedLiveQueries(client: QueryClient): void {

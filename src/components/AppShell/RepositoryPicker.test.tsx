@@ -3,18 +3,16 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { RepositoryInfo } from "../../bindings";
+import { createIpcMocks } from "../../test/test-utils";
 
 const open = vi.fn<(options: unknown) => Promise<string | null>>();
-const openRepository = vi.fn<(path: string) => Promise<RepositoryInfo>>();
+const mockIpc = createIpcMocks(["openRepository"] as const);
+const { openRepository } = mockIpc;
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: (options: unknown) => open(options),
 }));
-vi.mock("../../lib/ipc", () => ({
-  openRepository: (path: string) => openRepository(path),
-  IpcError: class extends Error {},
-}));
+vi.mock("../../lib/ipc", () => mockIpc);
 
 const { RepositoryPicker } = await import("./RepositoryPicker");
 const { useSession } = await import("../../state/session");
@@ -154,7 +152,24 @@ describe("RepositoryPicker", () => {
     render(<RepositoryPicker />);
     await userEvent.click(screen.getByRole("button"));
 
-    expect(await screen.findByRole("alert")).toBeDefined();
+    expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
     expect(screen.getByRole("button").hasAttribute("disabled")).toBe(false);
+  });
+
+  it("uses the shared Spanish summary for backend errors", async () => {
+    open.mockResolvedValue("/not/a/repo");
+    openRepository.mockRejectedValue(
+      Object.assign(new Error("Choose a working-tree root containing .git"), {
+        kind: "InvalidRepository",
+      }),
+    );
+
+    render(<RepositoryPicker />);
+    await userEvent.click(screen.getByRole("button"));
+
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      "No es un repositorio válido: Choose a working-tree root containing .git",
+    );
   });
 });

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { safeStorage } from "../lib/safeStorage";
+
 /** Panel width limits, in pixels. */
 export const SIDEBAR = { min: 160, max: 420, initial: 220 } as const;
 /** Minimum, maximum, and initial widths of the inspector panel, in pixels. */
@@ -57,7 +59,7 @@ function clamp(value: number, min: number, max: number): number {
  */
 function read(): Layout {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeStorage.get(STORAGE_KEY);
     if (raw === null) return DEFAULTS;
 
     const parsed: unknown = JSON.parse(raw);
@@ -118,11 +120,7 @@ export function useLayout() {
   const inspector = Math.min(layout.inspector, inspectorMax);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
-    } catch {
-      // A layout that cannot be persisted still works for this session.
-    }
+    safeStorage.set(STORAGE_KEY, JSON.stringify(layout));
   }, [layout]);
 
   return {

@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,6 +9,7 @@ import type {
   CommitInfo,
   HistoryPage,
 } from "../../bindings";
+import { renderWithQueryClient } from "../../test/test-utils";
 
 const getCommits = vi.fn<() => Promise<HistoryPage>>();
 const getCommitDiff = vi.fn<() => Promise<CommitDiff>>();
@@ -81,23 +81,39 @@ const COMMIT: CommitInfo = {
 };
 
 function renderShell() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={client}>
-      <AppShell />
-    </QueryClientProvider>,
-  );
+  return renderWithQueryClient(<AppShell />);
 }
 
-/**
- * The grid declares five columns. Rendering any other number of children
- * shifts every later one into the wrong column — which once dropped the file
- * view into the sidebar's zero-width slot and left the inspector filling the
- * window. The count is the invariant, so it is what gets asserted.
- */
-const GRID_CHILDREN = 5;
+function gridForHistory(): HTMLElement {
+  const history = screen.getByRole("main", { name: "Historial" });
+  const grid = history.parentElement;
+  if (grid === null)
+    throw new Error("History must be inside the application grid");
+  return grid;
+}
+
+function expectGridOrder(
+  inspectorName: "Cambios locales" | "Detalle del commit",
+) {
+  const grid = gridForHistory();
+  const slots = Array.from(grid.children);
+  expect(slots).toHaveLength(5);
+  expect(slots[0]).toBe(
+    screen.getByLabelText("Ramas y etiquetas", { selector: "aside" }),
+  );
+  expect(slots[1]).toBe(
+    screen.getByLabelText("Ancho de la barra lateral", {
+      selector: '[role="separator"]',
+    }),
+  );
+  expect(slots[2]).toBe(screen.getByRole("main", { name: "Historial" }));
+  expect(slots[3]).toBe(
+    screen.getByRole("separator", { name: "Ancho del panel de detalle" }),
+  );
+  expect(slots[4]).toBe(
+    screen.getByRole("complementary", { name: inspectorName }),
+  );
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -139,66 +155,46 @@ afterEach(cleanup);
 
 describe("AppShell layout", () => {
   it("keeps the grid children matched to its columns with nothing selected", async () => {
-    const { container } = renderShell();
-
-    await waitFor(() => {
-      expect(container.querySelector(".app-shell__body")).not.toBeNull();
-    });
-    expect(container.querySelector(".app-shell__body")?.children).toHaveLength(
-      GRID_CHILDREN,
-    );
+    renderShell();
+    await screen.findByRole("complementary", { name: "Cambios locales" });
+    expectGridOrder("Cambios locales");
   });
 
   it("keeps them matched with a commit selected", async () => {
     useSession.setState({
       selection: { kind: "commit", commitId: COMMIT.id, filePath: null },
     });
-    const { container } = renderShell();
-
-    await waitFor(() => {
-      expect(container.querySelector(".detail-panel")).not.toBeNull();
-    });
-    expect(container.querySelector(".app-shell__body")?.children).toHaveLength(
-      GRID_CHILDREN,
-    );
+    renderShell();
+    await screen.findByRole("complementary", { name: "Detalle del commit" });
+    expectGridOrder("Detalle del commit");
   });
 
   it("keeps them matched while a file is open and the sidebar is collapsed", async () => {
     useSession.setState({
       selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },
     });
-    const { container } = renderShell();
-
-    await waitFor(() => {
-      expect(container.querySelector(".file-diff")).not.toBeNull();
-    });
-
-    const body = container.querySelector(".app-shell__body");
-    expect(body?.children).toHaveLength(GRID_CHILDREN);
+    renderShell();
+    await screen.findByRole("region", { name: "Cambios en a.txt" });
+    expectGridOrder("Detalle del commit");
 
     // The sidebar gave up its width but kept its place; the file view must be
     // in the flexible column, not in the collapsed one.
-    const sidebar = container.querySelector(".sidebar");
-    expect(sidebar?.hasAttribute("hidden")).toBe(true);
-    expect(body?.children[0]).toBe(sidebar);
-    expect(body?.children[2]?.classList.contains("app-shell__history")).toBe(
-      true,
-    );
+    const sidebar = screen.getByLabelText("Ramas y etiquetas", {
+      selector: "aside",
+    });
+    expect(sidebar.hasAttribute("hidden")).toBe(true);
   });
 
   it("collapses the sidebar to zero width rather than unmounting it", async () => {
     useSession.setState({
       selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },
     });
-    const { container } = renderShell();
+    renderShell();
+    await screen.findByRole("region", { name: "Cambios en a.txt" });
 
-    await waitFor(() => {
-      expect(container.querySelector(".file-diff")).not.toBeNull();
-    });
-
-    const body = container.querySelector<HTMLElement>(".app-shell__body");
-    expect(body?.style.getPropertyValue("--sidebar-width")).toBe("0px");
-    expect(body?.style.getPropertyValue("--sidebar-divider")).toBe("0px");
+    const body = gridForHistory();
+    expect(body.style.getPropertyValue("--sidebar-width")).toBe("0px");
+    expect(body.style.getPropertyValue("--sidebar-divider")).toBe("0px");
   });
 });
 
@@ -216,20 +212,26 @@ describe("AppShell push confirmation", () => {
     ]);
     renderShell();
 
-    const push = await screen.findByRole("button", { name: "Push" });
+    const push = await screen.findByRole("button", {
+      name: "Enviar cambios",
+    });
     await waitFor(() => {
       expect(push).toHaveProperty("disabled", false);
     });
     await userEvent.click(push);
 
-    const dialog = await screen.findByText(/Se van a enviar los commits de/);
-    expect(dialog.querySelector("strong")?.textContent).toBe("feature/login");
+    const confirmation = await screen.findByRole("dialog", { hidden: true });
+    expect(within(confirmation).getByText("feature/login")).toBeInstanceOf(
+      HTMLElement,
+    );
   });
 
   it("keeps push disabled while no branch is checked out", async () => {
     renderShell();
 
-    const push = await screen.findByRole("button", { name: "Push" });
+    const push = await screen.findByRole("button", {
+      name: "Enviar cambios",
+    });
     expect(push).toHaveProperty("disabled", true);
   });
 });
@@ -241,8 +243,10 @@ describe("AppShell toolbar", () => {
 
     expect(
       await screen.findByText(/Abre un repositorio para ver su historial/),
-    ).toBeDefined();
-    expect(screen.getByText("Ningún repositorio abierto")).toBeDefined();
+    ).toBeInstanceOf(HTMLElement);
+    expect(screen.getByText("Ningún repositorio abierto")).toBeInstanceOf(
+      HTMLElement,
+    );
   });
 
   it("opens the repository named on the command line", async () => {
@@ -301,7 +305,9 @@ describe("AppShell toolbar", () => {
     getStartupRepository.mockRejectedValue(new Error("no argv"));
     renderShell();
 
-    expect(await screen.findByText("Ningún repositorio abierto")).toBeDefined();
+    expect(
+      await screen.findByText("Ningún repositorio abierto"),
+    ).toBeInstanceOf(HTMLElement);
   });
 
   it("titles the window with the repository it shows", async () => {
@@ -331,7 +337,9 @@ describe("AppShell toolbar", () => {
     const toggle = await screen.findByRole("button", { name: "GitHub" });
 
     await userEvent.click(toggle);
-    expect(await screen.findByText("Conectar con GitHub")).toBeDefined();
+    expect(await screen.findByText("Conectar con GitHub")).toBeInstanceOf(
+      HTMLElement,
+    );
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
 
     await userEvent.click(toggle);
@@ -364,19 +372,18 @@ describe("AppShell toolbar", () => {
     useSession.setState({
       selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },
     });
-    const { container } = renderShell();
+    renderShell();
 
     const pin = await screen.findByRole("button", { name: "Ramas" });
     expect(pin.getAttribute("aria-pressed")).toBe("false");
-    expect(container.querySelector(".sidebar")?.hasAttribute("hidden")).toBe(
-      true,
-    );
+    const sidebar = screen.getByLabelText("Ramas y etiquetas", {
+      selector: "aside",
+    });
+    expect(sidebar.hasAttribute("hidden")).toBe(true);
 
     await userEvent.click(pin);
 
     expect(pin.getAttribute("aria-pressed")).toBe("true");
-    expect(container.querySelector(".sidebar")?.hasAttribute("hidden")).toBe(
-      false,
-    );
+    expect(sidebar.hasAttribute("hidden")).toBe(false);
   });
 });

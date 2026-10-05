@@ -132,7 +132,7 @@ fn last_used(path: &Path) -> SystemTime {
 /// Best effort: failing to record a use must never fail the operation that
 /// prompted it, so the outcome is reported to the caller only as a `bool`.
 #[must_use]
-pub fn touch(entry: &Path) -> bool {
+fn touch(entry: &Path) -> bool {
     let Some(cache_root) = entry.parent() else {
         return false;
     };
@@ -158,9 +158,12 @@ pub(crate) fn touch_locked(entry: &Path) -> bool {
 /// from their own folders are not the cache's to mark.
 #[must_use]
 pub fn touch_if_cached(cache_root: &Path, repository: &Path) -> bool {
-    let root = cache_root
-        .canonicalize()
-        .unwrap_or_else(|_| cache_root.to_path_buf());
+    let Ok(root) = cache_root.canonicalize() else {
+        return false;
+    };
+    let Ok(repository) = repository.canonicalize() else {
+        return false;
+    };
     let Ok(relative) = repository.strip_prefix(&root) else {
         return false;
     };

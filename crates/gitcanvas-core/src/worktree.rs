@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use crate::{
-    blob::{self, ContentRead},
+    blob::{self, ContentRead, FileContentFields},
     diff::{self, FileDiff, FileDiffSummary},
     error::AppError,
     pagination::resolve_page_size,
@@ -41,7 +41,7 @@ pub enum WorktreeSide {
 impl WorktreeSide {
     /// Returns whether this side represents staged changes.
     #[must_use]
-    pub const fn is_staged(self) -> bool {
+    const fn is_staged(self) -> bool {
         matches!(self, Self::Staged)
     }
 }
@@ -136,16 +136,17 @@ pub struct WorktreeFileContent {
     pub side: WorktreeSide,
     /// Revision from which the file was read.
     pub revision: String,
-    /// Repository-relative file path.
-    pub path: String,
-    /// Number of text lines, when available.
-    pub lines: u32,
-    /// File size in bytes represented as decimal text.
-    pub bytes: String,
-    /// Why text was omitted, if applicable.
-    pub omitted: Option<diff::DiffOmission>,
-    /// File text, or `None` when omitted.
-    pub text: Option<String>,
+    /// Shared file content and bounded-read metadata.
+    #[serde(flatten)]
+    pub fields: FileContentFields,
+}
+
+impl std::ops::Deref for WorktreeFileContent {
+    type Target = FileContentFields;
+
+    fn deref(&self) -> &Self::Target {
+        &self.fields
+    }
 }
 
 /// Lightweight revision used by the fallback poller and stale-read guard.
@@ -261,11 +262,13 @@ pub fn get_worktree_file_content(
     Ok(WorktreeFileContent {
         side: request.side,
         revision: before,
-        path: request.path.clone(),
-        lines: content.lines,
-        bytes: content.bytes,
-        omitted: content.omitted,
-        text: content.text,
+        fields: FileContentFields {
+            path: request.path.clone(),
+            lines: content.lines,
+            bytes: content.bytes,
+            omitted: content.omitted,
+            text: content.text,
+        },
     })
 }
 
@@ -364,14 +367,15 @@ fn page(
         .ok_or_else(|| AppError::StaleCursor("worktree page is no longer available".into()))?
         .to_vec();
     let next_cursor = (end < files.len()).then(|| format!("{revision}:{end}"));
-    let insertions = files
-        .iter()
-        .map(|file| file.insertions)
-        .fold(0u32, u32::saturating_add);
-    let deletions = files
-        .iter()
-        .map(|file| file.deletions)
-        .fold(0u32, u32::saturating_add);
+    let (insertions, deletions) =
+        files
+            .iter()
+            .fold((0_u32, 0_u32), |(insertions, deletions), file| {
+                (
+                    insertions.saturating_add(file.insertions),
+                    deletions.saturating_add(file.deletions),
+                )
+            });
 
     Ok(WorktreeDiffPage {
         side,
@@ -664,5 +668,39 @@ fn ensure_revision(actual: &str, expected: &str) -> Result<(), AppError> {
         Err(AppError::WorktreeChanged(
             "repository revision is stale".into(),
         ))
+    }
+}
+
+#[cfg(test)]
+mod serialization_tests {
+    use super::{WorktreeFileContent, WorktreeSide};
+    use crate::{blob::FileContentFields, diff::DiffOmission};
+
+    #[test]
+    fn worktree_content_flattens_shared_fields_on_the_wire() {
+        let content = WorktreeFileContent {
+            side: WorktreeSide::Unstaged,
+            revision: "revision-1".to_owned(),
+            fields: FileContentFields {
+                path: "README.md".to_owned(),
+                lines: 3,
+                bytes: "12".to_owned(),
+                omitted: Some(DiffOmission::TooLarge),
+                text: None,
+            },
+        };
+
+        assert_eq!(
+            serde_json::to_value(content).unwrap(),
+            serde_json::json!({
+                "side": "unstaged",
+                "revision": "revision-1",
+                "path": "README.md",
+                "lines": 3,
+                "bytes": "12",
+                "omitted": "TooLarge",
+                "text": null
+            })
+        );
     }
 }

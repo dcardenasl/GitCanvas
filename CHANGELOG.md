@@ -96,6 +96,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Localized Git actions.** The toolbar, action notices, worktree label and GitHub token
+  field use Spanish; repository opening uses the shared error summary.
 - **Core diff and refresh limits.** Per-file statistics no longer allocate a `Patch` for
   every changed file, worktree revisions use incremental metadata hashing, invalid page
   sizes are rejected, and watcher events flush after at most two seconds.

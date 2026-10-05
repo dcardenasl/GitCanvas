@@ -1,6 +1,6 @@
 .commit-search {
   display: flex;
-  gap: 8px;
+  gap: var(--space-3);
   align-items: center;
 }
 
@@ -8,11 +8,11 @@
   width: 220px;
   padding: 5px 10px;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-control);
   background: var(--control);
   color: var(--ink);
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--font-size-body-wide);
 }
 
 .commit-search__input::placeholder {
@@ -21,7 +21,7 @@
 
 .commit-search__input:focus-visible {
   border-color: var(--accent);
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -29,7 +29,7 @@
   flex-shrink: 0;
   color: var(--ink-faint);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--font-size-small);
   white-space: nowrap;
 }
 

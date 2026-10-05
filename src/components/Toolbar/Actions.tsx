@@ -21,7 +21,7 @@ export function Actions({ actions, currentBranch }: ActionsProps) {
         disabled={busy}
         onClick={actions.pull}
       >
-        {actions.pulling ? "Pull…" : "Pull"}
+        {actions.pulling ? "Trayendo…" : "Traer cambios"}
       </button>
       <button
         type="button"
@@ -29,7 +29,7 @@ export function Actions({ actions, currentBranch }: ActionsProps) {
         disabled={busy || currentBranch === null}
         onClick={actions.requestPush}
       >
-        {actions.pushing ? "Push…" : "Push"}
+        {actions.pushing ? "Enviando…" : "Enviar cambios"}
       </button>
 
       {notice !== null && (

@@ -18,6 +18,7 @@ use std::{
 };
 
 use gitcanvas_core::{
+    error::AppError,
     repository::ActiveRepo,
     watch::{watch_repository, ChangeScope, WatchEvent},
 };
@@ -45,6 +46,26 @@ fn wait_until_quiet<T>(receiver: &Receiver<T>) {
             }
             Err(mpsc::RecvTimeoutError::Disconnected) => {
                 panic!("watcher event channel disconnected before settling")
+            }
+        }
+    }
+}
+
+fn wait_until_disconnected<T>(receiver: &Receiver<T>) {
+    let deadline = Instant::now()
+        .checked_add(WAIT)
+        .expect("deadline is representable");
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        assert!(
+            !remaining.is_zero(),
+            "watcher callback channel remained connected after drop"
+        );
+        match receiver.recv_timeout(remaining) {
+            Ok(_) => {}
+            Err(mpsc::RecvTimeoutError::Disconnected) => return,
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                panic!("watcher callback channel remained connected after drop")
             }
         }
     }
@@ -157,6 +178,8 @@ fn stops_reporting_once_the_handle_is_dropped() {
     wait_until_quiet(&rx);
 
     drop(watcher);
+    wait_until_disconnected(&rx);
+    calls.store(0, Ordering::SeqCst);
 
     fixture.commit_files(
         "refs/heads/main",
@@ -167,8 +190,11 @@ fn stops_reporting_once_the_handle_is_dropped() {
     );
     // A watch that outlives the repository nobody is looking at any more keeps
     // invalidating caches for a window that has moved on.
+    assert!(matches!(
+        rx.recv_timeout(QUIET),
+        Err(mpsc::RecvTimeoutError::Disconnected)
+    ));
     assert_eq!(calls.load(Ordering::SeqCst), 0);
-    assert!(rx.try_recv().is_err());
 }
 
 #[test]
@@ -198,5 +224,8 @@ fn reports_index_changes_as_worktree_changes() {
 #[test]
 fn watching_a_path_that_is_not_a_repository_is_an_error() {
     let dir = tempfile::tempdir().unwrap();
-    assert!(ActiveRepo::validate(dir.path()).is_err());
+    assert!(matches!(
+        ActiveRepo::validate(dir.path()),
+        Err(AppError::InvalidRepository(_))
+    ));
 }

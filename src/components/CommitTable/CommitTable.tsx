@@ -11,15 +11,19 @@ import {
 import type { CommitInfo } from "../../bindings";
 import type { RefBadge } from "../../state/refs";
 import { copyText } from "../../lib/clipboard";
+import {
+  graphWidth,
+  OVERSCAN,
+  ROW_HEIGHT,
+  type VisibleWindow,
+} from "../../lib/historyGeometry";
 import { ContextMenu } from "../ContextMenu";
 
 import { authorInitials, formatCommitTime, shortId } from "./format";
-import { OVERSCAN, ROW_HEIGHT, graphWidth } from "./geometry";
-
 import "./CommitTable.css";
 
 /** History rows, selection, graph dimensions, and navigation callbacks. */
-export interface CommitTableProps {
+interface CommitTableProps {
   readonly commits: readonly CommitInfo[];
   readonly commitIndexById?: ReadonlyMap<string, number>;
   readonly selectedId: string | null;
@@ -56,13 +60,6 @@ export interface CommitTableProps {
    * graph is to see where the branches are without cross-referencing a list.
    */
   readonly refsByCommit?: ReadonlyMap<string, readonly RefBadge[]>;
-}
-
-/** Inclusive row range currently mounted, plus the total scrolled height. */
-export interface VisibleWindow {
-  readonly startIndex: number;
-  readonly endIndex: number;
-  readonly totalHeight: number;
 }
 
 /** A spoken description of a row: what it is, who wrote it, and when. */

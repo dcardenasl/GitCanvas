@@ -1,6 +1,6 @@
-import type { FileChange, FileDiff, FileDiffSummary } from "../../bindings";
-
-import "../CommitDetailPanel/CommitDetailPanel.css";
+import type { FileChange } from "../../bindings";
+import type { ChangedFile } from "../../lib/changedFiles";
+import { DiffStat } from "../DiffStat/DiffStat";
 
 const CHANGE_MARK: Record<FileChange, string> = {
   Added: "A",
@@ -21,8 +21,6 @@ const CHANGE_LABEL: Record<FileChange, string> = {
   TypeChanged: "Tipo cambiado",
   Other: "Otro",
 };
-
-type ChangedFile = FileDiff | FileDiffSummary;
 
 interface ChangedFileRowProps {
   readonly file: ChangedFile | null;
@@ -82,10 +80,7 @@ export function ChangedFileRow({
         </span>
         <span className="file-row__stat">
           {file === null ? null : file.omitted === null ? (
-            <>
-              <span className="detail-panel__stat-add">+{file.insertions}</span>{" "}
-              <span className="detail-panel__stat-del">−{file.deletions}</span>
-            </>
+            <DiffStat insertions={file.insertions} deletions={file.deletions} />
           ) : (
             <span className="file-row__omitted">
               {file.omitted === "Binary" ? "binario" : "grande"}

@@ -6,7 +6,7 @@
 
 .toolbar {
   display: flex;
-  gap: 12px;
+  gap: var(--space-5);
   align-items: center;
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
@@ -15,7 +15,7 @@
 
 .toolbar__repository {
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--font-size-ui);
   font-weight: 600;
 }
 
@@ -24,7 +24,7 @@
   width: 24px;
   height: 24px;
   flex: 0 0 24px;
-  border-radius: 5px;
+  border-radius: var(--radius-tight);
 }
 
 .toolbar__spacer {
@@ -35,15 +35,14 @@
   display: grid;
 
   /* Fixed shape whether or not a commit is selected. The inspector column is
-     reserved from the start so choosing a commit does not shrink the history
-     by 310px, reflowing every row and redrawing the graph under the cursor
-     that just clicked. */
+     reserved from the start so choosing a commit does not resize the history,
+     reflowing every row and redrawing the graph under the cursor that clicked. */
   grid-template-columns:
-    var(--sidebar-width, 220px)
+    var(--sidebar-width)
     var(--sidebar-divider, auto)
     minmax(0, 1fr)
     auto
-    var(--inspector-width, 310px);
+    var(--inspector-width);
   min-height: 0;
 }
 
@@ -72,7 +71,7 @@
 .app-shell__empty {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-3);
   align-items: center;
   justify-content: center;
 }
@@ -81,7 +80,7 @@
   display: block;
   width: min(280px, calc(100vw - 48px));
   height: auto;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-2);
   padding: 8px 14px;
   border-radius: 9px;
   background: var(--empty-brand-surface);
@@ -90,14 +89,13 @@
 .app-shell__empty-hint {
   margin: 0;
   color: var(--ink-faint);
-  font-size: 13px;
+  font-size: var(--font-size-ui);
 }
 
 .history-view__state {
   margin: 0;
-  padding: 16px;
-  color: var(--ink-faint);
-  font-size: 13px;
+  padding: var(--space-7);
+  font-size: var(--font-size-ui);
 }
 
 .history-view {
@@ -114,7 +112,7 @@
 .working-tree-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
-  gap: 12px;
+  gap: var(--space-5);
   align-items: center;
   min-height: 40px;
   padding: 0 14px;
@@ -132,7 +130,7 @@
 }
 
 .working-tree-row:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: -2px;
 }
 
@@ -143,17 +141,17 @@
 .working-tree-row__marker {
   padding: 2px 6px;
   border: 1px solid var(--accent);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   color: var(--accent);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--font-size-caption);
   font-weight: 700;
 }
 
 .working-tree-row__title {
   overflow: hidden;
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--font-size-ui);
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -163,44 +161,19 @@
 .working-tree-row__stats {
   color: var(--ink-faint);
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--font-size-caption-wide);
   white-space: nowrap;
 }
 
 .repository-picker {
   display: flex;
-  gap: 10px;
+  gap: var(--space-4);
   align-items: center;
 }
 
 .repository-picker__error {
   margin: 0;
-  color: var(--danger);
-  font-size: 12px;
-}
-
-.button {
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--control);
-  color: var(--ink);
-  font: inherit;
-  font-size: 13px;
-  cursor: default;
-}
-
-.button:hover:not(:disabled) {
-  border-color: var(--accent);
-}
-
-.button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.button:disabled {
-  opacity: 0.55;
+  font-size: var(--font-size-body);
 }
 
 /* A spinner rather than only a label change: the wait is long enough that a
@@ -228,11 +201,4 @@
   .button__spinner {
     animation-duration: 2.4s;
   }
-}
-
-.button--primary {
-  border-color: transparent;
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-weight: 600;
 }

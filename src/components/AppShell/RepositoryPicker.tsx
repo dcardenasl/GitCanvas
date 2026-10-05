@@ -2,49 +2,22 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useRef, useState } from "react";
 
 import { userMessage } from "../../lib/errors";
-import { IpcError, openRepository } from "../../lib/ipc";
+import { openRepository } from "../../lib/ipc";
 import { afterPaint } from "../../lib/paint";
+import { safeStorage } from "../../lib/safeStorage";
 import { useSession } from "../../state/session";
 
 /** Where the picker last opened, so it starts there next time. */
 const LAST_DIRECTORY_KEY = "gitcanvas.lastDirectory";
 
-/** Human wording for each failure the engine can report. */
-function messageFor(error: unknown): string {
-  if (error instanceof IpcError) {
-    switch (error.kind) {
-      case "InvalidRepository":
-        return "Esa carpeta no es un repositorio Git.";
-      case "Io":
-        return "No se pudo acceder a esa ruta.";
-      case "InvalidInput":
-        return "La ruta indicada no es válida.";
-      case "StaleCursor":
-        return "El historial cambió mientras se leía. Vuelve a abrir el repositorio.";
-      default:
-        break;
-    }
-  }
-  return userMessage(error);
-}
-
 /** The directory the picker should start in, if one was remembered. */
 function lastDirectory(): string | undefined {
-  try {
-    return localStorage.getItem(LAST_DIRECTORY_KEY) ?? undefined;
-  } catch {
-    // Storage can be unavailable; starting from the default is not a failure.
-    return undefined;
-  }
+  return safeStorage.get(LAST_DIRECTORY_KEY) ?? undefined;
 }
 
 function rememberDirectory(path: string): void {
-  try {
-    const parent = path.slice(0, path.lastIndexOf("/"));
-    if (parent !== "") localStorage.setItem(LAST_DIRECTORY_KEY, parent);
-  } catch {
-    // Forgetting where we were is not worth failing an open over.
-  }
+  const parent = path.slice(0, path.lastIndexOf("/"));
+  if (parent !== "") safeStorage.set(LAST_DIRECTORY_KEY, parent);
 }
 
 /** What the button is doing right now. */
@@ -101,7 +74,7 @@ export function RepositoryPicker() {
       rememberDirectory(selected);
       setRepository(await openRepository(selected));
     } catch (cause) {
-      setError(messageFor(cause));
+      setError(userMessage(cause));
     } finally {
       // Runs on cancel too, so the button cannot be left disabled by someone
       // dismissing the panel.
@@ -134,7 +107,7 @@ export function RepositoryPicker() {
         {label}
       </button>
       {error !== null && (
-        <p className="repository-picker__error" role="alert">
+        <p className="state state--error repository-picker__error" role="alert">
           {error}
         </p>
       )}

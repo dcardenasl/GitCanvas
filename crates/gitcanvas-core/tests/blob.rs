@@ -167,7 +167,7 @@ fn a_file_with_invalid_utf8_is_shown_rather_than_refused() {
         content.text.is_some(),
         "a stray byte must not hide the file"
     );
-    assert!(content.text.unwrap().contains("still readable"));
+    assert!(content.text.as_ref().unwrap().contains("still readable"));
 }
 
 #[test]

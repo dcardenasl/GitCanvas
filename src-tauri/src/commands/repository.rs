@@ -38,16 +38,6 @@ pub async fn open_repository(
     .await
 }
 
-/// Checks a candidate working-tree root without changing application selection.
-#[tauri::command]
-#[specta::specta]
-pub async fn validate_repository(path: String) -> Result<RepositoryInfo, AppError> {
-    read("validate_repository", move || {
-        ActiveRepo::validate(&path)?.info()
-    })
-    .await
-}
-
 /// Reads a bounded history page using the selected repository's canonical path.
 #[tauri::command]
 #[specta::specta]

@@ -1,6 +1,7 @@
 import { userMessage } from "../../lib/errors";
-import { useSession, type FileSource } from "../../state/session";
+import { selectedFileSource, useSession } from "../../state/session";
 import { useWorktreeFiles, type LocalSide } from "../../state/worktree";
+import { DiffStat } from "../DiffStat/DiffStat";
 import {
   ChangedFilesBrowser,
   type ChangedFilesGroup,
@@ -32,8 +33,7 @@ export function WorkingTreeDetailPanel({
   const localData = local.data;
   const selectedFilePath =
     selection.kind === "worktree" ? selection.filePath : null;
-  const selectedFileSource: FileSource | null =
-    selection.kind === "worktree" ? selection.side : null;
+  const fileSource = selectedFileSource(selection);
   const groups: ChangedFilesGroup[] = [];
 
   if (staged !== null && staged.files.length > 0) {
@@ -59,17 +59,17 @@ export function WorkingTreeDetailPanel({
 
   return (
     <aside className="detail-panel" aria-label="Cambios locales">
-      <p className="detail-panel__hash">working tree</p>
+      <p className="detail-panel__hash">Árbol de trabajo</p>
       <h2 className="detail-panel__summary">Cambios locales</h2>
       <p className="detail-panel__local-hint">
         Lo que cambió en disco desde el último commit.
       </p>
 
       {local.isPending && !localData && (
-        <p className="detail-panel__state">Leyendo cambios locales…</p>
+        <p className="state detail-panel__state">Leyendo cambios locales…</p>
       )}
       {local.error !== null && groups.length === 0 && (
-        <p className="detail-panel__state" role="alert">
+        <p className="state detail-panel__state" role="alert">
           {userMessage(local.error)}
         </p>
       )}
@@ -78,11 +78,11 @@ export function WorkingTreeDetailPanel({
         local.error === null &&
         stagedFiles.length === 0 &&
         unstagedFiles.length === 0 && (
-          <p className="detail-panel__state">No hay cambios locales.</p>
+          <p className="state detail-panel__state">No hay cambios locales.</p>
         )}
 
       {loadError !== null && (
-        <p className="detail-panel__state" role="alert">
+        <p className="state detail-panel__state" role="alert">
           {userMessage(loadError)}
         </p>
       )}
@@ -91,7 +91,7 @@ export function WorkingTreeDetailPanel({
         <ChangedFilesBrowser
           groups={groups}
           selectedFilePath={selectedFilePath}
-          selectedFileSource={selectedFileSource}
+          selectedFileSource={fileSource}
           onOpen={(path, source) => {
             selectFile(path, source);
           }}
@@ -117,8 +117,7 @@ function localFileGroup(
         <span>{label}</span>
         <span className="detail-panel__local-count">
           {side.totalFiles} ·{" "}
-          <span className="detail-panel__stat-add">+{side.insertions}</span>{" "}
-          <span className="detail-panel__stat-del">−{side.deletions}</span>
+          <DiffStat insertions={side.insertions} deletions={side.deletions} />
         </span>
       </div>
     ),

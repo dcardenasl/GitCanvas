@@ -13,9 +13,7 @@ use std::{
 };
 
 use gitcanvas_core::github::{
-    cache::{
-        cached_entry_name, enforce_retention, status, touch, touch_if_cached, MAX_REPOSITORIES,
-    },
+    cache::{cached_entry_name, enforce_retention, status, touch_if_cached, MAX_REPOSITORIES},
     clone::cache_entry_name,
 };
 
@@ -142,7 +140,7 @@ fn using_a_clone_makes_it_the_most_recent() {
     seed_clone(root.path(), "new", Duration::from_secs(10));
     assert_eq!(status(root.path()).unwrap().entries[0].name, "new");
 
-    assert!(touch(&root.path().join("old")));
+    assert!(touch_if_cached(root.path(), &root.path().join("old")));
 
     let names: Vec<_> = status(root.path())
         .unwrap()
@@ -164,7 +162,10 @@ fn a_used_clone_survives_retention_over_a_newer_unused_one() {
             Duration::from_secs(1_000 + u64::try_from(index).unwrap()),
         );
     }
-    assert!(touch(&root.path().join("oldest-but-used")));
+    assert!(touch_if_cached(
+        root.path(),
+        &root.path().join("oldest-but-used")
+    ));
 
     let evicted = enforce_retention(root.path(), &[]).unwrap();
 

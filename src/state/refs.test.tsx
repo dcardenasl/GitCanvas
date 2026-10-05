@@ -1,17 +1,18 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BranchInfo, TagInfo } from "../bindings";
+import type { BranchInfo } from "../bindings";
+import {
+  createIpcMocks,
+  createQueryClientWrapper,
+  createTestQueryClient,
+} from "../test/test-utils";
 
-const getBranches = vi.fn<(path: string) => Promise<BranchInfo[]>>();
-const getTags = vi.fn<(path: string) => Promise<TagInfo[]>>();
-vi.mock("../lib/ipc", () => ({
-  getBranches: (path: string) => getBranches(path),
-  getTags: (path: string) => getTags(path),
-}));
+const mockIpc = createIpcMocks(["getBranches", "getTags"] as const);
+const { getBranches, getTags } = mockIpc;
+vi.mock("../lib/ipc", () => mockIpc);
 
 const { useBranches, useCurrentBranch, useRefsByCommit } =
   await import("./refs");
@@ -32,13 +33,12 @@ function branch(overrides: Partial<BranchInfo>): BranchInfo {
 }
 
 let client: QueryClient;
-function wrapper({ children }: { children: ReactNode }) {
-  return createElement(QueryClientProvider, { client }, children);
-}
+let wrapper: ReturnType<typeof createQueryClientWrapper>;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client = createTestQueryClient();
+  wrapper = createQueryClientWrapper(client);
   getTags.mockResolvedValue([]);
 });
 
@@ -120,7 +120,7 @@ describe("useRefsByCommit", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.get(TIP)).toBeDefined();
+      expect(result.current.get(TIP)).toHaveLength(4);
     });
     expect(
       result.current.get(TIP)?.map((ref) => `${ref.kind}:${ref.name}`),
