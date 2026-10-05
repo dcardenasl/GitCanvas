@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (14/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (15/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -152,8 +152,11 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       *Verificado:* búsqueda de afirmaciones contradictorias en reglas, arquitectura,
       ADRs y planes; revisión del diff documental y `git diff --check`.
       → `docs: clarify repository and token boundary rules`
-- [ ] **H2-14 — Corregir parsing de hunks.** En `DiffViewer/parse.ts`, ignorar cabeceras
-      solo antes del primer `@@`; test con contenido `-- x` posterior al inicio del hunk.
+- [x] **H2-14 — Corregir parsing de hunks.** El parser descarta cabeceras solo antes del
+      primer `@@`; `--- x` tras el inicio se conserva como una eliminación cuyo contenido
+      real es `-- x`.
+      *Verificado:* `npm run typecheck`, `npx vitest run src/components/DiffViewer/parse.test.ts`
+      (18 tests), `./pre-commit` y `git diff --check`.
       → `fix(diff): preserve hunk lines beginning with dashes`
 - [ ] **H2-15 — Corregir estados y errores de vistas de diff e historial.** Unificar
       expansión de archivos, mostrar errores de selección explícitamente, habilitar acciones

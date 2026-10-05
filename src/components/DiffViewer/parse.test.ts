@@ -65,6 +65,19 @@ describe("parseHunks", () => {
     expect(lines).toHaveLength(3);
   });
 
+  it("preserves hunk content that starts with dashes", () => {
+    const lines = parseHunks(
+      "diff --git a/file b/file\n--- a/file\n+++ b/file\n@@ -1 +1 @@\n--- x\n",
+    );
+
+    expect(lines).toContainEqual({
+      kind: "del",
+      text: "-- x",
+      oldLine: 1,
+      newLine: null,
+    });
+  });
+
   it("returns nothing for an empty patch rather than a blank line", () => {
     expect(parseHunks("")).toEqual([]);
   });

@@ -37,12 +37,14 @@ export function parseHunks(patch: string): DiffLine[] {
   const lines: DiffLine[] = [];
   let oldLine = 0;
   let newLine = 0;
+  let inHunk = false;
 
   for (const raw of patch.split("\n")) {
-    if (DROPPED.some((prefix) => raw.startsWith(prefix))) continue;
+    if (!inHunk && DROPPED.some((prefix) => raw.startsWith(prefix))) continue;
 
     const hunk = HUNK.exec(raw);
     if (hunk !== null) {
+      inHunk = true;
       oldLine = Number(hunk[1]);
       newLine = Number(hunk[2]);
       lines.push({ kind: "meta", text: raw, oldLine: null, newLine: null });

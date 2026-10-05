@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Diff content beginning with dashes** — hunk lines that resemble file headers now remain visible as additions or deletions.
 - **GitHub token setup** — surrounding whitespace is removed before verification and storage, while keychain read failures now reach the interface as errors.
 - **Repository listing waits** — GitHub discovery uses the read gate, and queued Git operations now return a clear timeout after 30 seconds.
 - **Repository watcher lifecycle** — changing repositories or closing the watcher invalidates older starts, and watcher disposal runs off the async thread.
