@@ -88,6 +88,11 @@ hasta obtener evidencia dinámica de arranque y E2E en los tres sistemas operati
       → `perf(history): bound pages and index commits`
 - [ ] **H2-29 — Evitar selecciones obsoletas de AppShell.** Ignorar respuesta tardía de
       startup repository y resolver selección huérfana de `revealCommit`.
+      *Implementación parcial (2026-10-05):* la búsqueda startup solo se aplica si no
+      había repositorio al iniciarse ni hubo un cambio de selección mientras esperaba;
+      también se cancela al desmontar la ventana. Un reveal agotado limpia la selección
+      huérfana sin borrar una selección más nueva. Se añadieron pruebas para ambas carreras;
+      no se ejecutaron.
       → `fix(ui): ignore stale repository and reveal selections`
 - [ ] **H2-30 — Corregir teclado y ergonomía de controles.** Resizer: limpiar `userSelect`,
       doble clic vuelve al valor inicial y filtrar botones; ContextMenu: callback actualizado,

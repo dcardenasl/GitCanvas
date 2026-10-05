@@ -32,6 +32,7 @@ interface SessionState {
   expandFile: (path: string) => void;
   revealCommit: (id: string) => void;
   clearReveal: () => void;
+  clearOrphanedReveal: () => void;
 }
 
 const EMPTY = {
@@ -125,6 +126,21 @@ export const useSession = create<SessionState>((set) => ({
 
   clearReveal: () => {
     set({ revealCommitId: null });
+  },
+
+  clearOrphanedReveal: () => {
+    set((state) => {
+      const revealCommitId = state.revealCommitId;
+      if (revealCommitId === null) return state;
+
+      const selection =
+        state.selection.kind === "commit" &&
+        state.selection.commitId === revealCommitId
+          ? { kind: "history" as const }
+          : state.selection;
+
+      return { revealCommitId: null, selection };
+    });
   },
 }));
 

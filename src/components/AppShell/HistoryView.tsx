@@ -26,6 +26,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
   const selectFile = useSession((state) => state.selectFile);
   const revealCommitId = useSession((state) => state.revealCommitId);
   const clearReveal = useSession((state) => state.clearReveal);
+  const clearOrphanedReveal = useSession((state) => state.clearOrphanedReveal);
 
   const refsByCommit = useRefsByCommit(repository?.path ?? null);
   const local = useWorktreeSnapshot(repository?.path ?? null);
@@ -90,8 +91,10 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
   useEffect(() => {
     // The whole history was walked and the commit is not in it. Give up rather
     // than leave a request pending forever against a ref that cannot be shown.
-    if (revealCommitId !== null && !loaded && !hasNextPage) clearReveal();
-  }, [revealCommitId, loaded, hasNextPage, clearReveal]);
+    if (revealCommitId !== null && !loaded && !hasNextPage) {
+      clearOrphanedReveal();
+    }
+  }, [revealCommitId, loaded, hasNextPage, clearOrphanedReveal]);
 
   if (history.error !== null && commits.length === 0) {
     return (

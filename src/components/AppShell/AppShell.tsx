@@ -59,11 +59,30 @@ export function AppShell() {
     // `gitcanvas /path/to/repo` opens straight into that repository. Failure is
     // deliberately quiet: the window still opens and the picker is right there,
     // which beats a startup error over an argument the user may have mistyped.
+    if (useSession.getState().repository !== null) return;
+
+    let cancelled = false;
+    let repositoryChanged = false;
+    const unsubscribe = useSession.subscribe((state, previous) => {
+      if (state.repository !== previous.repository) repositoryChanged = true;
+    });
     void getStartupRepository()
       .then((startup) => {
-        if (startup !== null) setRepository(startup);
+        if (
+          !cancelled &&
+          !repositoryChanged &&
+          startup !== null &&
+          useSession.getState().repository === null
+        ) {
+          setRepository(startup);
+        }
       })
       .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [setRepository]);
   const selectedIndex =
     selectedCommitId === null

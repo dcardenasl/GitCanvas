@@ -105,6 +105,29 @@ describe("session repository and reveal", () => {
     useSession.getState().clearReveal();
     expect(useSession.getState().revealCommitId).toBeNull();
   });
+
+  it("clears the selection when a requested commit is absent from history", () => {
+    useSession.getState().revealCommit(COMMIT);
+
+    useSession.getState().clearOrphanedReveal();
+
+    expect(useSession.getState().selection).toEqual({ kind: "history" });
+    expect(useSession.getState().revealCommitId).toBeNull();
+  });
+
+  it("preserves a newer selection when an older reveal becomes orphaned", () => {
+    useSession.getState().revealCommit(COMMIT);
+    useSession.getState().selectCommit("b".repeat(40));
+
+    useSession.getState().clearOrphanedReveal();
+
+    expect(useSession.getState().selection).toEqual({
+      kind: "commit",
+      commitId: "b".repeat(40),
+      filePath: null,
+    });
+    expect(useSession.getState().revealCommitId).toBeNull();
+  });
 });
 
 describe("session file selection", () => {

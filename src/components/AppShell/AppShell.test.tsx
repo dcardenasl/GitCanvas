@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -256,6 +256,44 @@ describe("AppShell toolbar", () => {
         name: "cli",
       });
     });
+  });
+
+  it("does not let a late command-line lookup replace a user selection", async () => {
+    let finishStartup: (
+      repository: { path: string; name: string } | null,
+    ) => void = () => undefined;
+    useSession.setState({ repository: null });
+    getStartupRepository.mockReturnValue(
+      new Promise((resolve) => {
+        finishStartup = resolve;
+      }),
+    );
+    renderShell();
+
+    useSession
+      .getState()
+      .openRepository({ path: "/tmp/manual", name: "manual" });
+    await act(async () => {
+      finishStartup({ path: "/tmp/cli", name: "cli" });
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(useSession.getState().repository).toEqual({
+        path: "/tmp/manual",
+        name: "manual",
+      });
+    });
+  });
+
+  it("clears an orphaned reveal selection after history is exhausted", async () => {
+    useSession.getState().revealCommit("missing-commit");
+    renderShell();
+
+    await waitFor(() => {
+      expect(useSession.getState().revealCommitId).toBeNull();
+    });
+    expect(useSession.getState().selection).toEqual({ kind: "history" });
   });
 
   it("still opens when the command-line lookup fails", async () => {
