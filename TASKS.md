@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (20/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 20/46 completadas · 26 pendientes · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -20,7 +20,7 @@
 
 ---
 
-## 🧭 Fase H2 — Endurecimiento post-auditoría (pendiente)
+## 🧭 Fase H2 — Endurecimiento post-auditoría (en curso)
 
 Plan de trabajo derivado de la auditoría estática completa del 2026-10-04:
 [`docs/plan/2026-10-04-plan-de-endurecimiento.md`](docs/plan/2026-10-04-plan-de-endurecimiento.md).
@@ -39,163 +39,9 @@ la sigue controlando exclusivamente `/release` y requiere aprobación de David.
 Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presentes en
 `dev`; la auditoría los tuvo en cuenta y no son tareas pendientes.
 
-### H2-0 — Desbloqueo del hook
+Las tareas H2-0 a H2-19 están completadas y archivadas en [`ARCHIVES.md`](ARCHIVES.md).
+La siguiente tarea a ejecutar es H2-20; conserva su ID y mensaje de commit.
 
-- [x] **H2-0 — Excluir el artefacto de brag del análisis.** Añadir `brag-output/` a
-      `.gitignore`, `.prettierignore` y a `ignores` de `eslint.config.js` (o mover el
-      artefacto fuera del repositorio si la configuración vigente lo aconseja). Confirmar
-      que el hook `./pre-commit` pasa con el directorio generado presente.
-      → `chore: ignore generated brag output`
-
-### H2-1 — Correctitud y seguridad
-
-- [x] **H2-1 — Acotar los diffs de commits.** `get_commit_diff` devuelve metadatos para
-      todos los archivos y solo materializa el parche del archivo seleccionado. Los diffs
-      con más de 5.000 rutas fallan de forma tipada antes de detectar renombres; las
-      expansiones respetan el límite duro de 16 MiB y se marcan `TooLarge` si lo exceden.
-      `FileDiffView` ya envía el archivo solicitado y los snapshots no piden un parche.
-      *Verificado:* `cargo test -p gitcanvas-core --test diff`, `cargo test -p gitcanvas-core
-      --lib`, binding exportado, `npm run typecheck`, tests Vitest de `diff`, `FileDiffView`
-      e IPC con Node 22 (48 tests), `./pre-commit`.
-      → `fix(diff): bound commit diff reads`
-- [x] **H2-2 — Asegurar lecturas del worktree.** Se rechazan symlinks internos y externos,
-      cualquier segmento `.git`, rutas fuera del root canónico y cambios de identidad entre
-      la apertura y la lectura; el resolver usa `ActiveRepo::path()`.
-      *Verificado:* `cargo test -p gitcanvas-core --test worktree` (8 tests) y
-      `cargo test -p gitcanvas-core --lib` (21 tests).
-      → `fix(worktree): validate paths and reject symlinks`
-- [x] **H2-3 — Clasificar rutas del watcher correctamente.** La clasificación inspecciona
-      solo componentes relativos al directorio de metadata, no nombres de carpetas padre.
-      *Verificado:* test de `config`, `refs/heads/main` e `index.lock` bajo una ruta cuyo
-      ancestro se llama `refs`; `cargo test -p gitcanvas-core --lib` (22 tests) y
-      `cargo clippy -p gitcanvas-core --all-targets -- -D warnings`.
-      → `fix(watch): classify paths relative to metadata`
-- [x] **H2-4 — Endurecer cliente REST de GitHub.** `ureq::Agent` fija timeout global de
-      30 s y conexión de 10 s; 401, falta de scopes, 403 por rate limit y 429 tienen
-      diagnósticos distintos. El límite de 1.000 repositorios devuelve `truncated` y se
-      explica en el selector. `with_base_url` está oculto en docs y valida HTTPS salvo IP
-      loopback/localhost.
-      *Verificado:* 9 tests de `github_api`, 24 tests core, contrato TypeScript regenerado,
-      typecheck y 40 tests de GitHubPicker/IPC; pruebas de timeout config, status, truncado
-      y rechazo de URLs HTTP externas.
-      → `fix(github): bound requests and classify api limits`
-- [x] **H2-5 — Hacer segura la concurrencia de clone y cache.** Locks advisory entre
-      procesos por entrada, staging único con limpieza RAII y recuperación de parciales
-      huérfanos bajo el lock; retención vuelve a leer el estado bajo lock, conserva tanto
-      el clon nuevo como el repo activo y acumula fallos de borrado sin borrar esa entrada.
-      *Verificado:* `cargo test -p gitcanvas-core --lib` (24 tests, incluido clone concurrente
-      y lectura concurrente de caché), `cargo test -p gitcanvas-core --test cache` (12 tests),
-      `cargo clippy -p gitcanvas-core --all-targets -- -D warnings`, binding regenerado,
-      `npm run typecheck`, 40 tests Vitest de GitHubPicker/IPC y `./pre-commit`.
-      → `fix(github): serialize clone cache mutations`
-- [x] **H2-6 — Rechazar blobs demasiado grandes antes de leerlos.** `blob.size()` se
-      comprueba antes de llamar a `content()` tanto para contenido de commit como de index;
-      la política compartida conserva la omisión `TooLarge` inicial y el error tipado al
-      exceder el tope de expansión, con ruta y límite en el mensaje.
-      *Verificado:* `cargo test -p gitcanvas-core --test blob` (6 tests),
-      `cargo test -p gitcanvas-core --test worktree` (9 tests, incluye staged por encima
-      del límite de expansión), `cargo clippy -p gitcanvas-core --all-targets -- -D warnings`
-      y `./pre-commit`.
-      → `fix(core): check blob sizes before reading content`
-- [x] **H2-7 — Centralizar errores del dominio.** `AppError` incorpora `Auth`, `Network`
-      y `Conflict`; las conversiones centralizan errores `git2` y `keyring`, con helper
-      `from_git2_remote` en operaciones remotas. Acciones, clone, credenciales y REST
-      propagan categorías operativas; `KIND_SUMMARY` muestra cada una en español.
-      *Verificado:* 26 tests core, 10 `github_api`, 17 `actions`; binding regenerado y diff
-      limitado a las tres variantes; `npm run typecheck`, 46 tests Vitest focalizados,
-      `cargo clippy -p gitcanvas-core --all-targets -- -D warnings` y `./pre-commit`.
-      → `refactor(errors): centralize domain error mapping`
-- [x] **H2-8 — Corregir acciones y límites latentes del core.** Pull actualiza la rama con
-      `reference_matching` contra el OID que leyó; `history::insert` omite snapshots que
-      no caben (preservando la entrada válida previa), y el shift del backoff satura con
-      `checked_shl` antes de multiplicar la duración.
-      *Verificado:* `cargo test -p gitcanvas-core --lib` (28 tests, incluye presupuesto 0,
-      reemplazo sobredimensionado y 40 reintentos), `cargo test -p gitcanvas-core --test
-      actions` (17 tests, fast-forward incluido), Clippy core y `./pre-commit`.
-      → `fix(core): guard history insertion and retry shifts`
-- [x] **H2-9 — Corregir ciclo de vida del watcher.** El reemplazo y eliminación de watchers
-      se destruyen dentro de `runtime::write`; las generaciones se avanzan monotónicamente,
-      `unwatch` invalida la generación pendiente y los starts viejos no reemplazan repos más
-      nuevos.
-      *Verificado:* `cargo test -p gitcanvas --lib commands::watch::tests` (3 pruebas de
-      cambio/unwatch concurrentes), `cargo clippy -p gitcanvas --all-targets -- -D warnings`
-      y `./pre-commit`.
-      → `fix(watch): invalidate stale watcher generations`
-- [x] **H2-10 — Aplicar gates de lectura y timeout a runtime.** El listado de GitHub usa el
-      gate de lectura reintentable; la espera por un slot de lectura o escritura vence a
-      los 30 s con `ResourceLimitExceeded`, sin bloquear indefinidamente.
-      *Verificado:* `cargo test -p gitcanvas --lib commands::runtime::tests` (4 pruebas de
-      capacidad, timeout, lectura durante escritura saturada y reintentos),
-      `cargo clippy -p gitcanvas --all-targets -- -D warnings` y `./pre-commit`.
-      → `fix(runtime): gate repository listing and bound permission waits`
-- [x] **H2-11 — Restringir operaciones a repositorios permitidos.** `AllowedRepos` guarda
-      paths canónicos autorizados al abrir, al resolver el repositorio de arranque o al
-      clonar. `with_repo` exige autorización y centraliza la apertura para los 14 comandos
-      de lectura, acciones y watcher; `validate_repository` sigue siendo un validador de
-      candidatos y no concede acceso. Regla 7 de `CLAUDE.md` alineada con la decisión.
-      *Verificado:* `cargo test -p gitcanvas --lib` (19 tests, incluyendo rechazo IPC antes
-      de open, autorización posterior y alias canónico), `cargo clippy -p gitcanvas
-      --all-targets -- -D warnings`, bindings sin cambios y `./pre-commit`.
-      → `refactor(commands): centralize allowed repository access`
-- [x] **H2-12 — Normalizar token GitHub en backend y frontend.** Se recorta antes de
-      verificar y guardar, y se normalizan tokens existentes al leer. `has_token` retorna
-      `Result<bool>`: ausencia es `false`; errores del keychain se propagan y la interfaz
-      los explica en vez de aparentar una sesión cerrada. La firma IPC ya era `Result<bool>`;
-      bindings regenerados sin cambio de contrato.
-      *Verificado:* 3 tests de credenciales, bindings actualizados, `npm run typecheck`,
-      41 tests Vitest GitHubPicker/IPC, Clippy core y Tauri, `./pre-commit`.
-      → `fix(github): trim tokens and propagate keyring errors`
-- [x] **H2-13 — Alinear reglas de secretos y repositorios.** Reglas 7 y 10 de `CLAUDE.md`
-      describen la allowlist y la única entrada IPC del PAT. `ARCHITECTURE.md`, ADR 0003 y
-      el plan rector reflejan el mismo límite; eliminadas las afirmaciones de que el token
-      nunca cruza IPC.
-      *Verificado:* búsqueda de afirmaciones contradictorias en reglas, arquitectura,
-      ADRs y planes; revisión del diff documental y `git diff --check`.
-      → `docs: clarify repository and token boundary rules`
-- [x] **H2-14 — Corregir parsing de hunks.** El parser descarta cabeceras solo antes del
-      primer `@@`; `--- x` tras el inicio se conserva como una eliminación cuyo contenido
-      real es `-- x`.
-      *Verificado:* `npm run typecheck`, `npx vitest run src/components/DiffViewer/parse.test.ts`
-      (18 tests), `./pre-commit` y `git diff --check`.
-      → `fix(diff): preserve hunk lines beginning with dashes`
-- [x] **H2-15 — Corregir estados y errores de vistas de diff e historial.** La expansión
-      usa `expandedFilePath` tanto para diffs como para contenido completo; lecturas de
-      archivos locales se habilitan solo tras obtener una revisión. Los errores de lectura
-      local quedan en la selección como alertas explícitas. Un fallo de página adicional
-      conserva la tabla y permite reintentar desde un banner.
-      *Verificado:* `npm run typecheck`; `npx vitest run src/components/FileDiffView/FileDiffView.test.tsx src/components/AppShell/HistoryView.test.tsx` (25 tests); `./pre-commit`.
-      → `fix(ui): preserve diff and history data on page errors`
-- [x] **H2-16 — Añadir frontera de error global localizada.** `main.tsx` monta un
-      `ErrorBoundary` por fuera de `StrictMode`; los errores de render muestran un fallback
-      en español con reinicio y sin exponer el error interno.
-      *Verificado:* `npm run typecheck`, `npx vitest run src/components/ErrorBoundary/ErrorBoundary.test.tsx` (1 test), `./pre-commit`.
-      → `feat(ui): add a localized application error boundary`
-- [x] **H2-17 — Hacer fiable la inicialización del repositorio en vivo.** El listener se
-      instala antes de `watch`; generaciones únicas viven a nivel de módulo y el cleanup
-      espera al inicio antes de invalidarlo. Estados degradados usan resúmenes españoles;
-      `errors.ts` expone `isAppErrorKind` y un mensaje seguro para categorías desconocidas.
-      *Verificado:* `npm run typecheck`; `npx vitest run src/state/liveRepository.test.ts src/lib/errors.test.ts` (20 tests); `./pre-commit`.
-      → `fix(live): make watcher startup and errors reliable`
-- [x] **H2-18 — Completar idioma y acceso por teclado.** `index.html` declara español.
-      La lista de commits es tabulable y ofrece foco roving, flechas, Home/End,
-      PageUp/PageDown y menú de contexto con Shift+F10/tecla de menú; las ramas locales
-      exponen el checkout por el mismo menú accesible por teclado.
-      *Verificado:* `npm run typecheck`; `npx vitest run src/components/CommitTable/CommitTable.test.tsx src/components/Sidebar/Sidebar.test.tsx` (31 tests); `./pre-commit`.
-      → `feat(ui): complete keyboard navigation and localization`
-
-### Reglas con guardia automática
-
-- [x] **H2-19 — Proteger invariantes de comandos y estado.** Tests AST de `src-tauri`
-      comprueban que todo `#[tauri::command]` usa `read`/`write` (excepciones requieren
-      nombre y motivo), que `tauri::State` no contiene `Repository`/`ActiveRepo`, y que
-      `collect_commands!` coincide sin duplicados con todos los comandos declarados. La
-      prueba IPC despacha handlers seguros con payload incompleto; `forget_github_token`,
-      `has_github_token` y `list_github_repositories` se validan en el registry pero no se
-      ejecutan para evitar borrar/consultar credenciales del host o acceder a la red.
-      Se corrigieron comentarios obsoletos sobre la selección de repositorio y el límite
-      IPC del token.
-      *Verificado:* `cargo fmt --all -- --check`; `cargo test -p gitcanvas --lib` (22 tests); `cargo clippy -p gitcanvas --all-targets -- -D warnings`.
-      → `test(tauri): enforce command and ipc invariants`
 - [ ] **H2-20 — Ampliar guardias Clippy.** Configurar prohibiciones del plan para
       `todo`, `unimplemented`, `dbg_macro`, `print_stdout/stderr`, `string_slice`, efectos
       aritméticos y docs faltantes; métodos prohibidos `std::process::Command` y
