@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (12/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (13/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -137,9 +137,13 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       de open, autorización posterior y alias canónico), `cargo clippy -p gitcanvas
       --all-targets -- -D warnings`, bindings sin cambios y `./pre-commit`.
       → `refactor(commands): centralize allowed repository access`
-- [ ] **H2-12 — Normalizar token GitHub en backend y frontend.** Aplicar `trim()` en ambos
-      extremos y hacer que `has_github_token` devuelva `Result<bool>`; actualizar IPC,
-      frontend, bindings y pruebas.
+- [x] **H2-12 — Normalizar token GitHub en backend y frontend.** Se recorta antes de
+      verificar y guardar, y se normalizan tokens existentes al leer. `has_token` retorna
+      `Result<bool>`: ausencia es `false`; errores del keychain se propagan y la interfaz
+      los explica en vez de aparentar una sesión cerrada. La firma IPC ya era `Result<bool>`;
+      bindings regenerados sin cambio de contrato.
+      *Verificado:* 3 tests de credenciales, bindings actualizados, `npm run typecheck`,
+      41 tests Vitest GitHubPicker/IPC, Clippy core y Tauri, `./pre-commit`.
       → `fix(github): trim tokens and propagate keyring errors`
 - [ ] **H2-13 — Alinear reglas de secretos y repositorios.** Reformular regla 10 para
       expresar el flujo real del token (nunca sale del backend; solo entra una vez) y

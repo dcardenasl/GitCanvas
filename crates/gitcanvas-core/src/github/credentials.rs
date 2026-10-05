@@ -29,13 +29,23 @@ fn entry() -> Result<Entry, AppError> {
 ///
 /// Returns [`AppError`] when the token is blank or the keychain rejects the write.
 pub fn store_token(token: &str) -> Result<(), AppError> {
+    let token = normalize_token(token)?;
+    entry()?.set_password(token).map_err(AppError::from)
+}
+
+/// Trims a token and rejects a value that contains only whitespace.
+///
+/// # Errors
+///
+/// Returns [`AppError::InvalidInput`] when the token is empty after trimming.
+pub fn normalize_token(token: &str) -> Result<&str, AppError> {
     let token = token.trim();
     if token.is_empty() {
         return Err(AppError::InvalidInput(
             "the token cannot be empty".to_owned(),
         ));
     }
-    entry()?.set_password(token).map_err(AppError::from)
+    Ok(token)
 }
 
 /// Reads the stored token.
@@ -47,13 +57,27 @@ pub fn store_token(token: &str) -> Result<(), AppError> {
 ///
 /// Returns [`AppError`] when no token is stored or the keychain read fails.
 pub(crate) fn read_token() -> Result<String, AppError> {
-    entry()?.get_password().map_err(AppError::from)
+    let token = entry()?.get_password().map_err(AppError::from)?;
+    normalize_token(&token)
+        .map(str::to_owned)
+        .map_err(|_| AppError::Auth("the stored GitHub token is empty".to_owned()))
 }
 
 /// Reports whether a token is stored, without revealing it.
-#[must_use]
-pub fn has_token() -> bool {
-    read_token().is_ok()
+///
+/// # Errors
+///
+/// Returns [`AppError`] when the keychain cannot be read.
+pub fn has_token() -> Result<bool, AppError> {
+    token_exists(entry()?.get_password())
+}
+
+fn token_exists(result: Result<String, keyring::Error>) -> Result<bool, AppError> {
+    match result {
+        Ok(token) => Ok(!token.trim().is_empty()),
+        Err(keyring::Error::NoEntry) => Ok(false),
+        Err(error) => Err(AppError::from(error)),
+    }
 }
 
 /// Removes the stored token.
@@ -126,7 +150,8 @@ pub(crate) fn callback() -> impl FnMut(&str, Option<&str>, CredentialType) -> Re
 
 #[cfg(test)]
 mod tests {
-    use super::is_github_https;
+    use super::{is_github_https, normalize_token, token_exists};
+    use crate::error::AppError;
 
     #[test]
     fn only_github_over_https_receives_the_token() {
@@ -153,5 +178,25 @@ mod tests {
         ] {
             assert!(!is_github_https(rejected), "accepted {rejected}");
         }
+    }
+
+    #[test]
+    fn token_normalization_trims_both_ends_and_rejects_whitespace() {
+        assert_eq!(normalize_token("  ghp_secret\n").unwrap(), "ghp_secret");
+        assert!(matches!(
+            normalize_token(" \t\n"),
+            Err(AppError::InvalidInput(_))
+        ));
+    }
+
+    #[test]
+    fn token_existence_preserves_keychain_failures() {
+        assert!(!token_exists(Err(keyring::Error::NoEntry)).unwrap());
+        assert!(token_exists(Ok("  token  ".to_owned())).unwrap());
+        assert!(!token_exists(Ok("  ".to_owned())).unwrap());
+        assert!(matches!(
+            token_exists(Err(keyring::Error::BadEncoding(vec![0xff]))),
+            Err(AppError::Internal(_))
+        ));
     }
 }

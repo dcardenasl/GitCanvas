@@ -65,7 +65,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
   }, []);
 
   const signIn = useMutation({
-    mutationFn: storeGithubToken,
+    mutationFn: (value: string) => storeGithubToken(value.trim()),
     onSuccess: () => {
       setToken("");
       void queryClient.invalidateQueries({ queryKey: ["github"] });
@@ -95,6 +95,11 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
           Pega un Personal Access Token con permiso <code>repo</code>. Se guarda
           en el llavero del sistema y nunca sale del backend.
         </p>
+        {signedIn.error !== null && (
+          <p className="github-picker__error" role="alert">
+            {userMessage(signedIn.error)}
+          </p>
+        )}
         <form
           className="github-picker__form"
           onSubmit={(event) => {

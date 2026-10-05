@@ -191,13 +191,22 @@ describe("GitHubPicker", () => {
 
       await userEvent.type(
         await screen.findByLabelText("Personal Access Token"),
-        "ghp_secret",
+        " ghp_secret ",
       );
       hasGithubToken.mockResolvedValue(true);
       await userEvent.click(screen.getByRole("button", { name: "Conectar" }));
 
       expect(storeGithubToken).toHaveBeenCalledWith("ghp_secret");
       expect(await screen.findByText("dcardenasl/gitcanvas")).toBeDefined();
+    });
+
+    it("shows a keychain read error instead of treating it as signed out", async () => {
+      hasGithubToken.mockRejectedValue(new Error("keychain is unavailable"));
+      renderPicker();
+
+      expect((await screen.findByRole("alert")).textContent).toContain(
+        "keychain is unavailable",
+      );
     });
 
     it("shows why a token was refused and keeps asking", async () => {

@@ -49,6 +49,7 @@ pub struct ProgressEmitter(pub Arc<dyn Fn(CloneProgressEvent) + Send + Sync>);
 #[specta::specta]
 pub async fn store_github_token(token: String) -> Result<GitHubAccount, AppError> {
     write("store_github_token", move || {
+        let token = credentials::normalize_token(&token)?.to_owned();
         // Verified before it is stored, so a token that cannot work never
         // becomes the reason a later clone fails for no visible reason.
         let account = GitHubClient::new(token.clone()).verify()?;
@@ -62,7 +63,7 @@ pub async fn store_github_token(token: String) -> Result<GitHubAccount, AppError
 #[tauri::command]
 #[specta::specta]
 pub async fn has_github_token() -> Result<bool, AppError> {
-    read("has_github_token", || Ok(credentials::has_token())).await
+    read("has_github_token", credentials::has_token).await
 }
 
 /// Removes the stored token.

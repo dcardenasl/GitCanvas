@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **GitHub token setup** — surrounding whitespace is removed before verification and storage, while keychain read failures now reach the interface as errors.
 - **Repository listing waits** — GitHub discovery uses the read gate, and queued Git operations now return a clear timeout after 30 seconds.
 - **Repository watcher lifecycle** — changing repositories or closing the watcher invalidates older starts, and watcher disposal runs off the async thread.
 - **Pull and history safety** — fast-forwards update the branch only if its prior target still matches, and over-budget history walks cannot stall cache insertion.
