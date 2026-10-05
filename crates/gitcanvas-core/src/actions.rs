@@ -18,6 +18,7 @@ use crate::{error::AppError, github::credentials, repository::ActiveRepo};
 /// A path that would be lost or overwritten by an operation.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct DirtyPath {
+    /// Repository-relative path that would be discarded or overwritten.
     pub path: String,
     /// True when the change is staged, false when it is only in the worktree.
     pub staged: bool,
@@ -32,9 +33,15 @@ pub struct DirtyPath {
 #[serde(tag = "kind")]
 pub enum CheckoutOutcome {
     /// The branch is now checked out.
-    Switched { branch: String },
+    Switched {
+        /// Name of the branch now checked out.
+        branch: String,
+    },
     /// Refused: these changes would have been lost.
-    Blocked { conflicts: Vec<DirtyPath> },
+    Blocked {
+        /// Local paths that prevent a safe checkout.
+        conflicts: Vec<DirtyPath>,
+    },
 }
 
 /// The outcome of a pull attempt.
@@ -48,9 +55,19 @@ pub enum PullOutcome {
     /// Already up to date; nothing was fetched that changes the branch.
     UpToDate,
     /// Fast-forwarded to the remote tip.
-    FastForwarded { commits: u32, to: String },
+    FastForwarded {
+        /// Number of commits added by the fast-forward.
+        commits: u32,
+        /// Commit id at the new branch tip.
+        to: String,
+    },
     /// Refused: the histories diverged and a real merge would be required.
-    DivergedRequiresMerge { local: String, remote: String },
+    DivergedRequiresMerge {
+        /// Local branch tip commit id.
+        local: String,
+        /// Upstream branch tip commit id.
+        remote: String,
+    },
     /// The branch has no upstream to pull from.
     NoUpstream,
 }
@@ -63,12 +80,16 @@ pub enum PullOutcome {
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(tag = "kind")]
 pub enum PushOutcome {
+    /// Successfully pushed the checked-out branch.
     Pushed {
+        /// Name of the branch sent.
         branch: String,
+        /// Name of the remote that received it.
         remote: String,
     },
     /// Refused: the remote has commits the local branch does not.
     RejectedNonFastForward {
+        /// Name of the branch the remote rejected.
         branch: String,
     },
 }

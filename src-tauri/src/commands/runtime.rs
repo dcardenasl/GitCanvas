@@ -55,7 +55,13 @@ impl Gate {
     fn acquire(&self) -> Result<Permit<'_>, AppError> {
         let poisoned = || AppError::Internal("git operation gate was poisoned".to_owned());
         let mut available = self.available.lock().map_err(|_| poisoned())?;
-        let deadline = Instant::now() + self.wait_timeout;
+        let deadline = Instant::now()
+            .checked_add(self.wait_timeout)
+            .ok_or_else(|| {
+                AppError::ResourceLimitExceeded(
+                    "the Git operation wait timeout is not representable".to_owned(),
+                )
+            })?;
         while *available == 0 {
             let remaining = deadline.saturating_duration_since(Instant::now());
             if remaining.is_zero() {
@@ -74,7 +80,9 @@ impl Gate {
                 ));
             }
         }
-        *available -= 1;
+        *available = available.checked_sub(1).ok_or_else(|| {
+            AppError::Internal("git operation gate permit count underflowed".to_owned())
+        })?;
         Ok(Permit { gate: self })
     }
 }
@@ -86,7 +94,7 @@ struct Permit<'a> {
 impl Drop for Permit<'_> {
     fn drop(&mut self) {
         if let Ok(mut available) = self.gate.available.lock() {
-            *available += 1;
+            *available = available.saturating_add(1);
             self.gate.changed.notify_one();
         }
     }

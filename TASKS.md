@@ -42,11 +42,18 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
 Las tareas H2-0 a H2-19 están completadas y archivadas en [`ARCHIVES.md`](ARCHIVES.md).
 La siguiente tarea a ejecutar es H2-20; conserva su ID y mensaje de commit.
 
-- [ ] **H2-20 — Ampliar guardias Clippy.** Configurar prohibiciones del plan para
-      `todo`, `unimplemented`, `dbg_macro`, `print_stdout/stderr`, `string_slice`, efectos
-      aritméticos y docs faltantes; métodos prohibidos `std::process::Command` y
-      `thread::sleep`, con excepción focalizada para `retry`. Resolver diagnósticos sin
-      silencios amplios.
+- [x] **H2-20 — Ampliar guardias Clippy.** `Cargo.toml` deniega `todo`, `unimplemented`,
+      `dbg_macro`, `print_stdout/stderr`, `string_slice`, efectos aritméticos, métodos
+      prohibidos y `missing_docs` en Rust. `clippy.toml` prohíbe crear procesos externos
+      y dormir hilos. Los diagnósticos se resolvieron con aritmética saturada/verificada,
+      esperas condicionadas en el watcher, documentación de la API pública y bindings
+      regenerados. Excepciones estrechas y comentadas: espera síncrona del helper de
+      reintento; salida requerida por directivas/diagnósticos del build de Cargo; error
+      de arranque anterior al logger; herramienta manual ignorada que compara contra Git.
+      No hay excepciones globales para estas reglas.
+      *Verificado:* `cargo fmt --all -- --check`, `cargo test --workspace` (todos pasan;
+      2 comparaciones manuales permanecen ignoradas por diseño), `cargo clippy --workspace
+      --all-targets -- -D warnings`, `./pre-commit` y `git diff --check`.
       → `chore(rust): enforce additional workspace lint rules`
 - [ ] **H2-21 — Cerrar fronteras ESLint y TSDoc.** Prohibir `import()` y `require` hacia
       `graph-layout`; añadir regla TSDoc para exports públicos y documentar excepciones

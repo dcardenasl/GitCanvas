@@ -24,7 +24,9 @@ fn seed(root: &Path, name: &str, bytes: usize, age: Duration) {
     let dir = root.join(name);
     fs::create_dir_all(&dir).unwrap();
     fs::write(dir.join("payload.bin"), vec![0u8; bytes]).unwrap();
-    let when = SystemTime::now() - age;
+    let when = SystemTime::now()
+        .checked_sub(age)
+        .expect("age predates now");
     filetime::set_file_mtime(&dir, filetime::FileTime::from_system_time(when)).unwrap();
 }
 

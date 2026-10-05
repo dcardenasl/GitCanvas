@@ -21,15 +21,21 @@ const WATCH_RETRIES: u32 = 3;
 const WATCH_BACKOFF: Duration = Duration::from_millis(100);
 const INTERESTING_METADATA: [&str; 5] = ["HEAD", "refs", "packed-refs", "ORIG_HEAD", "MERGE_HEAD"];
 
+/// Notification emitted when watched repository state changes or degrades.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WatchEvent {
+    /// Repository metadata or worktree content changed.
     Changed(ChangeScope),
+    /// Watching could not continue; polling may be required.
     Degraded(String),
 }
 
+/// Scope of a repository change notification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChangeScope {
+    /// Refs, branches, tags, or other history metadata changed.
     Metadata,
+    /// The index changed; worktree content should be refreshed.
     Worktree,
 }
 

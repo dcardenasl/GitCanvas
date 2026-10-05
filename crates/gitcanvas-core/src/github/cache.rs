@@ -26,7 +26,9 @@ pub const MAX_TOTAL_BYTES: u64 = 5 * 1024 * 1024 * 1024;
 /// One cached clone.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct CacheEntry {
+    /// Absolute path to the cached repository.
     pub path: String,
+    /// Stable cache entry name.
     pub name: String,
     /// Size in bytes, as a decimal string.
     ///
@@ -42,16 +44,18 @@ pub struct CacheEntry {
 /// What the cache currently holds.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct CacheStatus {
+    /// Cached clones currently retained.
     pub entries: Vec<CacheEntry>,
     /// Total size in bytes, as a decimal string. See [`CacheEntry::bytes`].
     pub total_bytes: String,
+    /// Maximum number of clones retained.
     pub max_repositories: u32,
     /// Limit in bytes, as a decimal string. See [`CacheEntry::bytes`].
     pub max_total_bytes: String,
 }
 
 fn directory_size(path: &Path) -> u64 {
-    let mut total = 0;
+    let mut total = 0_u64;
     let Ok(entries) = std::fs::read_dir(path) else {
         return 0;
     };
@@ -60,9 +64,9 @@ fn directory_size(path: &Path) -> u64 {
             continue;
         };
         if metadata.is_dir() {
-            total += directory_size(&entry.path());
+            total = total.saturating_add(directory_size(&entry.path()));
         } else {
-            total += metadata.len();
+            total = total.saturating_add(metadata.len());
         }
     }
     total

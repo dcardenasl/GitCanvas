@@ -1,3 +1,4 @@
+//! Local worktree read and safety integration tests.
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,

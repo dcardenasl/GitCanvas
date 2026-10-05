@@ -1,3 +1,4 @@
+//! Manual comparisons and latency measurements against a local reference repository.
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,
@@ -15,6 +16,9 @@ use std::{process::Command, time::Instant};
 
 #[test]
 #[ignore = "manual verification against a read-only local reference repository"]
+// This manual check intentionally uses Git itself as an independent ordering
+// oracle; it is never reachable from application code or routine tests.
+#[allow(clippy::disallowed_methods, clippy::print_stdout)]
 fn matches_git_log_for_reference_repository() {
     let path = std::env::var("GITCANVAS_REFERENCE_REPO").expect("Set GITCANVAS_REFERENCE_REPO");
     let active = ActiveRepo::validate(&path).unwrap();
@@ -58,6 +62,8 @@ fn matches_git_log_for_reference_repository() {
 
 #[test]
 #[ignore = "manual latency measurement, deliberately no timing assertion"]
+// Repacking and reporting the benchmark require the Git CLI in this manual tool.
+#[allow(clippy::disallowed_methods, clippy::print_stdout)]
 fn report_history_latency_for_ten_thousand_commits() {
     let fixture = support::Fixture::new();
     let mut parents = Vec::new();

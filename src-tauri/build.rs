@@ -1,3 +1,5 @@
+//! Emits the platform-specific instructions needed to build the Tauri app.
+
 fn main() {
     #[cfg(windows)]
     build_windows();
@@ -6,6 +8,8 @@ fn main() {
 }
 
 #[cfg(windows)]
+// Build-script diagnostics go to stdout because Cargo captures the build script.
+#[allow(clippy::print_stdout)]
 fn build_windows() {
     let attributes = tauri_build::Attributes::new()
         .windows_attributes(tauri_build::WindowsAttributes::new_without_app_manifest());
@@ -25,6 +29,8 @@ fn build_windows() {
 /// binary too.
 /// <https://github.com/tauri-apps/tauri/pull/4383#issuecomment-1212221864>
 #[cfg(windows)]
+// Cargo build directives are communicated exclusively through stdout lines.
+#[allow(clippy::print_stdout)]
 fn embed_manifest_for_msvc() {
     let Ok(target_env) = std::env::var("CARGO_CFG_TARGET_ENV") else {
         return;

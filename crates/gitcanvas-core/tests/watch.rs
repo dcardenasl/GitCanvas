@@ -11,9 +11,10 @@ mod support;
 use std::{
     sync::{
         atomic::{AtomicUsize, Ordering},
-        mpsc, Arc,
+        mpsc::{self, Receiver},
+        Arc,
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use gitcanvas_core::{
@@ -24,6 +25,30 @@ use support::Fixture;
 
 /// Long enough for a debounced watcher to report, short enough to fail fast.
 const WAIT: Duration = Duration::from_secs(10);
+const QUIET: Duration = Duration::from_millis(500);
+
+fn wait_until_quiet<T>(receiver: &Receiver<T>) {
+    let deadline = Instant::now()
+        .checked_add(WAIT)
+        .expect("deadline is representable");
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        assert!(
+            !remaining.is_zero(),
+            "watcher did not settle before timeout"
+        );
+        match receiver.recv_timeout(remaining.min(QUIET)) {
+            Ok(_) => {}
+            Err(mpsc::RecvTimeoutError::Timeout) if remaining >= QUIET => return,
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                panic!("watcher did not settle before timeout")
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                panic!("watcher event channel disconnected before settling")
+            }
+        }
+    }
+}
 
 #[test]
 fn reports_a_commit_made_after_the_repository_was_opened() {
@@ -36,7 +61,7 @@ fn reports_a_commit_made_after_the_repository_was_opened() {
         let _ = tx.send(event);
     })
     .unwrap();
-    std::thread::sleep(Duration::from_secs(2));
+    wait_until_quiet(&rx);
 
     // The exact situation this exists for: work arriving while the window is
     // already open.
@@ -66,7 +91,7 @@ fn reports_a_branch_moving() {
         let _ = tx.send(event);
     })
     .unwrap();
-    std::thread::sleep(Duration::from_secs(2));
+    wait_until_quiet(&rx);
 
     fixture.commit_files("refs/heads/feature", "on a branch", &[base], 2_000, &[]);
 
@@ -91,7 +116,7 @@ fn coalesces_the_burst_a_single_commit_produces() {
         let _ = tx.send(());
     })
     .unwrap();
-    std::thread::sleep(Duration::from_secs(2));
+    wait_until_quiet(&rx);
 
     fixture.commit_files(
         "refs/heads/main",
@@ -104,7 +129,10 @@ fn coalesces_the_burst_a_single_commit_produces() {
 
     // One commit writes a ref, the index and the reflog. Reporting each one
     // would re-read the whole history several times for a single change.
-    std::thread::sleep(Duration::from_millis(600));
+    assert!(matches!(
+        rx.recv_timeout(QUIET),
+        Err(mpsc::RecvTimeoutError::Timeout)
+    ));
     assert_eq!(
         calls.load(Ordering::SeqCst),
         1,
@@ -120,14 +148,15 @@ fn stops_reporting_once_the_handle_is_dropped() {
 
     let calls = Arc::new(AtomicUsize::new(0));
     let counter = Arc::clone(&calls);
+    let (tx, rx) = mpsc::channel();
     let watcher = watch_repository(&active, move |_| {
         counter.fetch_add(1, Ordering::SeqCst);
+        let _ = tx.send(());
     })
     .unwrap();
-    std::thread::sleep(Duration::from_secs(2));
+    wait_until_quiet(&rx);
 
     drop(watcher);
-    std::thread::sleep(Duration::from_secs(2));
 
     fixture.commit_files(
         "refs/heads/main",
@@ -136,11 +165,10 @@ fn stops_reporting_once_the_handle_is_dropped() {
         2_000,
         &[("a.txt", b"a\nb\n")],
     );
-    std::thread::sleep(Duration::from_millis(800));
-
     // A watch that outlives the repository nobody is looking at any more keeps
     // invalidating caches for a window that has moved on.
     assert_eq!(calls.load(Ordering::SeqCst), 0);
+    assert!(rx.try_recv().is_err());
 }
 
 #[test]
@@ -153,7 +181,7 @@ fn reports_index_changes_as_worktree_changes() {
         let _ = tx.send(event);
     })
     .unwrap();
-    std::thread::sleep(Duration::from_millis(300));
+    wait_until_quiet(&rx);
 
     std::fs::write(fixture.dir.path().join("a.txt"), "changed\n").unwrap();
     let mut index = fixture.repo.index().unwrap();

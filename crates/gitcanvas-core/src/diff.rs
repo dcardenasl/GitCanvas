@@ -36,12 +36,19 @@ pub const MAX_COMMIT_DIFF_BYTES: usize = MAX_EXPANDED_DIFF_BYTES;
 /// How a path changed between two trees.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub enum FileChange {
+    /// A path was added.
     Added,
+    /// An existing path changed.
     Modified,
+    /// A path was removed.
     Deleted,
+    /// Git detected that a path moved.
     Renamed,
+    /// Git detected a copy from an existing path.
     Copied,
+    /// A path's object type changed.
     TypeChanged,
+    /// Another change kind not represented above.
     Other,
 }
 
@@ -74,12 +81,17 @@ pub enum DiffOmission {
 /// about whether there is something to render.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct FileDiff {
+    /// Current repository-relative path.
     pub path: String,
     /// Previous path for renames and copies.
     pub old_path: Option<String>,
+    /// Kind of change represented by this file entry.
     pub change: FileChange,
+    /// Number of inserted lines.
     pub insertions: u32,
+    /// Number of deleted lines.
     pub deletions: u32,
+    /// Why the patch is omitted, if applicable.
     pub omitted: Option<DiffOmission>,
     /// Unified patch text for this file alone, ready for a diff renderer.
     pub patch: Option<String>,
@@ -88,11 +100,17 @@ pub struct FileDiff {
 /// File metadata used by large listings before a patch is requested.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct FileDiffSummary {
+    /// Current repository-relative path.
     pub path: String,
+    /// Previous path for renames and copies.
     pub old_path: Option<String>,
+    /// Kind of change represented by this file entry.
     pub change: FileChange,
+    /// Number of inserted lines.
     pub insertions: u32,
+    /// Number of deleted lines.
     pub deletions: u32,
+    /// Why the patch is omitted, if applicable.
     pub omitted: Option<DiffOmission>,
 }
 
@@ -112,11 +130,15 @@ impl From<&FileDiff> for FileDiffSummary {
 /// A commit's changes against its first parent.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct CommitDiff {
+    /// Commit whose changes are described.
     pub commit_id: String,
     /// The parent compared against; absent for a root commit.
     pub parent_id: Option<String>,
+    /// Changed files, with a patch only for the requested path.
     pub files: Vec<FileDiff>,
+    /// Total inserted lines across all changed files.
     pub insertions: u32,
+    /// Total deleted lines across all changed files.
     pub deletions: u32,
     /// True when this commit has more than one parent, so the diff covers one side.
     pub is_merge: bool,
@@ -125,6 +147,7 @@ pub struct CommitDiff {
 /// Bounds and selects the patch returned with commit change summaries.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct DiffRequest {
+    /// Commit whose changes are requested.
     pub commit_id: String,
     /// Changed path whose patch is requested; other files are summaries only.
     pub file_path: Option<String>,

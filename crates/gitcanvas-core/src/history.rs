@@ -21,29 +21,43 @@ pub const MAX_PAGE_SIZE: u16 = 500;
 /// One commit in the graph. Times are decimal Unix seconds, preserving Git's full integer range.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct CommitInfo {
+    /// Full object id of the commit.
     pub id: String,
+    /// Parent commit ids in their recorded order.
     pub parents: Vec<String>,
+    /// First line of the commit message.
     pub summary: String,
+    /// Full commit message.
     pub message: String,
+    /// Author display name.
     pub author_name: String,
+    /// Author email address.
     pub author_email: String,
+    /// Author timestamp in Unix seconds, represented as decimal text.
     pub author_time: String,
+    /// Committer timestamp in Unix seconds, represented as decimal text.
     pub commit_time: String,
 }
 
 /// Request for a page. Continuations carry the prior page's immutable walk roots.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct HistoryRequest {
+    /// Maximum number of commits requested for this page.
     pub limit: u16,
+    /// Opaque cursor returned by the preceding page, if any.
     pub cursor: Option<String>,
+    /// Walk roots to use when resuming a paged history traversal.
     pub roots: Option<Vec<String>>,
 }
 
 /// A bounded page and the information needed to resume its exact traversal.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct HistoryPage {
+    /// Commits returned in topological history order.
     pub commits: Vec<CommitInfo>,
+    /// Cursor for the next page, or `None` when traversal is complete.
     pub next_cursor: Option<String>,
+    /// Roots required to resume the history walk.
     pub roots: Vec<String>,
 }
 
@@ -224,7 +238,7 @@ fn read_page(
     if let Some(reader) = reader {
         let prefix = walk
             .by_ref()
-            .take(reader.max_commits + 1)
+            .take(reader.max_commits.saturating_add(1))
             .collect::<Result<Vec<_>, _>>()?;
         if prefix.len() <= reader.max_commits {
             let ids: WalkIds = prefix.into();

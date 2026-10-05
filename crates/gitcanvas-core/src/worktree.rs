@@ -30,11 +30,14 @@ pub const WORKTREE_PAGE_SIZE: usize = 250;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "lowercase")]
 pub enum WorktreeSide {
+    /// Changes already staged in the index.
     Staged,
+    /// Changes in the working directory that are not staged.
     Unstaged,
 }
 
 impl WorktreeSide {
+    /// Returns whether this side represents staged changes.
     #[must_use]
     pub const fn is_staged(self) -> bool {
         matches!(self, Self::Staged)
@@ -47,71 +50,106 @@ impl WorktreeSide {
 /// it was read from and is refused as stale once the changes have moved on.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct WorktreeDiffPage {
+    /// Side of the working tree represented by this page.
     pub side: WorktreeSide,
+    /// Revision token shared by the snapshot and its pages.
     pub revision: String,
+    /// Changed files included in this page.
     pub files: Vec<FileDiffSummary>,
+    /// Total number of changed files on this side.
     pub total_files: u32,
+    /// Cursor for the next page, or `None` when complete.
     pub next_cursor: Option<String>,
+    /// Total inserted lines across this side.
     pub insertions: u32,
+    /// Total deleted lines across this side.
     pub deletions: u32,
 }
 
 /// Both sides share one revision and one React Query cache entry.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct WorktreeSnapshot {
+    /// Revision token that identifies both sides of this snapshot.
     pub revision: String,
+    /// Staged changes at this revision.
     pub staged: WorktreeDiffPage,
+    /// Unstaged changes at this revision.
     pub unstaged: WorktreeDiffPage,
 }
 
 /// The combined initial snapshot request.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct WorktreeSnapshotRequest {
+    /// Staged-side cursor, if requesting a later page.
     pub staged_cursor: Option<String>,
+    /// Unstaged-side cursor, if requesting a later page.
     pub unstaged_cursor: Option<String>,
+    /// Maximum number of files to return, or `None` for the default.
     pub limit: Option<u16>,
+    /// Revision that must still be current for a paged read.
     pub expected_revision: Option<String>,
 }
 
 /// A single detailed local diff, fetched after a file is selected.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct WorktreeFileDiffRequest {
+    /// Side containing the requested file.
     pub side: WorktreeSide,
+    /// Repository-relative file path.
     pub path: String,
+    /// Revision token from the snapshot used to select the file.
     pub expected_revision: Option<String>,
+    /// Whether to bypass the ordinary patch-size limit.
     pub expand: bool,
 }
 
+/// One selected worktree file diff tied to its source revision.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct WorktreeFileDiff {
+    /// Side containing the file.
     pub side: WorktreeSide,
+    /// Revision from which the patch was read.
     pub revision: String,
+    /// File summary and selected patch.
     pub file: FileDiff,
 }
 
 /// Reads a local file from the index or disk.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct WorktreeFileContentRequest {
+    /// Side containing the requested file.
     pub side: WorktreeSide,
+    /// Repository-relative file path.
     pub path: String,
+    /// Revision token from the snapshot used to select the file.
     pub expected_revision: Option<String>,
+    /// Whether to bypass the ordinary content-size limit.
     pub expand: bool,
 }
 
+/// File text and metadata read from one worktree revision.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct WorktreeFileContent {
+    /// Side from which the file was read.
     pub side: WorktreeSide,
+    /// Revision from which the file was read.
     pub revision: String,
+    /// Repository-relative file path.
     pub path: String,
+    /// Number of text lines, when available.
     pub lines: u32,
+    /// File size in bytes represented as decimal text.
     pub bytes: String,
+    /// Why text was omitted, if applicable.
     pub omitted: Option<diff::DiffOmission>,
+    /// File text, or `None` when omitted.
     pub text: Option<String>,
 }
 
 /// Lightweight revision used by the fallback poller and stale-read guard.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct WorktreeFingerprint {
+    /// Compact revision token for the current local changes.
     pub revision: String,
 }
 

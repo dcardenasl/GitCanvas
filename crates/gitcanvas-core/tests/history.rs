@@ -1,3 +1,4 @@
+//! Commit history traversal and pagination integration tests.
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,

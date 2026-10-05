@@ -91,10 +91,20 @@ fn app_context<R: tauri::Runtime>() -> tauri::Context<R> {
     tauri::generate_context!()
 }
 
+/// Writes a startup diagnostic before the file logger has been initialized.
+// Early boot failures must remain visible when no tracing subscriber exists yet.
+#[allow(clippy::print_stderr)]
+fn report_early_startup_error(message: &str) {
+    eprintln!("{message}");
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// Starts the desktop application and exits if its native runtime cannot start.
 pub fn run() {
     if let Err(error) = resources::raise_file_descriptor_limit() {
-        eprintln!("warning: could not raise the file descriptor limit: {error}");
+        report_early_startup_error(&format!(
+            "warning: could not raise the file descriptor limit: {error}"
+        ));
     }
     let builder = specta_builder::<tauri::Wry>();
 
@@ -105,11 +115,15 @@ pub fn run() {
         specta_typescript::Typescript::default(),
         "../src/bindings.ts",
     ) {
-        eprintln!("warning: could not export TypeScript bindings: {error}");
+        report_early_startup_error(&format!(
+            "warning: could not export TypeScript bindings: {error}"
+        ));
     } else if let Err(error) =
         normalize_generated_bindings(std::path::Path::new("../src/bindings.ts"))
     {
-        eprintln!("warning: could not normalize TypeScript bindings: {error}");
+        report_early_startup_error(&format!(
+            "warning: could not normalize TypeScript bindings: {error}"
+        ));
     }
 
     // Starting the runtime is the one place where there is no caller left to
@@ -173,7 +187,7 @@ pub fn run() {
         })
         .run(app_context())
     {
-        eprintln!("fatal: could not start GitCanvas: {error}");
+        report_early_startup_error(&format!("fatal: could not start GitCanvas: {error}"));
         std::process::exit(1);
     }
 }

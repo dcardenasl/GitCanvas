@@ -30,24 +30,33 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 /// The authenticated account.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct GitHubAccount {
+    /// GitHub account login.
     pub login: String,
+    /// Display name supplied by GitHub, if set.
     pub name: Option<String>,
 }
 
 /// A repository the token can reach.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct GitHubRepository {
+    /// Owner and repository name separated by `/`.
     pub full_name: String,
+    /// HTTPS URL used to clone this repository.
     pub clone_url: String,
+    /// Whether the repository is private.
     pub private: bool,
+    /// Name of the repository's default branch.
     pub default_branch: String,
+    /// Repository description, if supplied.
     pub description: Option<String>,
 }
 
 /// The bounded repository listing and whether more repositories were available.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct GitHubRepositoryList {
+    /// Repositories returned within the configured page limit.
     pub repositories: Vec<GitHubRepository>,
+    /// Whether additional repositories were omitted by the result limit.
     pub truncated: bool,
 }
 

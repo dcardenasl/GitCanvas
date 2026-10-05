@@ -9,20 +9,30 @@ use crate::{error::AppError, repository::ActiveRepo};
 /// A branch uses its full ref name as identity; short names are display only.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct BranchInfo {
+    /// Short branch name for display.
     pub name: String,
+    /// Full ref name used as branch identity.
     pub full_name: String,
+    /// Commit id at the branch tip.
     pub target: String,
+    /// Whether this branch belongs to a remote.
     pub is_remote: bool,
+    /// Whether this is the currently checked-out branch.
     pub is_head: bool,
+    /// Whether this ref is symbolic instead of direct.
     pub is_symbolic: bool,
 }
 
 /// A tag may refer to any Git object, so a commit target is explicitly optional.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct TagInfo {
+    /// Tag name for display.
     pub name: String,
+    /// Object id directly referenced by the tag.
     pub target: String,
+    /// Resolved commit id, if the target peels to a commit.
     pub commit_id: Option<String>,
+    /// Whether the tag points to an annotated tag object.
     pub is_annotated: bool,
 }
 

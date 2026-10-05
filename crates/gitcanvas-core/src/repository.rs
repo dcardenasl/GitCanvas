@@ -19,7 +19,9 @@ pub struct ActiveRepo {
 /// Displayable repository identity, safe to send across IPC.
 #[derive(Debug, Clone, Serialize, Type)]
 pub struct RepositoryInfo {
+    /// Canonical absolute repository path.
     pub path: String,
+    /// Repository directory name for display.
     pub name: String,
 }
 
@@ -123,7 +125,7 @@ mod tests {
         for rejected in [
             "",
             "abc123",
-            &full[..39],
+            &full.chars().take(39).collect::<String>(),
             &format!("{full}0"),
             "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
         ] {

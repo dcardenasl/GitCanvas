@@ -126,13 +126,16 @@ pub(crate) fn read_blob_content(
 /// A file as it stands at one commit.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct FileContent {
+    /// Repository-relative path of the file.
     pub path: String,
+    /// Commit that supplies the file contents.
     pub commit_id: String,
     /// Total lines, available even when the text itself is withheld.
     pub lines: u32,
     /// Size in bytes, as a decimal string; a blob can exceed a JavaScript
     /// integer, and specta refuses to export 64-bit numbers.
     pub bytes: String,
+    /// Why `text` was withheld, if it was not returned.
     pub omitted: Option<DiffOmission>,
     /// The text, or `None` whenever `omitted` is set.
     pub text: Option<String>,
@@ -141,7 +144,9 @@ pub struct FileContent {
 /// What the caller wants read.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct FileContentRequest {
+    /// Commit from which to read the file.
     pub commit_id: String,
+    /// Repository-relative path to read.
     pub path: String,
     /// Return the text even if it exceeds the line budget.
     pub expand: bool,

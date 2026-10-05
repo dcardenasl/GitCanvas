@@ -13,3 +13,8 @@ doc-valid-idents = [
     "AppKit",
     "NSOpenPanel",
 ]
+
+disallowed-methods = [
+    { path = "std::process::Command::new", reason = "The application must not spawn external processes." },
+    { path = "std::thread::sleep", reason = "Use asynchronous or condition-based waiting instead of blocking a thread." },
+]

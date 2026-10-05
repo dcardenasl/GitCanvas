@@ -25,16 +25,22 @@ use crate::{
 /// progress; `total_objects` is zero until the server has finished counting.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Type)]
 pub struct CloneProgress {
+    /// Objects received from the remote so far.
     pub received_objects: u32,
+    /// Total objects expected, or zero before the count is known.
     pub total_objects: u32,
+    /// Objects indexed locally so far.
     pub indexed_objects: u32,
+    /// Bytes received so far.
     pub received_bytes: u64,
 }
 
 /// Where a clone landed.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct ClonedRepository {
+    /// Absolute path where the new clone was created.
     pub path: String,
+    /// Owner and repository name separated by `/`.
     pub full_name: String,
 }
 

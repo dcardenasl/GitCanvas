@@ -4,6 +4,13 @@ use std::{thread, time::Duration};
 
 use crate::error::AppError;
 
+// Retries intentionally block until the backoff expires; keeping this call in
+// one helper makes the synchronous API's only sleep exception explicit.
+#[allow(clippy::disallowed_methods)]
+fn wait_before_retry(delay: Duration) {
+    thread::sleep(delay);
+}
+
 /// Runs `operation`, retrying while it fails with a transient error.
 ///
 /// Waits `base`, then `2 × base`, then `4 × base`… between attempts, and gives
@@ -26,8 +33,8 @@ pub fn retry_transient<T>(
         match operation() {
             Err(error) if error.is_transient() && attempt < retries => {
                 let multiplier = 1u32.checked_shl(attempt).unwrap_or(u32::MAX);
-                thread::sleep(base.saturating_mul(multiplier));
-                attempt += 1;
+                wait_before_retry(base.saturating_mul(multiplier));
+                attempt = attempt.saturating_add(1);
             }
             other => return other,
         }

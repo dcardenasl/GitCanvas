@@ -15,25 +15,33 @@ pub const COMMIT_TREE_PAGE_SIZE: usize = 200;
 /// A direct child in a commit tree. Directories are loaded on demand by the UI.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct CommitTreeEntry {
+    /// Display name of this direct child.
     pub name: String,
     /// Repository-relative path, always separated with `/`.
     pub path: String,
+    /// Whether this child is a directory, file, or submodule.
     pub kind: CommitTreeEntryKind,
 }
 
 /// Git object types that can occur in a tree and have distinct UI behavior.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub enum CommitTreeEntryKind {
+    /// A tree that can be expanded to list its direct children.
     Directory,
+    /// A blob leaf.
     File,
+    /// A gitlink to another repository.
     Submodule,
 }
 
 /// A bounded page of direct children from a commit directory.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct CommitTreePage {
+    /// Commit whose tree is being listed.
     pub commit_id: String,
+    /// Repository-relative directory path; `None` denotes the root.
     pub directory_path: Option<String>,
+    /// Direct children returned for this page.
     pub entries: Vec<CommitTreeEntry>,
     /// Offset for the next page, absent when this directory is exhausted.
     pub next_offset: Option<u32>,
@@ -42,9 +50,11 @@ pub struct CommitTreePage {
 /// Identifies one immutable commit directory and the next direct-child offset.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct CommitTreeRequest {
+    /// Commit whose tree is being listed.
     pub commit_id: String,
     /// `None` selects the root. Non-root paths must be canonical Git paths.
     pub directory_path: Option<String>,
+    /// Offset into the directory's sorted direct children.
     pub offset: u32,
 }
 

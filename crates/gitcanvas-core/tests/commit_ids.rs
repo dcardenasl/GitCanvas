@@ -22,7 +22,7 @@ fn an_abbreviated_commit_id_is_refused_everywhere() {
     let fixture = Fixture::new();
     let commit = fixture.commit_files("HEAD", "root", &[], 1, &[("a.txt", b"a\n")]);
     let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
-    let short = commit.to_string()[..12].to_owned();
+    let short = commit.to_string().chars().take(12).collect::<String>();
 
     let diff = get_commit_diff(
         &active,

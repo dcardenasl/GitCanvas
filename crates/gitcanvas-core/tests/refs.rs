@@ -1,3 +1,4 @@
+//! Branch and tag listing integration tests.
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,

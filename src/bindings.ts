@@ -27,7 +27,9 @@ export const commands = {
 	 *  arguments is awkward.
 	 */
 	getStartupRepository: () => typedError<{
+	/**  Canonical absolute repository path. */
 	path: string,
+	/**  Repository directory name for display. */
 	name: string,
 } | null, AppError>(__TAURI_INVOKE("get_startup_repository")),
 	/**  Reads a bounded history page using the selected repository's canonical path. */
@@ -134,17 +136,25 @@ export type AppError =
 
 /**  A branch uses its full ref name as identity; short names are display only. */
 export type BranchInfo = {
+	/**  Short branch name for display. */
 	name: string,
+	/**  Full ref name used as branch identity. */
 	full_name: string,
+	/**  Commit id at the branch tip. */
 	target: string,
+	/**  Whether this branch belongs to a remote. */
 	is_remote: boolean,
+	/**  Whether this is the currently checked-out branch. */
 	is_head: boolean,
+	/**  Whether this ref is symbolic instead of direct. */
 	is_symbolic: boolean,
 };
 
 /**  One cached clone. */
 export type CacheEntry = {
+	/**  Absolute path to the cached repository. */
 	path: string,
+	/**  Stable cache entry name. */
 	name: string,
 	/**
 	 *  Size in bytes, as a decimal string.
@@ -161,9 +171,11 @@ export type CacheEntry = {
 
 /**  What the cache currently holds. */
 export type CacheStatus = {
+	/**  Cached clones currently retained. */
 	entries: CacheEntry[],
 	/**  Total size in bytes, as a decimal string. See [`CacheEntry::bytes`]. */
 	total_bytes: string,
+	/**  Maximum number of clones retained. */
 	max_repositories: number,
 	/**  Limit in bytes, as a decimal string. See [`CacheEntry::bytes`]. */
 	max_total_bytes: string,
@@ -178,9 +190,13 @@ export type CacheStatus = {
  */
 export type CheckoutOutcome =
 /**  The branch is now checked out. */
-{ kind: "Switched"; branch: string } |
+{ kind: "Switched";
+/**  Name of the branch now checked out. */
+branch: string } |
 /**  Refused: these changes would have been lost. */
-{ kind: "Blocked"; conflicts: DirtyPath[] };
+{ kind: "Blocked";
+/**  Local paths that prevent a safe checkout. */
+conflicts: DirtyPath[] };
 
 /**  Progress for an in-flight clone, emitted as it advances. */
 export type CloneProgressEvent = {
@@ -192,17 +208,23 @@ export type CloneProgressEvent = {
 
 /**  Where a clone landed. */
 export type ClonedRepository = {
+	/**  Absolute path where the new clone was created. */
 	path: string,
+	/**  Owner and repository name separated by `/`. */
 	full_name: string,
 };
 
 /**  A commit's changes against its first parent. */
 export type CommitDiff = {
+	/**  Commit whose changes are described. */
 	commit_id: string,
 	/**  The parent compared against; absent for a root commit. */
 	parent_id: string | null,
+	/**  Changed files, with a patch only for the requested path. */
 	files: FileDiff[],
+	/**  Total inserted lines across all changed files. */
 	insertions: number,
+	/**  Total deleted lines across all changed files. */
 	deletions: number,
 	/**  True when this commit has more than one parent, so the diff covers one side. */
 	is_merge: boolean,
@@ -210,31 +232,50 @@ export type CommitDiff = {
 
 /**  One commit in the graph. Times are decimal Unix seconds, preserving Git's full integer range. */
 export type CommitInfo = {
+	/**  Full object id of the commit. */
 	id: string,
+	/**  Parent commit ids in their recorded order. */
 	parents: string[],
+	/**  First line of the commit message. */
 	summary: string,
+	/**  Full commit message. */
 	message: string,
+	/**  Author display name. */
 	author_name: string,
+	/**  Author email address. */
 	author_email: string,
+	/**  Author timestamp in Unix seconds, represented as decimal text. */
 	author_time: string,
+	/**  Committer timestamp in Unix seconds, represented as decimal text. */
 	commit_time: string,
 };
 
 /**  A direct child in a commit tree. Directories are loaded on demand by the UI. */
 export type CommitTreeEntry = {
+	/**  Display name of this direct child. */
 	name: string,
 	/**  Repository-relative path, always separated with `/`. */
 	path: string,
+	/**  Whether this child is a directory, file, or submodule. */
 	kind: CommitTreeEntryKind,
 };
 
 /**  Git object types that can occur in a tree and have distinct UI behavior. */
-export type CommitTreeEntryKind = "Directory" | "File" | "Submodule";
+export type CommitTreeEntryKind =
+/**  A tree that can be expanded to list its direct children. */
+"Directory" |
+/**  A blob leaf. */
+"File" |
+/**  A gitlink to another repository. */
+"Submodule";
 
 /**  A bounded page of direct children from a commit directory. */
 export type CommitTreePage = {
+	/**  Commit whose tree is being listed. */
 	commit_id: string,
+	/**  Repository-relative directory path; `None` denotes the root. */
 	directory_path: string | null,
+	/**  Direct children returned for this page. */
 	entries: CommitTreeEntry[],
 	/**  Offset for the next page, absent when this directory is exhausted. */
 	next_offset: number | null,
@@ -242,9 +283,11 @@ export type CommitTreePage = {
 
 /**  Identifies one immutable commit directory and the next direct-child offset. */
 export type CommitTreeRequest = {
+	/**  Commit whose tree is being listed. */
 	commit_id: string,
 	/**  `None` selects the root. Non-root paths must be canonical Git paths. */
 	directory_path: string | null,
+	/**  Offset into the directory's sorted direct children. */
 	offset: number,
 };
 
@@ -257,6 +300,7 @@ export type DiffOmission =
 
 /**  Bounds and selects the patch returned with commit change summaries. */
 export type DiffRequest = {
+	/**  Commit whose changes are requested. */
 	commit_id: string,
 	/**  Changed path whose patch is requested; other files are summaries only. */
 	file_path: string | null,
@@ -266,17 +310,34 @@ export type DiffRequest = {
 
 /**  A path that would be lost or overwritten by an operation. */
 export type DirtyPath = {
+	/**  Repository-relative path that would be discarded or overwritten. */
 	path: string,
 	/**  True when the change is staged, false when it is only in the worktree. */
 	staged: boolean,
 };
 
 /**  How a path changed between two trees. */
-export type FileChange = "Added" | "Modified" | "Deleted" | "Renamed" | "Copied" | "TypeChanged" | "Other";
+export type FileChange =
+/**  A path was added. */
+"Added" |
+/**  An existing path changed. */
+"Modified" |
+/**  A path was removed. */
+"Deleted" |
+/**  Git detected that a path moved. */
+"Renamed" |
+/**  Git detected a copy from an existing path. */
+"Copied" |
+/**  A path's object type changed. */
+"TypeChanged" |
+/**  Another change kind not represented above. */
+"Other";
 
 /**  A file as it stands at one commit. */
 export type FileContent = {
+	/**  Repository-relative path of the file. */
 	path: string,
+	/**  Commit that supplies the file contents. */
 	commit_id: string,
 	/**  Total lines, available even when the text itself is withheld. */
 	lines: number,
@@ -285,6 +346,7 @@ export type FileContent = {
 	 *  integer, and specta refuses to export 64-bit numbers.
 	 */
 	bytes: string,
+	/**  Why `text` was withheld, if it was not returned. */
 	omitted: DiffOmission | null,
 	/**  The text, or `None` whenever `omitted` is set. */
 	text: string | null,
@@ -292,7 +354,9 @@ export type FileContent = {
 
 /**  What the caller wants read. */
 export type FileContentRequest = {
+	/**  Commit from which to read the file. */
 	commit_id: string,
+	/**  Repository-relative path to read. */
 	path: string,
 	/**  Return the text even if it exceeds the line budget. */
 	expand: boolean,
@@ -305,12 +369,17 @@ export type FileContentRequest = {
  *  about whether there is something to render.
  */
 export type FileDiff = {
+	/**  Current repository-relative path. */
 	path: string,
 	/**  Previous path for renames and copies. */
 	old_path: string | null,
+	/**  Kind of change represented by this file entry. */
 	change: FileChange,
+	/**  Number of inserted lines. */
 	insertions: number,
+	/**  Number of deleted lines. */
 	deletions: number,
+	/**  Why the patch is omitted, if applicable. */
 	omitted: DiffOmission | null,
 	/**  Unified patch text for this file alone, ready for a diff renderer. */
 	patch: string | null,
@@ -318,46 +387,67 @@ export type FileDiff = {
 
 /**  File metadata used by large listings before a patch is requested. */
 export type FileDiffSummary = {
+	/**  Current repository-relative path. */
 	path: string,
+	/**  Previous path for renames and copies. */
 	old_path: string | null,
+	/**  Kind of change represented by this file entry. */
 	change: FileChange,
+	/**  Number of inserted lines. */
 	insertions: number,
+	/**  Number of deleted lines. */
 	deletions: number,
+	/**  Why the patch is omitted, if applicable. */
 	omitted: DiffOmission | null,
 };
 
 /**  The authenticated account. */
 export type GitHubAccount = {
+	/**  GitHub account login. */
 	login: string,
+	/**  Display name supplied by GitHub, if set. */
 	name: string | null,
 };
 
 /**  A repository the token can reach. */
 export type GitHubRepository = {
+	/**  Owner and repository name separated by `/`. */
 	full_name: string,
+	/**  HTTPS URL used to clone this repository. */
 	clone_url: string,
+	/**  Whether the repository is private. */
 	private: boolean,
+	/**  Name of the repository's default branch. */
 	default_branch: string,
+	/**  Repository description, if supplied. */
 	description: string | null,
 };
 
 /**  The bounded repository listing and whether more repositories were available. */
 export type GitHubRepositoryList = {
+	/**  Repositories returned within the configured page limit. */
 	repositories: GitHubRepository[],
+	/**  Whether additional repositories were omitted by the result limit. */
 	truncated: boolean,
 };
 
 /**  A bounded page and the information needed to resume its exact traversal. */
 export type HistoryPage = {
+	/**  Commits returned in topological history order. */
 	commits: CommitInfo[],
+	/**  Cursor for the next page, or `None` when traversal is complete. */
 	next_cursor: string | null,
+	/**  Roots required to resume the history walk. */
 	roots: string[],
 };
 
 /**  Request for a page. Continuations carry the prior page's immutable walk roots. */
 export type HistoryRequest = {
+	/**  Maximum number of commits requested for this page. */
 	limit: number,
+	/**  Opaque cursor returned by the preceding page, if any. */
 	cursor: string | null,
+	/**  Walk roots to use when resuming a paged history traversal. */
 	roots: string[] | null,
 };
 
@@ -372,9 +462,17 @@ export type PullOutcome =
 /**  Already up to date; nothing was fetched that changes the branch. */
 { kind: "UpToDate" } |
 /**  Fast-forwarded to the remote tip. */
-{ kind: "FastForwarded"; commits: number; to: string } |
+{ kind: "FastForwarded";
+/**  Number of commits added by the fast-forward. */
+commits: number;
+/**  Commit id at the new branch tip. */
+to: string } |
 /**  Refused: the histories diverged and a real merge would be required. */
-{ kind: "DivergedRequiresMerge"; local: string; remote: string } |
+{ kind: "DivergedRequiresMerge";
+/**  Local branch tip commit id. */
+local: string;
+/**  Upstream branch tip commit id. */
+remote: string } |
 /**  The branch has no upstream to pull from. */
 { kind: "NoUpstream" };
 
@@ -385,9 +483,17 @@ export type PullOutcome =
  *  crosses the boundary. The default external tagging generates a shape that
  *  needs a key lookup before anything can be read.
  */
-export type PushOutcome = { kind: "Pushed"; branch: string; remote: string } |
+export type PushOutcome =
+/**  Successfully pushed the checked-out branch. */
+{ kind: "Pushed";
+/**  Name of the branch sent. */
+branch: string;
+/**  Name of the remote that received it. */
+remote: string } |
 /**  Refused: the remote has commits the local branch does not. */
-{ kind: "RejectedNonFastForward"; branch: string };
+{ kind: "RejectedNonFastForward";
+/**  Name of the branch the remote rejected. */
+branch: string };
 
 export type RepositoryChangedEvent = {
 	path: string,
@@ -402,15 +508,21 @@ export type RepositoryChangedKind = "Metadata" | "Worktree" | { Degraded: {
 
 /**  Displayable repository identity, safe to send across IPC. */
 export type RepositoryInfo = {
+	/**  Canonical absolute repository path. */
 	path: string,
+	/**  Repository directory name for display. */
 	name: string,
 };
 
 /**  A tag may refer to any Git object, so a commit target is explicitly optional. */
 export type TagInfo = {
+	/**  Tag name for display. */
 	name: string,
+	/**  Object id directly referenced by the tag. */
 	target: string,
+	/**  Resolved commit id, if the target peels to a commit. */
 	commit_id: string | null,
+	/**  Whether the tag points to an annotated tag object. */
 	is_annotated: boolean,
 };
 
@@ -426,67 +538,106 @@ export type WatchRequest = {
  *  it was read from and is refused as stale once the changes have moved on.
  */
 export type WorktreeDiffPage = {
+	/**  Side of the working tree represented by this page. */
 	side: WorktreeSide,
+	/**  Revision token shared by the snapshot and its pages. */
 	revision: string,
+	/**  Changed files included in this page. */
 	files: FileDiffSummary[],
+	/**  Total number of changed files on this side. */
 	total_files: number,
+	/**  Cursor for the next page, or `None` when complete. */
 	next_cursor: string | null,
+	/**  Total inserted lines across this side. */
 	insertions: number,
+	/**  Total deleted lines across this side. */
 	deletions: number,
 };
 
+/**  File text and metadata read from one worktree revision. */
 export type WorktreeFileContent = {
+	/**  Side from which the file was read. */
 	side: WorktreeSide,
+	/**  Revision from which the file was read. */
 	revision: string,
+	/**  Repository-relative file path. */
 	path: string,
+	/**  Number of text lines, when available. */
 	lines: number,
+	/**  File size in bytes represented as decimal text. */
 	bytes: string,
+	/**  Why text was omitted, if applicable. */
 	omitted: DiffOmission | null,
+	/**  File text, or `None` when omitted. */
 	text: string | null,
 };
 
 /**  Reads a local file from the index or disk. */
 export type WorktreeFileContentRequest = {
+	/**  Side containing the requested file. */
 	side: WorktreeSide,
+	/**  Repository-relative file path. */
 	path: string,
+	/**  Revision token from the snapshot used to select the file. */
 	expected_revision: string | null,
+	/**  Whether to bypass the ordinary content-size limit. */
 	expand: boolean,
 };
 
+/**  One selected worktree file diff tied to its source revision. */
 export type WorktreeFileDiff = {
+	/**  Side containing the file. */
 	side: WorktreeSide,
+	/**  Revision from which the patch was read. */
 	revision: string,
+	/**  File summary and selected patch. */
 	file: FileDiff,
 };
 
 /**  A single detailed local diff, fetched after a file is selected. */
 export type WorktreeFileDiffRequest = {
+	/**  Side containing the requested file. */
 	side: WorktreeSide,
+	/**  Repository-relative file path. */
 	path: string,
+	/**  Revision token from the snapshot used to select the file. */
 	expected_revision: string | null,
+	/**  Whether to bypass the ordinary patch-size limit. */
 	expand: boolean,
 };
 
 /**  Lightweight revision used by the fallback poller and stale-read guard. */
 export type WorktreeFingerprint = {
+	/**  Compact revision token for the current local changes. */
 	revision: string,
 };
 
 /**  Which side of the local changes the caller wants to inspect. */
-export type WorktreeSide = "staged" | "unstaged";
+export type WorktreeSide =
+/**  Changes already staged in the index. */
+"staged" |
+/**  Changes in the working directory that are not staged. */
+"unstaged";
 
 /**  Both sides share one revision and one React Query cache entry. */
 export type WorktreeSnapshot = {
+	/**  Revision token that identifies both sides of this snapshot. */
 	revision: string,
+	/**  Staged changes at this revision. */
 	staged: WorktreeDiffPage,
+	/**  Unstaged changes at this revision. */
 	unstaged: WorktreeDiffPage,
 };
 
 /**  The combined initial snapshot request. */
 export type WorktreeSnapshotRequest = {
+	/**  Staged-side cursor, if requesting a later page. */
 	staged_cursor: string | null,
+	/**  Unstaged-side cursor, if requesting a later page. */
 	unstaged_cursor: string | null,
+	/**  Maximum number of files to return, or `None` for the default. */
 	limit: number | null,
+	/**  Revision that must still be current for a paged read. */
 	expected_revision: string | null,
 };
 
