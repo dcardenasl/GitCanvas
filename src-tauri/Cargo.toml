@@ -49,6 +49,7 @@ e2e = ["dep:tauri-plugin-wdio-webdriver"]
 [dev-dependencies]
 git2.workspace = true
 tempfile = "3"
+syn.workspace = true
 # The `test` feature unlocks tauri::test, which builds a headless app and
 # dispatches real IPC requests through it. That is what lets the round trip be
 # verified in CI instead of only by looking at a window.

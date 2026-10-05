@@ -1,5 +1,6 @@
-//! Repository commands. Each request carries its repository identity so an older
-//! in-flight request cannot accidentally read a newly selected repository.
+//! Repository commands. Every request resolves its explicit path through the
+//! process-local allowlist; commands never depend on a mutable selected-repository
+//! slot that could change while an operation is in flight.
 
 use gitcanvas_core::{
     error::AppError,

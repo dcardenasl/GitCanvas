@@ -23,6 +23,9 @@ mod warmup;
 #[cfg(test)]
 mod repository_tests;
 
+#[cfg(test)]
+mod command_invariant_tests;
+
 use tauri_specta::{collect_commands, collect_events};
 
 #[cfg(any(debug_assertions, test))]

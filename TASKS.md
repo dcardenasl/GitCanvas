@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (19/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (20/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -185,10 +185,16 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
 
 ### Reglas con guardia automática
 
-- [ ] **H2-19 — Proteger invariantes de comandos y estado.** Tests `src-tauri` para que
-      cada `#[tauri::command]` use `read(`/`write(` salvo excepciones explícitas y ningún
-      `State` contenga `Repository` (B5). Agregar test de despacho IPC para todos los
-      comandos y corregir comentario obsoleto (B7).
+- [x] **H2-19 — Proteger invariantes de comandos y estado.** Tests AST de `src-tauri`
+      comprueban que todo `#[tauri::command]` usa `read`/`write` (excepciones requieren
+      nombre y motivo), que `tauri::State` no contiene `Repository`/`ActiveRepo`, y que
+      `collect_commands!` coincide sin duplicados con todos los comandos declarados. La
+      prueba IPC despacha handlers seguros con payload incompleto; `forget_github_token`,
+      `has_github_token` y `list_github_repositories` se validan en el registry pero no se
+      ejecutan para evitar borrar/consultar credenciales del host o acceder a la red.
+      Se corrigieron comentarios obsoletos sobre la selección de repositorio y el límite
+      IPC del token.
+      *Verificado:* `cargo fmt --all -- --check`; `cargo test -p gitcanvas --lib` (22 tests); `cargo clippy -p gitcanvas --all-targets -- -D warnings`.
       → `test(tauri): enforce command and ipc invariants`
 - [ ] **H2-20 — Ampliar guardias Clippy.** Configurar prohibiciones del plan para
       `todo`, `unimplemented`, `dbg_macro`, `print_stdout/stderr`, `string_slice`, efectos

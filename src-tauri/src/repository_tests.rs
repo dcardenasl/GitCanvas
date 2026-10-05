@@ -3,7 +3,7 @@
 use serde_json::{json, Value};
 use tauri::test::{get_ipc_response, mock_builder, MockRuntime, INVOKE_KEY};
 
-fn webview() -> tauri::WebviewWindow<MockRuntime> {
+pub(super) fn test_webview() -> tauri::WebviewWindow<MockRuntime> {
     let builder = super::specta_builder();
     let app = mock_builder()
         .manage(crate::commands::github::CacheRoot(
@@ -13,6 +13,13 @@ fn webview() -> tauri::WebviewWindow<MockRuntime> {
             gitcanvas_core::history::HistoryReader::default(),
         ))
         .manage(crate::commands::repo_access::AllowedRepos::default())
+        .manage(crate::commands::watch::ActiveWatch::default())
+        .manage(crate::commands::watch::ChangeNotifier(std::sync::Arc::new(
+            |_| {},
+        )))
+        .manage(crate::commands::github::ProgressEmitter(
+            std::sync::Arc::new(|_| {}),
+        ))
         .invoke_handler(builder.invoke_handler())
         .build(super::app_context())
         .unwrap();
@@ -21,7 +28,7 @@ fn webview() -> tauri::WebviewWindow<MockRuntime> {
         .unwrap()
 }
 
-fn invoke(
+pub(super) fn invoke(
     webview: &tauri::WebviewWindow<MockRuntime>,
     cmd: &str,
     body: Value,
@@ -63,7 +70,7 @@ fn repository_history_and_refs_round_trip_with_real_payloads() {
         .unwrap();
     repo.tag_lightweight("v1", &repo.find_object(id, None).unwrap(), false)
         .unwrap();
-    let webview = webview();
+    let webview = test_webview();
     let path = dir.path().to_str().unwrap();
     for command in ["open_repository", "validate_repository"] {
         let response = invoke(&webview, command, json!({"path": path})).unwrap();
@@ -92,7 +99,7 @@ fn repository_history_and_refs_round_trip_with_real_payloads() {
 #[test]
 fn command_failures_are_structured_and_invalid_limits_are_rejected() {
     let dir = tempfile::tempdir().unwrap();
-    let webview = webview();
+    let webview = test_webview();
     let path = dir.path().to_str().unwrap();
     for command in [
         "open_repository",
@@ -119,7 +126,7 @@ fn command_failures_are_structured_and_invalid_limits_are_rejected() {
 fn git_commands_require_a_repository_to_be_opened_first() {
     let dir = tempfile::tempdir().unwrap();
     git2::Repository::init(dir.path()).unwrap();
-    let webview = webview();
+    let webview = test_webview();
     let path = dir.path().to_str().unwrap();
 
     let denied = invoke(&webview, "get_branches", json!({"path": path})).unwrap_err();
@@ -142,7 +149,7 @@ fn independent_requests_do_not_change_each_others_repository() {
     let second = tempfile::tempdir().unwrap();
     git2::Repository::init(first.path()).unwrap();
     git2::Repository::init(second.path()).unwrap();
-    let webview = webview();
+    let webview = test_webview();
     invoke(
         &webview,
         "open_repository",

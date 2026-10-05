@@ -1,9 +1,9 @@
 //! GitHub token storage, backed by the operating system keychain.
 //!
-//! The token never leaves this crate. It is written here, read here, and handed
-//! straight to libgit2's credential callback or to an HTTP header — it is never
-//! returned across the IPC boundary, not even masked. The interface asks
-//! whether a token exists, never what it is.
+//! After the interface sends a token across IPC for storage, the token stays
+//! inside this crate: it is read here and handed straight to libgit2's
+//! credential callback or to an HTTP header. It is never returned across IPC,
+//! not even masked. The interface asks whether a token exists, never what it is.
 //!
 //! This replaces the Stronghold plugin named in the original design: Stronghold
 //! is deprecated and slated for removal in Tauri v3, and it would additionally
