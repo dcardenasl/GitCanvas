@@ -149,13 +149,12 @@
 
 - [x] **F0-7 — Hook de pre-commit.** `cargo fmt --check`, `eslint` y `prettier --check`,
       enganchado al `prepare` de npm para que se instale solo con `npm install`. Cada
-      fallo imprime el comando exacto que lo arregla, en vez de un volcado de errores.
+      fallo conserva el diagnóstico original y muestra el siguiente paso para corregirlo.
       Los hooks no corren en shell interactiva, así que el PATH de cargo y Homebrew se
       arma explícitamente en vez de confiar en que se cargue un perfil.
-      *Verificado:* sonda en los tres frentes —Rust mal formateado, un `any` de
-      TypeScript, y formato de Prettier—; los tres detienen el commit. Con el árbol
-      limpio pasa en **2,05 s**, que es el presupuesto que hace que `dev` siga siendo
-      rápido.
+      *Verificado entonces (hook original, antes de limitarlo a archivos staged):* sonda
+      en los tres frentes —Rust mal formateado, un `any` de TypeScript y formato de
+      Prettier—; los tres detienen el commit. Con el árbol limpio medía **2,05 s**.
       → `chore(hooks): add the pre-commit style hook`
 
 - [x] **F0-8 — Workflows de CI.** `dev-check.yml` (push a `dev`: typecheck, lint,
@@ -1104,7 +1103,8 @@ marca.
   de lógica de negocio: workspace Rust con la frontera del dominio aplicada por el
   compilador, TypeScript estricto con la frontera del graph-layout aplicada por ESLint,
   lints que deniegan `unwrap`/`expect`/`panic`, el pipeline de contratos tipados con su
-  chequeo de drift, hook de pre-commit de 2 s, y los tres workflows de CI.
+  chequeo de drift, hook de estilo limitado a los archivos staged, y los tres workflows
+  de CI.
   **Cada frontera se verificó rompiéndola a propósito una vez.**
   *Verificación de cierre:* `cargo fmt --check` limpio · `cargo clippy --all-targets
   --all-features -- -D warnings` limpio · `cargo test --workspace` 3 tests en verde ·
@@ -1287,3 +1287,50 @@ marca.
       IPC del token.
       *Verificado:* `cargo fmt --all -- --check`; `cargo test -p gitcanvas --lib` (22 tests); `cargo clippy -p gitcanvas --all-targets -- -D warnings`.
       → `test(tauri): enforce command and ipc invariants`
+- [x] **H2-20 — Ampliar guardias Clippy.** `Cargo.toml` deniega `todo`, `unimplemented`,
+      `dbg_macro`, `print_stdout/stderr`, `string_slice`, efectos aritméticos, métodos
+      prohibidos y `missing_docs` en Rust. `clippy.toml` prohíbe crear procesos externos
+      y dormir hilos. Se resolvieron diagnósticos con aritmética saturada/verificada,
+      esperas condicionadas, documentación pública y bindings regenerados. Excepciones
+      estrechas y comentadas para backoff, salida de Cargo, error previo al logger y
+      herramienta manual ignorada.
+      *Verificado:* `cargo fmt --all -- --check`, `cargo test --workspace` (todos pasan;
+      2 comparaciones manuales ignoradas por diseño), `cargo clippy --workspace --all-targets
+      -- -D warnings`, `./pre-commit` y `git diff --check`.
+      → `chore(rust): enforce additional workspace lint rules`
+- [x] **H2-21 — Cerrar fronteras ESLint y TSDoc.** ESLint prohíbe importaciones dinámicas,
+      tipos `import()` y llamadas `require()` dentro de `graph-layout`; se conserva la
+      prohibición de imports estáticos externos. `eslint-plugin-jsdoc` valida tags y exige
+      descripciones en exports públicos TypeScript, sin tipos redundantes de parámetros
+      o retornos. Se documentaron los exports existentes.
+      *Verificado:* `npm run lint`, `npm run typecheck`, tests de `graph-layout` (12),
+      `./pre-commit`; sondas rechazaron dinámico `import()`, import type, `require()` y
+      una interfaz pública sin TSDoc.
+      → `chore(ts): enforce graph imports and public api docs`
+- [x] **H2-22 — Tipar y validar todos los proyectos TypeScript.** Añadidos
+      `typecheck:e2e` y `typecheck:node`; ambos workflows de CI ejecutan ambos junto al
+      typecheck principal. E2E y `wdio.conf.ts` aplican `noUncheckedIndexedAccess` y
+      `exactOptionalPropertyTypes`; ESLint habilita `no-floating-promises` para E2E. Las
+      configs Node comprueban JS mediante `allowJs`/`checkJs`. Quitado `--passWithNoTests`.
+      *Hallazgo:* el grabador manual `e2e/recording/record-video.ts` depende de un checkout
+      hermano de `bitacora-engine`, ausente en CI; se excluye del proyecto E2E y H2-43 lo
+      aislará. Se corrigieron siete accesos E2E con validación explícita.
+      *Verificado:* los tres typechecks, `npm run lint`, `npm run format:check`,
+      `./pre-commit`, `npm run test` y `npm run test:coverage` (38 archivos, 317 tests;
+      cobertura statements 93,11 %, branches 86,31 %, functions 93,25 %, lines 93,89 %).
+      Sonda confirmó el rechazo/aceptación de promesas WebDriver según manejo; búsqueda sin
+      resultados de `--passWithNoTests`.
+      → `ci: typecheck e2e and node projects`
+- [x] **H2-23 — Hacer útil el hook de pre-commit y validar mensajes.** ESLint y Prettier
+      se ejecutan solo sobre archivos staged compatibles; ante fallo se conserva el
+      diagnóstico original y se añade una indicación de corrección. Rust mantiene
+      `cargo fmt --check`. Añadido `commit-msg`, sincronizado mediante el instalador.
+      *Hallazgo:* ESLint aplicaba reglas tipadas a JS sin servicios TypeScript; se
+      desactivaron solo las reglas tipadas para JavaScript común. El idioma e imperativo
+      del asunto siguen siendo convenciones documentadas, no comprobaciones mecánicas.
+      *Verificado:* `bash -n` en hooks; `npm run lint`, `npm run typecheck:node`,
+      `npm run format:check`, `./pre-commit`; sondas de staged/unstaged, diagnósticos de
+      Prettier y aceptación/rechazo de formato, tipo, mayúscula, punto final, menciones,
+      trailers y cuerpos multilinea. Caso sin staged validado en Bash 3.2. La cifra
+      histórica de 2,05 s quedó etiquetada como medida del hook original.
+      → `chore(hooks): validate staged files and commit messages`

@@ -51,6 +51,8 @@ git commit -m "type(scope): subject in english"
 
 **Una sola línea. Un solo `-m`. En inglés. Imperativo. Minúscula después de los dos
 puntos. Sin punto final.** Tipos: `feat fix docs chore refactor test perf style ci build`.
+El hook `commit-msg` valida el formato, el tipo permitido, el asunto de una sola línea
+y la ausencia de trailers o menciones a Claude, AI o Anthropic.
 
 Prohibido sin excepción:
 

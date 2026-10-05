@@ -50,6 +50,13 @@ export default tseslint.config(
     },
   },
 
+  // JavaScript has no TypeScript project from which typed rules can read
+  // parser services. Keep its ordinary ESLint checks without type-aware rules.
+  {
+    files: ["**/*.{js,jsx,cjs,mjs}"],
+    ...tseslint.configs.disableTypeChecked,
+  },
+
   // Public TypeScript exports are APIs even when they are consumed only
   // inside this application. Require TSDoc at the export boundary without
   // requiring redundant @param/@returns types already expressed in TypeScript.
