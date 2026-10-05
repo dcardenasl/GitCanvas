@@ -8,14 +8,15 @@
 
 **Estado al 2026-10-05:** 43 de las 46 tareas H2 están completadas y archivadas en
 [`ARCHIVES.md`](ARCHIVES.md); quedan H2-25, H2-42 y H2-45. De las completadas, 35 tienen
-un commit local dedicado. H2-34–41 están implementadas y verificadas, pero no tienen
-commits individuales; H2-45 debe reconciliar esa divergencia. El release v0.1.0
+un commit dedicado; H2-34–41 se integraron y verificaron juntas en `437ff07` porque sus
+cambios de frontend, IPC, bindings, core y pruebas se cruzan. H2-45 debe registrar esta
+excepción a la regla de commit individual y cerrar la trazabilidad. El release v0.1.0
 sigue abierto: PR #1 está abierta y R-4, R-5 y R-6 están pendientes.
 
 **Estado del checkout:** la PR #1 sigue en el SHA remoto `7f24bb6`; el checkout `dev` tiene
-commits y cambios locales que la PR aún no evalúa. El working tree contiene cambios de
-varias tareas. No asumir que estén integrados en la PR ni crear un commit que mezcle tareas;
-antes de editar, inspeccionar `git status`, el historial y la evidencia de abajo.
+44 commits locales por delante de `origin/dev` y el working tree está limpio. La PR aún no
+evalúa esos commits. No asumir que estén integrados en la PR; antes de editar, inspeccionar
+`git status`, el historial y la evidencia de abajo.
 
 ## Siguiente paso
 
@@ -41,7 +42,9 @@ verificación estén completos; registrar su commit dedicado cuando corresponda.
    conocido de `@wdio/tauri-service`.
 3. **H2-45 — Cierre H2.** Reconciliar H2-34–41 con el historial sin perder cambios;
    cerrar conteos, evidencia integrada y divergencias solo cuando las tareas previas estén
-   cerradas.
+   cerradas. El bloque H2-34–41 está integrado en `437ff07`, no en ocho commits individuales;
+   dejar esta desviación explícita. Esperar CI actual en Linux, macOS y Windows para H2-25 y
+   H2-42 antes de cerrar H2 o iniciar el release.
 4. **R-4 a R-6 — Release independiente.** Seguir `CLAUDE.md`; R-4 requiere CI verde y
    aprobación explícita de David antes del merge.
 
@@ -153,13 +156,14 @@ David.
       divergencias verificadas frente al plan, commits ya registrados y evidencia final.
       Ejecutar la verificación local definida por el plan y las comprobaciones manuales
       aplicables; registrar fallos ambientales sin declararlos verdes.
-      *Hallazgo (2026-10-05):* H2-33 quedó reconciliada con el commit local `03077dd`
-      (`perf(core): bound fingerprints and watcher debounce`). H2-34–41 siguen sin commits
-      dedicados y sus implementaciones permanecen en el working tree. H2-43 quedó reconciliada
-      con `5d47af3` (`chore(demo): isolate recorder tooling and document prerequisites`). El
-      invariante “una tarea = un commit” no se cumplió para H2-34–41. No cerrar H2-45 hasta
-      reconciliar ese historial, conservar los cambios y actualizar
-      TASKS/ARCHIVES con los commits efectivamente creados.
+      *Reconciliación de commits (2026-10-05):* H2-33 quedó en `03077dd` (`perf(core): bound
+      fingerprints and watcher debounce`), H2-34–41 en el commit de integración `437ff07`
+      (`refactor: consolidate audited hardening work`) y H2-43 en `5d47af3` (`chore(demo):
+      isolate recorder tooling and document prerequisites`). H2-34–41 no tienen un commit
+      individual por tarea; se conservaron juntas porque los cambios atraviesan componentes
+      compartidos y contratos entre frontend, IPC, bindings, Tauri y core. El conteo debe
+      distinguir los 35 cierres con commit dedicado de los 8 IDs cubiertos por el commit de
+      integración. El working tree quedó limpio tras `437ff07`.
       *Evidencia integrada actual (2026-10-05):* pasaron `cargo fmt --all --check`,
       `cargo clippy --all-targets --all-features --offline --locked -- -D warnings` y
       `cargo test --workspace --offline --locked` (150 tests: 23 Tauri, 40 unitarios core y
@@ -171,10 +175,15 @@ David.
       dependencias sin mantenimiento o un advisory de soundness configurados en la política.
       La primera ejecución completa detectó que `touch_if_cached` canonizaba la raíz pero
       no el repositorio, fallando bajo la ruta `/var` alias de macOS; ambos caminos ahora se
-      canonizan y los 12 tests del cache y la suite workspace completa vuelven a pasar.
-      El smoke de arranque y E2E de macOS también pasan; esta verificación integrada no
-      sustituye la reconciliación de commits individuales ni la evidencia E2E multiplataforma
-      pendiente de H2-25/H2-42.
+      canonizan y los 12 tests del cache y la suite workspace completa vuelven a pasar. La
+      verificación repetida sobre el snapshot integrado `437ff07` pasó con Node 24 (40 suites,
+      343 tests; cobertura: 94,75% statements, 88,08% branches, 94,05% funciones y 95,85%
+      líneas), typecheck de app/E2E/Node, lint, formato, `cargo fmt`, `cargo test --workspace`
+      (150 tests) y Clippy `-D warnings`. Node 20 del shell no cumple `engines >=22` y produce
+      un fallo de arranque en undici/jsdom; no usarlo para validar. El smoke de arranque y dos
+      corridas E2E de macOS también pasan. La PR #1 sigue en `7f24bb6`, con checks fallidos
+      del 2026-09-26; aún no hay CI sobre `437ff07`. Falta validar H2-25/H2-42 en los tres
+      sistemas antes de cerrar H2.
       → `docs(tasks): close post-audit hardening`
 
 **Criterio de cierre:** H2-0 a H2-45 completadas o hallazgos explícitamente descartados
