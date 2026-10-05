@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (17/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (18/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -170,10 +170,11 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       en español con reinicio y sin exponer el error interno.
       *Verificado:* `npm run typecheck`, `npx vitest run src/components/ErrorBoundary/ErrorBoundary.test.tsx` (1 test), `./pre-commit`.
       → `feat(ui): add a localized application error boundary`
-- [ ] **H2-17 — Hacer fiable la inicialización del repositorio en vivo.** Usar
-      `userMessage` al mostrar estado `Degraded`; mover generación a nivel módulo; registrar
-      `listen` antes de `watch`; agregar `isAppErrorKind` y texto seguro para errores
-      desconocidos en `errors.ts`.
+- [x] **H2-17 — Hacer fiable la inicialización del repositorio en vivo.** El listener se
+      instala antes de `watch`; generaciones únicas viven a nivel de módulo y el cleanup
+      espera al inicio antes de invalidarlo. Estados degradados usan resúmenes españoles;
+      `errors.ts` expone `isAppErrorKind` y un mensaje seguro para categorías desconocidas.
+      *Verificado:* `npm run typecheck`; `npx vitest run src/state/liveRepository.test.ts src/lib/errors.test.ts` (20 tests); `./pre-commit`.
       → `fix(live): make watcher startup and errors reliable`
 - [ ] **H2-18 — Completar idioma y acceso por teclado.** `index.html` en español; tabla de
       commits alcanzable con Tab, foco, Home/End/PageUp/PageDown y menú por teclado; permitir

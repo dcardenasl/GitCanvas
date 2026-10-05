@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Repository watcher startup** — change events are subscribed before watching begins, stale starts get unique generations, and degraded states show safe Spanish summaries.
 - **Diff and history errors** — file expansion uses one shared state, local file reads wait for a revision, and a failed history page can be retried without hiding commits already loaded.
 - **Diff content beginning with dashes** — hunk lines that resemble file headers now remain visible as additions or deletions.
 - **GitHub token setup** — surrounding whitespace is removed before verification and storage, while keychain read failures now reach the interface as errors.

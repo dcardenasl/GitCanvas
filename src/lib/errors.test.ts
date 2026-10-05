@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { IpcError } from "./ipc";
-import { userMessage } from "./errors";
+import { appErrorMessage, isAppErrorKind, userMessage } from "./errors";
 
 describe("userMessage", () => {
   it("introduces a backend failure in Spanish and keeps the diagnostic", () => {
@@ -28,8 +28,22 @@ describe("userMessage", () => {
     expect(userMessage("plain")).toBe("plain");
   });
 
-  it("does not invent a summary for a kind it does not know", () => {
+  it("uses a safe fallback for an unknown structured error kind", () => {
     const error = Object.assign(new Error("detail"), { kind: "FromTheFuture" });
-    expect(userMessage(error)).toBe("detail");
+    expect(userMessage(error)).toBe("Ocurrió un error inesperado.");
+  });
+});
+
+describe("isAppErrorKind", () => {
+  it("recognizes only declared backend kinds", () => {
+    expect(isAppErrorKind("WatchDegraded")).toBe(true);
+    expect(isAppErrorKind("FromTheFuture")).toBe(false);
+    expect(isAppErrorKind(null)).toBe(false);
+  });
+
+  it("returns a safe summary for unknown structured errors", () => {
+    expect(appErrorMessage("FromTheFuture", "internal detail")).toBe(
+      "Ocurrió un error inesperado.",
+    );
   });
 });

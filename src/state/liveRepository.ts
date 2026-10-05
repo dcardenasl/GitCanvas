@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
-import { userMessage } from "../lib/errors";
+import { appErrorMessage, userMessage } from "../lib/errors";
 import {
   onRepositoryChanged,
   unwatchRepository,
@@ -14,6 +14,19 @@ const METADATA_QUERIES = ["history", "branches", "tags"] as const;
 
 /** Queries that a change to the index or the working tree can stale. */
 const WORKTREE_QUERIES = ["worktree", "worktree-file-diff"] as const;
+
+// A module-level sequence gives every hook instance and StrictMode remount a
+// distinct backend generation. A component-local ref could restart at zero.
+let generationSequence = 0;
+const degradedGenerations = new Set<number>();
+
+function nextGeneration(): number {
+  generationSequence += 1;
+  if (!Number.isSafeInteger(generationSequence)) {
+    throw new Error("Repository watcher generation limit reached");
+  }
+  return generationSequence;
+}
 
 /**
  * Query families that describe the repository as it is right now.
@@ -55,7 +68,6 @@ export function useLiveRepository(path: string | null): {
       : outcome?.path === path
         ? outcome.status
         : { kind: "starting" };
-  const generationRef = useRef(0);
   const fingerprint = useWorktreeFingerprint(path, status.kind === "degraded");
   const previousFingerprint = useRef<{
     readonly path: string;
@@ -82,9 +94,9 @@ export function useLiveRepository(path: string | null): {
       return;
     }
 
-    let cancelled = false;
-    const generation = generationRef.current + 1;
-    generationRef.current = generation;
+    const lifecycle = { cancelled: false };
+    const isCancelled = () => lifecycle.cancelled;
+    const generation = nextGeneration();
     const invalidate = (scope: "metadata" | "worktree") => {
       const keys = scope === "metadata" ? METADATA_QUERIES : WORKTREE_QUERIES;
       for (const key of keys) {
@@ -92,43 +104,73 @@ export function useLiveRepository(path: string | null): {
       }
     };
 
-    void watchRepository({ path, generation })
-      .then(() => {
-        if (!cancelled) setOutcome({ path, status: { kind: "ready" } });
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setOutcome({
-            path,
-            status: {
-              kind: "degraded",
-              message: userMessage(error),
-            },
-          });
-        }
-      });
-
     const listening = onRepositoryChanged(({ payload }) => {
-      if (cancelled) return;
+      if (isCancelled()) return;
       if (payload.path !== path || payload.generation !== generation) return;
       if (payload.kind === "Metadata") {
         invalidate("metadata");
       } else if (payload.kind === "Worktree") {
         invalidate("worktree");
       } else {
+        degradedGenerations.add(generation);
         setOutcome({
           path,
-          status: { kind: "degraded", message: payload.kind.Degraded.message },
+          status: {
+            kind: "degraded",
+            message: appErrorMessage(
+              "WatchDegraded",
+              payload.kind.Degraded.message,
+            ),
+          },
+        });
+      }
+    });
+
+    let stopped = false;
+    const stopListening = () => {
+      void listening
+        .then((stop) => {
+          if (!stopped) {
+            stopped = true;
+            stop();
+          }
+        })
+        .catch(() => undefined);
+    };
+
+    const started = (async () => {
+      await listening;
+      if (isCancelled()) {
+        stopListening();
+        return;
+      }
+      await watchRepository({ path, generation });
+      if (isCancelled()) return;
+      if (degradedGenerations.delete(generation)) return;
+      setOutcome({ path, status: { kind: "ready" } });
+    })().catch((error: unknown) => {
+      if (!isCancelled()) {
+        setOutcome({
+          path,
+          status: {
+            kind: "degraded",
+            message: userMessage(error),
+          },
         });
       }
     });
 
     return () => {
-      cancelled = true;
-      void listening.then((stop) => {
-        stop();
-      });
-      void unwatchRepository(generation).catch(() => undefined);
+      lifecycle.cancelled = true;
+      degradedGenerations.delete(generation);
+      stopListening();
+      // Await startup so unwatch cannot race ahead of a watch command that was
+      // already sent and leave its late completion active in the backend.
+      void started
+        .then(() => {
+          return unwatchRepository(generation);
+        })
+        .catch(() => undefined);
     };
   }, [path, queryClient, retryToken]);
 

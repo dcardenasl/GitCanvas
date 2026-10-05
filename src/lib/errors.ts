@@ -29,16 +29,28 @@ const KIND_SUMMARY: Record<AppError["kind"], string> = {
   Internal: "Falló una operación interna",
 };
 
-function summaryFor(kind: string): string | undefined {
-  return (KIND_SUMMARY as Partial<Record<string, string>>)[kind];
+const UNKNOWN_ERROR_MESSAGE = "Ocurrió un error inesperado.";
+
+/** Whether a value is one of the backend's known, user-facing error kinds. */
+export function isAppErrorKind(kind: unknown): kind is AppError["kind"] {
+  return (
+    typeof kind === "string" &&
+    Object.prototype.hasOwnProperty.call(KIND_SUMMARY, kind)
+  );
 }
 
 /** The backend error category of `error`, if it came from the backend. */
 export function errorKind(error: unknown): AppError["kind"] | null {
   if (!(error instanceof Error) || !("kind" in error)) return null;
-  return typeof error.kind === "string"
-    ? (error.kind as AppError["kind"])
-    : null;
+  return isAppErrorKind(error.kind) ? error.kind : null;
+}
+
+/** Safe Spanish summary for structured errors, including watcher events. */
+export function appErrorMessage(kind: unknown, message: unknown): string {
+  if (!isAppErrorKind(kind) || typeof message !== "string") {
+    return UNKNOWN_ERROR_MESSAGE;
+  }
+  return `${KIND_SUMMARY[kind]}: ${message}`;
 }
 
 /**
@@ -50,8 +62,6 @@ export function errorKind(error: unknown): AppError["kind"] | null {
  */
 export function userMessage(error: unknown): string {
   if (!(error instanceof Error)) return String(error);
-  const kind =
-    "kind" in error && typeof error.kind === "string" ? error.kind : null;
-  const summary = kind === null ? undefined : summaryFor(kind);
-  return summary === undefined ? error.message : `${summary}: ${error.message}`;
+  if (!("kind" in error)) return error.message;
+  return appErrorMessage(error.kind, error.message);
 }

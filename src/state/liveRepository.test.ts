@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,14 +15,19 @@ type Handler = (event: {
 
 let handler: Handler | null = null;
 const stop = vi.fn();
+const operationOrder: string[] = [];
 const watchRepository = vi.fn<(request: unknown) => Promise<null>>();
 const unwatchRepository = vi.fn<(generation: number) => Promise<null>>();
 
 vi.mock("../lib/ipc", () => ({
-  watchRepository: (request: unknown) => watchRepository(request),
+  watchRepository: (request: unknown) => {
+    operationOrder.push("watch");
+    return watchRepository(request);
+  },
   unwatchRepository: (generation: number) => unwatchRepository(generation),
   getWorktreeFingerprint: () => Promise.resolve({ revision: "revision" }),
   onRepositoryChanged: (fn: Handler) => {
+    operationOrder.push("listen");
     handler = fn;
     return Promise.resolve(stop);
   },
@@ -39,6 +44,7 @@ function wrapper({ children }: { children: ReactNode }) {
 beforeEach(() => {
   vi.clearAllMocks();
   handler = null;
+  operationOrder.length = 0;
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   watchRepository.mockResolvedValue(null);
   unwatchRepository.mockResolvedValue(null);
@@ -48,7 +54,7 @@ afterEach(() => {
 });
 
 describe("useLiveRepository", () => {
-  it("watches the repository that is open", () => {
+  it("subscribes before starting the watch and uses a unique generation", async () => {
     renderHook(
       () => {
         useLiveRepository("/tmp/repo");
@@ -56,10 +62,16 @@ describe("useLiveRepository", () => {
       { wrapper },
     );
 
-    expect(watchRepository).toHaveBeenCalledWith({
-      path: "/tmp/repo",
-      generation: 1,
+    await waitFor(() => {
+      expect(watchRepository).toHaveBeenCalledTimes(1);
     });
+    expect(operationOrder).toEqual(["listen", "watch"]);
+    const request = watchRepository.mock.calls[0]?.[0] as {
+      path: string;
+      generation: number;
+    };
+    expect(request.path).toBe("/tmp/repo");
+    expect(Number.isSafeInteger(request.generation)).toBe(true);
   });
 
   it("watches nothing when no repository is open", () => {
@@ -84,8 +96,11 @@ describe("useLiveRepository", () => {
 
     // Let the listener subscription resolve.
     await Promise.resolve();
+    const generation = (
+      watchRepository.mock.calls[0]?.[0] as { generation: number }
+    ).generation;
     handler?.({
-      payload: { path: "/tmp/repo", generation: 1, kind: "Metadata" },
+      payload: { path: "/tmp/repo", generation, kind: "Metadata" },
     });
 
     const keys = invalidate.mock.calls.map((call) => call[0]?.queryKey?.[0]);
@@ -108,8 +123,11 @@ describe("useLiveRepository", () => {
     );
 
     await Promise.resolve();
+    const generation = (
+      watchRepository.mock.calls[0]?.[0] as { generation: number }
+    ).generation;
     handler?.({
-      payload: { path: "/tmp/repo", generation: 1, kind: "Worktree" },
+      payload: { path: "/tmp/repo", generation, kind: "Worktree" },
     });
 
     const keys = invalidate.mock.calls.map((call) => call[0]?.queryKey?.[0]);
@@ -127,12 +145,19 @@ describe("useLiveRepository", () => {
       { wrapper },
     );
 
-    await Promise.resolve();
+    await waitFor(() => {
+      expect(watchRepository).toHaveBeenCalledTimes(1);
+    });
     unmount();
 
     // A watch that outlives its window keeps invalidating caches for a
     // repository nobody is looking at.
-    expect(unwatchRepository).toHaveBeenCalledWith(1);
+    const generation = (
+      watchRepository.mock.calls[0]?.[0] as { generation: number }
+    ).generation;
+    await waitFor(() => {
+      expect(unwatchRepository).toHaveBeenCalledWith(generation);
+    });
   });
 
   it("keeps working when the watch cannot be established", async () => {
@@ -174,6 +199,85 @@ describe("useLiveRepository", () => {
         message: "permission denied",
       });
     });
+  });
+
+  it("summarizes watcher degradation events in Spanish", async () => {
+    const { result } = renderHook(() => useLiveRepository("/tmp/repo"), {
+      wrapper,
+    });
+    await waitFor(() => {
+      expect(watchRepository).toHaveBeenCalledTimes(1);
+    });
+    const generation = (
+      watchRepository.mock.calls[0]?.[0] as { generation: number }
+    ).generation;
+    act(() => {
+      handler?.({
+        payload: {
+          path: "/tmp/repo",
+          generation,
+          kind: { Degraded: { message: "watch failed" } },
+        },
+      });
+    });
+    expect(result.current.status).toEqual({
+      kind: "degraded",
+      message: "La observación del repositorio está degradada: watch failed",
+    });
+  });
+
+  it("does not replace an early degraded event with watch-ready", async () => {
+    let finishWatch: () => void = () => undefined;
+    watchRepository.mockReturnValue(
+      new Promise<null>((resolve) => {
+        finishWatch = () => {
+          resolve(null);
+        };
+      }),
+    );
+    const { result } = renderHook(() => useLiveRepository("/tmp/repo"), {
+      wrapper,
+    });
+    await waitFor(() => {
+      expect(watchRepository).toHaveBeenCalledTimes(1);
+    });
+    const generation = (
+      watchRepository.mock.calls[0]?.[0] as { generation: number }
+    ).generation;
+
+    act(() => {
+      handler?.({
+        payload: {
+          path: "/tmp/repo",
+          generation,
+          kind: { Degraded: { message: "early watch failure" } },
+        },
+      });
+    });
+    await act(async () => {
+      finishWatch();
+      await Promise.resolve();
+    });
+
+    expect(result.current.status).toEqual({
+      kind: "degraded",
+      message:
+        "La observación del repositorio está degradada: early watch failure",
+    });
+  });
+
+  it("assigns different generations to separate hook instances", async () => {
+    const first = renderHook(() => useLiveRepository("/tmp/one"), { wrapper });
+    const second = renderHook(() => useLiveRepository("/tmp/two"), { wrapper });
+    await waitFor(() => {
+      expect(watchRepository).toHaveBeenCalledTimes(2);
+    });
+    const generations = watchRepository.mock.calls.map(
+      ([request]) => (request as { generation: number }).generation,
+    );
+    expect(new Set(generations).size).toBe(2);
+    first.unmount();
+    second.unmount();
   });
 
   it("does not carry one repository's status over to the next", async () => {
