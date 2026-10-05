@@ -196,6 +196,33 @@ pub fn run() {
 mod tests {
     use super::specta_builder;
 
+    /// Keep the shipped window on the smallest permission set the app uses.
+    ///
+    /// Tauri permissions are additive, so restoring `core:default` here would
+    /// silently broaden the webview's authority even if every command still
+    /// behaved correctly. Parsing the capability makes this an explicit,
+    /// reviewable allowlist rather than a substring check.
+    #[test]
+    fn default_capability_contains_only_required_permissions() {
+        let capability: serde_json::Value =
+            serde_json::from_str(include_str!("../capabilities/default.json")).unwrap();
+        let permissions = capability["permissions"]
+            .as_array()
+            .expect("the default capability must declare permissions")
+            .iter()
+            .map(|permission| {
+                permission
+                    .as_str()
+                    .expect("capability permissions must be strings")
+            })
+            .collect::<std::collections::BTreeSet<_>>();
+        let expected = ["core:event:default", "dialog:allow-open"]
+            .into_iter()
+            .collect::<std::collections::BTreeSet<_>>();
+
+        assert_eq!(permissions, expected);
+    }
+
     /// Regenerates `src/bindings.ts` from the registered commands and events.
     ///
     /// Generating the contract from a test rather than from a running app is

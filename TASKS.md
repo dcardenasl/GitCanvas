@@ -49,8 +49,10 @@ hasta obtener evidencia dinámica de arranque y E2E en los tres sistemas operati
       `core:event:default` y `dialog:allow-open`, coherente con el uso de eventos, comandos
       IPC de la app y selector nativo de carpetas. `quality.yml` ahora ejecuta la suite E2E
       en Linux, macOS y Windows, usando Xvfb solo en Linux; las capturas usan `os.tmpdir()`
-      para no asumir `/tmp` en Windows. El JSON y los usos se verificaron por inspección
-      estática. Pendiente la primera evidencia dinámica de arranque/E2E en los tres OS: la
+      para no asumir `/tmp` en Windows. Se añadió un test de regresión que exige que la
+      allowlist sea exactamente esos dos permisos. El JSON y los usos se verificaron por
+      inspección estática; el nuevo test aún no se ha ejecutado. Pendiente la primera
+      evidencia dinámica de arranque/E2E en los tres OS: la
       skill `security-audit` prohíbe ejecutar builds/tests del proyecto sin sandbox aislado,
       que esta sesión no proporciona. Mantener H2-25 abierta hasta obtener esos resultados.
       → `chore(tauri): narrow application capabilities`
