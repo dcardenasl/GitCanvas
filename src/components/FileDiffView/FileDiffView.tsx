@@ -23,6 +23,7 @@ interface SharedProps {
   readonly path: string;
 }
 
+/** Source-specific inputs for a commit or local worktree file view. */
 export type FileDiffViewProps =
   | (SharedProps & {
       readonly commit: CommitInfo;

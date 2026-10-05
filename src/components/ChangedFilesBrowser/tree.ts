@@ -1,7 +1,9 @@
 import type { FileDiff, FileDiffSummary } from "../../bindings";
 
+/** A changed path represented either with its patch or summary metadata. */
 export type ChangedFile = FileDiff | FileDiffSummary;
 
+/** A directory node whose entries are ordered directories followed by files. */
 export interface FileTreeDirectory {
   readonly kind: "directory";
   readonly name: string;
@@ -10,6 +12,7 @@ export interface FileTreeDirectory {
   readonly fileCount: number;
 }
 
+/** A leaf in the changed-file tree, retaining the source diff record. */
 export interface FileTreeFile {
   readonly kind: "file";
   readonly id: string;
@@ -17,8 +20,10 @@ export interface FileTreeFile {
   readonly file: ChangedFile;
 }
 
+/** One directory or file node in the changed-file tree. */
 export type FileTreeEntry = FileTreeDirectory | FileTreeFile;
 
+/** Tree roots and every directory path available for expand/collapse controls. */
 export interface FileTree {
   readonly entries: readonly FileTreeEntry[];
   readonly directoryPaths: readonly string[];

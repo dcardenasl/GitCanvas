@@ -7,6 +7,7 @@ import { edgePath, incomingPath } from "./path";
 
 import "./GraphCanvas.css";
 
+/** Visible graph geometry and row window for drawing the commit history. */
 export interface GraphCanvasProps {
   /** Every row laid out so far, indexed by absolute history position. */
   readonly rows: readonly GraphRow[];

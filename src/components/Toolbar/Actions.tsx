@@ -3,6 +3,7 @@ import type { GitActions } from "./useGitActions";
 
 import "./Actions.css";
 
+/** Git operations and current branch displayed by the action controls. */
 export interface ActionsProps {
   readonly actions: GitActions;
   readonly currentBranch: string | null;

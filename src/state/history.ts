@@ -116,6 +116,7 @@ export function layoutHistory(
   };
 }
 
+/** React Query cache identity for a repository's commit history. */
 export function historyQueryKey(path: string | null) {
   return ["history", path] as const;
 }

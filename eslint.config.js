@@ -4,6 +4,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 import prettier from "eslint-config-prettier";
+import jsdoc from "eslint-plugin-jsdoc";
 
 export default tseslint.config(
   {
@@ -49,6 +50,43 @@ export default tseslint.config(
     },
   },
 
+  // Public TypeScript exports are APIs even when they are consumed only
+  // inside this application. Require TSDoc at the export boundary without
+  // requiring redundant @param/@returns types already expressed in TypeScript.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    plugins: { jsdoc },
+    rules: {
+      "jsdoc/check-tag-names": ["error", { typed: true }],
+      "jsdoc/require-description": "error",
+      "jsdoc/require-jsdoc": [
+        "error",
+        {
+          publicOnly: {
+            ancestorsOnly: true,
+            esm: true,
+            cjs: false,
+            window: false,
+          },
+          contexts: [
+            "VariableDeclaration",
+            "TSTypeAliasDeclaration",
+            "TSInterfaceDeclaration",
+            "TSEnumDeclaration",
+          ],
+          require: {
+            ArrowFunctionExpression: true,
+            ClassDeclaration: true,
+            ClassExpression: true,
+            FunctionDeclaration: true,
+            FunctionExpression: true,
+          },
+          enableFixer: false,
+        },
+      ],
+    },
+  },
+
   /*
    * The graph layout boundary.
    *
@@ -83,6 +121,24 @@ export default tseslint.config(
                 "graph-layout must stay pure: no React, no DOM, no IPC. Move this to a component or an ipc wrapper.",
             },
           ],
+        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportExpression",
+          message:
+            "graph-layout must not use dynamic imports; its dependencies must remain statically auditable.",
+        },
+        {
+          selector: "TSImportType",
+          message:
+            "graph-layout must not use import() types to reach outside its own directory.",
+        },
+        {
+          selector: "CallExpression[callee.name='require']",
+          message:
+            "graph-layout must not use CommonJS require; its dependencies must remain statically auditable.",
         },
       ],
       "no-restricted-globals": [

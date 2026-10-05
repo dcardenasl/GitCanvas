@@ -17,6 +17,7 @@ import { OVERSCAN, ROW_HEIGHT, graphWidth } from "./geometry";
 
 import "./CommitTable.css";
 
+/** History rows, selection, graph dimensions, and navigation callbacks. */
 export interface CommitTableProps {
   readonly commits: readonly CommitInfo[];
   readonly selectedId: string | null;

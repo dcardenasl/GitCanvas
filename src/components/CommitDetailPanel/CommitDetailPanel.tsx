@@ -16,6 +16,7 @@ import {
 
 import "./CommitDetailPanel.css";
 
+/** Repository and commit whose metadata and changed files are shown. */
 export interface CommitDetailPanelProps {
   readonly repositoryPath: string;
   readonly commit: CommitInfo;

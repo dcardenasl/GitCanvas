@@ -1,6 +1,8 @@
 import { create } from "zustand";
 
+/** User-selected appearance, optionally following the operating system. */
 export type ThemePreference = "dark" | "light" | "system";
+/** Concrete palette applied to the document after resolving system preference. */
 export type ResolvedTheme = Exclude<ThemePreference, "system">;
 
 const STORAGE_KEY = "gitcanvas.theme.v1";
@@ -37,6 +39,7 @@ interface ThemePreferences {
 }
 
 /** Window-level appearance preference, independent of the selected repository. */
+/** Appearance preference store, persisted independently of repository state. */
 export const useThemePreferences = create<ThemePreferences>((set) => {
   const preference = readPreference();
   // The store is created while the entry module is evaluated, before React

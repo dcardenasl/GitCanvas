@@ -6,6 +6,7 @@ import { parseHunks, type DiffLine } from "./parse";
 
 import "./DiffViewer.css";
 
+/** Patch content and expansion/display controls for a single file. */
 export interface DiffViewerProps {
   readonly file: FileDiff;
   /** Requests the full patch for a file held back by the size guard. */
@@ -69,6 +70,7 @@ export function DiffViewer({
   return <LineTable lines={lines} wrap={wrap} showOldColumn />;
 }
 
+/** Diff rows and formatting options for the numbered line grid. */
 export interface LineTableProps {
   readonly lines: readonly DiffLine[];
   readonly wrap: boolean;

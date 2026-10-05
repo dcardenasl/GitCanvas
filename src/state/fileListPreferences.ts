@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+/** Presentation mode for changed-file navigation. */
 export type FileListView = "path" | "tree";
 
 const STORAGE_KEY = "gitcanvas.file-list-view";

@@ -8,6 +8,7 @@ import {
 
 import "../CommitDetailPanel/CommitDetailPanel.css";
 
+/** Canonical repository path whose staged and unstaged changes are shown. */
 export interface WorkingTreeDetailPanelProps {
   readonly repositoryPath: string;
 }

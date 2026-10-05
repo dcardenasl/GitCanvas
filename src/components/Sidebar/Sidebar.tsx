@@ -9,6 +9,7 @@ import {
 
 import "./Sidebar.css";
 
+/** Display and navigation data for one branch or tag. */
 export interface RefTarget {
   /** Display name of the ref. */
   readonly name: string;
@@ -25,6 +26,7 @@ export interface RefTarget {
   readonly checkoutBranch?: string;
 }
 
+/** Visibility and optional local-branch checkout behavior of the sidebar. */
 export interface SidebarProps {
   /**
    * Collapses the sidebar without removing it from the grid.

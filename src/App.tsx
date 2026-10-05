@@ -28,6 +28,7 @@ const queryClient = new QueryClient({
   },
 });
 
+/** Root React tree, with one shared query cache for the application. */
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>

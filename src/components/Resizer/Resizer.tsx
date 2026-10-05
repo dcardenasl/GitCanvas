@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 
 import "./Resizer.css";
 
+/** Accessible bounds and callbacks for a draggable panel divider. */
 export interface ResizerProps {
   /** Accessible name, e.g. "Ancho de la barra lateral". */
   readonly label: string;

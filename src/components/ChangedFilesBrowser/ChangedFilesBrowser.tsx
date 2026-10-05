@@ -6,6 +6,7 @@ import { useFileListPreferences } from "../../state/fileListPreferences";
 import { ChangedFileRow } from "../ChangedFileRow/ChangedFileRow";
 import { buildFileTree, type ChangedFile, type FileTreeEntry } from "./tree";
 
+/** Files and presentation labels for one section of the changed-file list. */
 export interface ChangedFilesGroup {
   readonly files: readonly ChangedFile[];
   readonly source: FileSource;
@@ -16,6 +17,7 @@ export interface ChangedFilesGroup {
   readonly footer?: ReactNode;
 }
 
+/** Inputs for rendering and navigating one or more changed-file groups. */
 export interface ChangedFilesBrowserProps {
   readonly groups: readonly ChangedFilesGroup[];
   readonly selectedFilePath: string | null;

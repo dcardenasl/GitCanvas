@@ -6,6 +6,7 @@ import { findMatches } from "./match";
 
 import "./CommitSearch.css";
 
+/** Loaded commits to search and callback for navigating to a match. */
 export interface CommitSearchProps {
   readonly commits: readonly CommitInfo[];
   /** Called with the commit to select and scroll to. */

@@ -16,6 +16,7 @@ import {
   getWorktreeSnapshot,
 } from "../lib/ipc";
 
+/** Stable prefix shared by React Query entries for local repository changes. */
 export const WORKTREE_QUERY_KEY = "worktree";
 
 const INITIAL_WORKTREE_REQUEST: WorktreeSnapshotRequest = {

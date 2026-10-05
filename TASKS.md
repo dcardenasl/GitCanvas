@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 20/46 completadas · 26 pendientes · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 21/46 completadas · 25 pendientes · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -40,7 +40,7 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
 `dev`; la auditoría los tuvo en cuenta y no son tareas pendientes.
 
 Las tareas H2-0 a H2-19 están completadas y archivadas en [`ARCHIVES.md`](ARCHIVES.md).
-La siguiente tarea a ejecutar es H2-20; conserva su ID y mensaje de commit.
+La siguiente tarea a ejecutar es H2-22; conserva su ID y mensaje de commit.
 
 - [x] **H2-20 — Ampliar guardias Clippy.** `Cargo.toml` deniega `todo`, `unimplemented`,
       `dbg_macro`, `print_stdout/stderr`, `string_slice`, efectos aritméticos, métodos
@@ -55,9 +55,15 @@ La siguiente tarea a ejecutar es H2-20; conserva su ID y mensaje de commit.
       2 comparaciones manuales permanecen ignoradas por diseño), `cargo clippy --workspace
       --all-targets -- -D warnings`, `./pre-commit` y `git diff --check`.
       → `chore(rust): enforce additional workspace lint rules`
-- [ ] **H2-21 — Cerrar fronteras ESLint y TSDoc.** Prohibir `import()` y `require` hacia
-      `graph-layout`; añadir regla TSDoc para exports públicos y documentar excepciones
-      justificadas.
+- [x] **H2-21 — Cerrar fronteras ESLint y TSDoc.** ESLint prohíbe importaciones
+      dinámicas, tipos `import()` y llamadas `require()` dentro de `graph-layout`; se
+      conserva la prohibición de imports estáticos externos. `eslint-plugin-jsdoc` valida
+      nombres de tags TSDoc y exige descripciones en exports públicos de TypeScript, sin
+      pedir tipos redundantes de parámetros/retornos. Se documentaron los exports ya
+      existentes; las reexportaciones usan la documentación de su declaración origen.
+      *Verificado:* `npm run lint`, `npm run typecheck`, tests de `graph-layout` (12),
+      `./pre-commit`; sondas de ESLint rechazaron dinámico `import()`, import type,
+      `require()` y una interfaz pública sin TSDoc.
       → `chore(ts): enforce graph imports and public api docs`
 - [ ] **H2-22 — Tipar y validar todos los proyectos TypeScript.** Incorporar e2e, WDIO y
       configs a `typecheck:e2e`/`typecheck:node` o `tsc -b` en workflows; endurecer configs

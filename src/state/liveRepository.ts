@@ -196,6 +196,7 @@ export function useLiveRepository(path: string | null): {
   };
 }
 
+/** Current setup and health state of the active repository watcher. */
 export type WatcherStatus =
   | { kind: "idle" }
   | { kind: "starting" }

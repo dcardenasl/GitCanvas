@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 
+/** Content, labels, and callbacks for a modal confirmation. */
 export interface ConfirmDialogProps {
   readonly title: string;
   readonly body: React.ReactNode;

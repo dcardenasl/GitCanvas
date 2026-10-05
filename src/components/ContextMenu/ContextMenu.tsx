@@ -2,11 +2,13 @@ import { useEffect, useRef } from "react";
 
 import "./ContextMenu.css";
 
+/** One action rendered as a focusable context-menu option. */
 export interface MenuItem {
   readonly label: string;
   readonly onSelect: () => void;
 }
 
+/** Pointer position, available actions, and close callback for the menu. */
 export interface ContextMenuProps {
   readonly x: number;
   readonly y: number;

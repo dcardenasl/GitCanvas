@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import type { RepositoryInfo } from "../bindings";
 
+/** Origin of a selected file in the repository UI. */
 export type FileSource = "commit" | "staged" | "unstaged";
 
 /** The only legal interface selections. */
@@ -39,6 +40,7 @@ const EMPTY = {
   expandedFilePath: null,
 } as const;
 
+/** Repository and navigation state shared by the application panels. */
 export const useSession = create<SessionState>((set) => ({
   repository: null,
   ...EMPTY,
@@ -126,16 +128,19 @@ export const useSession = create<SessionState>((set) => ({
   },
 }));
 
+/** Selected commit id, or `null` when history itself is selected. */
 export function selectedCommitId(state: SessionState): string | null {
   return state.selection.kind === "commit" && state.selection.commitId !== ""
     ? state.selection.commitId
     : null;
 }
 
+/** Selected file path across commit and worktree views. */
 export function selectedFilePath(state: SessionState): string | null {
   return state.selection.kind === "history" ? null : state.selection.filePath;
 }
 
+/** Source of the selected file, or `null` when no file is selected. */
 export function selectedFileSource(state: SessionState): FileSource | null {
   if (state.selection.kind === "history") return null;
   return state.selection.kind === "commit" ? "commit" : state.selection.side;
