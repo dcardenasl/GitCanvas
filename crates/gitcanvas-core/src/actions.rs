@@ -222,7 +222,9 @@ pub fn pull_fast_forward(active: &ActiveRepo) -> Result<PullOutcome, AppError> {
     fetch.download_tags(AutotagOption::All);
     // The remote's configured refspecs, so the tracking ref the branch points
     // at is the one that gets updated — whatever the remote branch is called.
-    remote.fetch(&[] as &[&str], Some(&mut fetch), None)?;
+    remote
+        .fetch(&[] as &[&str], Some(&mut fetch), None)
+        .map_err(AppError::from_git2_remote)?;
 
     let tracking = repo.find_reference(&upstream_ref_name)?;
     let target: AnnotatedCommit<'_> = repo.reference_to_annotated_commit(&tracking)?;
@@ -248,7 +250,7 @@ pub fn pull_fast_forward(active: &ActiveRepo) -> Result<PullOutcome, AppError> {
     repo.checkout_tree(commit.as_object(), Some(CheckoutBuilder::new().safe()))
         .map_err(|error| {
             if error.code() == ErrorCode::Conflict {
-                AppError::InvalidInput(
+                AppError::Conflict(
                     "local changes would be overwritten by the pull; commit or discard them first"
                         .to_owned(),
                 )
@@ -283,7 +285,9 @@ fn remote_tip(
     remote: &mut git2::Remote<'_>,
     reference: &str,
 ) -> Result<Option<git2::Oid>, AppError> {
-    let connection = remote.connect_auth(Direction::Push, Some(remote_callbacks()), None)?;
+    let connection = remote
+        .connect_auth(Direction::Push, Some(remote_callbacks()), None)
+        .map_err(AppError::from_git2_remote)?;
     Ok(connection
         .list()?
         .iter()
@@ -360,11 +364,11 @@ pub fn push_current_branch(active: &ActiveRepo) -> Result<PushOutcome, AppError>
             });
         }
         Err(error) if error.code() == ErrorCode::Auth => {
-            return Err(AppError::InvalidInput(
+            return Err(AppError::Auth(
                 "the remote rejected the credentials for this push".to_owned(),
             ));
         }
-        Err(error) => return Err(AppError::from(error)),
+        Err(error) => return Err(AppError::from_git2_remote(error)),
     }
 
     match refusal.take() {
@@ -375,7 +379,7 @@ pub fn push_current_branch(active: &ActiveRepo) -> Result<PushOutcome, AppError>
         Some(message) if is_non_fast_forward(&message) => Ok(PushOutcome::RejectedNonFastForward {
             branch: branch_name,
         }),
-        Some(message) => Err(AppError::Git(format!(
+        Some(message) => Err(AppError::Conflict(format!(
             "the remote refused the push: {message}"
         ))),
     }

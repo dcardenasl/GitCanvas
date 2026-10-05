@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Remote operation errors** — authentication, network failures and repository conflicts now have distinct backend and Spanish interface messages.
 - **Large Git blobs** — initial reads and explicit expansions now check the recorded blob size before requesting its content, in both commit and staged-file views.
 - **GitHub clone cache** — concurrent clones serialize per repository, abandoned staging directories are cleaned safely, and retention preserves the repository currently open in the app.
 - **GitHub repository discovery** — API calls have bounded connection and request times, rate limits are identified, and the picker says when the 1,000-repository cap is reached.

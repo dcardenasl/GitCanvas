@@ -90,7 +90,7 @@ impl GitHubClient {
     ///
     /// # Errors
     ///
-    /// Returns [`AppError::InvalidInput`] when no token is stored.
+    /// Returns [`AppError::Auth`] when no token is stored.
     pub fn from_stored_token() -> Result<Self, AppError> {
         credentials::read_token().map(Self::new)
     }
@@ -122,7 +122,7 @@ impl GitHubClient {
         match response {
             Ok(mut response) if response.status().is_success() => {
                 response.body_mut().read_to_string().map_err(|error| {
-                    AppError::Internal(format!("could not read the response: {error}"))
+                    AppError::Network(format!("could not read the GitHub response: {error}"))
                 })
             }
             Ok(response) => Err(status_error(
@@ -136,16 +136,19 @@ impl GitHubClient {
                     .get("retry-after")
                     .and_then(|value| value.to_str().ok()),
             )),
-            Err(ureq::Error::StatusCode(401)) => Err(AppError::InvalidInput(
-                "the GitHub token is invalid".to_owned(),
-            )),
-            Err(ureq::Error::StatusCode(403)) => Err(AppError::InvalidInput(
+            Err(ureq::Error::StatusCode(401)) => {
+                Err(AppError::Auth("the GitHub token is invalid".to_owned()))
+            }
+            Err(ureq::Error::StatusCode(403)) => Err(AppError::Auth(
                 "the GitHub token lacks the required scopes".to_owned(),
             )),
-            Err(ureq::Error::StatusCode(code)) => Err(AppError::Internal(format!(
+            Err(ureq::Error::StatusCode(code)) if code >= 500 => Err(AppError::Network(format!(
                 "GitHub responded with status {code}"
             ))),
-            Err(error) => Err(AppError::Internal(format!(
+            Err(ureq::Error::StatusCode(code)) => Err(AppError::Internal(format!(
+                "GitHub rejected the request with status {code}"
+            ))),
+            Err(error) => Err(AppError::Network(format!(
                 "could not reach GitHub: {error}"
             ))),
         }
@@ -244,14 +247,15 @@ fn validate_base_url(base_url: &str) -> Result<(), AppError> {
 
 fn status_error(status: u16, rate_remaining: Option<&str>, retry_after: Option<&str>) -> AppError {
     match status {
-        401 => AppError::InvalidInput("the GitHub token is invalid".to_owned()),
-        403 if rate_remaining == Some("0") || retry_after.is_some() => AppError::Internal(
-            "GitHub API rate limit exceeded; wait before trying again".to_owned(),
-        ),
-        403 => AppError::InvalidInput("the GitHub token lacks the required scopes".to_owned()),
-        429 => AppError::Internal(
-            "GitHub API rate limit exceeded; wait before trying again".to_owned(),
-        ),
+        401 => AppError::Auth("the GitHub token is invalid".to_owned()),
+        403 if rate_remaining == Some("0") || retry_after.is_some() => {
+            AppError::Network("GitHub API rate limit exceeded; wait before trying again".to_owned())
+        }
+        403 => AppError::Auth("the GitHub token lacks the required scopes".to_owned()),
+        429 => {
+            AppError::Network("GitHub API rate limit exceeded; wait before trying again".to_owned())
+        }
+        500..=599 => AppError::Network(format!("GitHub responded with status {status}")),
         code => AppError::Internal(format!("GitHub responded with status {code}")),
     }
 }

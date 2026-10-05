@@ -269,15 +269,7 @@ fn clone_into_cache(
             let _recorded = cache::touch_locked(&destination);
             Ok(cloned())
         }
-        Err(error) => Err(
-            if error.class() == git2::ErrorClass::Http || error.code() == git2::ErrorCode::Auth {
-                AppError::InvalidInput(
-                    "GitHub refused the credentials for this repository".to_owned(),
-                )
-            } else {
-                AppError::from(error)
-            },
-        ),
+        Err(error) => Err(AppError::from_git2_remote(error)),
     }
 }
 

@@ -18,6 +18,7 @@ use gitcanvas_core::{
         checkout_branch, pull_fast_forward, push_current_branch, CheckoutOutcome, PullOutcome,
         PushOutcome,
     },
+    error::AppError,
     repository::ActiveRepo,
 };
 use support::Fixture;
@@ -432,7 +433,7 @@ fn pull_that_would_overwrite_local_work_moves_nothing() {
 
     let error = pull_fast_forward(&open(&remotes.local)).unwrap_err();
 
-    assert!(format!("{error:?}").contains("InvalidInput"), "{error:?}");
+    assert!(matches!(error, AppError::Conflict(_)), "{error:?}");
     assert_eq!(
         remotes.local.repo.refname_to_id("refs/heads/main").unwrap(),
         remotes.base,

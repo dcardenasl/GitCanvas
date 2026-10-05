@@ -104,6 +104,12 @@ export type AppError =
 { kind: "Io"; message: string } |
 /**  libgit2 could not complete an operation. */
 { kind: "Git"; message: string } |
+/**  Credentials were missing or rejected by a remote service. */
+{ kind: "Auth"; message: string } |
+/**  A remote service could not be reached or did not respond in time. */
+{ kind: "Network"; message: string } |
+/**  The requested operation conflicts with the repository or remote state. */
+{ kind: "Conflict"; message: string } |
 /**  A request violates the public contract. */
 { kind: "InvalidInput"; message: string } |
 /**  A requested file would resolve outside the selected repository. */

@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (7/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (8/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -97,11 +97,13 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       del límite de expansión), `cargo clippy -p gitcanvas-core --all-targets -- -D warnings`
       y `./pre-commit`.
       → `fix(core): check blob sizes before reading content`
-- [ ] **H2-7 — Centralizar errores del dominio.** Revisar M7: variantes `Auth`, `Network`
-      y `Conflict`, conversiones centralizadas incluida `keyring::Error`, helper
-      `from_git2_remote`; propagar a acciones, clone, credenciales, API y
-      `src/lib/errors.ts`/`KIND_SUMMARY`. Regenerar bindings mediante `cargo test` y revisar
-      que el diff generado sea el esperado.
+- [x] **H2-7 — Centralizar errores del dominio.** `AppError` incorpora `Auth`, `Network`
+      y `Conflict`; las conversiones centralizan errores `git2` y `keyring`, con helper
+      `from_git2_remote` en operaciones remotas. Acciones, clone, credenciales y REST
+      propagan categorías operativas; `KIND_SUMMARY` muestra cada una en español.
+      *Verificado:* 26 tests core, 10 `github_api`, 17 `actions`; binding regenerado y diff
+      limitado a las tres variantes; `npm run typecheck`, 46 tests Vitest focalizados,
+      `cargo clippy -p gitcanvas-core --all-targets -- -D warnings` y `./pre-commit`.
       → `refactor(errors): centralize domain error mapping`
 - [ ] **H2-8 — Corregir acciones y límites latentes del core.** Pull con
       `reference_matching`; añadir guarda a `history::insert` contra el bucle señalado y

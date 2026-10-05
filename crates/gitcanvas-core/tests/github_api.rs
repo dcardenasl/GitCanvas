@@ -15,7 +15,7 @@ use std::{
     thread,
 };
 
-use gitcanvas_core::github::api::GitHubClient;
+use gitcanvas_core::{error::AppError, github::api::GitHubClient};
 
 type Headers = Vec<(String, String)>;
 type CannedResponse = (u16, String, Headers);
@@ -135,22 +135,19 @@ fn the_token_travels_only_in_the_authorization_header() {
 }
 
 #[test]
-fn a_rejected_token_is_reported_as_invalid_input_not_an_internal_error() {
+fn a_rejected_token_is_reported_as_authentication_failure() {
     let server = FakeGitHub::start(vec![(401, r#"{"message":"Bad credentials"}"#.to_owned())]);
 
     let error = server.client("expired").verify().unwrap_err();
 
-    assert!(
-        format!("{error:?}").contains("InvalidInput"),
-        "an expired token is the user's problem to fix, not a crash: {error:?}"
-    );
+    assert!(matches!(error, AppError::Auth(_)), "{error:?}");
 }
 
 #[test]
 fn missing_scopes_are_reported_the_same_way_as_a_bad_token() {
     let server = FakeGitHub::start(vec![(403, r#"{"message":"Forbidden"}"#.to_owned())]);
     let error = server.client("no-scopes").verify().unwrap_err();
-    assert!(format!("{error:?}").contains("InvalidInput"));
+    assert!(matches!(error, AppError::Auth(_)));
 }
 
 #[test]
@@ -161,15 +158,24 @@ fn rate_limit_responses_are_distinct_from_bad_credentials_and_missing_scopes() {
         vec![("X-RateLimit-Remaining".to_owned(), "0".to_owned())],
     )]);
     let error = rate_limited.client("limited").verify().unwrap_err();
-    assert!(format!("{error:?}").contains("rate limit"));
+    assert!(matches!(error, AppError::Network(message) if message.contains("rate limit")));
 
     let too_many_requests = FakeGitHub::start(vec![(429, "{}".to_owned())]);
     let error = too_many_requests.client("limited").verify().unwrap_err();
-    assert!(format!("{error:?}").contains("rate limit"));
+    assert!(matches!(error, AppError::Network(message) if message.contains("rate limit")));
 
     let invalid = FakeGitHub::start(vec![(401, "{}".to_owned())]);
     let error = invalid.client("invalid").verify().unwrap_err();
-    assert!(format!("{error:?}").contains("InvalidInput"));
+    assert!(matches!(error, AppError::Auth(_)));
+}
+
+#[test]
+fn server_failures_are_reported_as_network_errors() {
+    let server = FakeGitHub::start(vec![(503, "temporarily unavailable".to_owned())]);
+
+    let error = server.client("token").verify().unwrap_err();
+
+    assert!(matches!(error, AppError::Network(message) if message.contains("503")));
 }
 
 #[test]

@@ -19,15 +19,6 @@ const SERVICE: &str = "dev.gitcanvas.github";
 /// One account per service, since the app authenticates as a single user.
 const ACCOUNT: &str = "personal-access-token";
 
-impl From<keyring::Error> for AppError {
-    fn from(error: keyring::Error) -> Self {
-        match error {
-            keyring::Error::NoEntry => Self::InvalidInput("no GitHub token is stored".to_owned()),
-            other => Self::Internal(format!("keychain error: {other}")),
-        }
-    }
-}
-
 fn entry() -> Result<Entry, AppError> {
     Entry::new(SERVICE, ACCOUNT).map_err(AppError::from)
 }

@@ -16,6 +16,15 @@ pub enum AppError {
     /// libgit2 could not complete an operation.
     #[error("Git operation failed: {0}")]
     Git(String),
+    /// Credentials were missing or rejected by a remote service.
+    #[error("Authentication failed: {0}")]
+    Auth(String),
+    /// A remote service could not be reached or did not respond in time.
+    #[error("Network operation failed: {0}")]
+    Network(String),
+    /// The requested operation conflicts with the repository or remote state.
+    #[error("Operation conflicts with the current state: {0}")]
+    Conflict(String),
     /// A request violates the public contract.
     #[error("Invalid request: {0}")]
     InvalidInput(String),
@@ -55,6 +64,12 @@ impl AppError {
     pub fn is_transient(&self) -> bool {
         matches!(self, Self::ResourceExhausted(_))
     }
+
+    /// Converts a libgit2 failure raised while contacting a remote.
+    #[must_use]
+    pub fn from_git2_remote(error: git2::Error) -> Self {
+        Self::from(error)
+    }
 }
 
 /// Whether an OS error means the process ran out of file descriptors:
@@ -74,9 +89,37 @@ impl From<git2::Error> for AppError {
         // message is inspected; everything downstream matches on the variant.
         if error.class() == git2::ErrorClass::Os && error.message().contains("Too many open files")
         {
-            Self::ResourceExhausted(error.message().to_owned())
-        } else {
-            Self::Git(error.message().to_owned())
+            return Self::ResourceExhausted(error.message().to_owned());
+        }
+        if error.code() == git2::ErrorCode::Auth {
+            return Self::Auth(error.message().to_owned());
+        }
+        if matches!(
+            error.code(),
+            git2::ErrorCode::Conflict
+                | git2::ErrorCode::Unmerged
+                | git2::ErrorCode::MergeConflict
+                | git2::ErrorCode::Uncommitted
+                | git2::ErrorCode::IndexDirty
+        ) {
+            return Self::Conflict(error.message().to_owned());
+        }
+        if matches!(
+            error.class(),
+            git2::ErrorClass::Net | git2::ErrorClass::Http | git2::ErrorClass::Ssl
+        ) || error.code() == git2::ErrorCode::Timeout
+        {
+            return Self::Network(error.message().to_owned());
+        }
+        Self::Git(error.message().to_owned())
+    }
+}
+
+impl From<keyring::Error> for AppError {
+    fn from(error: keyring::Error) -> Self {
+        match error {
+            keyring::Error::NoEntry => Self::Auth("no GitHub token is stored".to_owned()),
+            other => Self::Internal(format!("keychain error: {other}")),
         }
     }
 }
@@ -120,5 +163,39 @@ mod tests {
             "permission denied",
         );
         assert!(!AppError::from(unrelated).is_transient());
+    }
+
+    #[test]
+    fn libgit2_errors_map_to_domain_categories() {
+        let auth = git2::Error::new(
+            git2::ErrorCode::Auth,
+            git2::ErrorClass::Http,
+            "credentials rejected",
+        );
+        assert!(matches!(AppError::from(auth), AppError::Auth(_)));
+
+        let network = git2::Error::new(
+            git2::ErrorCode::Timeout,
+            git2::ErrorClass::Net,
+            "connection timed out",
+        );
+        let network = AppError::from(network);
+        assert!(matches!(network, AppError::Network(_)));
+        assert!(!network.is_transient());
+
+        let conflict = git2::Error::new(
+            git2::ErrorCode::Conflict,
+            git2::ErrorClass::Checkout,
+            "local changes would be overwritten",
+        );
+        assert!(matches!(AppError::from(conflict), AppError::Conflict(_)));
+    }
+
+    #[test]
+    fn missing_keychain_entry_is_an_authentication_error() {
+        assert!(matches!(
+            AppError::from(keyring::Error::NoEntry),
+            AppError::Auth(_)
+        ));
     }
 }

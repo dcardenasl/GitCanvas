@@ -14,6 +14,15 @@ describe("userMessage", () => {
     );
   });
 
+  it.each([
+    ["Auth", "Falló la autenticación"],
+    ["Network", "No se pudo completar la operación de red"],
+    ["Conflict", "La operación entra en conflicto con el estado actual"],
+  ] as const)("summarizes %s failures", (kind, summary) => {
+    const error = new IpcError({ kind, message: "diagnostic" });
+    expect(userMessage(error)).toBe(`${summary}: diagnostic`);
+  });
+
   it("leaves other errors and values as they are", () => {
     expect(userMessage(new Error("boom"))).toBe("boom");
     expect(userMessage("plain")).toBe("plain");
