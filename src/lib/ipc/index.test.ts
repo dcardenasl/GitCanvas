@@ -103,9 +103,9 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
   ],
   [
     "cloneGithubRepository",
-    () => ipc.cloneGithubRepository("https://github.com/o/r.git", "o/r"),
+    () => ipc.cloneGithubRepository("https://github.com/o/r.git", "o/r", null),
     "cloneGithubRepository",
-    ["https://github.com/o/r.git", "o/r"],
+    ["https://github.com/o/r.git", "o/r", null],
   ],
   [
     "getCloneCacheStatus",

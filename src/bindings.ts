@@ -69,7 +69,7 @@ export const commands = {
 	/**  Lists the repositories the stored token can reach. */
 	listGithubRepositories: () => typedError<GitHubRepositoryList, AppError>(__TAURI_INVOKE("list_github_repositories")),
 	/**  Clones a repository into the application cache, emitting progress as it goes. */
-	cloneGithubRepository: (cloneUrl: string, fullName: string) => typedError<ClonedRepository, AppError>(__TAURI_INVOKE("clone_github_repository", { cloneUrl, fullName })),
+	cloneGithubRepository: (cloneUrl: string, fullName: string, activeRepositoryPath: string | null) => typedError<ClonedRepository, AppError>(__TAURI_INVOKE("clone_github_repository", { cloneUrl, fullName, activeRepositoryPath })),
 	/**  Reports what the clone cache holds and the limits it is held to. */
 	getCloneCacheStatus: () => typedError<CacheStatus, AppError>(__TAURI_INVOKE("get_clone_cache_status")),
 	/**  Checks out a local branch, refusing by default when work would be lost. */

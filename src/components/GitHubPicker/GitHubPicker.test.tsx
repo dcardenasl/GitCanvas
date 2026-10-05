@@ -12,7 +12,11 @@ const storeGithubToken =
   vi.fn<(token: string) => Promise<{ login: string; name: string | null }>>();
 const cloneGithubRepository =
   vi.fn<
-    (url: string, name: string) => Promise<{ path: string; full_name: string }>
+    (
+      url: string,
+      name: string,
+      activePath: string | null,
+    ) => Promise<{ path: string; full_name: string }>
   >();
 const openRepository =
   vi.fn<(path: string) => Promise<{ path: string; name: string }>>();
@@ -25,14 +29,18 @@ vi.mock("../../lib/ipc", () => ({
   hasGithubToken: () => hasGithubToken(),
   listGithubRepositories: () => listGithubRepositories(),
   storeGithubToken: (token: string) => storeGithubToken(token),
-  cloneGithubRepository: (url: string, name: string) =>
-    cloneGithubRepository(url, name),
+  cloneGithubRepository: (
+    url: string,
+    name: string,
+    activePath: string | null,
+  ) => cloneGithubRepository(url, name, activePath),
   openRepository: (path: string) => openRepository(path),
   forgetGithubToken: () => forgetGithubToken(),
   onCloneProgress: (handler: unknown) => onCloneProgress(handler),
 }));
 
 const { GitHubPicker } = await import("./GitHubPicker");
+const { useSession } = await import("../../state/session");
 
 const REPO: GitHubRepository = {
   full_name: "dcardenasl/gitcanvas",
@@ -63,6 +71,7 @@ function renderPicker(onClose = vi.fn()) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useSession.setState({ repository: null });
   onCloneProgress.mockImplementation(() => Promise.resolve(() => undefined));
 });
 afterEach(cleanup);
@@ -111,6 +120,9 @@ describe("GitHubPicker", () => {
   });
 
   it("clones the chosen repository and opens it", async () => {
+    useSession.setState({
+      repository: { path: "/cache/current", name: "current" },
+    });
     hasGithubToken.mockResolvedValue(true);
     listGithubRepositories.mockResolvedValue(repositoryList([REPO]));
     cloneGithubRepository.mockResolvedValue({
@@ -131,6 +143,7 @@ describe("GitHubPicker", () => {
       expect(cloneGithubRepository).toHaveBeenCalledWith(
         REPO.clone_url,
         REPO.full_name,
+        "/cache/current",
       );
     });
     await waitFor(() => {

@@ -33,6 +33,9 @@ function progressLabel(progress: CloneProgressEvent): string {
 export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
   const queryClient = useQueryClient();
   const setRepository = useSession((state) => state.openRepository);
+  const activeRepositoryPath = useSession(
+    (state) => state.repository?.path ?? null,
+  );
 
   const [token, setToken] = useState("");
   const [progress, setProgress] = useState<CloneProgressEvent | null>(null);
@@ -76,7 +79,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
 
   const clone = useMutation({
     mutationFn: ({ url, name }: { url: string; name: string }) =>
-      cloneGithubRepository(url, name),
+      cloneGithubRepository(url, name, activeRepositoryPath),
     onSuccess: async (cloned) => {
       setProgress(null);
       setRepository(await openRepository(cloned.path));

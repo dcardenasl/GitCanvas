@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (5/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (6/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -79,9 +79,14 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       typecheck y 40 tests de GitHubPicker/IPC; pruebas de timeout config, status, truncado
       y rechazo de URLs HTTP externas.
       → `fix(github): bound requests and classify api limits`
-- [ ] **H2-5 — Hacer segura la concurrencia de clone y cache.** Verificar M2/M3/B11;
-      locks por entrada, staging parcial único y retención que acumula errores sin borrar
-      clones en uso. Probar clones/listados concurrentes y limpieza.
+- [x] **H2-5 — Hacer segura la concurrencia de clone y cache.** Locks advisory entre
+      procesos por entrada, staging único con limpieza RAII y recuperación de parciales
+      huérfanos bajo el lock; retención vuelve a leer el estado bajo lock, conserva tanto
+      el clon nuevo como el repo activo y acumula fallos de borrado sin borrar esa entrada.
+      *Verificado:* `cargo test -p gitcanvas-core --lib` (24 tests, incluido clone concurrente
+      y lectura concurrente de caché), `cargo test -p gitcanvas-core --test cache` (12 tests),
+      `cargo clippy -p gitcanvas-core --all-targets -- -D warnings`, binding regenerado,
+      `npm run typecheck`, 40 tests Vitest de GitHubPicker/IPC y `./pre-commit`.
       → `fix(github): serialize clone cache mutations`
 - [ ] **H2-6 — Rechazar blobs demasiado grandes antes de leerlos.** Comprobar
       `blob.size()` en `blob.rs` y `worktree.rs` antes de `content()`; verificar límites,

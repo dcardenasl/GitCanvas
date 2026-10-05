@@ -109,8 +109,14 @@ export const forgetGithubToken = () => result(commands.forgetGithubToken());
 export const listGithubRepositories = () =>
   result(commands.listGithubRepositories());
 /** Clones a repository into the application cache. */
-export const cloneGithubRepository = (cloneUrl: string, fullName: string) =>
-  result(commands.cloneGithubRepository(cloneUrl, fullName));
+export const cloneGithubRepository = (
+  cloneUrl: string,
+  fullName: string,
+  activeRepositoryPath: string | null = null,
+) =>
+  result(
+    commands.cloneGithubRepository(cloneUrl, fullName, activeRepositoryPath),
+  );
 /** Reports what the clone cache holds and the limits it is held to. */
 export const getCloneCacheStatus = () => result(commands.getCloneCacheStatus());
 

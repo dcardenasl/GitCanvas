@@ -74,6 +74,7 @@ notify = { version = "8", default-features = false, features = ["macos_kqueue"] 
 # for the same reason libgit2 is vendored: identical behaviour everywhere.
 ureq = { version = "3", default-features = false, features = ["rustls", "json"] }
 url = "2"
+fs2 = "0.4"
 
 # The OS keychain. No default features on purpose: the crate ships none, so
 # every platform backend has to be named explicitly.

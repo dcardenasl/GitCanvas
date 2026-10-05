@@ -5,7 +5,8 @@
 //! would be visually convincing and wrong, which is worse than refusing.
 
 use std::{
-    path::Path,
+    path::{Path, PathBuf},
+    sync::atomic::{AtomicU64, Ordering},
     time::{Duration, Instant},
 };
 
@@ -189,8 +190,11 @@ fn clone_into_cache(
     cache_root: &Path,
     mut on_progress: impl FnMut(CloneProgress),
 ) -> Result<ClonedRepository, AppError> {
+    std::fs::create_dir_all(cache_root)?;
+    let cache_root = cache_root.canonicalize()?;
     let entry = name.cache_entry();
     let destination = cache_root.join(&entry);
+    let _entry_lock = cache::lock_entry(&cache_root, &entry)?;
     let cloned = || ClonedRepository {
         path: destination.to_string_lossy().into_owned(),
         full_name: format!("{}/{}", name.owner, name.name),
@@ -202,7 +206,7 @@ fn clone_into_cache(
         // entry whose origin is somewhere else was not put there by a clone of
         // `url`, and serving it would show the wrong history.
         if origin_matches(&destination, url) {
-            let _recorded = cache::touch(&destination);
+            let _recorded = cache::touch_locked(&destination);
             return Ok(cloned());
         }
         // The cache is application-owned, so an unusable or foreign entry is
@@ -210,16 +214,29 @@ fn clone_into_cache(
         std::fs::remove_dir_all(&destination)?;
     }
 
-    std::fs::create_dir_all(cache_root)?;
-
-    // Cloned beside the final location and renamed into place, so a crash or a
-    // failed transfer can never leave a half-written repository that a later
-    // run would take for a good one. The leading dot keeps it out of the
-    // cache's listing and retention accounting.
-    let partial = cache_root.join(format!(".partial-{entry}"));
-    if partial.exists() {
-        std::fs::remove_dir_all(&partial)?;
+    // The entry lock guarantees no other clone for this repository is active,
+    // so leftovers can only belong to a process that exited mid-transfer.
+    let partial_prefix = format!(".partial-{entry}-");
+    for item in std::fs::read_dir(&cache_root)? {
+        let item = item?;
+        if item
+            .file_name()
+            .to_string_lossy()
+            .starts_with(&partial_prefix)
+        {
+            let path = item.path();
+            if path.is_dir() {
+                std::fs::remove_dir_all(path)?;
+            } else {
+                std::fs::remove_file(path)?;
+            }
+        }
     }
+
+    // Each operation gets its own hidden staging directory. The per-entry
+    // lock serializes replacements; unique names also keep interrupted clones
+    // from deleting another process's in-flight transfer.
+    let partial = PartialClone::new(&cache_root, &entry);
 
     let mut callbacks = RemoteCallbacks::new();
     callbacks.credentials(credentials::callback());
@@ -245,26 +262,50 @@ fn clone_into_cache(
     let mut builder = RepoBuilder::new();
     builder.fetch_options(fetch);
 
-    match builder.clone(url, &partial) {
+    match builder.clone(url, partial.path()) {
         Ok(repo) => {
             drop(repo);
-            std::fs::rename(&partial, &destination)?;
-            let _recorded = cache::touch(&destination);
+            std::fs::rename(partial.path(), &destination)?;
+            let _recorded = cache::touch_locked(&destination);
             Ok(cloned())
         }
-        Err(error) => {
-            let _ = std::fs::remove_dir_all(&partial);
-            Err(
-                if error.class() == git2::ErrorClass::Http || error.code() == git2::ErrorCode::Auth
-                {
-                    AppError::InvalidInput(
-                        "GitHub refused the credentials for this repository".to_owned(),
-                    )
-                } else {
-                    AppError::from(error)
-                },
-            )
+        Err(error) => Err(
+            if error.class() == git2::ErrorClass::Http || error.code() == git2::ErrorCode::Auth {
+                AppError::InvalidInput(
+                    "GitHub refused the credentials for this repository".to_owned(),
+                )
+            } else {
+                AppError::from(error)
+            },
+        ),
+    }
+}
+
+struct PartialClone(PathBuf);
+
+impl PartialClone {
+    fn new(cache_root: &Path, entry: &str) -> Self {
+        static NEXT_PARTIAL_ID: AtomicU64 = AtomicU64::new(1);
+        loop {
+            let sequence = NEXT_PARTIAL_ID.fetch_add(1, Ordering::Relaxed);
+            let path = cache_root.join(format!(
+                ".partial-{entry}-{}-{sequence}",
+                std::process::id()
+            ));
+            if !path.exists() {
+                return Self(path);
+            }
         }
+    }
+
+    fn path(&self) -> &Path {
+        &self.0
+    }
+}
+
+impl Drop for PartialClone {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
     }
 }
 
@@ -369,7 +410,11 @@ mod tests {
         let first = clone_into_cache(&url, &name, root.path(), |_| {}).unwrap();
         assert!(Path::new(&first.path).ends_with("owner__repo"));
         assert!(Repository::open(&first.path).is_ok());
-        assert!(!root.path().join(".partial-owner__repo").exists());
+        assert!(root.path().read_dir().unwrap().all(|entry| !entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with(".partial-")));
         assert!(
             Path::new(&first.path)
                 .join(".git")
@@ -418,22 +463,66 @@ mod tests {
 
         assert!(result.is_err());
         assert!(!root.path().join("owner__repo").exists());
-        assert!(!root.path().join(".partial-owner__repo").exists());
+        assert!(root.path().read_dir().unwrap().all(|entry| !entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with(".partial-")));
     }
 
     #[test]
-    fn an_interrupted_clone_is_cleared_before_the_next_attempt() {
+    fn concurrent_clones_of_one_entry_serialize_without_sharing_partials() {
         let source = tempfile::tempdir().unwrap();
         let url = source_repository(source.path());
         let root = tempfile::tempdir().unwrap();
         let name = RepositoryName::parse("owner/repo").unwrap();
-        let leftover = root.path().join(".partial-owner__repo");
-        std::fs::create_dir_all(&leftover).unwrap();
-        std::fs::write(leftover.join("junk"), b"x").unwrap();
+        let root_path = root.path().to_path_buf();
+        let stale_partial = root.path().join(".partial-owner__repo-stale");
+        std::fs::create_dir(&stale_partial).unwrap();
+        std::fs::write(stale_partial.join("junk"), b"left by a terminated clone").unwrap();
 
-        let cloned = clone_into_cache(&url, &name, root.path(), |_| {}).unwrap();
+        let (first, second) = std::thread::scope(|scope| {
+            let start = std::sync::Arc::new(std::sync::Barrier::new(4));
+            let first_start = std::sync::Arc::clone(&start);
+            let second_start = std::sync::Arc::clone(&start);
+            let reader_start = std::sync::Arc::clone(&start);
+            let first_root = root_path.clone();
+            let second_root = root_path.clone();
+            let reader_root = root_path.clone();
+            let url_ref = &url;
+            let name_ref = &name;
+            let first = scope.spawn(move || {
+                first_start.wait();
+                clone_into_cache(url_ref, name_ref, &first_root, |_| {})
+            });
+            let second = scope.spawn(move || {
+                second_start.wait();
+                clone_into_cache(url_ref, name_ref, &second_root, |_| {})
+            });
+            let reader = scope.spawn(move || {
+                reader_start.wait();
+                for _ in 0..100 {
+                    cache::status(&reader_root).unwrap();
+                    std::thread::yield_now();
+                }
+            });
+            start.wait();
+            let result = (
+                first.join().unwrap().unwrap(),
+                second.join().unwrap().unwrap(),
+            );
+            reader.join().unwrap();
+            result
+        });
 
-        assert!(Repository::open(&cloned.path).is_ok());
-        assert!(!leftover.exists());
+        assert_eq!(first.path, second.path);
+        assert!(Repository::open(&first.path).is_ok());
+        assert!(root.path().read_dir().unwrap().all(|entry| {
+            !entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".partial-")
+        }));
     }
 }

@@ -84,6 +84,7 @@ pub async fn list_github_repositories() -> Result<GitHubRepositoryList, AppError
 pub async fn clone_github_repository(
     clone_url: String,
     full_name: String,
+    active_repository_path: Option<String>,
     root: tauri::State<'_, CacheRoot>,
     emitter: tauri::State<'_, ProgressEmitter>,
 ) -> Result<clone::ClonedRepository, AppError> {
@@ -92,6 +93,9 @@ pub async fn clone_github_repository(
     // Validated before any work starts, so a malformed name fails here rather
     // than after the transfer.
     let entry = clone::cache_entry_name(&full_name)?;
+    let active_entry = active_repository_path
+        .as_deref()
+        .and_then(|path| cache::cached_entry_name(&destination, std::path::Path::new(path)));
 
     let cloned = write("clone_github_repository", move || {
         clone::clone_repository(&clone_url, &full_name, &destination, |progress| {
@@ -105,12 +109,23 @@ pub async fn clone_github_repository(
     })
     .await?;
 
-    // Retention runs after the clone, protecting the one that just arrived.
+    // Keep both the new clone and the currently open cache entry. A retention
+    // failure must not turn a completed clone into an apparent clone failure.
     let destination = root.0.clone();
     write("enforce_cache_retention", move || {
-        cache::enforce_retention(&destination, Some(&entry))
+        let mut keep = vec![entry];
+        if let Some(active_entry) = active_entry {
+            if !keep.contains(&active_entry) {
+                keep.push(active_entry);
+            }
+        }
+        cache::enforce_retention(&destination, &keep)
     })
-    .await?;
+    .await
+    .unwrap_or_else(|error| {
+        tracing::warn!(%error, "could not enforce clone cache retention");
+        Vec::new()
+    });
 
     Ok(cloned)
 }

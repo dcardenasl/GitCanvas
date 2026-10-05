@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 git2.workspace = true
+fs2.workspace = true
 keyring.workspace = true
 notify.workspace = true
 serde.workspace = true
