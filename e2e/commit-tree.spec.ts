@@ -1,3 +1,6 @@
+import os from "node:os";
+import path from "node:path";
+
 import { $$, browser, expect } from "@wdio/globals";
 
 /** Exercises the native IPC and the complete commit-tree browsing flow. */
@@ -46,7 +49,9 @@ describe("commit tree browsing", () => {
         timeoutMsg: "the unchanged fixture file was not listed",
       },
     );
-    await browser.saveScreenshot("/tmp/gitcanvas-commit-tree.png");
+    await browser.saveScreenshot(
+      path.join(os.tmpdir(), "gitcanvas-commit-tree.png"),
+    );
     const target = await browser.$(
       '//ul[@aria-label="Todos los archivos del commit"]//button[contains(., "filler.txt")]',
     );

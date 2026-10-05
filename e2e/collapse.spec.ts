@@ -1,11 +1,15 @@
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import { $, $$, browser, expect } from "@wdio/globals";
+
+const SCREENSHOT_DIR = path.join(os.tmpdir(), "gc-shots");
 
 /** Verifies the collapsed-sidebar layout with real geometry, not just the DOM. */
 describe("reading a file with the sidebar collapsed", () => {
   before(async () => {
-    fs.mkdirSync("/tmp/gc-shots", { recursive: true });
+    fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
     await browser.setWindowSize(1440, 900);
     // A fixed pause is a coin flip on a loaded machine: cold-start time
     // varies with whatever else is running. Wait for the actual signal that
@@ -61,7 +65,7 @@ describe("reading a file with the sidebar collapsed", () => {
     });
 
     console.log(`COLLAPSE ${JSON.stringify(geometry)}`);
-    await browser.saveScreenshot("/tmp/gc-shots/06-file-open.png");
+    await browser.saveScreenshot(path.join(SCREENSHOT_DIR, "06-file-open.png"));
 
     // The bug this guards: the file view landed in the sidebar's zero-width
     // column and the inspector filled the window.
@@ -83,6 +87,8 @@ describe("reading a file with the sidebar collapsed", () => {
     console.log(`PINNED sidebar=${String(sidebar)}`);
     expect(sidebar).toBeGreaterThan(100);
 
-    await browser.saveScreenshot("/tmp/gc-shots/07-sidebar-pinned.png");
+    await browser.saveScreenshot(
+      path.join(SCREENSHOT_DIR, "07-sidebar-pinned.png"),
+    );
   });
 });

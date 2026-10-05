@@ -1,9 +1,11 @@
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import { $, $$, browser, expect } from "@wdio/globals";
 
 /** Where the captures land. */
-const OUT = "/tmp/gc-shots";
+const OUT = path.join(os.tmpdir(), "gc-shots");
 
 describe("GitCanvas against its own history", () => {
   before(async () => {

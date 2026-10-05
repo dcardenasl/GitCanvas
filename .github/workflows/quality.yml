@@ -121,15 +121,18 @@ jobs:
 
       # --- End to end ---
       #
-      # Linux only. macOS and Windows runners would each need their own display
-      # and signing setup for a check that verifies wiring, not platform
-      # behaviour, and the wiring is identical on all three.
-      #
+      # Exercise the real app on every supported desktop OS. The suite launches
+      # the plain binary (not the macOS app bundle), so no signing or Finder
+      # automation is required. Linux alone needs a virtual display.
       # Reuses the frontend built by the bundle step and compiles only the E2E
       # Rust variant with `--features e2e`; the released binary has no WebDriver.
-      - name: Run the end-to-end suite
+      - name: Run the end-to-end suite on Linux
         if: matrix.os == 'ubuntu-latest'
         run: xvfb-run --auto-servernum npm run test:e2e:run
+
+      - name: Run the end-to-end suite on macOS and Windows
+        if: matrix.os == 'macos-latest' || matrix.os == 'windows-latest'
+        run: npm run test:e2e:run
 
       # The feature must never reach a release build, so this asserts it rather
       # than trusting that nobody adds it to the default set.

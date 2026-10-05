@@ -46,10 +46,12 @@ La siguiente tarea a ejecutar es H2-25; conserva su ID y mensaje de commit.
       `core:event:default` y `dialog:allow-open`; confirmar arranque y E2E multiplataforma.
       *Implementación parcial (2026-10-05):* `capabilities/default.json` ya concede solo
       `core:event:default` y `dialog:allow-open`, coherente con el uso de eventos, comandos
-      IPC de la app y selector nativo de carpetas. El JSON y los usos se verificaron por
-      inspección estática. Pendiente comprobar arranque y E2E multiplataforma: la skill
-      `security-audit` prohíbe ejecutar builds/tests del proyecto sin sandbox aislado, que
-      esta sesión no proporciona. Mantener H2-25 abierta hasta obtener esa evidencia.
+      IPC de la app y selector nativo de carpetas. `quality.yml` ahora ejecuta la suite E2E
+      en Linux, macOS y Windows, usando Xvfb solo en Linux; las capturas usan `os.tmpdir()`
+      para no asumir `/tmp` en Windows. El JSON y los usos se verificaron por inspección
+      estática. Pendiente la primera evidencia dinámica de arranque/E2E en los tres OS: la
+      skill `security-audit` prohíbe ejecutar builds/tests del proyecto sin sandbox aislado,
+      que esta sesión no proporciona. Mantener H2-25 abierta hasta obtener esos resultados.
       → `chore(tauri): narrow application capabilities`
 
 ### Estado, rendimiento y UX
