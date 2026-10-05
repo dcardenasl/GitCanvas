@@ -3,13 +3,12 @@ import path from "node:path";
 
 import { $$, browser, expect } from "@wdio/globals";
 
+import { waitForHistory } from "./history";
+
 /** Exercises the native IPC and the complete commit-tree browsing flow. */
 describe("commit tree browsing", () => {
   before(async () => {
-    await browser.waitUntil(
-      async () => (await $$('[role="option"]').length) > 0,
-      { timeout: 20_000, timeoutMsg: "the commit history never rendered" },
-    );
+    await waitForHistory();
     const commits = await $$('[role="option"]');
     await commits[0]?.click();
     await browser.waitUntil(

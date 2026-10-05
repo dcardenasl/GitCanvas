@@ -36,9 +36,9 @@ verificación estén completos; registrar su commit dedicado cuando corresponda.
 1. **H2-25 — Permisos y validación multiplataforma.** Obtener una corrida de CI sobre el
    código vigente; confirmar arranque y E2E en Linux, macOS y Windows. No cerrar con los
    resultados antiguos documentados en la tarea.
-2. **H2-42 — Suite E2E.** El suite pasa localmente en macOS (4 specs/8 tests), con un
-   reintento configurado. Completar evidencia CI Linux/Windows, revisar si ese reintento
-   sigue justificado y registrar el warning conocido de `@wdio/tauri-service` sin ocultarlo.
+2. **H2-42 — Suite E2E.** Dos corridas locales en macOS pasaron sin reintentos (4 specs/8
+   tests cada una). Completar evidencia CI Linux/Windows y mantener visible el warning
+   conocido de `@wdio/tauri-service`.
 3. **H2-45 — Cierre H2.** Reconciliar H2-34–41 y H2-43 con el historial sin perder cambios;
    cerrar conteos, evidencia integrada y divergencias solo cuando las tareas previas estén
    cerradas.
@@ -138,13 +138,14 @@ David.
       [código upstream](https://github.com/webdriverio/desktop-mobile/blob/main/packages/tauri-service/src/service.ts)).
       Se corrigió además la comparación de rutas canónicas de macOS (`/var` frente a
       `/private/var`), que impedía limpiar fixtures propios.
-      `specFileRetries` se redujo de 2 a 1: el runner separa los specs por proceso WDIO y la
-      corrida completa de macOS volvió a pasar con este valor, con una recuperación disponible
-      para la carrera de IPC documentada. Queda pendiente E2E en CI para Linux y Windows y
-      medir si otros sistemas permiten retirar el reintento. La ejecución remota más reciente
-      consultable ([quality](https://github.com/dcardenasl/gitcanvas/actions/runs/36265828914),
-      2026-09-26, SHA `7f24bb6`) falló sin pasos ni logs, así que no permite atribuir el
-      fallo a la suite ni justificar cambiar el número de reintentos.
+      `specFileRetries` quedó en 0: cada spec corre en su propio proceso WDIO, la ventana se
+      selecciona antes de consultar elementos y los tests esperan estado observable. Dos
+      corridas completas consecutivas en macOS pasaron sin reintentos (4 specs/8 tests cada
+      una; compilación aislada con `HOME` e identificador Tauri temporales). El warning no
+      fatal de `@wdio/tauri-service` al limpiar mocks sigue visible después de cada sesión.
+      Queda pendiente evidencia CI Linux y Windows. Los checks remotos más recientes
+      consultables ([quality](https://github.com/dcardenasl/gitcanvas/actions/runs/36265828914),
+      2026-09-26, SHA `7f24bb6`) fallaron sin pasos ni logs; no evalúan el código actual.
       → `test(e2e): replace fixed waits with observable conditions`
 ### Documentación y cierre
 

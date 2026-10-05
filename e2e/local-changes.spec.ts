@@ -2,8 +2,9 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { $$, browser, expect } from "@wdio/globals";
+import { browser, expect } from "@wdio/globals";
 
+import { waitForHistory } from "./history";
 import { e2eRepository } from "../wdio.conf";
 
 /** Permanent regression coverage for the staged/unstaged working-tree view. */
@@ -12,10 +13,7 @@ describe("local changes", () => {
     execFileSync("git", ["-C", e2eRepository, ...args], { stdio: "pipe" });
 
   before(async () => {
-    await browser.waitUntil(
-      async () => (await $$('[role="option"]').length) > 0,
-      { timeout: 20_000, timeoutMsg: "the commit history never rendered" },
-    );
+    await waitForHistory();
 
     fs.writeFileSync(path.join(e2eRepository, "a.txt"), "one\ntwo\nthree\n");
     fs.writeFileSync(path.join(e2eRepository, "untracked.txt"), "new\n");
@@ -44,7 +42,7 @@ describe("local changes", () => {
     expect(localText).toContain("untracked.txt");
   });
 
-  it("closes a staged view when its revision disappears", async () => {
+  it("reports when a staged file disappears from local changes", async () => {
     await (await browser.$('[aria-label="Preparados"] button')).click();
     await browser.waitUntil(
       async () => (await browser.$(".file-diff")).isDisplayed(),
@@ -68,11 +66,20 @@ describe("local changes", () => {
     fs.rmSync(path.join(e2eRepository, "staged.txt"));
     git("add", "-u", "staged.txt");
     await browser.waitUntil(
-      async () => !(await (await browser.$(".file-diff")).isDisplayed()),
+      async () => {
+        const alert = await browser.$(".file-diff [role=alert]");
+        return (
+          (await alert.isDisplayed()) &&
+          (await alert.getText()).includes(
+            "El archivo local no está disponible",
+          )
+        );
+      },
       {
         timeout: 20_000,
-        timeoutMsg: "the deleted local file view stayed open",
+        timeoutMsg: "the unavailable local file was not reported",
       },
     );
+    await expect(await browser.$(".file-diff")).toBeDisplayed();
   });
 });

@@ -10,5 +10,5 @@
     "noEmit": true,
     "types": ["node", "@wdio/globals/types", "@wdio/mocha-framework"]
   },
-  "include": ["e2e/**/*.spec.ts", "wdio.conf.ts"]
+  "include": ["e2e/**/*.spec.ts", "e2e/history.ts", "wdio.conf.ts"]
 }

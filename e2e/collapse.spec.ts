@@ -1,26 +1,12 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-
 import { $, $$, browser, expect } from "@wdio/globals";
 
-const SCREENSHOT_DIR = path.join(os.tmpdir(), "gc-shots");
+import { waitForHistory } from "./history";
 
 /** Verifies the collapsed-sidebar layout with real geometry, not just the DOM. */
 describe("reading a file with the sidebar collapsed", () => {
   before(async () => {
-    fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
     await browser.setWindowSize(1440, 900);
-    // A fixed pause is a coin flip on a loaded machine: cold-start time
-    // varies with whatever else is running. Wait for the actual signal that
-    // the history rendered instead of guessing how long that takes.
-    await browser.waitUntil(
-      async () => (await $$('[role="option"]').length) > 0,
-      {
-        timeout: 20_000,
-        timeoutMsg: "the commit history never rendered",
-      },
-    );
+    await waitForHistory(5);
   });
 
   it("gives the file view the room the sidebar released", async () => {
@@ -28,14 +14,16 @@ describe("reading a file with the sidebar collapsed", () => {
     const row = rows[4];
     if (row === undefined) throw new Error("Expected at least five commits");
     await row.click();
-    await browser.pause(2000);
 
     const files = await $$('[aria-label="Archivos modificados"] button');
     await expect(files).toBeElementsArrayOfSize({ gte: 1 });
     const file = files[0];
     if (file === undefined) throw new Error("Expected a changed file");
     await file.click();
-    await browser.pause(2500);
+    await browser.waitUntil(
+      async () => await browser.$(".file-diff").isDisplayed(),
+      { timeout: 20_000, timeoutMsg: "the selected file diff never opened" },
+    );
 
     /*
      * No nested functions inside `browser.execute`: esbuild injects its
@@ -65,8 +53,6 @@ describe("reading a file with the sidebar collapsed", () => {
     });
 
     console.log(`COLLAPSE ${JSON.stringify(geometry)}`);
-    await browser.saveScreenshot(path.join(SCREENSHOT_DIR, "06-file-open.png"));
-
     // The bug this guards: the file view landed in the sidebar's zero-width
     // column and the inspector filled the window.
     expect(geometry.children).toBe(5);
@@ -77,8 +63,14 @@ describe("reading a file with the sidebar collapsed", () => {
 
   it("brings the sidebar back when asked", async () => {
     await (await $("button=Ramas")).click();
-    await browser.pause(1500);
-
+    await browser.waitUntil(
+      async () =>
+        await browser.execute(() => {
+          const el = document.querySelector(".sidebar");
+          return el !== null && el.getBoundingClientRect().width > 100;
+        }),
+      { timeout: 20_000, timeoutMsg: "the pinned sidebar did not reopen" },
+    );
     const sidebar = await browser.execute(() => {
       const el = document.querySelector(".sidebar");
       return el ? Math.round(el.getBoundingClientRect().width) : -1;
@@ -86,9 +78,5 @@ describe("reading a file with the sidebar collapsed", () => {
 
     console.log(`PINNED sidebar=${String(sidebar)}`);
     expect(sidebar).toBeGreaterThan(100);
-
-    await browser.saveScreenshot(
-      path.join(SCREENSHOT_DIR, "07-sidebar-pinned.png"),
-    );
   });
 });

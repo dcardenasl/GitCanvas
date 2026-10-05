@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -34,46 +35,139 @@ function applicationPath(): string {
   );
 }
 
-/**
- * A repository with a merge, built before the application starts.
- *
- * It has to exist here rather than in the spec: the application receives its
- * path as a launch argument, and by the time a spec runs the window is already
- * open.
- */
-function createFixtureRepository(): string {
-  const repository = fs.mkdtempSync(path.join(os.tmpdir(), "gitcanvas-e2e-"));
-  const git = (...args: string[]) =>
-    execFileSync("git", ["-C", repository, ...args], { stdio: "pipe" });
+/** Paths and hand-off token for a fixture owned by this E2E run. */
+interface OwnedFixture {
+  readonly repository: string;
+  readonly token: string;
+}
 
-  execFileSync("git", ["init", "-b", "main", repository], { stdio: "pipe" });
-  git("config", "user.email", "e2e@example.com");
-  git("config", "user.name", "End To End");
+const FIXTURE_ENV = "GITCANVAS_E2E_FIXTURE";
+const FIXTURE_TOKEN_ENV = "GITCANVAS_E2E_FIXTURE_TOKEN";
+const FIXTURE_OWNER_MARKER = ".git/gitcanvas-e2e-owner";
+const FIXTURE_TOKEN_PATTERN = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/;
 
-  // Screenshot and layout specs read specific rows out of the history table
-  // (the fifth, the tenth), so the merge below needs real depth behind it —
-  // not just the three commits the assertions past the first row would need.
-  for (let filler = 1; filler <= 8; filler += 1) {
-    fs.writeFileSync(
-      path.join(repository, "filler.txt"),
-      `${String(filler)}\n`,
-    );
-    git("add", "filler.txt");
-    git("commit", "-m", `filler commit ${String(filler)}`);
+/** Validate a fixture path and its ownership marker without following symlinks. */
+function validatedOwnedFixture(
+  repository: string,
+  token: string,
+): OwnedFixture | null {
+  if (!FIXTURE_TOKEN_PATTERN.test(token)) {
+    return null;
   }
 
-  fs.writeFileSync(path.join(repository, "a.txt"), "one\n");
-  git("add", "a.txt");
-  git("commit", "-m", "first commit");
+  try {
+    const realRepository = fs.realpathSync(repository);
+    const realTemp = fs.realpathSync(os.tmpdir());
+    const repositoryInfo = fs.lstatSync(repository);
+    const relative = path.relative(realTemp, realRepository);
+    const gitInfo = fs.lstatSync(path.join(realRepository, ".git"));
+    const markerPath = path.join(realRepository, FIXTURE_OWNER_MARKER);
+    const markerInfo = fs.lstatSync(markerPath);
 
-  git("checkout", "-b", "side");
-  fs.writeFileSync(path.join(repository, "a.txt"), "one\ntwo\n");
-  git("commit", "-am", "second commit on side");
+    if (
+      repositoryInfo.isSymbolicLink() ||
+      !repositoryInfo.isDirectory() ||
+      !gitInfo.isDirectory() ||
+      markerInfo.isSymbolicLink() ||
+      !markerInfo.isFile() ||
+      markerInfo.size !== token.length ||
+      path.dirname(relative) !== "." ||
+      !path.basename(relative).startsWith("gitcanvas-e2e-") ||
+      fs.readFileSync(markerPath, "utf8") !== token
+    ) {
+      return null;
+    }
 
-  git("checkout", "main");
-  git("merge", "--no-ff", "side", "-m", "merge side into main");
+    return { repository: realRepository, token };
+  } catch {
+    return null;
+  }
+}
 
-  return repository;
+/** Reuse only a fixture created by this test run, never an arbitrary env path. */
+function inheritedOwnedFixture(): OwnedFixture | null {
+  // The main runner inherits the user's environment, so a matching path and
+  // marker alone do not prove that this process created the fixture. Only a
+  // WDIO child with its private IPC channel may consume the runner's hand-off.
+  if (
+    process.env.WDIO_WORKER_ID === undefined ||
+    typeof process.send !== "function"
+  ) {
+    return null;
+  }
+
+  const repository = process.env[FIXTURE_ENV];
+  const token = process.env[FIXTURE_TOKEN_ENV];
+  return repository === undefined || token === undefined
+    ? null
+    : validatedOwnedFixture(repository, token);
+}
+
+function removeOwnedFixture(fixture: OwnedFixture): void {
+  // The runner owns the fixture directly; this check must not require WDIO's
+  // worker-only IPC markers, which are absent in the main process.
+  const current = validatedOwnedFixture(fixture.repository, fixture.token);
+  if (
+    current?.repository === fixture.repository &&
+    current.token === fixture.token
+  ) {
+    fs.rmSync(fixture.repository, { recursive: true, force: true });
+  }
+}
+
+/** Build a temporary fixture before the app starts, then remove it on failure. */
+function createFixtureRepository(
+  kind: "history" | "local-changes",
+): OwnedFixture {
+  const repository = fs.mkdtempSync(path.join(os.tmpdir(), "gitcanvas-e2e-"));
+  const token = randomUUID();
+  try {
+    const git = (...args: string[]) =>
+      execFileSync("git", ["-C", repository, ...args], { stdio: "pipe" });
+
+    execFileSync("git", ["init", "-b", "main", repository], { stdio: "pipe" });
+    fs.writeFileSync(path.join(repository, FIXTURE_OWNER_MARKER), token, {
+      flag: "wx",
+      mode: 0o600,
+    });
+    git("config", "user.email", "e2e@example.com");
+    git("config", "user.name", "End To End");
+
+    if (kind === "local-changes") {
+      fs.writeFileSync(path.join(repository, "base.txt"), "base\n");
+      git("add", "base.txt");
+      git("commit", "-m", "base commit");
+      return { repository: fs.realpathSync(repository), token };
+    }
+
+    // Screenshot and layout specs read specific rows out of the history table
+    // (the fifth, the tenth), so the merge below needs real depth behind it —
+    // not just the three commits the assertions past the first row would need.
+    for (let filler = 1; filler <= 8; filler += 1) {
+      fs.writeFileSync(
+        path.join(repository, "filler.txt"),
+        `${String(filler)}\n`,
+      );
+      git("add", "filler.txt");
+      git("commit", "-m", `filler commit ${String(filler)}`);
+    }
+
+    fs.writeFileSync(path.join(repository, "a.txt"), "one\n");
+    git("add", "a.txt");
+    git("commit", "-m", "first commit");
+
+    git("checkout", "-b", "side");
+    fs.writeFileSync(path.join(repository, "a.txt"), "one\ntwo\n");
+    git("commit", "-am", "second commit on side");
+
+    git("checkout", "main");
+    git("merge", "--no-ff", "side", "-m", "merge side into main");
+
+    return { repository: fs.realpathSync(repository), token };
+  } catch (error) {
+    fs.rmSync(repository, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 /**
@@ -83,7 +177,15 @@ function createFixtureRepository(): string {
  * graph gets exercised against a history nobody wrote for it. Without it, a
  * purpose-built fixture is created and removed afterwards.
  */
-const providedRepository = process.env.GITCANVAS_E2E_REPO;
+const fixtureKind = process.env.GITCANVAS_E2E_FIXTURE_KIND ?? "history";
+if (fixtureKind !== "history" && fixtureKind !== "local-changes") {
+  throw new Error(`Unsupported E2E fixture kind: ${fixtureKind}`);
+}
+
+// local-changes writes files and updates the index. Give that spec its own
+// throwaway repository even when the rest of the suite targets a user repo.
+const providedRepository =
+  fixtureKind === "local-changes" ? undefined : process.env.GITCANVAS_E2E_REPO;
 
 /*
  * This file is evaluated twice: once by the launcher, which starts the
@@ -93,12 +195,19 @@ const providedRepository = process.env.GITCANVAS_E2E_REPO;
  * showing, so every spec that changes the repository saw nothing happen. The
  * launcher publishes its fixture in the environment and the worker reuses it.
  */
-const fixture =
-  providedRepository ??
-  process.env.GITCANVAS_E2E_FIXTURE ??
-  createFixtureRepository();
-if (providedRepository === undefined) {
-  process.env.GITCANVAS_E2E_FIXTURE = fixture;
+const inheritedFixture =
+  providedRepository === undefined ? inheritedOwnedFixture() : null;
+const ownedFixture =
+  providedRepository === undefined
+    ? (inheritedFixture ?? createFixtureRepository(fixtureKind))
+    : null;
+const fixture = providedRepository ?? ownedFixture?.repository;
+if (fixture === undefined) {
+  throw new Error("Unable to prepare the E2E repository");
+}
+if (ownedFixture !== null) {
+  process.env[FIXTURE_ENV] = ownedFixture.repository;
+  process.env[FIXTURE_TOKEN_ENV] = ownedFixture.token;
 }
 export const e2eRepository = fixture;
 
@@ -106,18 +215,15 @@ export const config: WebdriverIO.Config = {
   runner: "local",
   tsConfigPath: "./tsconfig.e2e.json",
 
-  specs: ["./e2e/**/*.spec.ts"],
+  // Keep manual visual captures out of the regression suite; run them by
+  // naming their file explicitly with `--spec` when a screenshot is needed.
+  specs: ["./e2e/*.spec.ts"],
   maxInstances: 1,
 
-  // Relaunching the app against an already-watched repository sometimes races
-  // Tauri's own IPC bridge against `tauri-plugin-wdio-webdriver`'s injected
-  // script: the frontend's `core.invoke` calls never resolve, so the window
-  // opens but the history never renders. It is confined to this harness — the
-  // plugin never ships in a release build — and a fresh relaunch does not hit
-  // the same race twice in a row, which a retry of the whole spec file (a new
-  // process, not just the failed assertion) is what actually clears it.
-  specFileRetries: process.env.GITCANVAS_RECORDING_OUTPUT === undefined ? 2 : 0,
-  specFileRetriesDelay: 2,
+  // Every spec runs in its own WDIO process (see scripts/run-e2e.sh), and the
+  // window is selected before the spec starts. Retrying would mask a broken
+  // startup or assertion without repairing either race, so each spec runs once.
+  specFileRetries: 0,
 
   capabilities: [
     {
@@ -179,8 +285,6 @@ export const config: WebdriverIO.Config = {
 
   onComplete() {
     // Only remove what this file created; never a repository someone passed in.
-    if (providedRepository === undefined) {
-      fs.rmSync(fixture, { recursive: true, force: true });
-    }
+    if (ownedFixture !== null) removeOwnedFixture(ownedFixture);
   },
 };

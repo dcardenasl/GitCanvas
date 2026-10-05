@@ -18,7 +18,11 @@ cd "${ROOT_DIR}"
 status=0
 for spec in e2e/*.spec.ts; do
     echo "==> ${spec}"
-    if ! npx wdio run ./wdio.conf.ts --spec "${spec}"; then
+    if [[ "${spec}" == "e2e/local-changes.spec.ts" ]]; then
+        if ! GITCANVAS_E2E_FIXTURE_KIND=local-changes npx wdio run ./wdio.conf.ts --spec "${spec}"; then
+            status=1
+        fi
+    elif ! npx wdio run ./wdio.conf.ts --spec "${spec}"; then
         status=1
     fi
 done

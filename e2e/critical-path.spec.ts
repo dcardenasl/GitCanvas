@@ -1,5 +1,7 @@
 import { $, $$, browser, expect } from "@wdio/globals";
 
+import { waitForHistory } from "./history";
+
 /**
  * The path the whole application exists to serve: open a repository, read the
  * graph, select a commit, read its diff.
@@ -12,16 +14,7 @@ import { $, $$, browser, expect } from "@wdio/globals";
  */
 describe("open a repository and read a commit", () => {
   before(async () => {
-    // A fixed pause is a coin flip on a loaded machine: cold-start time
-    // varies with whatever else is running. Wait for the actual signal that
-    // the history rendered instead of guessing how long that takes.
-    await browser.waitUntil(
-      async () => (await $$('[role="option"]').length) > 0,
-      {
-        timeout: 20_000,
-        timeoutMsg: "the commit history never rendered",
-      },
-    );
+    await waitForHistory(3);
   });
 
   it("draws the history over the commit rows", async () => {
