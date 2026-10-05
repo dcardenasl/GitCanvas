@@ -73,19 +73,27 @@ fn classify(event: &Event, metadata: &[PathBuf]) -> Option<ChangeScope> {
         return None;
     }
     if event.paths.iter().any(|path| {
-        metadata.iter().any(|metadata| path.starts_with(metadata))
-            && path
-                .file_name()
-                .is_some_and(|name| name == "index" || name == "index.lock")
+        metadata
+            .iter()
+            .filter_map(|root| path.strip_prefix(root).ok())
+            .any(|relative| {
+                relative
+                    .file_name()
+                    .is_some_and(|name| name == "index" || name == "index.lock")
+            })
     }) {
         return Some(ChangeScope::Worktree);
     }
     if event.paths.iter().any(|path| {
-        metadata.iter().any(|metadata| path.starts_with(metadata))
-            && path.components().any(|component| {
-                INTERESTING_METADATA
-                    .iter()
-                    .any(|name| component.as_os_str() == *name)
+        metadata
+            .iter()
+            .filter_map(|root| path.strip_prefix(root).ok())
+            .any(|relative| {
+                relative.components().any(|component| {
+                    INTERESTING_METADATA
+                        .iter()
+                        .any(|name| component.as_os_str() == *name)
+                })
             })
     }) {
         return Some(ChangeScope::Metadata);
@@ -206,4 +214,38 @@ pub fn watch_repository(
         stop: message_tx,
         worker: Some(worker),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use notify::{
+        event::{DataChange, ModifyKind},
+        Event, EventKind,
+    };
+
+    use super::{classify, ChangeScope};
+
+    #[test]
+    fn classifies_only_components_relative_to_the_metadata_directory() {
+        let metadata = PathBuf::from("/tmp/refs/repository/.git");
+        let event = |path: &str| {
+            Event::new(EventKind::Modify(ModifyKind::Data(DataChange::Content)))
+                .add_path(metadata.join(path))
+        };
+
+        assert_eq!(
+            classify(&event("config"), std::slice::from_ref(&metadata)),
+            None
+        );
+        assert_eq!(
+            classify(&event("refs/heads/main"), std::slice::from_ref(&metadata)),
+            Some(ChangeScope::Metadata)
+        );
+        assert_eq!(
+            classify(&event("index.lock"), std::slice::from_ref(&metadata)),
+            Some(ChangeScope::Worktree)
+        );
+    }
 }

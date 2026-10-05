@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (3/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (4/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -64,9 +64,11 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       *Verificado:* `cargo test -p gitcanvas-core --test worktree` (8 tests) y
       `cargo test -p gitcanvas-core --lib` (21 tests).
       → `fix(worktree): validate paths and reject symlinks`
-- [ ] **H2-3 — Clasificar rutas del watcher correctamente.** Verificar M1 y cambiar la
-      clasificación a partir de `strip_prefix(metadata)`; añadir el caso de repositorio
-      bajo un directorio llamado `refs`.
+- [x] **H2-3 — Clasificar rutas del watcher correctamente.** La clasificación inspecciona
+      solo componentes relativos al directorio de metadata, no nombres de carpetas padre.
+      *Verificado:* test de `config`, `refs/heads/main` e `index.lock` bajo una ruta cuyo
+      ancestro se llama `refs`; `cargo test -p gitcanvas-core --lib` (22 tests) y
+      `cargo clippy -p gitcanvas-core --all-targets -- -D warnings`.
       → `fix(watch): classify paths relative to metadata`
 - [ ] **H2-4 — Endurecer cliente REST de GitHub.** Configurar timeout global y de conexión
       en `ureq::Agent`; diferenciar 403 con rate limit, 429 y 401; hacer explícito el
