@@ -14,9 +14,9 @@ excepción a la regla de commit individual y cerrar la trazabilidad. El release 
 sigue abierto: PR #1 está abierta y R-4, R-5 y R-6 están pendientes.
 
 **Estado del checkout:** la PR #1 sigue en el SHA remoto `7f24bb6`; el checkout `dev` tiene
-44 commits locales por delante de `origin/dev` y el working tree está limpio. La PR aún no
-evalúa esos commits. No asumir que estén integrados en la PR; antes de editar, inspeccionar
-`git status`, el historial y la evidencia de abajo.
+commits locales aún no publicados y el working tree está limpio. La PR aún no evalúa esos
+commits. No asumir que estén integrados en la PR; antes de editar, inspeccionar `git status`,
+el historial y la evidencia de abajo.
 
 ## Siguiente paso
 
@@ -25,7 +25,8 @@ cerrarla, hace falta que una corrida de `quality` evalúe el código actual y pa
 Linux, macOS y Windows; los runs remotos anotados en la tarea son de un SHA anterior y
 fallaron antes de ejecutar pasos, así que no cuentan como evidencia. Luego, cerrar H2-42
 con evidencia de CI multiplataforma y por último reconciliar commits y trazabilidad en
-H2-45. El release sigue su flujo separado de `CLAUDE.md`.
+H2-45. La nueva evidencia requiere actualizar la PR desde `dev`; pedir autorización explícita
+antes de publicar los commits locales. El release sigue su flujo separado de `CLAUDE.md`.
 
 Antes de empezar, revisar `git status`: el working tree puede incluir cambios de varias
 tareas. Comparar cada cambio con los criterios de aceptación y la evidencia de esta lista.
