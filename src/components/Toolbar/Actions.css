@@ -1,11 +1,34 @@
 .actions__notice {
+  display: flex;
+  gap: 6px;
+  align-items: center;
   margin: 0;
   max-width: 46ch;
-  overflow: hidden;
   color: var(--ink-muted);
   font-size: 11.5px;
+}
+
+.actions__notice > span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.actions__notice-close {
+  flex: 0 0 auto;
+  padding: 0 3px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: default;
+}
+
+.actions__notice-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .actions__notice--error {

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import type { CheckoutOutcome, DirtyPath } from "../../bindings";
 import { userMessage } from "../../lib/errors";
@@ -8,6 +8,7 @@ import {
   pullFastForward,
   pushCurrentBranch,
 } from "../../lib/ipc";
+import { LIVE_QUERIES } from "../../state/liveRepository";
 
 /** What the last action left for the user to read. */
 export interface Notice {
@@ -28,6 +29,7 @@ export interface GitActions {
   readonly pulling: boolean;
   readonly pushing: boolean;
   readonly notice: Notice | null;
+  readonly clearNotice: () => void;
   readonly confirmingPush: boolean;
   readonly blocked: BlockedCheckout | null;
   pull: () => void;
@@ -50,82 +52,132 @@ export interface GitActions {
  */
 export function useGitActions(repositoryPath: string | null): GitActions {
   const queryClient = useQueryClient();
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const [noticeState, setNoticeState] = useState<{
+    readonly repositoryPath: string;
+    readonly notice: Notice;
+  } | null>(null);
   const [blocked, setBlocked] = useState<BlockedCheckout | null>(null);
   const [confirmingPush, setConfirmingPush] = useState(false);
+  const [previousRepositoryPath, setPreviousRepositoryPath] =
+    useState(repositoryPath);
+  const currentRepositoryPath = useRef(repositoryPath);
 
-  const refresh = () => queryClient.invalidateQueries();
+  if (previousRepositoryPath !== repositoryPath) {
+    setPreviousRepositoryPath(repositoryPath);
+    setNoticeState(null);
+    setBlocked(null);
+    setConfirmingPush(false);
+  }
+
+  const notice =
+    noticeState?.repositoryPath === repositoryPath ? noticeState.notice : null;
+  const setNotice = (path: string, next: Notice) => {
+    if (path !== currentRepositoryPath.current) return;
+    setNoticeState({ repositoryPath: path, notice: next });
+  };
+  const refresh = (path: string) =>
+    Promise.all(
+      LIVE_QUERIES.map((key) =>
+        queryClient.invalidateQueries({ queryKey: [key, path] }),
+      ),
+    );
   const requirePath = (): string => {
     if (repositoryPath === null) throw new Error("No repository is open");
     return repositoryPath;
   };
-  const fail = (error: Error) => {
-    setNotice({ tone: "error", text: userMessage(error) });
+
+  useLayoutEffect(() => {
+    currentRepositoryPath.current = repositoryPath;
+  }, [repositoryPath]);
+
+  const fail = (error: Error, path: string) => {
+    setNotice(path, { tone: "error", text: userMessage(error) });
   };
 
   const checkout = useMutation({
-    mutationFn: ({ branch, force }: { branch: string; force: boolean }) =>
-      checkoutBranch(requirePath(), branch, force),
+    mutationFn: ({
+      path,
+      branch,
+      force,
+    }: {
+      path: string;
+      branch: string;
+      force: boolean;
+    }) => checkoutBranch(path, branch, force),
     onSuccess: (outcome: CheckoutOutcome, variables) => {
       if (outcome.kind === "Blocked") {
+        if (variables.path !== currentRepositoryPath.current) return;
         setBlocked({ branch: variables.branch, conflicts: outcome.conflicts });
         return;
       }
       setBlocked(null);
-      setNotice({ tone: "info", text: `En ${outcome.branch}.` });
-      void refresh();
+      setNotice(variables.path, {
+        tone: "info",
+        text: `En ${outcome.branch}.`,
+      });
+      void refresh(variables.path);
     },
-    onError: fail,
+    onError: (error, variables) => {
+      fail(error, variables.path);
+    },
   });
 
   const pull = useMutation({
-    mutationFn: () => pullFastForward(requirePath()),
-    onSuccess: (outcome) => {
+    mutationFn: ({ path }: { path: string }) => pullFastForward(path),
+    onSuccess: (outcome, variables) => {
       switch (outcome.kind) {
         case "UpToDate":
-          setNotice({ tone: "info", text: "Ya está al día." });
+          setNotice(variables.path, { tone: "info", text: "Ya está al día." });
           break;
-        case "FastForwarded":
-          setNotice({
+        case "FastForwarded": {
+          const count = `${String(outcome.commits)} ${
+            outcome.commits === 1 ? "commit" : "commits"
+          }`;
+          setNotice(variables.path, {
             tone: "info",
-            text: `Avanzó ${String(outcome.commits)} commits.`,
+            text: `Avanzó ${count}.`,
           });
-          void refresh();
+          void refresh(variables.path);
           break;
+        }
         case "DivergedRequiresMerge":
-          setNotice({
+          setNotice(variables.path, {
             tone: "error",
             text: `${outcome.local} y ${outcome.remote} divergieron. Hace falta un merge, que se resuelve desde la línea de comandos.`,
           });
           break;
         case "NoUpstream":
-          setNotice({
+          setNotice(variables.path, {
             tone: "error",
             text: "Esta rama no tiene upstream configurado.",
           });
           break;
       }
     },
-    onError: fail,
+    onError: (error, variables) => {
+      fail(error, variables.path);
+    },
   });
 
   const push = useMutation({
-    mutationFn: () => pushCurrentBranch(requirePath()),
-    onSuccess: (outcome) => {
+    mutationFn: ({ path }: { path: string }) => pushCurrentBranch(path),
+    onSuccess: (outcome, variables) => {
       if (outcome.kind === "RejectedNonFastForward") {
-        setNotice({
+        setNotice(variables.path, {
           tone: "error",
           text: `El remoto rechazó el push de ${outcome.branch}: tiene commits que no están acá. Tráelos con pull antes de hacer push.`,
         });
         return;
       }
-      setNotice({
+      setNotice(variables.path, {
         tone: "info",
         text: `${outcome.branch} enviada a ${outcome.remote}.`,
       });
-      void refresh();
+      void refresh(variables.path);
     },
-    onError: fail,
+    onError: (error, variables) => {
+      fail(error, variables.path);
+    },
   });
 
   const busy = checkout.isPending || pull.isPending || push.isPending;
@@ -135,31 +187,34 @@ export function useGitActions(repositoryPath: string | null): GitActions {
     pulling: pull.isPending,
     pushing: push.isPending,
     notice,
+    clearNotice: () => {
+      setNoticeState(null);
+    },
     confirmingPush,
     blocked,
     pull: () => {
-      pull.mutate();
+      pull.mutate({ path: requirePath() });
     },
     requestPush: () => {
       setConfirmingPush(true);
     },
     confirmPush: () => {
       setConfirmingPush(false);
-      push.mutate();
+      push.mutate({ path: requirePath() });
     },
     cancelPush: () => {
       setConfirmingPush(false);
     },
     checkout: (branch) => {
       if (busy) return;
-      setNotice(null);
-      checkout.mutate({ branch, force: false });
+      setNoticeState(null);
+      checkout.mutate({ path: requirePath(), branch, force: false });
     },
     confirmDiscardAndCheckout: () => {
       if (blocked === null) return;
       const { branch } = blocked;
       setBlocked(null);
-      checkout.mutate({ branch, force: true });
+      checkout.mutate({ path: requirePath(), branch, force: true });
     },
     cancelBlocked: () => {
       setBlocked(null);

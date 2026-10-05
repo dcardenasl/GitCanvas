@@ -33,7 +33,7 @@ export function Actions({ actions, currentBranch }: ActionsProps) {
       </button>
 
       {notice !== null && (
-        <p
+        <div
           className={
             notice.tone === "error"
               ? "actions__notice actions__notice--error"
@@ -41,8 +41,16 @@ export function Actions({ actions, currentBranch }: ActionsProps) {
           }
           role={notice.tone === "error" ? "alert" : "status"}
         >
-          {notice.text}
-        </p>
+          <span>{notice.text}</span>
+          <button
+            type="button"
+            className="actions__notice-close"
+            aria-label="Cerrar aviso"
+            onClick={actions.clearNotice}
+          >
+            ×
+          </button>
+        </div>
       )}
 
       {actions.confirmingPush && currentBranch !== null && (

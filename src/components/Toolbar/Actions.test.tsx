@@ -24,8 +24,8 @@ const { Actions } = await import("./Actions");
 const { useGitActions } = await import("./useGitActions");
 
 /** Wires the actions the way the shell does, plus a control that switches branch. */
-function Harness() {
-  const actions = useGitActions("/tmp/repo");
+function Harness({ path = "/tmp/repo" }: { readonly path?: string }) {
+  const actions = useGitActions(path);
   return (
     <>
       <Actions actions={actions} currentBranch="dev" />
@@ -45,11 +45,12 @@ function renderActions() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  render(
+  const view = render(
     <QueryClientProvider client={client}>
       <Harness />
     </QueryClientProvider>,
   );
+  return { client, ...view };
 }
 
 beforeEach(() => {
@@ -125,6 +126,84 @@ describe("Actions", () => {
     await userEvent.click(screen.getByRole("button", { name: "Pull" }));
 
     expect(await screen.findByRole("status")).toBeDefined();
+  });
+
+  it("uses singular and plural wording for pull results", async () => {
+    renderActions();
+    pullFastForward.mockResolvedValue({ kind: "FastForwarded", commits: 1 });
+
+    await userEvent.click(screen.getByRole("button", { name: "Pull" }));
+    expect(await screen.findByText("Avanzó 1 commit.")).toBeDefined();
+
+    await userEvent.click(screen.getByRole("button", { name: "Cerrar aviso" }));
+    pullFastForward.mockResolvedValue({ kind: "FastForwarded", commits: 2 });
+    await userEvent.click(screen.getByRole("button", { name: "Pull" }));
+    expect(await screen.findByText("Avanzó 2 commits.")).toBeDefined();
+  });
+
+  it("closes notices and clears them when the repository changes", async () => {
+    const { client, rerender } = renderActions();
+    pullFastForward.mockResolvedValue({ kind: "UpToDate" });
+
+    await userEvent.click(screen.getByRole("button", { name: "Pull" }));
+    expect(await screen.findByText("Ya está al día.")).toBeDefined();
+    rerender(
+      <QueryClientProvider client={client}>
+        <Harness path="/tmp/another-repo" />
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText("Ya está al día.")).toBeNull();
+    rerender(
+      <QueryClientProvider client={client}>
+        <Harness />
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText("Ya está al día.")).toBeNull();
+  });
+
+  it("does not restore a late notice from the previous repository", async () => {
+    let finishPull: (outcome: PullOutcome) => void = () => undefined;
+    const { client, rerender } = renderActions();
+    pullFastForward.mockReturnValue(
+      new Promise((resolve) => {
+        finishPull = resolve;
+      }),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Pull" }));
+    rerender(
+      <QueryClientProvider client={client}>
+        <Harness path="/tmp/another-repo" />
+      </QueryClientProvider>,
+    );
+    finishPull({ kind: "UpToDate" });
+    await screen.findByRole("button", { name: "Pull" });
+    rerender(
+      <QueryClientProvider client={client}>
+        <Harness />
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText("Ya está al día.")).toBeNull();
+  });
+
+  it("refreshes only live queries for the repository changed by pull", async () => {
+    const { client } = renderActions();
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    pullFastForward.mockResolvedValue({ kind: "FastForwarded", commits: 1 });
+
+    await userEvent.click(screen.getByRole("button", { name: "Pull" }));
+
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalled();
+    });
+    expect(invalidate.mock.calls.map(([filters]) => filters.queryKey)).toEqual([
+      ["history", "/tmp/repo"],
+      ["branches", "/tmp/repo"],
+      ["tags", "/tmp/repo"],
+      ["worktree", "/tmp/repo"],
+      ["worktree-file-diff", "/tmp/repo"],
+      ["worktree-fingerprint", "/tmp/repo"],
+    ]);
   });
 
   it("reports a missing upstream as a state, not a crash", async () => {

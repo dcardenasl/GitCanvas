@@ -61,7 +61,12 @@ hasta obtener evidencia dinámica de arranque y E2E en los tres sistemas operati
 
 - [ ] **H2-26 — Acotar invalidación de queries y avisos.** Invalidar por alcance
       `LIVE_QUERIES`, permitir cerrar notice, limpiarlo al cambiar repo y corregir singular
-      y plural.
+      y plural. *Implementación parcial (2026-10-05):* las acciones Git invalidan solo
+      `LIVE_QUERIES` del repositorio que cambió; sus avisos se pueden cerrar y se limpian
+      al cambiar de repositorio, incluso si una operación anterior termina tarde. El
+      resultado de pull distingue `commit`/`commits`. Se añadieron pruebas de regresión
+      para alcance, cierre, cambio de repositorio y número; aún no ejecutadas por la
+      restricción de `security-audit` documentada en H2-25.
       → `fix(ui): scope live query invalidation`
 - [ ] **H2-27 — Centralizar query keys y refresh en vivo.** Módulo único `queryKeys` y
       `invalidateLive()`; retirar duplicación en tres archivos, con pruebas de alcance.
