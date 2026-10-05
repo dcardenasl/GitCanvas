@@ -6,17 +6,16 @@
 > Convenciones y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado al 2026-10-05:** 42 de las 46 tareas H2 están completadas y en
-[`ARCHIVES.md`](ARCHIVES.md); quedan H2-25, H2-42, H2-44 y H2-45. De las completadas,
-33 tienen un commit local dedicado. H2-34–41 y H2-43 están implementadas y verificadas,
-pero no tienen commits individuales; H2-45 debe reconciliar esa divergencia. El release
-v0.1.0 también sigue abierto: PR #1 está abierta y R-4, R-5 y R-6 están pendientes.
+**Estado al 2026-10-05:** 43 de las 46 tareas H2 están completadas y en
+[`ARCHIVES.md`](ARCHIVES.md); quedan H2-25, H2-42 y H2-45. De las completadas, 34 tienen
+un commit local dedicado. H2-34–41 y H2-43 están implementadas y verificadas, pero no
+tienen commits individuales; H2-45 debe reconciliar esa divergencia. El release v0.1.0
+sigue abierto: PR #1 está abierta y R-4, R-5 y R-6 están pendientes.
 
-**Punto de partida del checkout:** rama `dev`, HEAD `03077dd`, `origin/dev` en `7f24bb6`
-(39 commits locales por delante). El working tree contiene 122 rutas modificadas o nuevas,
-con cambios mezclados de varias tareas. No asumir que esos cambios están integrados en el
-PR ni crear un commit que mezcle tareas; antes de editar, inspeccionar `git status` y
-comparar los archivos con los criterios y la evidencia de abajo.
+**Estado del checkout:** la PR #1 sigue en el SHA remoto `7f24bb6`; el checkout `dev` tiene
+commits y cambios locales que la PR aún no evalúa. El working tree contiene cambios de
+varias tareas. No asumir que estén integrados en la PR ni crear un commit que mezcle tareas;
+antes de editar, inspeccionar `git status`, el historial y la evidencia de abajo.
 
 ## Siguiente paso
 
@@ -24,8 +23,8 @@ Retomar **H2-25**: la allowlist, el arranque local y E2E en macOS ya se verifica
 cerrarla, hace falta que una corrida de `quality` evalúe el código actual y pase E2E en
 Linux, macOS y Windows; los runs remotos anotados en la tarea son de un SHA anterior y
 fallaron antes de ejecutar pasos, así que no cuentan como evidencia. Luego, cerrar H2-42
-con evidencia de CI multiplataforma, terminar y confirmar H2-44, y por último reconciliar
-commits y trazabilidad en H2-45. El release sigue su flujo separado de `CLAUDE.md`.
+con evidencia de CI multiplataforma y por último reconciliar commits y trazabilidad en
+H2-45. El release sigue su flujo separado de `CLAUDE.md`.
 
 Antes de empezar, revisar `git status`: el working tree puede incluir cambios de varias
 tareas. Comparar cada cambio con los criterios de aceptación y la evidencia de esta lista.
@@ -40,13 +39,10 @@ verificación estén completos; registrar su commit dedicado cuando corresponda.
 2. **H2-42 — Suite E2E.** El suite pasa localmente en macOS (4 specs/8 tests), con un
    reintento configurado. Completar evidencia CI Linux/Windows, revisar si ese reintento
    sigue justificado y registrar el warning conocido de `@wdio/tauri-service` sin ocultarlo.
-3. **H2-44 — Documentación.** El contenido ya está actualizado en el working tree; revisar
-   el diff y enlaces, terminar su commit dedicado y actualizar estado/evidencia en ese
-   mismo cambio.
-4. **H2-45 — Cierre H2.** Reconciliar H2-34–41 y H2-43 con el historial sin perder cambios;
+3. **H2-45 — Cierre H2.** Reconciliar H2-34–41 y H2-43 con el historial sin perder cambios;
    cerrar conteos, evidencia integrada y divergencias solo cuando las tareas previas estén
    cerradas.
-5. **R-4 a R-6 — Release independiente.** Seguir `CLAUDE.md`; R-4 requiere CI verde y
+4. **R-4 a R-6 — Release independiente.** Seguir `CLAUDE.md`; R-4 requiere CI verde y
    aprobación explícita de David antes del merge.
 
 ## Cómo se usa este archivo
@@ -66,7 +62,7 @@ verificación estén completos; registrar su commit dedicado cuando corresponda.
 
 Plan rector: [`docs/plan/2026-10-04-plan-de-endurecimiento.md`](docs/plan/2026-10-04-plan-de-endurecimiento.md).
 Leer el contexto, los hallazgos y los criterios de aceptación de la tarea antes de
-implementarla; validar hallazgos en el código y registrar aquí si no se reproducen. Las 42
+implementarla; validar hallazgos en el código y registrar aquí si no se reproducen. Las 43
 tareas cerradas están en
 [`ARCHIVES.md`](ARCHIVES.md). Los commits `c954492` (branding) y `7f24bb6` (grabador de
 demo) ya existen en `dev` y no son pendientes.
@@ -152,21 +148,6 @@ David.
       → `test(e2e): replace fixed waits with observable conditions`
 ### Documentación y cierre
 
-- [ ] **H2-44 — Sincronizar documentos de arquitectura y producto.** Actualizar `CONTEXT.md`
-      y ADR 0001 para explicar watcher de metadata versus fingerprint de árbol y acotar
-      “read-only” dado que existen checkout/pull/push; sincronizar README, CHANGELOG,
-      DESIGN, PRODUCT, `docs/ASSET.md`, `docs/SNAPSHOT.md` y el índice/reglas de `CLAUDE.md`.
-      *Progreso (2026-10-05):* reconstruidos `CONTEXT.md` y ADR 0001 desde el watcher,
-      fingerprint, límites y acciones Git reales. README ahora registra rutas de logs por
-      plataforma, release pendiente, comandos de CI y requisitos de demo; CHANGELOG tiene
-      una sola sección `Added` por versión y enlaces de comparación. DESIGN/PRODUCT y las
-      fichas ASSET/SNAPSHOT describen la plataforma desktop, la UI y el estado H2/release.
-      `CLAUDE.md` indexa los documentos e iguala las reglas 7/10 y verificación a los
-      comandos y flujos actuales. `git diff --check` pasó y se revisaron manualmente los
-      enlaces relativos añadidos. Markdown está excluido intencionalmente de Prettier por
-      `.prettierignore`; falta registrar el cambio en su commit dedicado antes de marcarla
-      completa.
-      → `docs: align architecture and product documentation`
 - [ ] **H2-45 — Cerrar trazabilidad de H2.** Revisar conteo/estado de tareas, documentar
       divergencias verificadas frente al plan, commits ya registrados y evidencia final.
       Ejecutar la verificación local definida por el plan y las comprobaciones manuales

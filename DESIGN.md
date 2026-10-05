@@ -6,9 +6,11 @@ Git workspace while carrying the GitCanvas orchid identity through purposeful UI
 ## Surface and hierarchy
 
 Dense desktop Git workspace: compact toolbar, 220px branch sidebar, flexible history
-and a 310px inspector when a commit is selected. One vertical scroll owner contains
-virtualized commit rows and their SVG graph. Row height is 40px. Preserve horizontal
-space for the commit message; allow horizontal graph scrolling for many lanes.
+and a 310px inspector when a commit is selected. Sidebar width is bounded to 160–420px;
+inspector width to 240–620px; history keeps at least 360px. The Tauri window minimum
+is 940×600. One vertical scroll owner contains virtualized commit rows and their SVG
+graph. Row height is 40px. Preserve horizontal space for the commit message; allow
+horizontal graph scrolling for many lanes.
 
 ## Tokens
 
@@ -17,7 +19,8 @@ space for the commit message; allow horizontal graph scrolling for many lanes.
 - Orchid remains the brand accent (#c4a3ff dark, #6941a5 light); selected rows use a subtle violet tint in both themes.
 - Green and red remain reserved for added and removed code; graph lane hues stay stable and receive a subtle surface outline for separation.
 - Theme preference is window-level, persisted locally, defaults to dark, and can follow the operating system.
-- Sans: Hanken Grotesk, system-ui fallback. Code and SHAs: JetBrains Mono, monospace.
+- Sans: `ui-sans-serif`, `system-ui`, `-apple-system`, `Segoe UI`, sans-serif. Code and
+  SHAs: `ui-monospace`, JetBrains Mono, SF Mono, Menlo, monospace.
 - Controls: 7px corner radius, 13px text, explicit hover/focus/disabled states.
 
 ## Interaction
@@ -27,8 +30,9 @@ into history, and selecting a commit reveals its metadata and diff. Errors and l
 states occupy their own region without replacing successful repository data. Keyboard
 navigation, visible focus and descriptive accessible names accompany all controls.
 
-## Responsive behavior
+## Platform behavior
 
-Keep the graph and commit message usable at the desktop window minimum. On narrower
-browser previews, collapse supporting navigation and show the inspector beneath history.
-No decorative cards, marketing header, fake traffic lights or mock profile identity.
+The product is a desktop Tauri application for macOS, Linux, and Windows. The layout is
+designed for the 940×600 minimum window; there is no separate responsive web or mobile
+layout. No decorative cards, marketing header, fake traffic lights or mock profile
+identity.

@@ -24,8 +24,13 @@ el render SVG. El graph es el núcleo de valor: todo lo demás está subordinado
 | Archivo | Qué contiene |
 |---|---|
 | `TASKS.md` | **Fuente de verdad de ejecución.** Qué falta, qué se hizo, qué se descubrió |
+| `CONTEXT.md` | Contexto vigente de arquitectura, observación del repositorio y límites de mutación |
 | `docs/plans/2026-09-08-plan-de-implementacion.md` | Plan rector: fases, deltas, ledger de commits |
+| `docs/plan/2026-10-04-plan-de-endurecimiento.md` | Plan de endurecimiento H2 y sus criterios de verificación |
 | `docs/PLAN-DESARROLLO.md` | Plan de diseño original. El plan rector lo endurece en 10 puntos (D1–D10) |
+| `PRODUCT.md` | Propósito, plataforma, capacidades y límites del producto |
+| `DESIGN.md` | Jerarquía visual, tokens e interacciones de la interfaz |
+| `docs/adr/` | Decisiones de arquitectura aceptadas y sus consecuencias |
 | `docs/ASSET.md` | Ficha del asset y roadmap de producto |
 | `docs/SNAPSHOT.md` | Estado de la última sesión |
 | `docs/mockup.html` | Referencia visual de la UI. Abrir en el navegador |
@@ -129,19 +134,23 @@ Cada una está hecha para fallar el build, no para depender de que alguien se ac
 6. **Todo comando que toca `git2` corre en `tauri::async_runtime::spawn_blocking`.**
    `git2` es bloqueante; sin esto un repo grande congela la UI.
 7. **El estado nunca guarda un `git2::Repository` vivo.** `AllowedRepos` conserva solo
-   paths canónicos autorizados por `open_repository`, el arranque o clone. Los comandos
-   que operan sobre un repo pasan por `with_repo`, que exige allowlist y construye un
-   `ActiveRepo` nuevo para abrir su propio handle.
+   paths canónicos autorizados por `open_repository`, `get_startup_repository` o clone.
+   Los comandos que operan sobre un repo pasan por `with_repo`, que exige allowlist y
+   construye un `ActiveRepo` nuevo para abrir su propio handle. GitCanvas es de lectura
+   para inspección, pero no estrictamente read-only: checkout, pull fast-forward y push
+   son acciones explícitas; clone crea una copia propia. Checkout protege cambios
+   locales salvo opción explícita de descarte, y push nunca fuerza.
 8. **Paginación acotada, con cursor ligado a la revisión que lo emitió.** La historia usa
    SHA + roots congelados; los cambios locales, `revisión:posición`, y rechazan un cursor
    de otra revisión (`StaleCursor`). Solo el árbol de un commit, que es inmutable, pagina
    por offset. Máximo 500 commits por página.
 9. **El layout del graph es reanudable.** Cargar la página N+1 no puede reordenar los
    carriles de las páginas anteriores.
-10. **El PAT entra por IPC una sola vez**, como argumento de
-    `store_github_token`; Rust lo recorta, verifica y guarda en el keychain del SO. El
-    backend nunca lo devuelve: las llamadas REST y el callback de `git2` lo leen dentro
-    de Rust. Nunca se escribe en un archivo plano.
+10. **El PAT entra por IPC solo al guardarlo**, como argumento de
+    `store_github_token`; frontend y Rust eliminan espacios exteriores, Rust lo verifica
+    y guarda en el keychain del SO. El backend nunca lo devuelve ni lo vuelve a exponer
+    por IPC: las llamadas REST y el callback de `git2` lo leen dentro de Rust. Nunca se
+    escribe en un archivo plano.
 
 ## Convenciones de código
 
@@ -162,13 +171,18 @@ Cada una está hecha para fallar el build, no para depender de que alguien se ac
 
 **Pre-commit (local, instantáneo):** `cargo fmt --check`, `eslint`, `prettier --check`.
 
-**Push a `dev` (CI ligero, ubuntu):** typecheck, lint, `vitest run`,
-`cargo test -p gitcanvas-core`.
+**Push a `dev` (CI ligero, ubuntu):** `npm run typecheck`,
+`npm run typecheck:e2e`, `npm run typecheck:node`, `npm run lint`,
+`npm run format:check`, `npm run test`, `cargo test -p gitcanvas-core`.
 
-**PR `dev → main` (la puerta real, matriz ubuntu/macos/windows):** `cargo fmt --check`,
-`cargo clippy --all-targets -- -D warnings`, `cargo test`, `vitest run --coverage`
-contra los umbrales (90% en `graph-layout`), regeneración de `bindings.ts` +
-`git diff --exit-code`, `tauri build`, y E2E en ubuntu.
+**PR `dev → main` (la puerta real, matriz ubuntu/macos/windows):** `npm run typecheck`,
+`npm run typecheck:e2e`, `npm run typecheck:node`, `npm run lint`,
+`npm run format:check`, `npm run test:coverage`, `cargo fmt --all --check`,
+`cargo clippy --all-targets --all-features -- -D warnings`, `cargo test --workspace`,
+regeneración de `src/bindings.ts` + `git diff --exit-code`, auditoría de dependencias
+de producción (`npm audit --omit=dev --audit-level=high`), `cargo deny check`,
+`cargo audit` y `npm run tauri build -- --ci`. E2E corre en Linux con Xvfb y en macOS
+y Windows de forma nativa.
 
 **`dev` es rápido, el PR a `main` es la puerta.** No agregues checks pesados al hook de
 pre-commit ni al workflow de push: la decisión ya está tomada y explicada.

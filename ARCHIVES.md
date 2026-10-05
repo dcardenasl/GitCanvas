@@ -1124,7 +1124,7 @@ marca.
 
 ---
 
-## ✅ Fase H2 — Endurecimiento post-auditoría (42/46 implementadas; 33 cierres con commit)
+## ✅ Fase H2 — Endurecimiento post-auditoría (43/46 implementadas; 34 cierres con commit)
 
 > Plan de referencia: [`docs/plan/2026-10-04-plan-de-endurecimiento.md`](docs/plan/2026-10-04-plan-de-endurecimiento.md).
 > Se conservan las descripciones, verificaciones y mensajes de commit registrados al
@@ -1622,3 +1622,21 @@ marca.
       dos `.mjs`; transpilación TypeScript con diagnósticos sintácticos del recorder; y
       comprobación de que los comandos npm apuntan a los tres archivos bajo `tools/demo/`.
       → `chore(demo): isolate recorder tooling and document prerequisites`
+
+### H2-44 — Sincronizar documentos de arquitectura y producto
+
+- [x] **H2-44 — Sincronizar documentos de arquitectura y producto.** `CONTEXT.md` y ADR 0001
+      describen el watcher de metadata, el fingerprint del árbol, los límites y las acciones
+      Git explícitas. README refleja las rutas de logs por plataforma, el estado del release,
+      los comandos de verificación y los requisitos reales de demo; CHANGELOG tiene una sola
+      sección `Added` por versión y enlaces de comparación. DESIGN y PRODUCT describen la
+      aplicación desktop y su alcance; ASSET y SNAPSHOT reflejan el estado H2/release y el
+      punto de continuación. `CLAUDE.md` indexa los documentos y sus reglas 7/10 y CI
+      coinciden con el código y los workflows.
+      *Verificado (2026-10-05):* inspección de workflows y código fuente para contrastar
+      comandos, rutas de logs, políticas del watcher/fingerprint, acciones Git y manejo del
+      token. `gh pr view 1 --repo dcardenasl/gitcanvas` confirmó que la PR sigue abierta en
+      `7f24bb6` y que los checks disponibles son fallos del 2026-09-26 sin pasos ejecutados.
+      El chequeo de enlaces relativos no encontró rutas rotas; `git diff --check` pasó. Los
+      archivos Markdown están excluidos intencionalmente de Prettier por `.prettierignore`.
+      → `docs: align architecture and product documentation`

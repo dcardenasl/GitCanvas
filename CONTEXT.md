@@ -1,54 +1,52 @@
-# GitCanvas architecture context
+# GitCanvas Context
 
-## Working Tree
+## Product and architecture
 
-The working tree is the selected repository on disk plus its Git index. GitCanvas
-is read-only: it observes and displays local changes but never stages, unstages,
-commits, checks out, or deletes files as part of this feature.
+GitCanvas is a Tauri 2 desktop application for inspecting Git history and working-tree
+changes. The Rust `gitcanvas-core` crate owns Git operations and bounded data access;
+`src-tauri` exposes typed IPC commands and schedules blocking Git work off the UI
+runtime; React and TypeScript render the interface and compute the resumable commit
+graph. `src/bindings.ts` is generated from Rust types.
 
-## Staged and Unstaged
+## Live repository observation
 
-`Staged` compares `HEAD` with the index. It reads selected file contents from
-the index blob. `Unstaged` compares the index with the working directory. It
-reads selected file contents from the confined working-directory path. The same
-path may therefore appear in both groups when it was staged and then edited
-again.
+The native watcher does not recursively watch project files. It subscribes to Git
+metadata paths for the repository and its common directory, and recursively watches
+only `refs` directories. It classifies `HEAD`, refs, packed refs and merge-related
+metadata as history metadata; index changes invalidate working-tree data. Editors can
+change files without changing Git metadata, so the visible UI also polls a bounded
+working-tree fingerprint. Healthy watcher state uses a five-second base interval;
+degraded state uses two seconds, with adaptive backoff capped at 60 seconds. Polling
+invalidates local queries only when the fingerprint changes. The fingerprint is an
+opaque revision token, not a durable or cryptographic identifier.
 
-## Snapshot and Revision
+Watcher events are debounced (250 ms settle, at most two seconds). Watch and unwatch
+operations use generations so stale asynchronous starts cannot replace or stop the
+current watcher. A watcher failure is surfaced as a recoverable degraded state.
 
-A `Snapshot` is one bounded response containing both local groups. A `Revision`
-is a deterministic fingerprint of `HEAD`, the index, Git status and relevant
-working-tree metadata. Every detail request may carry the snapshot revision;
-the engine rejects a stale or mixed read with a typed error instead of showing
-old content as current.
+## Repository mutation boundary
 
-The initial response contains summaries only, with at most 250 files per side.
-Diff patches and complete file contents are separate on-demand requests.
+GitCanvas is read-mostly, not read-only. Its ordinary inspection paths do not stage,
+unstage, commit, or delete user files. Explicit Git actions can check out a branch,
+fast-forward pull, and push the current branch. Checkout is guarded against losing
+local changes and requires a separate explicit force option to discard them; pull does
+not merge, and push does not force. GitHub clone creates an application-owned local
+copy. Repository commands require a canonical path previously authorized through the
+repository-opening, startup, or clone flow; each operation opens its own short-lived
+Git handle.
 
-## Watcher
+## Resource limits and UI contract
 
-The native watcher observes the working tree and Git metadata. Metadata events
-invalidate history, branches and tags. Working-tree events invalidate local
-change queries. Each watch has a generation token so an asynchronous watcher
-for an old repository cannot publish into the newly opened repository.
+History pages are capped at 500 commits. Worktree snapshots page at most 250 files per
+side. Initial file content is capped at 2 MiB and explicit reads at 32 MiB; initial
+patches are capped at 1 MiB and explicit patches at 16 MiB. Oversized or omitted
+content is reported through typed outcomes. Commit diffs compare against the first
+parent. Pull is fast-forward only. GitHub credentials are stored in the operating
+system keychain and remain inside Rust after entry.
 
-The frontend also polls the lightweight revision fingerprint every five seconds
-while visible, and every two seconds while the watcher is degraded. A changed
-fingerprint invalidates only local queries. Degraded watcher state remains
-visible and can be retried manually.
+## Session entry points
 
-## Resource policy
-
-Initial patches are limited to 1 MiB per file and initial contents to 2 MiB.
-Explicit expansion is capped at 16 MiB for patches and 32 MiB for contents.
-Binary detection examines the first 8 KiB. Oversized data is reported without
-materializing the complete file; explicit requests above the hard limit are
-typed resource errors.
-
-## Code ownership
-
-`crates/gitcanvas-core/src/worktree.rs` owns local-change semantics. Path
-resolution and content normalization are centralized there and in the shared
-blob reader. `src/state/session.ts` owns one discriminated selection. Generated
-Specta bindings are the only Rust/TypeScript contract; `src/lib/ipc` is the
-small typed adapter used by React Query.
+Read `TASKS.md` for the next open task and its acceptance evidence. Read the referenced
+plan before implementing it. `CLAUDE.md` records branch, commit, security, and
+verification conventions; `DESIGN.md`, `PRODUCT.md`, and `docs/adr/` describe current
+product and architecture decisions. `ARCHIVES.md` records completed tasks.

@@ -9,8 +9,11 @@ the most value — seeing the shape of the history — and solves it well.
 
 ## Status
 
-**v0.1.0** — the MVP is complete: local history with a resumable commit graph,
-commit diffs, GitHub cloning, and guarded checkout, pull and push.
+**v0.1.0 release pending.** The MVP is implemented and in post-audit hardening;
+[the release PR is open](https://github.com/dcardenasl/gitcanvas/pull/1), but merge
+approval, the release tag and published installers are still pending. Its last recorded
+quality run failed before any steps were recorded;
+[the run has no available logs](https://github.com/dcardenasl/gitcanvas/actions/runs/36265828914).
 
 See [`CHANGELOG.md`](CHANGELOG.md) for what shipped, [`TASKS.md`](TASKS.md) for
 how it was built, and
@@ -30,8 +33,7 @@ for the governing plan.
 
 ## Install
 
-There are no published installers yet — the first release is still an open pull
-request. Until then, build it yourself:
+There are no published installers yet. To build locally:
 
 ```bash
 npm install
@@ -69,7 +71,12 @@ or launch the app and press **Abrir repositorio**.
 | **Push** | Asks for confirmation first, and never forces |
 | **GitHub** | Stores a token in the OS keychain, lists your repositories, clones one |
 
-Logs are written to `~/Library/Application Support/gitcanvas/logs` on macOS.
+Logs are written below Tauri's application data directory, in `logs/` (daily JSONL,
+up to seven files):
+
+- macOS: `~/Library/Application Support/com.davidcardenas.gitcanvas/logs`
+- Linux: `${XDG_DATA_HOME:-~/.local/share}/com.davidcardenas.gitcanvas/logs`
+- Windows: `%APPDATA%\\com.davidcardenas.gitcanvas\\logs`
 
 ## Requirements
 
@@ -83,11 +90,20 @@ Logs are written to `~/Library/Application Support/gitcanvas/logs` on macOS.
 npm install          # also installs the git hooks via the prepare script
 npm run tauri dev    # run the app
 npm run typecheck    # tsc --noEmit
+npm run typecheck:e2e
+npm run typecheck:node
 npm run lint         # eslint
-npm run test         # vitest
-cargo test           # Rust unit and integration tests
-cargo clippy --all-targets -- -D warnings
+npm run format:check
+npm run test:coverage
+cargo fmt --all --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --workspace
+npm run tauri build -- --ci
 ```
+
+The end-to-end suite is `npm run test:e2e:run`; Linux CI runs it under Xvfb, while
+macOS and Windows run with their native desktop environment. `npm run test:e2e` also
+builds the app before starting the suite.
 
 ## Product walkthrough video
 
@@ -100,13 +116,22 @@ GITCANVAS_VIDEO_LANGUAGE=en npm run record:demo
 npm run record:demo:vertical
 ```
 
-The output defaults to `../../bitacora-engine/registry/projects/gitcanvas-output/`
-as `atlas-storefront-walkthrough-es.mp4` and
-`atlas-storefront-walkthrough-en.mp4`. Set `GITCANVAS_RECORDING_OUTPUT` to
-choose another path. Install the `edge-tts` command or set `EDGE_TTS_COMMAND` to
-its executable path. Narration uses the neural Chilean Spanish voice
+Both commands write to `../../bitacora-engine/registry/projects/gitcanvas-output/`
+by default. Set `GITCANVAS_VIDEO_DIR` to choose another output directory for
+both the landscape and vertical videos. The vertical command expects the English
+landscape video in that directory.
+
+The demo tools live in `tools/demo/` and are intentionally excluded from the
+application's CI, lint, and TypeScript checks. They require a sibling checkout
+of `bitacora-engine` at `../../bitacora-engine`, with its WebDriver capture
+adapter available. Install the `edge-tts` command or set `EDGE_TTS_COMMAND` to
+its executable path; narration synthesis requires network access. Narration uses
+the neural Chilean Spanish voice
 `es-CL-CatalinaNeural` and conversational US English voice `en-US-EmmaNeural`,
-with short pauses between sections. The vertical command reframes the English
+with short pauses between sections. Both commands require `ffmpeg` and
+`ffprobe`; the vertical command also requires ImageMagick's `magick` executable.
+The vertical composition uses the macOS Arial font at
+`/System/Library/Fonts/Supplemental/Arial.ttf`. The vertical command reframes the English
 video to 9:16, holds the centered GitCanvas logo at the opening, zooms from a
 laptop view into the app, and zooms back out to the laptop at the end. Between
 those bookends it follows the pointer between focused views of the history,

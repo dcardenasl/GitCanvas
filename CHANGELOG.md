@@ -28,8 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rejected, disk reads use a stable stat/read/stat policy, and binary, UTF-8,
   stale-read and resource-limit outcomes cross IPC as explicit errors.
 
-### Added
-
 - **Switch branch from the sidebar.** Right-click a local branch and choose "Cambiar a
   …". A checkout that would lose local changes asks first, exactly as the backend
   guard has always required.
@@ -222,3 +220,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Push is never forced.** A rejected non-fast-forward push is explained, never
   retried with force: the remote having commits the local branch does not is
   exactly the case where forcing destroys someone else's work.
+
+[Unreleased]: https://github.com/dcardenasl/gitcanvas/compare/v0.1.0...dev
+[0.1.0]: https://github.com/dcardenasl/gitcanvas/compare/6c8b765...v0.1.0
