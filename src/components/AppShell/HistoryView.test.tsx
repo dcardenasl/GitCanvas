@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { HistoryPage, WorktreeSnapshot } from "../../bindings";
@@ -157,5 +158,33 @@ describe("HistoryView", () => {
       expect(getCommits).toHaveBeenCalledTimes(2);
     });
     expect(getCommits.mock.calls[1]?.[1]).toMatchObject({ cursor: "cursor-1" });
+  });
+
+  it("keeps loaded commits visible and retries a failed next page", async () => {
+    const page = mergePage();
+    getCommits
+      .mockResolvedValueOnce({ ...page, next_cursor: "cursor-1" })
+      .mockRejectedValueOnce(new Error("falló la página siguiente"))
+      .mockResolvedValueOnce({ ...page, commits: [] });
+
+    renderView();
+
+    expect(
+      await screen.findByText("Merge pull request #1 from dcardenasl/dev"),
+    ).toBeDefined();
+    expect(await screen.findByRole("alert")).toBeDefined();
+    expect(
+      screen.getByText("Merge pull request #1 from dcardenasl/dev"),
+    ).toBeDefined();
+
+    await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+
+    await waitFor(() => {
+      expect(getCommits).toHaveBeenCalledTimes(3);
+    });
+    expect(getCommits.mock.calls[2]?.[1]).toMatchObject({ cursor: "cursor-1" });
+    await waitFor(() => {
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
   });
 });

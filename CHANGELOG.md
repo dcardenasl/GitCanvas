@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Diff and history errors** — file expansion uses one shared state, local file reads wait for a revision, and a failed history page can be retried without hiding commits already loaded.
 - **Diff content beginning with dashes** — hunk lines that resemble file headers now remain visible as additions or deletions.
 - **GitHub token setup** — surrounding whitespace is removed before verification and storage, while keychain read failures now reach the interface as errors.
 - **Repository listing waits** — GitHub discovery uses the read gate, and queued Git operations now return a clear timeout after 30 seconds.
@@ -48,9 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Commit diffs** — changed-file lists now return summaries and load only the selected patch, with explicit per-file and file-count limits for large commits.
 - **Reading a local file** — editing the file (or staging it) while its diff was open
   closed the view, because the read was refused as stale and any failure closed it. The
-  view now takes the new revision and reads again, and closes only when the file really
-  cannot be shown. A local-changes listing torn by an edit that lands while it is being
-  read is read again instead of leaving the view on the previous revision.
+  view now takes the new revision and reads again, while other read failures stay visible
+  in the selected file view. A local-changes listing torn by an edit that lands while it
+  is being read is read again instead of leaving the view on the previous revision.
 - **Error messages** — failures from the engine are introduced by a Spanish summary of
   their kind instead of appearing as raw English text in an otherwise Spanish interface.
 - **Push confirmation** — the dialog now names the checked-out branch instead of the

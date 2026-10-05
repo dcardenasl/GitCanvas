@@ -422,7 +422,7 @@ describe("FileDiffView", () => {
       });
     });
 
-    it("closes once the re-read finds the file is gone", async () => {
+    it("keeps the selection and reports when the re-read finds the file gone", async () => {
       getWorktreeSnapshot.mockResolvedValueOnce(worktreeSnapshot([local()]));
       getWorktreeFileDiff.mockRejectedValueOnce(
         Object.assign(new Error("repository revision is stale"), {
@@ -441,12 +441,14 @@ describe("FileDiffView", () => {
       );
       open();
 
-      await vi.waitFor(() => {
-        expect(useSession.getState().selection).toEqual({ kind: "history" });
+      expect(await screen.findByRole("alert")).toBeDefined();
+      expect(useSession.getState().selection).toMatchObject({
+        kind: "worktree",
+        filePath: "local.ts",
       });
     });
 
-    it("closes when the file is deleted while it is showing", async () => {
+    it("reports when the file is deleted while it is showing", async () => {
       // The real order of events: it is on screen, then the watcher reports a
       // change and every local query is invalidated at once. The open file's
       // read is repeated with the old revision and refused; the snapshot comes
@@ -494,12 +496,14 @@ describe("FileDiffView", () => {
         queryKey: ["worktree-file-diff", "/tmp/repo"],
       });
 
-      await vi.waitFor(() => {
-        expect(useSession.getState().selection).toEqual({ kind: "history" });
+      expect(await screen.findByRole("alert")).toBeDefined();
+      expect(useSession.getState().selection).toMatchObject({
+        kind: "worktree",
+        filePath: "local.ts",
       });
     });
 
-    it("closes when the file can no longer be shown", async () => {
+    it("keeps the selection and shows an unavailable-file error", async () => {
       getWorktreeSnapshot.mockResolvedValue(worktreeSnapshot([local()]));
       getWorktreeFileDiff.mockRejectedValue(
         Object.assign(new Error("local.ts"), {
@@ -508,8 +512,10 @@ describe("FileDiffView", () => {
       );
       open();
 
-      await vi.waitFor(() => {
-        expect(useSession.getState().selection).toEqual({ kind: "history" });
+      expect(await screen.findByRole("alert")).toBeDefined();
+      expect(useSession.getState().selection).toMatchObject({
+        kind: "worktree",
+        filePath: "local.ts",
       });
     });
   });

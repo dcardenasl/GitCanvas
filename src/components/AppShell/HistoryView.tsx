@@ -83,9 +83,10 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
     // branch tip, for instance. Keep pulling pages until it turns up or the
     // history runs out; `hasNextPage` is what makes this terminate rather than
     // an arbitrary page cap that could stop just short of the answer.
-    if (loaded || !hasNextPage || isFetchingNextPage) return;
+    if (loaded || !hasNextPage || isFetchingNextPage || history.error !== null)
+      return;
     fetchNextPage();
-  }, [loaded, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [loaded, hasNextPage, isFetchingNextPage, history.error, fetchNextPage]);
 
   useEffect(() => {
     // The whole history was walked and the commit is not in it. Give up rather
@@ -93,7 +94,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
     if (revealCommitId !== null && !loaded && !hasNextPage) clearReveal();
   }, [revealCommitId, loaded, hasNextPage, clearReveal]);
 
-  if (history.error !== null) {
+  if (history.error !== null && commits.length === 0) {
     return (
       <div className="history-view">
         {localRow}
@@ -131,6 +132,19 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
     <div className="history-view">
       {localRow}
       {localState}
+      {history.error !== null && (
+        <p className="history-view__state" role="alert">
+          No se pudo cargar la siguiente página: {userMessage(history.error)}{" "}
+          <button
+            type="button"
+            className="button"
+            disabled={isFetchingNextPage}
+            onClick={fetchNextPage}
+          >
+            Reintentar
+          </button>
+        </p>
+      )}
       <CommitTable
         commits={commits}
         selectedId={selectedCommitId}

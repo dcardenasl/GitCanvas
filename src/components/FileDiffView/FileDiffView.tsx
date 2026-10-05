@@ -47,8 +47,7 @@ export function FileDiffView(props: FileDiffViewProps) {
   const [choice, setChoice] = useState<{
     key: string;
     mode: Mode;
-    expand: boolean;
-  }>({ key: "", mode: "diff", expand: false });
+  }>({ key: "", mode: "diff" });
 
   const isWorktree = props.worktree !== undefined;
   const isSnapshot = !isWorktree && props.snapshot === true;
@@ -61,7 +60,7 @@ export function FileDiffView(props: FileDiffViewProps) {
     : choice.key === key
       ? choice.mode
       : "diff";
-  const expandWholeFile = choice.key === key && choice.expand;
+  const expanded = expandPath === path;
 
   const commitDiff = useCommitDiff(
     repositoryPath,
@@ -78,7 +77,7 @@ export function FileDiffView(props: FileDiffViewProps) {
           side: props.worktree.side,
           path,
           expected_revision: localRevision,
-          expand: expandWholeFile,
+          expand: expanded,
         }
       : null,
   );
@@ -105,23 +104,26 @@ export function FileDiffView(props: FileDiffViewProps) {
       repositoryPath,
       isWorktree ? props.worktree.side : props.commit.id,
       path,
-      expandWholeFile,
+      expanded,
       localRevision,
     ],
-    enabled: mode === "file" && !deleted,
+    enabled:
+      mode === "file" &&
+      !deleted &&
+      (!isWorktree || localRevision !== undefined),
     queryFn: () => {
       if (isWorktree) {
         return getWorktreeFileContent(repositoryPath, {
           side: props.worktree.side,
           path,
           expected_revision: localRevision ?? null,
-          expand: expandWholeFile,
+          expand: expanded,
         });
       }
       return getFileContent(repositoryPath, {
         commit_id: props.commit.id,
         path,
-        expand: expandWholeFile,
+        expand: expanded,
       });
     },
     staleTime: isWorktree ? 1_000 : Infinity,
@@ -136,13 +138,12 @@ export function FileDiffView(props: FileDiffViewProps) {
     // A read is tied to the revision it was asked for, so editing the file
     // while it is open makes that read fail as stale. The file is still there:
     // take the new revision and read again instead of closing what the user is
-    // looking at. Any other failure means the file cannot be shown.
+    // looking at. Other failures stay visible in the selected file view.
     if (errorKind(failure) === "WorktreeChanged") {
       void refetchLocalSnapshot();
       return;
     }
-    selectFile(null);
-  }, [diff.error, whole.error, isWorktree, selectFile, refetchLocalSnapshot]);
+  }, [diff.error, whole.error, isWorktree, refetchLocalSnapshot]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -161,7 +162,7 @@ export function FileDiffView(props: FileDiffViewProps) {
   );
 
   const setMode = (next: Mode) => {
-    setChoice({ key, mode: next, expand: expandWholeFile });
+    setChoice({ key, mode: next });
   };
 
   return (
@@ -246,6 +247,11 @@ export function FileDiffView(props: FileDiffViewProps) {
       </header>
 
       <div className="file-diff__body">
+        {isWorktree && localSnapshot.error !== null && (
+          <p className="file-diff__state" role="alert">
+            {userMessage(localSnapshot.error)}
+          </p>
+        )}
         {mode === "diff" ? (
           <>
             {diff.isPending && (
@@ -268,7 +274,9 @@ export function FileDiffView(props: FileDiffViewProps) {
                 file={file}
                 wrap={wrap}
                 expanding={diff.isFetching}
-                onExpand={expandFile}
+                onExpand={() => {
+                  expandFile(path);
+                }}
               />
             )}
           </>
@@ -299,7 +307,7 @@ export function FileDiffView(props: FileDiffViewProps) {
                   className="button"
                   disabled={whole.isFetching}
                   onClick={() => {
-                    setChoice({ key, mode: "file", expand: true });
+                    expandFile(path);
                   }}
                 >
                   {whole.isFetching ? "Cargando…" : "Ver archivo completo"}

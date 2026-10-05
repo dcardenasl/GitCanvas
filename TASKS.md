@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (15/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (16/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -158,10 +158,12 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       *Verificado:* `npm run typecheck`, `npx vitest run src/components/DiffViewer/parse.test.ts`
       (18 tests), `./pre-commit` y `git diff --check`.
       → `fix(diff): preserve hunk lines beginning with dashes`
-- [ ] **H2-15 — Corregir estados y errores de vistas de diff e historial.** Unificar
-      expansión de archivos, mostrar errores de selección explícitamente, habilitar acciones
-      solo con revisión local; los errores de páginas siguientes deben ser banner con
-      reintento y preservar filas ya cargadas.
+- [x] **H2-15 — Corregir estados y errores de vistas de diff e historial.** La expansión
+      usa `expandedFilePath` tanto para diffs como para contenido completo; lecturas de
+      archivos locales se habilitan solo tras obtener una revisión. Los errores de lectura
+      local quedan en la selección como alertas explícitas. Un fallo de página adicional
+      conserva la tabla y permite reintentar desde un banner.
+      *Verificado:* `npm run typecheck`; `npx vitest run src/components/FileDiffView/FileDiffView.test.tsx src/components/AppShell/HistoryView.test.tsx` (25 tests); `./pre-commit`.
       → `fix(ui): preserve diff and history data on page errors`
 - [ ] **H2-16 — Añadir frontera de error global localizada.** Incorporar `ErrorBoundary`
       en `App.tsx`/`main.tsx` con mensaje español y prueba del fallback.
