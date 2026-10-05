@@ -11,12 +11,16 @@ use gitcanvas_core::{
         cache::{self, CacheStatus},
         clone, credentials,
     },
+    repository::ActiveRepo,
 };
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::{path::PathBuf, sync::Arc};
 
-use super::runtime::{read, write};
+use super::{
+    repo_access::AllowedRepos,
+    runtime::{read, write},
+};
 
 /// Progress for an in-flight clone, emitted as it advances.
 #[derive(Debug, Clone, Serialize, Deserialize, Type, tauri_specta::Event)]
@@ -85,11 +89,13 @@ pub async fn clone_github_repository(
     clone_url: String,
     full_name: String,
     active_repository_path: Option<String>,
+    allowed: tauri::State<'_, AllowedRepos>,
     root: tauri::State<'_, CacheRoot>,
     emitter: tauri::State<'_, ProgressEmitter>,
 ) -> Result<clone::ClonedRepository, AppError> {
     let destination = root.0.clone();
     let publish = Arc::clone(&emitter.0);
+    let allowed = allowed.inner().clone();
     // Validated before any work starts, so a malformed name fails here rather
     // than after the transfer.
     let entry = clone::cache_entry_name(&full_name)?;
@@ -98,14 +104,16 @@ pub async fn clone_github_repository(
         .and_then(|path| cache::cached_entry_name(&destination, std::path::Path::new(path)));
 
     let cloned = write("clone_github_repository", move || {
-        clone::clone_repository(&clone_url, &full_name, &destination, |progress| {
+        let cloned = clone::clone_repository(&clone_url, &full_name, &destination, |progress| {
             publish(CloneProgressEvent {
                 full_name: full_name.clone(),
                 received_objects: progress.received_objects,
                 total_objects: progress.total_objects,
                 received_bytes: progress.received_bytes.to_string(),
             });
-        })
+        })?;
+        allowed.allow(&ActiveRepo::validate(&cloned.path)?)?;
+        Ok(cloned)
     })
     .await?;
 

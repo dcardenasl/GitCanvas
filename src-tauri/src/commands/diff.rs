@@ -6,14 +6,16 @@ use gitcanvas_core::{
     commit_tree::{self, CommitTreePage, CommitTreeRequest},
     diff::{self, CommitDiff, DiffRequest},
     error::AppError,
-    repository::ActiveRepo,
     worktree::{
         self, WorktreeFileContent, WorktreeFileContentRequest, WorktreeFileDiff,
         WorktreeFileDiffRequest, WorktreeFingerprint, WorktreeSnapshot, WorktreeSnapshotRequest,
     },
 };
 
-use super::runtime::read;
+use super::{
+    repo_access::{with_repo, AllowedRepos},
+    runtime::read,
+};
 
 /// Reads a commit's changes against its first parent.
 ///
@@ -21,9 +23,16 @@ use super::runtime::read;
 /// interface loads a large diff only when the user asks for it.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_commit_diff(path: String, request: DiffRequest) -> Result<CommitDiff, AppError> {
+pub async fn get_commit_diff(
+    path: String,
+    request: DiffRequest,
+    allowed: tauri::State<'_, AllowedRepos>,
+) -> Result<CommitDiff, AppError> {
+    let allowed = allowed.inner().clone();
     read("get_commit_diff", move || {
-        diff::get_commit_diff(&ActiveRepo::validate(&path)?, &request)
+        with_repo(&allowed, &path, |active| {
+            diff::get_commit_diff(active, &request)
+        })
     })
     .await
 }
@@ -37,9 +46,13 @@ pub async fn get_commit_diff(path: String, request: DiffRequest) -> Result<Commi
 pub async fn get_file_content(
     path: String,
     request: FileContentRequest,
+    allowed: tauri::State<'_, AllowedRepos>,
 ) -> Result<FileContent, AppError> {
+    let allowed = allowed.inner().clone();
     read("get_file_content", move || {
-        blob::get_file_content(&ActiveRepo::validate(&path)?, &request)
+        with_repo(&allowed, &path, |active| {
+            blob::get_file_content(active, &request)
+        })
     })
     .await
 }
@@ -50,9 +63,13 @@ pub async fn get_file_content(
 pub async fn get_commit_tree_page(
     path: String,
     request: CommitTreeRequest,
+    allowed: tauri::State<'_, AllowedRepos>,
 ) -> Result<CommitTreePage, AppError> {
+    let allowed = allowed.inner().clone();
     read("get_commit_tree_page", move || {
-        commit_tree::get_commit_tree_page(&ActiveRepo::validate(&path)?, &request)
+        with_repo(&allowed, &path, |active| {
+            commit_tree::get_commit_tree_page(active, &request)
+        })
     })
     .await
 }
@@ -63,9 +80,13 @@ pub async fn get_commit_tree_page(
 pub async fn get_worktree_snapshot(
     path: String,
     request: WorktreeSnapshotRequest,
+    allowed: tauri::State<'_, AllowedRepos>,
 ) -> Result<WorktreeSnapshot, AppError> {
+    let allowed = allowed.inner().clone();
     read("get_worktree_snapshot", move || {
-        worktree::get_worktree_snapshot(&ActiveRepo::validate(&path)?, &request)
+        with_repo(&allowed, &path, |active| {
+            worktree::get_worktree_snapshot(active, &request)
+        })
     })
     .await
 }
@@ -76,9 +97,13 @@ pub async fn get_worktree_snapshot(
 pub async fn get_worktree_file_diff(
     path: String,
     request: WorktreeFileDiffRequest,
+    allowed: tauri::State<'_, AllowedRepos>,
 ) -> Result<WorktreeFileDiff, AppError> {
+    let allowed = allowed.inner().clone();
     read("get_worktree_file_diff", move || {
-        worktree::get_worktree_file_diff(&ActiveRepo::validate(&path)?, &request)
+        with_repo(&allowed, &path, |active| {
+            worktree::get_worktree_file_diff(active, &request)
+        })
     })
     .await
 }
@@ -89,9 +114,13 @@ pub async fn get_worktree_file_diff(
 pub async fn get_worktree_file_content(
     path: String,
     request: WorktreeFileContentRequest,
+    allowed: tauri::State<'_, AllowedRepos>,
 ) -> Result<WorktreeFileContent, AppError> {
+    let allowed = allowed.inner().clone();
     read("get_worktree_file_content", move || {
-        worktree::get_worktree_file_content(&ActiveRepo::validate(&path)?, &request)
+        with_repo(&allowed, &path, |active| {
+            worktree::get_worktree_file_content(active, &request)
+        })
     })
     .await
 }
@@ -99,9 +128,13 @@ pub async fn get_worktree_file_content(
 /// Reads a cheap revision used when filesystem events are unavailable.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_worktree_fingerprint(path: String) -> Result<WorktreeFingerprint, AppError> {
+pub async fn get_worktree_fingerprint(
+    path: String,
+    allowed: tauri::State<'_, AllowedRepos>,
+) -> Result<WorktreeFingerprint, AppError> {
+    let allowed = allowed.inner().clone();
     read("get_worktree_fingerprint", move || {
-        worktree::get_worktree_fingerprint(&ActiveRepo::validate(&path)?)
+        with_repo(&allowed, &path, worktree::get_worktree_fingerprint)
     })
     .await
 }

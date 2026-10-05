@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (11/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (12/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -128,10 +128,14 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       capacidad, timeout, lectura durante escritura saturada y reintentos),
       `cargo clippy -p gitcanvas --all-targets -- -D warnings` y `./pre-commit`.
       → `fix(runtime): gate repository listing and bound permission waits`
-- [ ] **H2-11 — Restringir operaciones a repositorios permitidos.** Poblar `AllowedRepos`
-      desde `open_repository`, `get_startup_repository` y clone; implementar `with_repo`
-      para consolidar apertura/validación de los 14 comandos. Si no se adopta la allowlist,
-      documentar en el resultado por qué y reformular la regla 7 de `CLAUDE.md`.
+- [x] **H2-11 — Restringir operaciones a repositorios permitidos.** `AllowedRepos` guarda
+      paths canónicos autorizados al abrir, al resolver el repositorio de arranque o al
+      clonar. `with_repo` exige autorización y centraliza la apertura para los 14 comandos
+      de lectura, acciones y watcher; `validate_repository` sigue siendo un validador de
+      candidatos y no concede acceso. Regla 7 de `CLAUDE.md` alineada con la decisión.
+      *Verificado:* `cargo test -p gitcanvas --lib` (19 tests, incluyendo rechazo IPC antes
+      de open, autorización posterior y alias canónico), `cargo clippy -p gitcanvas
+      --all-targets -- -D warnings`, bindings sin cambios y `./pre-commit`.
       → `refactor(commands): centralize allowed repository access`
 - [ ] **H2-12 — Normalizar token GitHub en backend y frontend.** Aplicar `trim()` en ambos
       extremos y hacer que `has_github_token` devuelva `Result<bool>`; actualizar IPC,

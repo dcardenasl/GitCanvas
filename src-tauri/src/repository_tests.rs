@@ -12,6 +12,7 @@ fn webview() -> tauri::WebviewWindow<MockRuntime> {
         .manage(std::sync::Arc::new(
             gitcanvas_core::history::HistoryReader::default(),
         ))
+        .manage(crate::commands::repo_access::AllowedRepos::default())
         .invoke_handler(builder.invoke_handler())
         .build(super::app_context())
         .unwrap();
@@ -104,6 +105,7 @@ fn command_failures_are_structured_and_invalid_limits_are_rejected() {
         assert!(response["message"].is_string());
     }
     git2::Repository::init(dir.path()).unwrap();
+    invoke(&webview, "open_repository", json!({"path": path})).unwrap();
     let response = invoke(
         &webview,
         "get_commits",
@@ -111,6 +113,27 @@ fn command_failures_are_structured_and_invalid_limits_are_rejected() {
     )
     .unwrap_err();
     assert_eq!(response["kind"], "InvalidInput");
+}
+
+#[test]
+fn git_commands_require_a_repository_to_be_opened_first() {
+    let dir = tempfile::tempdir().unwrap();
+    git2::Repository::init(dir.path()).unwrap();
+    let webview = webview();
+    let path = dir.path().to_str().unwrap();
+
+    let denied = invoke(&webview, "get_branches", json!({"path": path})).unwrap_err();
+    assert_eq!(denied["kind"], "InvalidRepository");
+    assert!(denied["message"]
+        .as_str()
+        .unwrap()
+        .contains("has not been opened"));
+
+    invoke(&webview, "open_repository", json!({"path": path})).unwrap();
+    assert_eq!(
+        invoke(&webview, "get_branches", json!({"path": path})).unwrap(),
+        json!([])
+    );
 }
 
 #[test]

@@ -129,6 +129,7 @@ pub fn run() {
         .manage(std::sync::Arc::new(
             gitcanvas_core::history::HistoryReader::default(),
         ))
+        .manage(commands::repo_access::AllowedRepos::default())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             use tauri::Manager;

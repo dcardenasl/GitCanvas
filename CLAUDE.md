@@ -126,8 +126,10 @@ Cada una está hecha para fallar el build, no para depender de que alguien se ac
    ni del DOM.** ESLint lo prohíbe y sus tests corren en `environment: 'node'`.
 6. **Todo comando que toca `git2` corre en `tauri::async_runtime::spawn_blocking`.**
    `git2` es bloqueante; sin esto un repo grande congela la UI.
-7. **El estado nunca guarda un `git2::Repository` vivo.** Solo el path canónico
-   validado (`ActiveRepo`); cada comando abre su propio handle.
+7. **El estado nunca guarda un `git2::Repository` vivo.** `AllowedRepos` conserva solo
+   paths canónicos autorizados por `open_repository`, el arranque o clone. Los comandos
+   que operan sobre un repo pasan por `with_repo`, que exige allowlist y construye un
+   `ActiveRepo` nuevo para abrir su propio handle.
 8. **Paginación acotada, con cursor ligado a la revisión que lo emitió.** La historia usa
    SHA + roots congelados; los cambios locales, `revisión:posición`, y rechazan un cursor
    de otra revisión (`StaleCursor`). Solo el árbol de un commit, que es inmutable, pagina

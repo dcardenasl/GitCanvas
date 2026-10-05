@@ -9,11 +9,14 @@ use std::sync::{
     Mutex,
 };
 
-use gitcanvas_core::{error::AppError, repository::ActiveRepo, watch};
+use gitcanvas_core::{error::AppError, watch};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use super::runtime::{read, write};
+use super::{
+    repo_access::{with_repo, AllowedRepos},
+    runtime::{read, write},
+};
 
 /// Announces a scoped change in the generation currently shown by the window.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -84,6 +87,7 @@ pub async fn watch_repository(
     request: WatchRequest,
     current: tauri::State<'_, ActiveWatch>,
     notifier: tauri::State<'_, ChangeNotifier>,
+    allowed: tauri::State<'_, AllowedRepos>,
 ) -> Result<(), AppError> {
     if !request_generation(&current, request.generation) {
         return Ok(());
@@ -104,28 +108,32 @@ pub async fn watch_repository(
     }
 
     let publish = std::sync::Arc::clone(&notifier.0);
+    let allowed = allowed.inner().clone();
     let reported_path = request.path.clone();
     let generation = request.generation;
 
     let watcher = read("watch_repository", move || {
-        let active = ActiveRepo::validate(&request.path)?;
         let publish = publish.clone();
         let reported_path = reported_path.clone();
-        watch::watch_repository(&active, move |event| {
-            let kind = match event {
-                watch::WatchEvent::Changed(watch::ChangeScope::Metadata) => {
-                    RepositoryChangedKind::Metadata
-                }
-                watch::WatchEvent::Changed(watch::ChangeScope::Worktree) => {
-                    RepositoryChangedKind::Worktree
-                }
-                watch::WatchEvent::Degraded(message) => RepositoryChangedKind::Degraded { message },
-            };
-            publish(RepositoryChangedEvent {
-                path: reported_path.clone(),
-                generation,
-                kind,
-            });
+        with_repo(&allowed, &request.path, |active| {
+            watch::watch_repository(active, move |event| {
+                let kind = match event {
+                    watch::WatchEvent::Changed(watch::ChangeScope::Metadata) => {
+                        RepositoryChangedKind::Metadata
+                    }
+                    watch::WatchEvent::Changed(watch::ChangeScope::Worktree) => {
+                        RepositoryChangedKind::Worktree
+                    }
+                    watch::WatchEvent::Degraded(message) => {
+                        RepositoryChangedKind::Degraded { message }
+                    }
+                };
+                publish(RepositoryChangedEvent {
+                    path: reported_path.clone(),
+                    generation,
+                    kind,
+                });
+            })
         })
     })
     .await;

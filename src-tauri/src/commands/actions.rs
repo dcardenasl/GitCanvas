@@ -7,10 +7,12 @@
 use gitcanvas_core::{
     actions::{self, CheckoutOutcome, PullOutcome, PushOutcome},
     error::AppError,
-    repository::ActiveRepo,
 };
 
-use super::runtime::write;
+use super::{
+    repo_access::{with_repo, AllowedRepos},
+    runtime::write,
+};
 
 /// Checks out a local branch, refusing by default when work would be lost.
 #[tauri::command]
@@ -19,9 +21,13 @@ pub async fn checkout_branch(
     path: String,
     branch: String,
     force: bool,
+    allowed: tauri::State<'_, AllowedRepos>,
 ) -> Result<CheckoutOutcome, AppError> {
+    let allowed = allowed.inner().clone();
     write("checkout_branch", move || {
-        actions::checkout_branch(&ActiveRepo::validate(&path)?, &branch, force)
+        with_repo(&allowed, &path, |active| {
+            actions::checkout_branch(active, &branch, force)
+        })
     })
     .await
 }
@@ -29,9 +35,13 @@ pub async fn checkout_branch(
 /// Fetches and fast-forwards the current branch, reporting anything else.
 #[tauri::command]
 #[specta::specta]
-pub async fn pull_fast_forward(path: String) -> Result<PullOutcome, AppError> {
+pub async fn pull_fast_forward(
+    path: String,
+    allowed: tauri::State<'_, AllowedRepos>,
+) -> Result<PullOutcome, AppError> {
+    let allowed = allowed.inner().clone();
     write("pull_fast_forward", move || {
-        actions::pull_fast_forward(&ActiveRepo::validate(&path)?)
+        with_repo(&allowed, &path, actions::pull_fast_forward)
     })
     .await
 }
@@ -39,9 +49,13 @@ pub async fn pull_fast_forward(path: String) -> Result<PullOutcome, AppError> {
 /// Pushes the current branch to its remote.
 #[tauri::command]
 #[specta::specta]
-pub async fn push_current_branch(path: String) -> Result<PushOutcome, AppError> {
+pub async fn push_current_branch(
+    path: String,
+    allowed: tauri::State<'_, AllowedRepos>,
+) -> Result<PushOutcome, AppError> {
+    let allowed = allowed.inner().clone();
     write("push_current_branch", move || {
-        actions::push_current_branch(&ActiveRepo::validate(&path)?)
+        with_repo(&allowed, &path, actions::push_current_branch)
     })
     .await
 }

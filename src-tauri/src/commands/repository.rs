@@ -9,7 +9,11 @@ use gitcanvas_core::{
     repository::{ActiveRepo, RepositoryInfo},
 };
 
-use super::{github::CacheRoot, runtime::read};
+use super::{
+    github::CacheRoot,
+    repo_access::{with_repo, AllowedRepos},
+    runtime::read,
+};
 
 /// Validates and opens a local repository, returning its canonical identity.
 #[tauri::command]
@@ -17,14 +21,18 @@ use super::{github::CacheRoot, runtime::read};
 pub async fn open_repository(
     path: String,
     cache: tauri::State<'_, CacheRoot>,
+    allowed: tauri::State<'_, AllowedRepos>,
 ) -> Result<RepositoryInfo, AppError> {
     let cache_root = cache.0.clone();
+    let allowed = allowed.inner().clone();
     read("open_repository", move || {
         let active = ActiveRepo::validate(&path)?;
+        let info = active.info()?;
+        allowed.allow(&active)?;
         // Opening a cached clone counts as using it, which is what keeps the
         // retention policy from evicting a clone that is in regular use.
         let _recorded = cache::touch_if_cached(&cache_root, active.path());
-        active.info()
+        Ok(info)
     })
     .await
 }
@@ -46,10 +54,14 @@ pub async fn get_commits(
     path: String,
     request: HistoryRequest,
     reader: tauri::State<'_, std::sync::Arc<HistoryReader>>,
+    allowed: tauri::State<'_, AllowedRepos>,
 ) -> Result<HistoryPage, AppError> {
     let reader = std::sync::Arc::clone(reader.inner());
+    let allowed = allowed.inner().clone();
     read("get_commits", move || {
-        reader.get_commits(&ActiveRepo::validate(&path)?, &request)
+        with_repo(&allowed, &path, |active| {
+            reader.get_commits(active, &request)
+        })
     })
     .await
 }
@@ -57,9 +69,13 @@ pub async fn get_commits(
 /// Lists local and remote branches and identifies the current branch.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_branches(path: String) -> Result<Vec<BranchInfo>, AppError> {
+pub async fn get_branches(
+    path: String,
+    allowed: tauri::State<'_, AllowedRepos>,
+) -> Result<Vec<BranchInfo>, AppError> {
+    let allowed = allowed.inner().clone();
     read("get_branches", move || {
-        refs::get_branches(&ActiveRepo::validate(&path)?)
+        with_repo(&allowed, &path, refs::get_branches)
     })
     .await
 }
@@ -67,9 +83,13 @@ pub async fn get_branches(path: String) -> Result<Vec<BranchInfo>, AppError> {
 /// Lists tags, peeling annotated tags to commits when applicable.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_tags(path: String) -> Result<Vec<TagInfo>, AppError> {
+pub async fn get_tags(
+    path: String,
+    allowed: tauri::State<'_, AllowedRepos>,
+) -> Result<Vec<TagInfo>, AppError> {
+    let allowed = allowed.inner().clone();
     read("get_tags", move || {
-        refs::get_tags(&ActiveRepo::validate(&path)?)
+        with_repo(&allowed, &path, refs::get_tags)
     })
     .await
 }
@@ -91,8 +111,11 @@ pub async fn get_tags(path: String) -> Result<Vec<TagInfo>, AppError> {
 /// arguments is awkward.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_startup_repository() -> Result<Option<RepositoryInfo>, AppError> {
-    read("get_startup_repository", || {
+pub async fn get_startup_repository(
+    allowed: tauri::State<'_, AllowedRepos>,
+) -> Result<Option<RepositoryInfo>, AppError> {
+    let allowed = allowed.inner().clone();
+    read("get_startup_repository", move || {
         let from_env = std::env::var("GITCANVAS_REPOSITORY").ok();
         let candidates = from_env
             .into_iter()
@@ -101,7 +124,9 @@ pub async fn get_startup_repository() -> Result<Option<RepositoryInfo>, AppError
 
         for candidate in candidates {
             if let Ok(repo) = ActiveRepo::validate(&candidate) {
-                return repo.info().map(Some);
+                let info = repo.info()?;
+                allowed.allow(&repo)?;
+                return Ok(Some(info));
             }
         }
         Ok(None)
