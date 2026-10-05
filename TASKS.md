@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (9/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (10/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -113,9 +113,13 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       reemplazo sobredimensionado y 40 reintentos), `cargo test -p gitcanvas-core --test
       actions` (17 tests, fast-forward incluido), Clippy core y `./pre-commit`.
       → `fix(core): guard history insertion and retry shifts`
-- [ ] **H2-9 — Corregir ciclo de vida del watcher.** En `commands/watch.rs`, liberar watcher
-      dentro de `runtime::write`/`spawn_blocking`; `unwatch` debe invalidar
-      `desired_generation`. Cubrir watch/unwatch concurrentes y cambio de repositorio.
+- [x] **H2-9 — Corregir ciclo de vida del watcher.** El reemplazo y eliminación de watchers
+      se destruyen dentro de `runtime::write`; las generaciones se avanzan monotónicamente,
+      `unwatch` invalida la generación pendiente y los starts viejos no reemplazan repos más
+      nuevos.
+      *Verificado:* `cargo test -p gitcanvas --lib commands::watch::tests` (3 pruebas de
+      cambio/unwatch concurrentes), `cargo clippy -p gitcanvas --all-targets -- -D warnings`
+      y `./pre-commit`.
       → `fix(watch): invalidate stale watcher generations`
 - [ ] **H2-10 — Aplicar gates de lectura y timeout a runtime.** `list_github_repositories`
       debe usar gate de lectura; aplicar timeout al permiso/runtime y cubrir contención.

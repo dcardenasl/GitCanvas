@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Repository watcher lifecycle** — changing repositories or closing the watcher invalidates older starts, and watcher disposal runs off the async thread.
 - **Pull and history safety** — fast-forwards update the branch only if its prior target still matches, and over-budget history walks cannot stall cache insertion.
 - **Remote operation errors** — authentication, network failures and repository conflicts now have distinct backend and Spanish interface messages.
 - **Large Git blobs** — initial reads and explicit expansions now check the recorded blob size before requesting its content, in both commit and staged-file views.
