@@ -6,7 +6,7 @@
 //! allocation in the UI.
 
 use std::{
-    fs::{self, File, Metadata},
+    fs::{self, File, Metadata, OpenOptions},
     io::Read,
     path::{Component, Path, PathBuf},
     time::UNIX_EPOCH,
@@ -209,9 +209,9 @@ pub fn get_worktree_file_content(
     let content = if request.side.is_staged() {
         read_index_content(&repo, &index, &request.path, request.expand)
     } else {
-        let path = resolve_worktree_file(&repo, &request.path)?;
+        let path = resolve_worktree_file(active, &request.path)?;
         ensure_visible_worktree_file(&repo, &index, &request.path)?;
-        read_disk_content(&path, &request.path, request.expand)
+        read_disk_content(&path, active.path(), &request.path, request.expand)
     }?;
 
     let after = revision(&repo, &repo.index()?)?;
@@ -367,6 +367,7 @@ fn read_index_content(
 
 fn read_disk_content(
     path: &Path,
+    repository_root: &Path,
     display_path: &str,
     expand: bool,
 ) -> Result<ContentRead, AppError> {
@@ -383,13 +384,16 @@ fn read_disk_content(
             return blob::too_large_content(before.0, display_path, expand);
         }
 
-        let file = File::open(path)?;
+        let mut file = OpenOptions::new().read(true).open(path)?;
+        verify_open_file(path, repository_root, &file, display_path)?;
         let mut bytes = Vec::new();
-        file.take((blob::MAX_EXPANDED_CONTENT_BYTES + 1) as u64)
+        (&mut file)
+            .take((blob::MAX_EXPANDED_CONTENT_BYTES + 1) as u64)
             .read_to_end(&mut bytes)?;
         if bytes.len() > blob::MAX_EXPANDED_CONTENT_BYTES {
             return blob::too_large_content(bytes.len() as u64, display_path, true);
         }
+        verify_open_file(path, repository_root, &file, display_path)?;
         let after = file_stamp(path)?;
         if before != after {
             continue;
@@ -428,15 +432,34 @@ fn ensure_visible_worktree_file(
     }
 }
 
-fn resolve_worktree_file(repo: &Repository, path: &str) -> Result<PathBuf, AppError> {
-    let worktree = repo
-        .workdir()
-        .ok_or_else(|| AppError::InvalidRepository("Bare repositories are not supported".into()))?;
-    let candidate = worktree.join(validate_relative_path(path)?);
+fn resolve_worktree_file(active: &ActiveRepo, path: &str) -> Result<PathBuf, AppError> {
+    let relative = validate_relative_path(path)?;
+    let repository_root = active.path();
+    let candidate = repository_root.join(relative);
+    let mut component_path = repository_root.to_path_buf();
+    for component in Path::new(path).components() {
+        if let Component::Normal(name) = component {
+            component_path.push(name);
+            let metadata = fs::symlink_metadata(&component_path).map_err(|error| {
+                AppError::WorktreeFileUnavailable(format!("{path} cannot be read: {error}"))
+            })?;
+            if metadata.file_type().is_symlink() {
+                let target = component_path.canonicalize().map_err(|error| {
+                    AppError::WorktreeFileUnavailable(format!("{path} cannot be resolved: {error}"))
+                })?;
+                if !target.starts_with(repository_root) {
+                    return Err(AppError::PathOutsideRepository(path.to_owned()));
+                }
+                return Err(AppError::WorktreeFileUnavailable(format!(
+                    "{path} uses a symbolic link, which is not supported"
+                )));
+            }
+        }
+    }
     let metadata = fs::symlink_metadata(&candidate).map_err(|error| {
         AppError::WorktreeFileUnavailable(format!("{path} cannot be read: {error}"))
     })?;
-    if !metadata.file_type().is_file() && !metadata.file_type().is_symlink() {
+    if !metadata.file_type().is_file() {
         return Err(AppError::WorktreeFileUnavailable(format!(
             "{path} is not a regular file"
         )));
@@ -444,13 +467,63 @@ fn resolve_worktree_file(repo: &Repository, path: &str) -> Result<PathBuf, AppEr
     let canonical = candidate.canonicalize().map_err(|error| {
         AppError::WorktreeFileUnavailable(format!("{path} cannot be resolved: {error}"))
     })?;
-    if !canonical.starts_with(worktree) {
+    if !canonical.starts_with(repository_root) {
         return Err(AppError::PathOutsideRepository(path.to_owned()));
     }
     if !canonical.is_file() {
         return Err(AppError::WorktreeFileUnavailable(path.to_owned()));
     }
     Ok(canonical)
+}
+
+fn verify_open_file(
+    path: &Path,
+    repository_root: &Path,
+    file: &File,
+    display_path: &str,
+) -> Result<(), AppError> {
+    let changed = || AppError::WorktreeChanged(display_path.to_owned());
+    let opened = file.metadata().map_err(|_| changed())?;
+    if !opened.is_file() {
+        return Err(changed());
+    }
+    let current = fs::symlink_metadata(path).map_err(|_| changed())?;
+    if !current.file_type().is_file() || current.file_type().is_symlink() {
+        return Err(changed());
+    }
+    let canonical = path.canonicalize().map_err(|_| changed())?;
+    if !canonical.starts_with(repository_root)
+        || canonical != path
+        || !same_file_identity(&opened, &current)
+    {
+        return Err(changed());
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn same_file_identity(opened: &Metadata, current: &Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt;
+
+    opened.dev() == current.dev() && opened.ino() == current.ino()
+}
+
+#[cfg(windows)]
+fn same_file_identity(opened: &Metadata, current: &Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+
+    opened.volume_serial_number().is_some()
+        && opened.volume_serial_number() == current.volume_serial_number()
+        && opened.file_index().is_some()
+        && opened.file_index() == current.file_index()
+}
+
+#[cfg(not(any(unix, windows)))]
+fn same_file_identity(opened: &Metadata, current: &Metadata) -> bool {
+    opened.is_file()
+        && current.is_file()
+        && opened.len() == current.len()
+        && opened.modified().ok() == current.modified().ok()
 }
 
 fn validate_relative_path(path: &str) -> Result<PathBuf, AppError> {
@@ -462,7 +535,7 @@ fn validate_relative_path(path: &str) -> Result<PathBuf, AppError> {
         matches!(
             component,
             Component::ParentDir | Component::RootDir | Component::Prefix(_)
-        )
+        ) || matches!(component, Component::Normal(name) if name == ".git")
     }) {
         return Err(AppError::PathOutsideRepository(path.to_owned()));
     }

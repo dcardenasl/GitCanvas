@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (2/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (3/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -58,9 +58,11 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       --lib`, binding exportado, `npm run typecheck`, tests Vitest de `diff`, `FileDiffView`
       e IPC con Node 22 (48 tests), `./pre-commit`.
       → `fix(diff): bound commit diff reads`
-- [ ] **H2-2 — Asegurar lecturas del worktree.** Verificar A2; rechazar symlinks o
-      representarlos como texto, excluir `.git`, revalidar tras abrir, usar `active.path()`
-      y cubrir symlink interno y carreras de ruta.
+- [x] **H2-2 — Asegurar lecturas del worktree.** Se rechazan symlinks internos y externos,
+      cualquier segmento `.git`, rutas fuera del root canónico y cambios de identidad entre
+      la apertura y la lectura; el resolver usa `ActiveRepo::path()`.
+      *Verificado:* `cargo test -p gitcanvas-core --test worktree` (8 tests) y
+      `cargo test -p gitcanvas-core --lib` (21 tests).
       → `fix(worktree): validate paths and reject symlinks`
 - [ ] **H2-3 — Clasificar rutas del watcher correctamente.** Verificar M1 y cambiar la
       clasificación a partir de `strip_prefix(metadata)`; añadir el caso de repositorio

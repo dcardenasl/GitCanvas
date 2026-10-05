@@ -283,9 +283,16 @@ fn rejects_traversal_absolute_paths_and_external_symlinks() {
         fixture.dir.path().join("outside.txt"),
     )
     .unwrap();
+    #[cfg(unix)]
+    std::os::unix::fs::symlink("a.txt", fixture.dir.path().join("internal-link.txt")).unwrap();
 
     let repository = active(&fixture);
-    for path in ["../secret.txt", "/tmp/secret.txt", "../repo2/a.txt"] {
+    for path in [
+        "../secret.txt",
+        "/tmp/secret.txt",
+        "../repo2/a.txt",
+        ".git/config",
+    ] {
         let error = get_worktree_file_content(
             &repository,
             &WorktreeFileContentRequest {
@@ -312,6 +319,20 @@ fn rejects_traversal_absolute_paths_and_external_symlinks() {
     .unwrap_err();
     #[cfg(unix)]
     assert!(matches!(error, AppError::PathOutsideRepository(_)));
+
+    #[cfg(unix)]
+    let error = get_worktree_file_content(
+        &repository,
+        &WorktreeFileContentRequest {
+            side: WorktreeSide::Unstaged,
+            path: "internal-link.txt".into(),
+            expected_revision: None,
+            expand: false,
+        },
+    )
+    .unwrap_err();
+    #[cfg(unix)]
+    assert!(matches!(error, AppError::WorktreeFileUnavailable(_)));
 }
 
 #[test]
