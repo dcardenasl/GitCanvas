@@ -25,11 +25,13 @@ const MAX_CONCURRENT_READS: usize = 2;
 const MAX_CONCURRENT_WRITES: usize = 2;
 const READ_RETRIES: u32 = 3;
 const READ_BACKOFF: Duration = Duration::from_millis(100);
+const OPERATION_GATE_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// A counting gate: at most `capacity` permits are out at any time.
 struct Gate {
     available: Mutex<usize>,
     changed: Condvar,
+    wait_timeout: Duration,
 }
 
 impl Gate {
@@ -37,14 +39,40 @@ impl Gate {
         Self {
             available: Mutex::new(capacity),
             changed: Condvar::new(),
+            wait_timeout: OPERATION_GATE_TIMEOUT,
+        }
+    }
+
+    #[cfg(test)]
+    fn with_wait_timeout(capacity: usize, wait_timeout: Duration) -> Self {
+        Self {
+            available: Mutex::new(capacity),
+            changed: Condvar::new(),
+            wait_timeout,
         }
     }
 
     fn acquire(&self) -> Result<Permit<'_>, AppError> {
         let poisoned = || AppError::Internal("git operation gate was poisoned".to_owned());
         let mut available = self.available.lock().map_err(|_| poisoned())?;
+        let deadline = Instant::now() + self.wait_timeout;
         while *available == 0 {
-            available = self.changed.wait(available).map_err(|_| poisoned())?;
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return Err(AppError::ResourceLimitExceeded(
+                    "timed out waiting for an available Git operation slot".to_owned(),
+                ));
+            }
+            let (next, timeout) = self
+                .changed
+                .wait_timeout(available, remaining)
+                .map_err(|_| poisoned())?;
+            available = next;
+            if timeout.timed_out() && *available == 0 {
+                return Err(AppError::ResourceLimitExceeded(
+                    "timed out waiting for an available Git operation slot".to_owned(),
+                ));
+            }
         }
         *available -= 1;
         Ok(Permit { gate: self })
@@ -198,5 +226,17 @@ mod tests {
             }));
         assert!(outcome.unwrap_err().is_transient());
         assert_eq!(attempts.load(Ordering::SeqCst), 1, "a write runs once");
+    }
+
+    #[test]
+    fn a_gate_wait_has_a_bounded_timeout() {
+        let gate = Gate::with_wait_timeout(0, Duration::from_millis(5));
+
+        let Err(error) = gate.acquire() else {
+            panic!("a zero-capacity gate must not admit work")
+        };
+
+        assert!(matches!(error, AppError::ResourceLimitExceeded(_)));
+        assert!(error.to_string().contains("timed out"));
     }
 }

@@ -72,7 +72,7 @@ pub async fn forget_github_token() -> Result<(), AppError> {
 #[tauri::command]
 #[specta::specta]
 pub async fn list_github_repositories() -> Result<GitHubRepositoryList, AppError> {
-    write("list_github_repositories", || {
+    read("list_github_repositories", || {
         GitHubClient::from_stored_token()?.list_repositories()
     })
     .await

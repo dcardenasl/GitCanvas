@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (10/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (11/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -121,8 +121,12 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       cambio/unwatch concurrentes), `cargo clippy -p gitcanvas --all-targets -- -D warnings`
       y `./pre-commit`.
       → `fix(watch): invalidate stale watcher generations`
-- [ ] **H2-10 — Aplicar gates de lectura y timeout a runtime.** `list_github_repositories`
-      debe usar gate de lectura; aplicar timeout al permiso/runtime y cubrir contención.
+- [x] **H2-10 — Aplicar gates de lectura y timeout a runtime.** El listado de GitHub usa el
+      gate de lectura reintentable; la espera por un slot de lectura o escritura vence a
+      los 30 s con `ResourceLimitExceeded`, sin bloquear indefinidamente.
+      *Verificado:* `cargo test -p gitcanvas --lib commands::runtime::tests` (4 pruebas de
+      capacidad, timeout, lectura durante escritura saturada y reintentos),
+      `cargo clippy -p gitcanvas --all-targets -- -D warnings` y `./pre-commit`.
       → `fix(runtime): gate repository listing and bound permission waits`
 - [ ] **H2-11 — Restringir operaciones a repositorios permitidos.** Poblar `AllowedRepos`
       desde `open_repository`, `get_startup_repository` y clone; implementar `with_repo`
