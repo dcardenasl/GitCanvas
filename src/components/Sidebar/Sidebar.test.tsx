@@ -170,6 +170,18 @@ describe("Sidebar", () => {
       expect(onCheckout).toHaveBeenCalledWith("main");
     });
 
+    it("can open the checkout menu and switch branches from the keyboard", async () => {
+      const onCheckout = vi.fn();
+      renderSidebar(onCheckout);
+
+      const branchButton = await screen.findByRole("button", { name: /^main/ });
+      branchButton.focus();
+      await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+      await userEvent.keyboard("{Enter}");
+
+      expect(onCheckout).toHaveBeenCalledWith("main");
+    });
+
     it("offers nothing on the branch that is already checked out", async () => {
       renderSidebar(vi.fn());
 

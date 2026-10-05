@@ -182,6 +182,19 @@ function RefGroup({
                 onClick={() => {
                   if (entry.commitId !== null) onOpen(entry.commitId);
                 }}
+                onKeyDown={(event) => {
+                  if (
+                    entry.checkoutBranch === undefined ||
+                    onMenu === undefined ||
+                    (event.key !== "ContextMenu" &&
+                      !(event.key === "F10" && event.shiftKey))
+                  ) {
+                    return;
+                  }
+                  event.preventDefault();
+                  const bounds = event.currentTarget.getBoundingClientRect();
+                  onMenu(bounds.left, bounds.bottom, entry.checkoutBranch);
+                }}
                 onContextMenu={(event) => {
                   if (
                     entry.checkoutBranch === undefined ||

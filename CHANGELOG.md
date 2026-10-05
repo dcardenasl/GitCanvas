@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Keyboard access to history and branch checkout.** Commit rows support Tab, arrow keys, Home/End, PageUp/PageDown and their context menu; local branches can be checked out from that menu without a mouse.
 - **Localized application error fallback.** A render failure now shows a Spanish recovery screen with a restart action instead of leaving the window blank.
 - **GitCanvas branding** — the toolbar shows the mark beside the repository name, the
   empty state shows the full logo, and the application icons are the new ones.

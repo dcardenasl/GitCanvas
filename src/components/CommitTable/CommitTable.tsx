@@ -95,6 +95,8 @@ export function CommitTable({
   refsByCommit,
 }: CommitTableProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const rowRefs = useRef(new Map<number, HTMLDivElement>());
+  const pendingFocusIndex = useRef<number | null>(null);
   const [menu, setMenu] = useState<{
     x: number;
     y: number;
@@ -141,6 +143,10 @@ export function CommitTable({
 
   const items = virtualizer.getVirtualItems();
   const totalHeight = virtualizer.getTotalSize();
+  const selectedIndex =
+    selectedId === null
+      ? -1
+      : commits.findIndex((commit) => commit.id === selectedId);
 
   const first = items[0];
   const last = items[items.length - 1];
@@ -160,17 +166,89 @@ export function CommitTable({
     if (reachedEnd) onReachEndRef.current?.();
   }, [reachedEnd, commits.length]);
 
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>, index: number) => {
-      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-      event.preventDefault();
+  useEffect(() => {
+    const pending = pendingFocusIndex.current;
+    if (pending === null) return;
+    const row = rowRefs.current.get(pending);
+    if (row !== undefined) {
+      row.focus();
+      pendingFocusIndex.current = null;
+    }
+  }, [items, selectedId]);
 
-      const next = event.key === "ArrowDown" ? index + 1 : index - 1;
+  const handleKeyDown = useCallback(
+    (
+      event: React.KeyboardEvent<HTMLDivElement>,
+      index: number,
+      commit: CommitInfo,
+    ) => {
+      if (
+        event.key === "ContextMenu" ||
+        (event.key === "F10" && event.shiftKey)
+      ) {
+        event.preventDefault();
+        onSelect(commit.id);
+        const bounds = event.currentTarget.getBoundingClientRect();
+        setMenu({ x: bounds.left, y: bounds.bottom, commit });
+        return;
+      }
+
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        onSelect(commit.id);
+        return;
+      }
+
+      let next: number;
+      switch (event.key) {
+        case "ArrowDown":
+          next = index + 1;
+          break;
+        case "ArrowUp":
+          next = index - 1;
+          break;
+        case "Home":
+          next = 0;
+          break;
+        case "End":
+          next = commits.length - 1;
+          break;
+        case "PageDown":
+          next =
+            index +
+            Math.max(
+              1,
+              Math.floor(
+                (scrollRef.current?.clientHeight ?? ROW_HEIGHT) / ROW_HEIGHT,
+              ),
+            );
+          break;
+        case "PageUp":
+          next =
+            index -
+            Math.max(
+              1,
+              Math.floor(
+                (scrollRef.current?.clientHeight ?? ROW_HEIGHT) / ROW_HEIGHT,
+              ),
+            );
+          break;
+        default:
+          return;
+      }
+      event.preventDefault();
+      next = Math.max(0, Math.min(next, commits.length - 1));
       const target = commits[next];
       if (target === undefined) return;
 
+      pendingFocusIndex.current = next;
       onSelect(target.id);
       virtualizer.scrollToIndex(next);
+      const row = rowRefs.current.get(next);
+      if (row !== undefined) {
+        row.focus();
+        pendingFocusIndex.current = null;
+      }
     },
     [commits, onSelect, virtualizer],
   );
@@ -225,12 +303,21 @@ export function CommitTable({
                  * puts the separators a listener needs.
                  */
                 aria-label={rowLabel(commit, refsByCommit?.get(commit.id))}
-                tabIndex={selected ? 0 : -1}
+                tabIndex={
+                  selected ||
+                  item.index === (selectedIndex < 0 ? 0 : selectedIndex)
+                    ? 0
+                    : -1
+                }
+                ref={(element) => {
+                  if (element === null) rowRefs.current.delete(item.index);
+                  else rowRefs.current.set(item.index, element);
+                }}
                 onClick={() => {
                   onSelect(commit.id);
                 }}
                 onKeyDown={(event) => {
-                  handleKeyDown(event, item.index);
+                  handleKeyDown(event, item.index, commit);
                 }}
                 onContextMenu={(event) => {
                   event.preventDefault();

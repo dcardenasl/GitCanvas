@@ -5,7 +5,7 @@
 > Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
 > Historial de tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** H2 pendiente (18/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
+**Estado:** H2 pendiente (19/46) · Release v0.1.0 pendiente (R-4 a R-6, requieren aprobación de David) · actualizado 2026-10-04
 
 ## Cómo se usa este archivo
 
@@ -176,9 +176,11 @@ Los commits `c954492` (branding) y `7f24bb6` (grabador de demo) ya están presen
       `errors.ts` expone `isAppErrorKind` y un mensaje seguro para categorías desconocidas.
       *Verificado:* `npm run typecheck`; `npx vitest run src/state/liveRepository.test.ts src/lib/errors.test.ts` (20 tests); `./pre-commit`.
       → `fix(live): make watcher startup and errors reliable`
-- [ ] **H2-18 — Completar idioma y acceso por teclado.** `index.html` en español; tabla de
-      commits alcanzable con Tab, foco, Home/End/PageUp/PageDown y menú por teclado; permitir
-      checkout desde sidebar. Cubrir navegación sin mouse.
+- [x] **H2-18 — Completar idioma y acceso por teclado.** `index.html` declara español.
+      La lista de commits es tabulable y ofrece foco roving, flechas, Home/End,
+      PageUp/PageDown y menú de contexto con Shift+F10/tecla de menú; las ramas locales
+      exponen el checkout por el mismo menú accesible por teclado.
+      *Verificado:* `npm run typecheck`; `npx vitest run src/components/CommitTable/CommitTable.test.tsx src/components/Sidebar/Sidebar.test.tsx` (31 tests); `./pre-commit`.
       → `feat(ui): complete keyboard navigation and localization`
 
 ### Reglas con guardia automática

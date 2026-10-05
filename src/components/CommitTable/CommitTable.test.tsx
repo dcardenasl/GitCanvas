@@ -40,6 +40,10 @@ function withViewport(height: number): void {
     y: 0,
     toJSON: () => ({}),
   });
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+    configurable: true,
+    get: () => height,
+  });
 }
 
 describe("CommitTable", () => {
@@ -101,6 +105,70 @@ describe("CommitTable", () => {
     await userEvent.keyboard("{ArrowDown}");
 
     expect(onSelect).toHaveBeenCalledWith(commits[3]?.id);
+    expect(document.activeElement).toBe(
+      screen.getByRole("option", { name: /^commit 3\./ }),
+    );
+  });
+
+  it("can be reached with Tab when no commit is selected", async () => {
+    withViewport(ROW_HEIGHT * 10);
+    render(
+      <CommitTable
+        commits={makeCommits(5)}
+        selectedId={null}
+        onSelect={() => undefined}
+        maxLanes={1}
+      />,
+    );
+
+    await userEvent.tab();
+
+    expect(document.activeElement).toBe(screen.getAllByRole("option")[0]);
+  });
+
+  it.each([
+    ["Home", 0],
+    ["End", 19],
+    ["PageDown", 12],
+    ["PageUp", 0],
+  ])("moves selection with %s", async (key, targetIndex) => {
+    withViewport(ROW_HEIGHT * 10);
+    const onSelect = vi.fn();
+    const commits = makeCommits(20);
+
+    render(
+      <CommitTable
+        commits={commits}
+        selectedId={commits[2]?.id ?? null}
+        onSelect={onSelect}
+        maxLanes={1}
+      />,
+    );
+
+    screen.getByRole("option", { selected: true }).focus();
+    await userEvent.keyboard(`{${key}}`);
+
+    expect(onSelect).toHaveBeenCalledWith(commits[targetIndex]?.id);
+  });
+
+  it("opens the commit menu from the keyboard", async () => {
+    withViewport(ROW_HEIGHT * 10);
+    render(
+      <CommitTable
+        commits={makeCommits(3)}
+        selectedId={null}
+        onSelect={() => undefined}
+        maxLanes={1}
+      />,
+    );
+
+    screen.getAllByRole("option")[0]?.focus();
+    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+
+    expect(await screen.findByRole("menu")).toBeDefined();
+    expect(document.activeElement).toBe(
+      screen.getByRole("menuitem", { name: "Copiar hash (0000000)" }),
+    );
   });
 
   it("asks for the next page when the tail comes into view", () => {
