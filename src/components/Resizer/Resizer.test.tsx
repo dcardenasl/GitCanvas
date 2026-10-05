@@ -10,10 +10,11 @@ function renderResizer(
   overrides: Partial<React.ComponentProps<typeof Resizer>> = {},
 ) {
   const onResize = vi.fn();
-  render(
+  const view = render(
     <Resizer
       label="Ancho de la barra lateral"
       width={200}
+      initialWidth={220}
       min={100}
       max={300}
       grows="right"
@@ -22,6 +23,7 @@ function renderResizer(
     />,
   );
   return {
+    ...view,
     onResize,
     separator: screen.getByRole("separator", { hidden: true }),
   };
@@ -109,12 +111,54 @@ describe("Resizer", () => {
     expect(onResize).toHaveBeenLastCalledWith(230);
   });
 
-  it("restores the middle of its range on double click", () => {
-    const { onResize, separator } = renderResizer();
+  it("restores the initial width on double click", () => {
+    const { onResize, separator } = renderResizer({
+      width: 250,
+      initialWidth: 180,
+    });
 
     fireEvent.doubleClick(separator);
 
-    expect(onResize).toHaveBeenCalledWith(200);
+    expect(onResize).toHaveBeenCalledWith(180);
+  });
+
+  it("restores the previous text selection style after a drag", () => {
+    const { separator } = renderResizer();
+    withPointerCapture(separator);
+    document.body.style.userSelect = "text";
+
+    fireEvent.pointerDown(separator, { pointerId: 1, clientX: 500 });
+    expect(document.body.style.userSelect).toBe("none");
+    fireEvent.pointerCancel(separator, { pointerId: 1 });
+
+    expect(document.body.style.userSelect).toBe("text");
+    document.body.style.userSelect = "";
+  });
+
+  it("ignores non-primary pointer buttons", () => {
+    const { onResize, separator } = renderResizer();
+    withPointerCapture(separator);
+
+    fireEvent.pointerDown(separator, {
+      pointerId: 1,
+      clientX: 500,
+      button: 2,
+    });
+    fireEvent.pointerMove(separator, { pointerId: 1, clientX: 530 });
+
+    expect(onResize).not.toHaveBeenCalled();
+  });
+
+  it("restores text selection when unmounted during a drag", () => {
+    const { separator, unmount } = renderResizer();
+    withPointerCapture(separator);
+    document.body.style.userSelect = "text";
+
+    fireEvent.pointerDown(separator, { pointerId: 1, clientX: 500 });
+    unmount();
+
+    expect(document.body.style.userSelect).toBe("text");
+    document.body.style.userSelect = "";
   });
 
   it("leaves the tab order when hidden", () => {

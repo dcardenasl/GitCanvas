@@ -7,6 +7,8 @@ export interface ResizerProps {
   /** Accessible name, e.g. "Ancho de la barra lateral". */
   readonly label: string;
   readonly width: number;
+  /** Width restored by double-click, before the user resized this panel. */
+  readonly initialWidth: number;
   readonly min: number;
   readonly max: number;
   /** Which way a wider panel grows, so the drag direction matches the panel. */
@@ -39,13 +41,19 @@ const STEP = 16;
 export function Resizer({
   label,
   width,
+  initialWidth,
   min,
   max,
   grows,
   onResize,
   hidden = false,
 }: ResizerProps) {
-  const dragging = useRef<{ startX: number; startWidth: number } | null>(null);
+  const dragging = useRef<{
+    pointerId: number;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
+  const previousUserSelect = useRef<string | null>(null);
 
   const clamp = useCallback(
     (value: number) => Math.min(Math.max(value, min), max),
@@ -53,23 +61,36 @@ export function Resizer({
   );
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || dragging.current !== null) return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    dragging.current = { startX: event.clientX, startWidth: width };
+    dragging.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startWidth: width,
+    };
+    previousUserSelect.current = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
   };
 
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const drag = dragging.current;
-    if (drag === null) return;
+    if (drag?.pointerId !== event.pointerId) return;
 
     const delta = event.clientX - drag.startX;
     onResize(clamp(drag.startWidth + (grows === "right" ? delta : -delta)));
   };
 
   const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragging.current;
+    if (drag?.pointerId !== event.pointerId) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     dragging.current = null;
+    if (previousUserSelect.current !== null) {
+      document.body.style.userSelect = previousUserSelect.current;
+      previousUserSelect.current = null;
+    }
   };
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -81,14 +102,18 @@ export function Resizer({
     onResize(clamp(width + towards * STEP * (grows === "right" ? 1 : -1)));
   };
 
-  useEffect(() => {
-    // A drag in progress must not leave text selected across the window.
-    if (dragging.current === null) return;
-    document.body.style.userSelect = "none";
-    return () => {
-      document.body.style.userSelect = "";
-    };
-  });
+  useEffect(
+    () => () => {
+      // Unmounting during a drag must restore the value that was there before
+      // the gesture, including an application-level text-selection policy.
+      if (previousUserSelect.current !== null) {
+        document.body.style.userSelect = previousUserSelect.current;
+        previousUserSelect.current = null;
+      }
+      dragging.current = null;
+    },
+    [],
+  );
 
   return (
     <div
@@ -107,9 +132,7 @@ export function Resizer({
       onPointerCancel={endDrag}
       onKeyDown={onKeyDown}
       onDoubleClick={() => {
-        // Double click restores the default, so a divider dragged into a
-        // useless position is always one gesture from being fixed.
-        onResize(clamp((min + max) / 2));
+        onResize(clamp(initialWidth));
       }}
     />
   );

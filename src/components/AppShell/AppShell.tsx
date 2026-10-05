@@ -212,6 +212,7 @@ export function AppShell() {
           <Resizer
             label="Ancho de la barra lateral"
             width={layout.sidebar}
+            initialWidth={SIDEBAR.initial}
             min={SIDEBAR.min}
             max={layout.sidebarMax}
             grows="right"
@@ -242,6 +243,7 @@ export function AppShell() {
           <Resizer
             label="Ancho del panel de detalle"
             width={layout.inspector}
+            initialWidth={INSPECTOR.initial}
             min={INSPECTOR.min}
             max={layout.inspectorMax}
             grows="left"

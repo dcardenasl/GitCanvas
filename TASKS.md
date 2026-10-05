@@ -96,7 +96,12 @@ hasta obtener evidencia dinámica de arranque y E2E en los tres sistemas operati
       → `fix(ui): ignore stale repository and reveal selections`
 - [ ] **H2-30 — Corregir teclado y ergonomía de controles.** Resizer: limpiar `userSelect`,
       doble clic vuelve al valor inicial y filtrar botones; ContextMenu: callback actualizado,
-      flechas y retorno del foco; Escape cierra `FileDiffView`.
+      flechas y retorno del foco; Escape cierra `FileDiffView`. *Implementación parcial
+      (2026-10-05):* Resizer conserva/restaura el `userSelect` anterior incluso al desmontar,
+      ignora botones y punteros ajenos y restablece el ancho inicial. ContextMenu usa el
+      callback más reciente, navegación Arrow/Home/End y devuelve el foco al opener en
+      Escape/selección; Escape del menú no se propaga hasta cerrar FileDiffView. Se
+      añadieron regresiones; aún no ejecutadas.
       → `fix(ui): restore focus and keyboard control behavior`
 - [ ] **H2-31 — Acotar y tematizar GraphCanvas.** Un solo `filter` por `<g>`, altura limitada
       o virtualización; paleta de `graph-layout/colors.ts` por tema y test de contraste para

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 import "./ContextMenu.css";
 
@@ -25,34 +25,84 @@ export interface ContextMenuProps {
  */
 export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  const [activeIndex, setActiveIndex] = useState(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const close = useCallback((restoreFocus: boolean) => {
+    if (restoreFocus && opener.current?.isConnected === true) {
+      opener.current.focus();
+    }
+    onCloseRef.current();
+  }, []);
+
+  useLayoutEffect(() => {
+    const activeElement = document.activeElement;
+    opener.current =
+      activeElement instanceof HTMLElement ? activeElement : null;
     ref.current?.querySelector("button")?.focus();
 
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
     function onPointerDown(event: PointerEvent) {
-      if (!ref.current?.contains(event.target as Node)) onClose();
+      if (!ref.current?.contains(event.target as Node)) close(false);
+    }
+    const closeOnAnchorMove = () => {
+      close(false);
+    };
+
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("scroll", closeOnAnchorMove, true);
+    window.addEventListener("resize", closeOnAnchorMove);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("scroll", closeOnAnchorMove, true);
+      window.removeEventListener("resize", closeOnAnchorMove);
+    };
+  }, [close]);
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (items.length === 0) return;
+
+    let nextIndex: number | null = null;
+    switch (event.key) {
+      case "ArrowDown":
+        nextIndex = (activeIndex + 1) % items.length;
+        break;
+      case "ArrowUp":
+        nextIndex = (activeIndex - 1 + items.length) % items.length;
+        break;
+      case "Home":
+        nextIndex = 0;
+        break;
+      case "End":
+        nextIndex = items.length - 1;
+        break;
+      case "Escape":
+        event.preventDefault();
+        event.stopPropagation();
+        close(true);
+        return;
     }
 
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("scroll", onClose, true);
-    window.addEventListener("resize", onClose);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("scroll", onClose, true);
-      window.removeEventListener("resize", onClose);
-    };
-  }, [onClose]);
+    if (nextIndex !== null) {
+      event.preventDefault();
+      setActiveIndex(nextIndex);
+      ref.current
+        ?.querySelectorAll<HTMLButtonElement>("[role='menuitem']")
+        .item(nextIndex)
+        .focus();
+    }
+  };
 
   return (
     <div
       ref={ref}
       className="context-menu"
       role="menu"
+      onKeyDown={onKeyDown}
       // Kept inside the window: a menu opened near the right or bottom edge
       // would otherwise open partly off screen.
       style={{
@@ -60,15 +110,19 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
         top: Math.min(y, window.innerHeight - items.length * 30 - 12),
       }}
     >
-      {items.map((item) => (
+      {items.map((item, index) => (
         <button
           key={item.label}
           type="button"
           role="menuitem"
+          tabIndex={index === activeIndex ? 0 : -1}
           className="context-menu__item"
           onClick={() => {
-            item.onSelect();
-            onClose();
+            try {
+              item.onSelect();
+            } finally {
+              close(true);
+            }
           }}
         >
           {item.label}

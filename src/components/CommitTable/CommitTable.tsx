@@ -331,6 +331,7 @@ export function CommitTable({
                 }}
                 onContextMenu={(event) => {
                   event.preventDefault();
+                  event.currentTarget.focus();
                   onSelect(commit.id);
                   setMenu({ x: event.clientX, y: event.clientY, commit });
                 }}
