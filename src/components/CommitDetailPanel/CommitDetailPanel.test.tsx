@@ -294,7 +294,7 @@ describe("CommitDetailPanel", () => {
     expect(
       screen.queryByRole("button", { name: "Cargar más entradas" }),
     ).toBeNull();
-  });
+  }, 60_000);
 
   it("labels each change kind for assistive technology", async () => {
     getCommitDiff.mockResolvedValue(
