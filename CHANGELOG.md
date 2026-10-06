@@ -105,6 +105,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   retry with backoff, macOS's low Finder-launched descriptor limit is raised when
   permitted, concurrent Git operations are bounded, and degraded watcher recovery
   backs off to prevent resource exhaustion.
+- **Project presentation and licensing.** The README, repository assets and package metadata now present GitCanvas as a cross-platform MIT-licensed desktop client.
 
 ## [0.1.0] — 2026-09-08
 
