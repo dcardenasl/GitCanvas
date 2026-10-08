@@ -1,0 +1,4 @@
+# Rust and vendored C libraries must agree on the minimum macOS version.
+# Tauri's bundle default and Rust's Apple Silicon baseline are both macOS 11.
+[env]
+MACOSX_DEPLOYMENT_TARGET = "11.0"

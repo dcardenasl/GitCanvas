@@ -1,0 +1,120 @@
+# Workspace root.
+#
+# The split is the point: `gitcanvas-core` holds every piece of git domain
+# logic and does NOT depend on `tauri`. A `use tauri::…` inside it does not
+# compile, so the boundary is enforced by the dependency graph rather than by
+# remembering to respect a folder convention.
+#
+# `src-tauri` is the IPC layer: it registers commands, owns application state,
+# and translates core results into responses. Nothing else.
+
+[workspace]
+resolver = "2"
+members = ["src-tauri", "crates/gitcanvas-core"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.98"
+authors = ["David Cardenas Lorca"]
+license = "MIT"
+publish = false
+
+# Lints, defined once and inherited by every member through `[lints] workspace = true`.
+#
+# `unwrap_used`, `expect_used` and `panic` are DENY, not warn: a panic inside a
+# Tauri command takes down the whole application, which is not acceptable in a
+# tool that is supposed to be dependable. Every failure is modelled as a typed
+# error and propagated as a `Result`.
+#
+# `indexing_slicing` is here for the same reason — `v[i]` panics out of range.
+# The graph layout indexes lane arrays constantly, so this is not theoretical.
+#
+# Tests opt out through `#![cfg_attr(test, allow(...))]` in each crate root, and
+# integration tests through an explicit `#![allow(...)]` header: a panicking
+# assertion IS the point there.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+indexing_slicing = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+string_slice = "deny"
+arithmetic_side_effects = "deny"
+disallowed_methods = "deny"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Type contracts. Rust is the single source of truth for every type that
+# crosses the IPC boundary; `src/bindings.ts` is generated from these and CI
+# fails if the checked-in file drifts from what the code produces.
+#
+# Pinned to exact versions on purpose: these are release candidates, and a
+# caret range over an RC series is not predictable.
+# libgit2, compiled from source rather than linked against whatever version
+# happens to be installed. Vendoring both libgit2 and OpenSSL is what makes the
+# build identical on this machine, on CI and on any machine that ships the app,
+# instead of depending on system libraries that differ per platform.
+git2 = { version = "0.21", default-features = false, features = [
+    "vendored-libgit2",
+    "vendored-openssl",
+    "ssh",
+    "https",
+] }
+rlimit = "0.10"
+thiserror = "2"
+
+# Filesystem notification, for noticing that a repository changed underneath the
+# window. Pinned to the stable 8.x line rather than the 9.0 release candidate.
+notify = { version = "8", default-features = false, features = ["macos_kqueue"] }
+
+# HTTP for the two GitHub REST calls. `rustls` rather than the system TLS stack,
+# for the same reason libgit2 is vendored: identical behaviour everywhere.
+ureq = { version = "3", default-features = false, features = ["rustls", "json"] }
+url = "2"
+fs2 = "0.4"
+
+# The OS keychain. No default features on purpose: the crate ships none, so
+# every platform backend has to be named explicitly.
+keyring = { version = "3", features = [
+    "apple-native",
+    "windows-native",
+    "sync-secret-service",
+] }
+tauri-plugin-dialog = "2"
+
+# Embedded WebDriver, for the end-to-end suite only. Behind the `e2e` feature so
+# the shipped binary never carries a WebDriver server: a released application
+# that can be driven remotely is a liability, not a feature.
+tauri-plugin-wdio-webdriver = "1.4"
+
+# AppKit, only to pre-initialise the folder panel on macOS. The bindings used
+# are safe functions, so the workspace's `unsafe_code = "forbid"` still holds.
+objc2-app-kit = { version = "0.3", features = ["NSSavePanel", "NSOpenPanel", "NSPanel", "NSWindow", "NSResponder"] }
+objc2-foundation = "0.3"
+
+specta = { version = "=2.0.0-rc.25", features = ["derive"] }
+specta-typescript = "=0.0.12"
+tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
+syn = { version = "2", features = ["full", "visit"] }
+
+# Profiles live at the workspace root; cargo ignores them in member manifests.
+# See https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

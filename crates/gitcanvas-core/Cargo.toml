@@ -1,0 +1,41 @@
+[package]
+name = "gitcanvas-core"
+description = "Git domain logic for GitCanvas: history, refs, diffs and remotes"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+git2.workspace = true
+fs2.workspace = true
+keyring.workspace = true
+notify.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+specta.workspace = true
+thiserror.workspace = true
+ureq.workspace = true
+url.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+same-file = "1"
+
+# Deliberately absent: `tauri`. This crate must stay usable, and testable,
+# without starting an application. Adding it here would silently undo the
+# boundary the workspace exists to enforce.
+
+[dev-dependencies]
+tempfile = "3"
+# Deterministic mtimes, so LRU order is set by the test rather than by how fast
+# the machine happens to create directories.
+filetime = "0.2"
+
+[[bench]]
+name = "history_verification"
+harness = false
+
+[lints]
+workspace = true

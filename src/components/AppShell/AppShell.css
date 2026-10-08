@@ -1,0 +1,204 @@
+.app-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+}
+
+.toolbar {
+  display: flex;
+  gap: var(--space-5);
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-toolbar);
+}
+
+.toolbar__repository {
+  color: var(--ink);
+  font-size: var(--font-size-ui);
+  font-weight: 600;
+}
+
+.toolbar__brand {
+  display: block;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border-radius: var(--radius-tight);
+}
+
+.toolbar__spacer {
+  flex: 1;
+}
+
+.app-shell__body {
+  display: grid;
+
+  /* Fixed shape whether or not a commit is selected. The inspector column is
+     reserved from the start so choosing a commit does not resize the history,
+     reflowing every row and redrawing the graph under the cursor that clicked. */
+  grid-template-columns:
+    var(--sidebar-width)
+    var(--sidebar-divider, auto)
+    minmax(0, 1fr)
+    auto
+    var(--inspector-width);
+  min-height: 0;
+}
+
+/* A collapsed panel keeps its place in the grid and gives up only its width,
+   so the columns and their children never fall out of step. */
+.app-shell__body > .sidebar {
+  min-width: 0;
+}
+
+.sidebar[hidden],
+.resizer[hidden] {
+  display: block;
+  overflow: hidden;
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  visibility: hidden;
+}
+
+.app-shell__history {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.app-shell__empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: center;
+}
+
+.app-shell__empty-logo {
+  display: block;
+  width: min(280px, calc(100vw - 48px));
+  height: auto;
+  margin-bottom: var(--space-2);
+  padding: 8px 14px;
+  border-radius: 9px;
+  background: var(--empty-brand-surface);
+}
+
+.app-shell__empty-hint {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: var(--font-size-ui);
+}
+
+.history-view__state {
+  margin: 0;
+  padding: var(--space-7);
+  font-size: var(--font-size-ui);
+}
+
+.history-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.history-view > .commit-table {
+  min-height: 0;
+  flex: 1;
+}
+
+.working-tree-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: var(--space-5);
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-toolbar);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.working-tree-row:hover {
+  background: var(--surface-hover);
+}
+
+.working-tree-row:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.working-tree-row--selected {
+  background: var(--surface-selected);
+}
+
+.working-tree-row__marker {
+  padding: 2px 6px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+}
+
+.working-tree-row__title {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--font-size-ui);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.working-tree-row__summary,
+.working-tree-row__stats {
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-caption-wide);
+  white-space: nowrap;
+}
+
+.repository-picker {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.repository-picker__error {
+  margin: 0;
+  font-size: var(--font-size-body);
+}
+
+/* A spinner rather than only a label change: the wait is long enough that a
+   static "Elige una carpeta…" reads as a stuck button rather than a busy one. */
+.button__spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 7px;
+  border: 2px solid currentcolor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  vertical-align: -1px;
+  animation: button-spin 700ms linear infinite;
+}
+
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Respect a system-wide preference for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .button__spinner {
+    animation-duration: 2.4s;
+  }
+}

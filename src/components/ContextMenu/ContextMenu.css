@@ -1,0 +1,30 @@
+.context-menu {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-toolbar);
+  box-shadow: var(--menu-shadow);
+}
+
+.context-menu__item {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--radius-tight);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--font-size-body-wide);
+  text-align: left;
+  cursor: default;
+}
+
+.context-menu__item:hover,
+.context-menu__item:focus-visible {
+  background: var(--surface-hover);
+  outline: none;
+}

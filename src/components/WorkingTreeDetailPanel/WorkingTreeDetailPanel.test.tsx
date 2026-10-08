@@ -1,0 +1,268 @@
+// @vitest-environment jsdom
+import { cleanup, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type {
+  FileDiff,
+  FileDiffSummary,
+  WorktreeSnapshot,
+} from "../../bindings";
+import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
+
+const mockIpc = createIpcMocks(["getWorktreeSnapshot"] as const);
+const { getWorktreeSnapshot } = mockIpc;
+
+vi.mock("../../lib/ipc", () => mockIpc);
+
+const { WorkingTreeDetailPanel } = await import("./WorkingTreeDetailPanel");
+const { useSession } = await import("../../state/session");
+const { useFileListPreferences } =
+  await import("../../state/fileListPreferences");
+
+function file(overrides: Partial<FileDiff> = {}): FileDiff {
+  return {
+    path: "src/app.ts",
+    old_path: null,
+    change: "Modified",
+    insertions: 2,
+    deletions: 1,
+    omitted: null,
+    patch: "@@ -1 +1 @@\n-a\n+b\n",
+    ...overrides,
+  };
+}
+
+function local(
+  stagedFiles: FileDiff[],
+  unstagedFiles: FileDiff[],
+): WorktreeSnapshot {
+  const page = (files: FileDiff[], side: "staged" | "unstaged") => {
+    const summaries = files.map((entry) => ({
+      path: entry.path,
+      old_path: entry.old_path,
+      change: entry.change,
+      insertions: entry.insertions,
+      deletions: entry.deletions,
+      omitted: entry.omitted,
+    }));
+    return {
+      side,
+      revision: "revision",
+      files: summaries,
+      total_files: summaries.length,
+      next_cursor: null,
+      insertions: summaries.reduce((sum, entry) => sum + entry.insertions, 0),
+      deletions: summaries.reduce((sum, entry) => sum + entry.deletions, 0),
+    };
+  };
+  return {
+    revision: "revision",
+    staged: page(stagedFiles, "staged"),
+    unstaged: page(unstagedFiles, "unstaged"),
+  };
+}
+
+function renderPanel() {
+  return renderWithQueryClient(
+    <WorkingTreeDetailPanel repositoryPath="/tmp/repo" />,
+  );
+}
+
+beforeEach(() => {
+  getWorktreeSnapshot.mockReset();
+  localStorage.removeItem("gitcanvas.file-list-view");
+  useFileListPreferences.setState({ view: "path" });
+  useSession.setState({
+    selection: { kind: "history" },
+  });
+});
+afterEach(cleanup);
+
+describe("WorkingTreeDetailPanel", () => {
+  it("separates staged and unstaged files", async () => {
+    getWorktreeSnapshot.mockResolvedValue(
+      local([file({ path: "staged.ts" })], [file({ path: "local.ts" })]),
+    );
+
+    renderPanel();
+
+    expect(
+      await screen.findByRole("region", { name: "Preparados" }),
+    ).toBeInstanceOf(HTMLElement);
+    expect(screen.getByRole("region", { name: "Sin preparar" })).toBeInstanceOf(
+      HTMLElement,
+    );
+    expect(screen.getByText("staged.ts")).toBeInstanceOf(HTMLElement);
+    expect(screen.getByText("local.ts")).toBeInstanceOf(HTMLElement);
+  });
+
+  it("opens a local file with the correct source", async () => {
+    getWorktreeSnapshot.mockResolvedValue(local([file()], []));
+
+    renderPanel();
+    const list = await screen.findByRole("list", {
+      name: "Archivos preparados",
+    });
+    await userEvent.click(within(list).getByRole("button"));
+
+    expect(useSession.getState().selection).toEqual({
+      kind: "worktree",
+      side: "staged",
+      filePath: "src/app.ts",
+    });
+  });
+
+  it("groups files by directory and preserves the staged/unstaged source", async () => {
+    getWorktreeSnapshot.mockResolvedValue(
+      local(
+        [file({ path: "src/app.ts" })],
+        [file({ path: "src/components/Button.tsx" })],
+      ),
+    );
+
+    renderPanel();
+    await screen.findByRole("list", { name: "Archivos preparados" });
+    await userEvent.click(screen.getByRole("button", { name: "Árbol" }));
+
+    const unstaged = await screen.findByRole("region", {
+      name: "Sin preparar",
+    });
+    const tree = within(unstaged).getByRole("list", {
+      name: "Archivos sin preparar",
+    });
+    expect(
+      within(tree).getByRole("button", { name: "src, 1 archivo modificado" }),
+    ).toBeInstanceOf(HTMLElement);
+    expect(within(tree).getByText("Button.tsx")).toBeInstanceOf(HTMLElement);
+
+    await userEvent.click(within(tree).getByText("Button.tsx"));
+    expect(useSession.getState().selection).toEqual({
+      kind: "worktree",
+      side: "unstaged",
+      filePath: "src/components/Button.tsx",
+    });
+  });
+
+  it("collapses and expands every directory from the shared control", async () => {
+    getWorktreeSnapshot.mockResolvedValue(
+      local([file({ path: "src/a.ts" })], [file({ path: "test/b.ts" })]),
+    );
+
+    renderPanel();
+    await screen.findByRole("list", { name: "Archivos preparados" });
+    await userEvent.click(screen.getByRole("button", { name: "Árbol" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Contraer todo" }),
+    );
+
+    expect(
+      screen
+        .getByRole("button", { name: "src, 1 archivo modificado" })
+        .getAttribute("aria-expanded"),
+    ).toBe("false");
+    expect(screen.getByText("Expandir todo")).toBeInstanceOf(HTMLElement);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Expandir todo" }),
+    );
+    expect(
+      screen
+        .getByRole("button", { name: "test, 1 archivo modificado" })
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
+  });
+
+  describe("when there are more files than one page", () => {
+    /** A listing whose unstaged side has three files but shows only the first. */
+    function truncated(): WorktreeSnapshot {
+      const all = local(
+        [],
+        [
+          file({ path: "one.ts", insertions: 1, deletions: 0 }),
+          file({ path: "two.ts", insertions: 2, deletions: 0 }),
+          file({ path: "three.ts", insertions: 3, deletions: 0 }),
+        ],
+      );
+      return {
+        ...all,
+        unstaged: {
+          ...all.unstaged,
+          files: all.unstaged.files.slice(0, 1),
+          next_cursor: "revision:1",
+        },
+      };
+    }
+
+    const summary = (path: string): FileDiffSummary => ({
+      path,
+      old_path: null,
+      change: "Modified",
+      insertions: 1,
+      deletions: 0,
+      omitted: null,
+    });
+
+    it("reports the real totals and offers the rest", async () => {
+      getWorktreeSnapshot.mockResolvedValue(truncated());
+
+      renderPanel();
+
+      const section = await screen.findByRole("region", {
+        name: "Sin preparar",
+      });
+      // Three files and six added lines exist, however many are loaded.
+      expect(section.textContent).toContain("3");
+      expect(section.textContent).toContain("+6");
+      expect(
+        within(section).getByRole("button", { name: "Cargar 2 archivos más" }),
+      ).toBeInstanceOf(HTMLElement);
+    });
+
+    it("loads the next page from the cursor, in the same revision", async () => {
+      const first = truncated();
+      getWorktreeSnapshot.mockResolvedValueOnce(first).mockResolvedValueOnce({
+        ...first,
+        unstaged: {
+          ...first.unstaged,
+          files: [summary("two.ts"), summary("three.ts")],
+          next_cursor: null,
+        },
+      });
+      renderPanel();
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Cargar 2 archivos más" }),
+      );
+
+      expect(getWorktreeSnapshot).toHaveBeenLastCalledWith("/tmp/repo", {
+        staged_cursor: null,
+        unstaged_cursor: "revision:1",
+        limit: null,
+        expected_revision: "revision",
+      });
+      expect(await screen.findByText("three.ts")).toBeInstanceOf(HTMLElement);
+      expect(screen.getByText("one.ts")).toBeInstanceOf(HTMLElement);
+      expect(
+        screen.queryByRole("button", { name: /Cargar \d+ archivos más/ }),
+      ).toBeNull();
+    });
+
+    it("says so and starts over when the changes moved on", async () => {
+      getWorktreeSnapshot.mockResolvedValueOnce(truncated());
+      renderPanel();
+      const button = await screen.findByRole("button", {
+        name: "Cargar 2 archivos más",
+      });
+
+      getWorktreeSnapshot.mockRejectedValueOnce(
+        new Error("local changes changed since this page was loaded"),
+      );
+      getWorktreeSnapshot.mockResolvedValue(truncated());
+      await userEvent.click(button);
+
+      expect((await screen.findByRole("alert")).textContent).toContain(
+        "changed since this page was loaded",
+      );
+    });
+  });
+});

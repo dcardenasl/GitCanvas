@@ -1,0 +1,191 @@
+name: quality
+
+# The gate is the pull request into main, and nowhere else.
+#
+# `dev` is where work lands quickly, so nothing heavy runs on a push there —
+# not here and not locally. Everything that takes real time lives in this
+# workflow: clippy with -D warnings, the full test suite on three operating
+# systems, the coverage thresholds, the check that the generated bindings still
+# match the Rust types, and a real bundle build. That is the wait you accept
+# once, when you propose a merge into main, instead of on every commit.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Read-only token: nothing here writes to the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # Windows Defender's real-time scan can lock or partially read a
+      # just-linked executable before the loader is done with it, which
+      # surfaces as `cargo test` failing with STATUS_ENTRYPOINT_NOT_FOUND on a
+      # binary that built and links cleanly. Excluding the workspace removes
+      # the race instead of retrying around it.
+      - name: Exclude the workspace from Windows Defender
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: Add-MpPreference -ExclusionPath "${{ github.workspace }}"
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install the Rust toolchain
+        run: python scripts/install-rust-toolchain.py
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: ${{ matrix.os }}
+
+      # Tauri links against the system webview, and the keychain backend talks
+      # to the Secret Service over D-Bus. Only Linux needs either installed;
+      # macOS ships WebKit and its own Keychain, Windows ships WebView2 and the
+      # Credential Manager.
+      - name: Install the Linux webview dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          if apt-cache show webkit2gtk-driver >/dev/null 2>&1; then
+            webkit_driver=webkit2gtk-driver
+          elif apt-cache show webkitgtk-webdriver >/dev/null 2>&1; then
+            webkit_driver=webkitgtk-webdriver
+          else
+            echo "No WebKitGTK WebDriver package is available for this Ubuntu image." >&2
+            exit 1
+          fi
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libxdo-dev \
+            libdbus-1-dev \
+            pkg-config \
+            rpm \
+            "$webkit_driver"
+
+      - run: npm ci
+
+      # --- Frontend ---
+      - run: npm run typecheck
+      - run: npm run typecheck:e2e
+      - run: npm run typecheck:node
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run test:coverage
+
+      # --- Rust ---
+      - run: cargo fmt --all --check
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo test --workspace
+
+      # --- The contract ---
+      #
+      # `cargo test` regenerates src/bindings.ts from the registered commands.
+      # If the checked-in file differs from what the Rust types produce right
+      # now, the contract has drifted and the build stops here. This is what
+      # makes "no type is ever written by hand on both sides" a fact rather
+      # than an intention.
+      - name: Check that the generated bindings are current
+        shell: bash
+        run: |
+          if ! git diff --exit-code -- src/bindings.ts; then
+            echo "::error file=src/bindings.ts::bindings.ts is out of date. Run 'cargo test' and commit the result."
+            exit 1
+          fi
+
+      # --- Dependency posture ---
+      #
+      # Scoped to what actually ships. The end-to-end toolchain pulls in a large
+      # transitive tree with known advisories, and none of it reaches the
+      # binary: Tauri bundles `dist/`, which contains no node_modules. Auditing
+      # everything would mean either ignoring the report or dropping the E2E
+      # suite; auditing production dependencies keeps the signal meaningful.
+      - name: Audit the dependencies that ship
+        run: npm audit --omit=dev --audit-level=high
+
+      # --- The bundle ---
+      - name: Build the application bundle
+        run: npm run tauri build -- --ci
+
+      # --- End to end ---
+      #
+      # Exercise the real app on every supported desktop OS. The suite launches
+      # the plain binary (not the macOS app bundle), so no signing or Finder
+      # automation is required. Linux alone needs a virtual display.
+      # Reuses the frontend built by the bundle step and compiles only the E2E
+      # Rust variant with `--features e2e`; the released binary has no WebDriver.
+      - name: Run the end-to-end suite on Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: xvfb-run --auto-servernum npm run test:e2e:run
+
+      - name: Run the end-to-end suite on macOS and Windows
+        if: matrix.os == 'macos-latest' || matrix.os == 'windows-latest'
+        run: npm run test:e2e:run
+
+      # The feature must never reach a release build, so this asserts it rather
+      # than trusting that nobody adds it to the default set.
+      - name: Check that the release build carries no WebDriver
+        shell: bash
+        run: |
+          if cargo tree -p gitcanvas -e normal | grep -q wdio-webdriver; then
+            echo "::error::the default build pulls in the embedded WebDriver server"
+            exit 1
+          fi
+
+  dependency-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install the Rust toolchain
+        run: python scripts/install-rust-toolchain.py
+
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/cargo-deny
+            ~/.cargo/bin/cargo-audit
+          key: rust-security-tools-${{ runner.os }}-deny-0.20.2-audit-0.22.2
+
+      - name: Install Rust dependency audit tools
+        run: |
+          if ! cargo deny --version | grep -Fq 'cargo-deny 0.20.2'; then
+            cargo install --locked --force cargo-deny --version 0.20.2
+          fi
+          if ! cargo audit --version | grep -Fq 'cargo-audit-audit 0.22.2'; then
+            cargo install --locked --force cargo-audit --version 0.22.2
+          fi
+
+      - name: Check Rust dependency policies
+        run: cargo deny check
+
+      - name: Audit Rust dependencies for known vulnerabilities
+        run: cargo audit

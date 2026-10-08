@@ -1,29 +1,40 @@
-# GitCanvas: Snapshot
-> Actualizado: 2026-09-08 · Detalle completo: [ASSET.md](ASSET.md)
+# GitCanvas — snapshot
 
-## ⚡ Retomar en 30 segundos
+> Actualizado: 2026-10-05 · Ficha completa: [ASSET.md](ASSET.md)
 
-| Campo | Valor |
+## Retomar
+
+| Campo | Estado |
 |---|---|
-| **Etapa** | 💡 Idea (diseño cerrado, sin código) |
-| **Última sesión** | 2026-09-08 |
-| **¿Dónde quedé?** | Diseño cerrado más plan de desarrollo detallado y completo por fase, ya escrito en PLAN-DESARROLLO.md: arquitectura, decisiones técnicas concretas (sin puntos abiertos), criterios de aceptación, estrategia de testing, CI/CD, riesgos con mitigación y performance budget. |
-| **Próximo paso** | Fase 0: instalar Rust + Tauri CLI y scaffoldear con `npm create tauri-app@latest` (React + TypeScript) |
-| **Bloqueante activo** | Ninguno |
-| **Decisión pendiente** | Ninguna: todas las decisiones técnicas de esta sesión quedaron cerradas |
+| Etapa | MVP implementado; endurecimiento H2 en curso |
+| H2 | 43/46 implementadas y archivadas; 35 cierres con commit; H2-34–41 requieren reconciliar commits |
+| Release | PR [#1](https://github.com/dcardenasl/gitcanvas/pull/1) abierta en SHA `7f24bb6`; el checkout `dev` tiene commits y cambios locales posteriores que la PR aún no evalúa. Los checks visibles son de 2026-09-26 y fallaron antes de ejecutar pasos; aprobación/merge y R-5/R-6 pendientes |
+| Siguiente tarea | H2-25: confirmar arranque y E2E en Linux, macOS y Windows |
+| Fuente de trabajo | [`TASKS.md`](../TASKS.md), criterios detallados en el plan H2 |
 
-## ⏳ Pendiente de escribir
-> Decisiones confirmadas en conversación que no llegaron a un artefacto formal.
-> Procesar esto primero al iniciar la próxima sesión con este proyecto.
+El MVP incluye historial y graph, detalle/diffs, cambios locales, GitHub clone y
+acciones Git guardadas. Durante la inspección GitCanvas no añade ni quita archivos del
+index, no crea commits ni elimina archivos. Checkout, fast-forward pull y push sí
+modifican estado Git de forma explícita. Pull no crea merges y push nunca fuerza.
 
-*(vacío)*
+## Estado del trabajo en curso
 
----
+El checkout compartido contiene cambios de varias tareas H2. Antes de editar, inspeccionar
+`git status`, revisar el criterio de la tarea activa y confirmar qué cambios pertenecen a
+ella. No archivar una tarea hasta que su implementación y evidencia requerida estén
+completas. La suite E2E pasó en macOS local (4 specs/8 tests); aún falta evidencia de CI
+Linux/macOS/Windows para los cambios actuales. No declarar verde lo que no se haya ejecutado
+sobre el código vigente.
 
-## 📁 Archivos de detalle
+`ARCHIVES.md` declara H2-34–H2-41 completadas, pero esas entradas no tienen commits
+dedicados; sus cambios siguen en el working tree. H2-33 está reconciliada con `03077dd` y
+H2-43 con un commit propio. H2-45 está abierta para reconciliar la divergencia restante con
+la convención de un commit por tarea.
 
-| Archivo | Contenido | Cuándo cargarlo |
-|---|---|---|
-| [ASSET.md](ASSET.md) | Ficha completa del asset | Al trabajar en el asset |
-| [PLAN-DESARROLLO.md](PLAN-DESARROLLO.md) | Plan de ejecución técnica detallado por fase | Al empezar a programar cualquier fase |
-| [mockup.html](mockup.html) | Propuesta visual de la interfaz (abrir en el navegador) | Como referencia visual mientras se construye la UI |
+## Documentos
+
+- [Plan de endurecimiento](plan/2026-10-04-plan-de-endurecimiento.md)
+- [Plan rector](plans/2026-09-08-plan-de-implementacion.md)
+- [Contexto arquitectónico](../CONTEXT.md)
+- [Decisiones de arquitectura](adr/)
+- [Ficha del asset](ASSET.md)

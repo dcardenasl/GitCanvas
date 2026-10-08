@@ -1,0 +1,1 @@
+export { WorkingTreeDetailPanel } from "./WorkingTreeDetailPanel";

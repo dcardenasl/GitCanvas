@@ -1,0 +1,20 @@
+# Product and technology names that are not code and must not be wrapped in
+# backticks. `".."` keeps clippy's own default list and extends it.
+doc-valid-idents = [
+    "..",
+    "GitCanvas",
+    "GitHub",
+    "GitKraken",
+    "TypeScript",
+    "JavaScript",
+    "WebDriver",
+    "WebKit",
+    "WebView",
+    "AppKit",
+    "NSOpenPanel",
+]
+
+disallowed-methods = [
+    { path = "std::process::Command::new", reason = "The application must not spawn external processes." },
+    { path = "std::thread::sleep", reason = "Use asynchronous or condition-based waiting instead of blocking a thread." },
+]

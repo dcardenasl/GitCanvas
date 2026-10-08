@@ -1,0 +1,62 @@
+[package]
+name = "gitcanvas"
+description = "Visual Git client focused on the branch and commit graph"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "gitcanvas_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json"] }
+tracing-appender = "0.2"
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog.workspace = true
+tauri-plugin-wdio-webdriver = { workspace = true, optional = true }
+serde.workspace = true
+serde_json.workspace = true
+
+# The git domain. This layer only translates between IPC and core.
+gitcanvas-core = { path = "../crates/gitcanvas-core" }
+
+specta.workspace = true
+specta-typescript.workspace = true
+tauri-specta.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-app-kit.workspace = true
+objc2-foundation.workspace = true
+
+[features]
+# Builds with an embedded WebDriver server, for `npm run test:e2e`. Never
+# enabled for a release build.
+e2e = ["dep:tauri-plugin-wdio-webdriver"]
+
+[dev-dependencies]
+git2.workspace = true
+tempfile = "3"
+syn.workspace = true
+# The `test` feature unlocks tauri::test, which builds a headless app and
+# dispatches real IPC requests through it. That is what lets the round trip be
+# verified in CI instead of only by looking at a window.
+tauri = { version = "2", features = ["test"] }
+
+[lints]
+workspace = true
+
+[target.'cfg(unix)'.dependencies]
+rlimit.workspace = true

@@ -1,0 +1,88 @@
+.sidebar {
+  overflow-y: auto;
+  padding: 12px 10px;
+  border-right: 1px solid var(--border);
+  background: var(--surface-sidebar);
+}
+
+.sidebar__label {
+  margin: 14px 6px 6px;
+  color: var(--ink-faint);
+  font-size: var(--font-size-caption-wide);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sidebar__label:first-child {
+  margin-top: 0;
+}
+
+.sidebar__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sidebar__item {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: var(--font-size-body-wide);
+  text-align: left;
+  cursor: default;
+}
+
+.sidebar__item:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.sidebar__item:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.sidebar__item:disabled {
+  opacity: 0.45;
+}
+
+/* The ref whose commit is selected, so the sidebar reflects where you are. */
+.sidebar__item--current {
+  background: var(--surface-selected);
+  color: var(--ink);
+}
+
+.sidebar__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar__item--head {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.sidebar__item--tag {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small-wide);
+}
+
+.sidebar__badge {
+  margin-left: auto;
+  padding: 1px 5px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+}

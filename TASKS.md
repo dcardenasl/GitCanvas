@@ -1,10 +1,53 @@
 # TASKS — GitCanvas
 
-> Fuente de verdad de ejecución. El plan rector está en
-> [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
-> Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
+> Fuente de verdad para el trabajo pendiente. El plan rector de H2 está en
+> [`docs/plan/2026-10-04-plan-de-endurecimiento.md`](docs/plan/2026-10-04-plan-de-endurecimiento.md);
+> el plan general está en [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
+> Convenciones y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
+> Tareas completadas: [`ARCHIVES.md`](ARCHIVES.md).
 
-**Estado:** Fase G · 2/63 tareas · última actualización 2026-09-08
+**Estado al 2026-10-05:** 43 de las 46 tareas H2 están completadas y archivadas en
+[`ARCHIVES.md`](ARCHIVES.md); quedan H2-25, H2-42 y H2-45. De las completadas, 35 tienen
+un commit dedicado; H2-34–41 se integraron y verificaron juntas en `437ff07` porque sus
+cambios de frontend, IPC, bindings, core y pruebas se cruzan. H2-45 debe registrar esta
+excepción a la regla de commit individual y cerrar la trazabilidad. El release v0.1.0
+sigue abierto: PR #1 está abierta y R-4, R-5 y R-6 están pendientes.
+
+**Estado del checkout:** la PR #1 sigue en el SHA remoto `7f24bb6`; el checkout `dev` tiene
+commits locales aún no publicados y el working tree está limpio. La PR aún no evalúa esos
+commits. No asumir que estén integrados en la PR; antes de editar, inspeccionar `git status`,
+el historial y la evidencia de abajo.
+
+## Siguiente paso
+
+Retomar **H2-25**: la allowlist, el arranque local y E2E en macOS ya se verificaron. Para
+cerrarla, hace falta que una corrida de `quality` evalúe el código actual y pase E2E en
+Linux, macOS y Windows; los runs remotos anotados en la tarea son de un SHA anterior y
+fallaron antes de ejecutar pasos, así que no cuentan como evidencia. Luego, cerrar H2-42
+con evidencia de CI multiplataforma y por último reconciliar commits y trazabilidad en
+H2-45. La nueva evidencia requiere actualizar la PR desde `dev`; pedir autorización explícita
+antes de publicar los commits locales. El release sigue su flujo separado de `CLAUDE.md`.
+
+Antes de empezar, revisar `git status`: el working tree puede incluir cambios de varias
+tareas. Comparar cada cambio con los criterios de aceptación y la evidencia de esta lista.
+Mover una tarea a [`ARCHIVES.md`](ARCHIVES.md) solo cuando todos sus criterios y su
+verificación estén completos; registrar su commit dedicado cuando corresponda.
+
+## Cola de trabajo
+
+1. **H2-25 — Permisos y validación multiplataforma.** Obtener una corrida de CI sobre el
+   código vigente; confirmar arranque y E2E en Linux, macOS y Windows. No cerrar con los
+   resultados antiguos documentados en la tarea.
+2. **H2-42 — Suite E2E.** Dos corridas locales en macOS pasaron sin reintentos (4 specs/8
+   tests cada una). Completar evidencia CI Linux/Windows y mantener visible el warning
+   conocido de `@wdio/tauri-service`.
+3. **H2-45 — Cierre H2.** Reconciliar H2-34–41 con el historial sin perder cambios;
+   cerrar conteos, evidencia integrada y divergencias solo cuando las tareas previas estén
+   cerradas. El bloque H2-34–41 está integrado en `437ff07`, no en ocho commits individuales;
+   dejar esta desviación explícita. Esperar CI actual en Linux, macOS y Windows para H2-25 y
+   H2-42 antes de cerrar H2 o iniciar el release.
+4. **R-4 a R-6 — Release independiente.** Seguir `CLAUDE.md`; R-4 requiere CI verde y
+   aprobación explícita de David antes del merge.
 
 ## Cómo se usa este archivo
 
@@ -19,336 +62,152 @@
 
 ---
 
-## 🔴 En progreso — Fase G: Bootstrap del repositorio
+## Fase H2 — Endurecimiento post-auditoría
 
-- [x] **G-1 — Inicializar el repositorio.** `git init -b main`. `main` es el punto de
-      partida del proyecto y el único commit propio que va a recibir es el inicial.
+Plan rector: [`docs/plan/2026-10-04-plan-de-endurecimiento.md`](docs/plan/2026-10-04-plan-de-endurecimiento.md).
+Leer el contexto, los hallazgos y los criterios de aceptación de la tarea antes de
+implementarla; validar hallazgos en el código y registrar aquí si no se reproducen. Las 43
+tareas cerradas están en
+[`ARCHIVES.md`](ARCHIVES.md). Los commits `c954492` (branding) y `7f24bb6` (grabador de
+demo) ya existen en `dev` y no son pendientes.
 
-- [x] **G-2 — Archivos raíz.** `.gitignore`, `.editorconfig` (4 espacios Rust / 2 JS-TS,
-      per `~/Developer/AGENTS.md`), `README.md` con las limitaciones conocidas escritas
-      de entrada, `CHANGELOG.md` con `[Unreleased]` vacío, `CLAUDE.md` y este archivo.
-      Sin `LICENSE`: el asset es privado, y publicar sin licencia es exactamente lo que
-      significa "todos los derechos reservados".
+**Convenciones:** trabajar en `dev`; una unidad verificable y un commit por tarea; usar el
+mensaje indicado en cada tarea; actualizar su estado y evidencia en el mismo commit de
+implementación. Actualizar `CHANGELOG.md` solo para `feat`, `fix` o `perf`. No publicar a
+`main` desde esta fase: la publicación corresponde a `/release` y requiere aprobación de
+David.
 
-- [ ] **G-3 — Commit inicial en `main`.** Incluye `docs/` intacto y el plan rector en
-      `docs/plans/`.
-      → `chore: initialize the repository`
+- [ ] **H2-25 — Reducir permisos Tauri a los usados.** Reemplazar `core:default` por
+      `core:event:default` y `dialog:allow-open`; confirmar arranque y E2E multiplataforma.
+      *Implementación parcial (2026-10-05):* `capabilities/default.json` ya concede solo
+      `core:event:default` y `dialog:allow-open`, coherente con el uso de eventos, comandos
+      IPC de la app y selector nativo de carpetas. `quality.yml` ahora ejecuta la suite E2E
+      en Linux, macOS y Windows, usando Xvfb solo en Linux; las capturas usan `os.tmpdir()`
+      para no asumir `/tmp` en Windows. Se añadió un test de regresión que exige que la
+      allowlist sea exactamente esos dos permisos. El JSON y los usos se verificaron por
+      inspección estática. *Verificado en sandbox aislado y offline:* `cargo test -p gitcanvas
+      --lib default_capability_contains_only_required_permissions --offline --locked` (1 test
+      passed; reejecutado en el working tree actual el 2026-10-05, 1 passed). *Smoke local
+      (2026-10-05):* la app arrancó con el código actual mediante `tauri dev`, usando
+      identificador y `HOME` temporales para aislarla de la instalación abierta; Vite quedó
+      listo y el proceso nativo siguió activo hasta su cierre limpio. Queda pendiente la
+      evidencia E2E de CI en Linux, macOS y Windows. Las últimas ejecuciones remotas
+      disponibles (2026-09-26, SHA
+      `7f24bb6`) de [quality](https://github.com/dcardenasl/gitcanvas/actions/runs/36265828914)
+      y [dev-check](https://github.com/dcardenasl/gitcanvas/actions/runs/36265828257)
+      fallaron antes de registrar pasos y GitHub no tiene logs (`log not found`); no prueban
+      el estado del código ni cuentan como resultado multiplataforma. La PR sigue apuntando
+      a `7f24bb6`; el checkout local de `dev` contiene commits y cambios posteriores que CI
+      todavía no evaluó. El E2E local macOS ha pasado dos veces con `specFileRetries: 0`
+      (4 specs/8 tests por corrida), pero no sustituye la evidencia CI en los tres sistemas.
+      → `chore(tauri): narrow application capabilities`
 
-- [ ] **G-4 — Remoto privado en GitHub.** `gh repo create dcardenasl/gitcanvas --private`,
-      push de `main`.
+### Calidad de pruebas
 
-- [ ] **G-5 — Proteger `main`.** Requerir PR y que el check `quality` pase. Sin esto la
-      puerta de calidad es voluntaria y se salta el día que hay prisa.
+- [ ] **H2-42 — Hacer E2E determinista y relevante.** Helper `waitForHistory()`, quitar
+      `browser.pause`, usar `os.tmpdir()`, retirar/fusionar specs sin aserciones, desacoplar
+      `local-changes` y reducir reintentos conforme a evidencia.
+      *Progreso (2026-10-05):* helper común adoptado por los specs de regresión; se
+      eliminaron todas las pausas fijas de `e2e/`. `audit.spec.ts` se retiró porque solo
+      imprimía observaciones; `screenshots.spec.ts` pasó a `e2e/manual/`, fuera del glob CI,
+      conservando capturas mediante esperas observables. `local-changes` recibe por el runner
+      un repositorio temporal mínimo propio e ignora `GITCANVAS_E2E_REPO`, evitando modificar
+      por accidente el repositorio del usuario. `npm run typecheck:e2e`, ESLint de E2E,
+      Prettier y `bash -n scripts/run-e2e.sh` pasan en sandbox aislado. En la revisión
+      (2026-10-05) se encontró que un
+      `GITCANVAS_E2E_FIXTURE` heredado sin procedencia confiable podía usarse como destino
+      de escritura y borrado. `wdio.conf.ts` ahora exige que el hand-off apunte a un hijo
+      directo de `os.tmpdir()` con marcador aleatorio dentro de `.git`; la creación limpia
+      el temporal ante fallos y el cierre solo elimina un fixture cuyo marcador y token
+      coinciden. El token debe tener el formato de UUID y el marcador su tamaño exacto
+      antes de leerlo, para rechazar entradas malformadas y evitar lecturas sin límite.
+      Cualquier `GITCANVAS_E2E_REPO` externo sigue ignorado en el caso
+      `local-changes`. *Verificado (2026-10-05):* `npm run typecheck:e2e` y
+      `prettier --check wdio.conf.ts` pasan. `npm run test:e2e:run` pasó en macOS usando
+      binario E2E con `HOME` e identificador Tauri temporales: los cuatro specs CI
+      (`collapse`, `commit-tree`, `critical-path`, `local-changes`) aprobaron sus 8 tests.
+      La spec `local-changes` ahora comprueba el contrato de `FileDiffView`: conserva la
+      selección y muestra el error localizado cuando un archivo staged desaparece. Sondas
+      de comportamiento confirman que el runner no reutiliza una ruta heredada aun cuando
+      su marcador y token tienen formato válido, deja intacto ese directorio no propio y
+      elimina su fixture temporal al cerrar.
+      La validación del hand-off worker conserva los controles de IPC/ID de WDIO y el
+      marcador; la sonda previa confirmó que el worker reutiliza el fixture creado por el
+      runner. `@wdio/tauri-service` todavía registra un warning no fatal al limpiar mocks
+      después de perder el `sessionId`. El código upstream en `afterSession` intenta restaurar
+      mocks sin comprobar si la sesión sigue activa; la última versión publicada consultada
+      (1.4.0, 2026-10-05) mantiene ese comportamiento. Se deja visible para reevaluarlo al
+      actualizar el servicio, sin silenciar otros diagnósticos.
+      ([paquete](https://www.npmjs.com/package/%40wdio/tauri-service),
+      [código upstream](https://github.com/webdriverio/desktop-mobile/blob/main/packages/tauri-service/src/service.ts)).
+      Se corrigió además la comparación de rutas canónicas de macOS (`/var` frente a
+      `/private/var`), que impedía limpiar fixtures propios.
+      `specFileRetries` quedó en 0: cada spec corre en su propio proceso WDIO, la ventana se
+      selecciona antes de consultar elementos y los tests esperan estado observable. Dos
+      corridas completas consecutivas en macOS pasaron sin reintentos (4 specs/8 tests cada
+      una; compilación aislada con `HOME` e identificador Tauri temporales). El warning no
+      fatal de `@wdio/tauri-service` al limpiar mocks sigue visible después de cada sesión.
+      Queda pendiente evidencia CI Linux y Windows. Los checks remotos más recientes
+      consultables ([quality](https://github.com/dcardenasl/gitcanvas/actions/runs/36265828914),
+      2026-09-26, SHA `7f24bb6`) fallaron sin pasos ni logs; no evalúan el código actual.
+      → `test(e2e): replace fixed waits with observable conditions`
+### Documentación y cierre
 
-- [ ] **G-6 — Rama `dev` y cierre del bootstrap.** `git checkout -b dev`, push con
-      upstream, y marcar G-3 a G-5 como hechas. Todo el trabajo posterior va a `dev`.
-      → `docs(tasks): close the repository bootstrap tasks`
+- [ ] **H2-45 — Cerrar trazabilidad de H2.** Revisar conteo/estado de tareas, documentar
+      divergencias verificadas frente al plan, commits ya registrados y evidencia final.
+      Ejecutar la verificación local definida por el plan y las comprobaciones manuales
+      aplicables; registrar fallos ambientales sin declararlos verdes.
+      *Reconciliación de commits (2026-10-05):* H2-33 quedó en `03077dd` (`perf(core): bound
+      fingerprints and watcher debounce`), H2-34–41 en el commit de integración `437ff07`
+      (`refactor: consolidate audited hardening work`) y H2-43 en `5d47af3` (`chore(demo):
+      isolate recorder tooling and document prerequisites`). H2-34–41 no tienen un commit
+      individual por tarea; se conservaron juntas porque los cambios atraviesan componentes
+      compartidos y contratos entre frontend, IPC, bindings, Tauri y core. El conteo debe
+      distinguir los 35 cierres con commit dedicado de los 8 IDs cubiertos por el commit de
+      integración. El working tree quedó limpio tras `437ff07`.
+      *Evidencia integrada actual (2026-10-05):* pasaron `cargo fmt --all --check`,
+      `cargo clippy --all-targets --all-features --offline --locked -- -D warnings` y
+      `cargo test --workspace --offline --locked` (150 tests: 23 Tauri, 40 unitarios core y
+      87 de integración). `npm run test:coverage` pasó 40 suites/343 tests con 94,75% de
+      statements, 88,08% de branches, 94,05% de funciones y 95,85% de líneas. También
+      pasaron `npm run typecheck`, `typecheck:e2e`, `typecheck:node`, `lint` y `format:check`.
+      También pasaron `npm audit --omit=dev --audit-level=high` (sin vulnerabilidades),
+      `cargo deny check` y `cargo audit`; `cargo audit` reportó 8 avisos permitidos de
+      dependencias sin mantenimiento o un advisory de soundness configurados en la política.
+      La primera ejecución completa detectó que `touch_if_cached` canonizaba la raíz pero
+      no el repositorio, fallando bajo la ruta `/var` alias de macOS; ambos caminos ahora se
+      canonizan y los 12 tests del cache y la suite workspace completa vuelven a pasar. La
+      verificación repetida sobre el snapshot integrado `437ff07` pasó con Node 24 (40 suites,
+      343 tests; cobertura: 94,75% statements, 88,08% branches, 94,05% funciones y 95,85%
+      líneas), typecheck de app/E2E/Node, lint, formato, `cargo fmt`, `cargo test --workspace`
+      (150 tests) y Clippy `-D warnings`. Node 20 del shell no cumple `engines >=22` y produce
+      un fallo de arranque en undici/jsdom; no usarlo para validar. El smoke de arranque y dos
+      corridas E2E de macOS también pasan. En el checkout actual también pasaron
+      `npm audit --omit=dev --audit-level=high`, `cargo deny check`, `cargo audit` (8 avisos
+      permitidos) y `npm run tauri build -- --ci` en macOS, que produjo `.app` y `.dmg`. La
+      PR #1 sigue en `7f24bb6`, con checks fallidos del 2026-09-26; aún no hay CI sobre el
+      código local. Falta validar H2-25/H2-42 en los tres sistemas antes de cerrar H2.
+      → `docs(tasks): close post-audit hardening`
 
----
-
-## ⏳ Fase 0 — Cimientos
-
-> Que build, lint, tipos, tests, hooks, CI y generación de bindings funcionen **antes**
-> de la primera línea de lógica de negocio.
->
-> **Prerrequisito:** Rust no está instalado en esta máquina. Lo corre David:
-> `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source "$HOME/.cargo/env" && rustup component add clippy rustfmt`
-
-- [ ] **F0-1 — Scaffold Tauri v2.** `npm create tauri-app@latest` (React + TS + Vite) en
-      un directorio temporal y fusionado en la raíz, para no pisar `docs/`.
-      → `chore(scaffold): add the tauri v2 app with react and typescript`
-
-- [ ] **F0-2 — Workspace Rust.** Mover el dominio git a `crates/gitcanvas-core`, sin
-      `tauri` entre sus dependencias, y dejar `src-tauri` como capa delgada. Motivo:
-      convierte "el dominio no sabe que existe Tauri" de convención de carpetas en error
-      de compilación (delta D1).
-      → `refactor(rust): extract the git domain into the gitcanvas-core crate`
-
-- [ ] **F0-3 — TypeScript estricto y frontera de imports.** `strict`,
-      `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`,
-      `verbatimModuleSyntax`; ESLint type-checked con `no-explicit-any: error` y
-      `no-restricted-imports` prohibiendo que `lib/graph-layout/**` importe de
-      `components/`, `state/`, `bindings.ts` o del DOM (delta D10). Activar strict
-      después de tener código escrito cuesta mucho más que empezar con él.
-      → `chore(ts): enable strict typescript and the graph-layout import boundary`
-
-- [ ] **F0-4 — Lints de Rust.** `clippy::all` + `clippy::pedantic`, y
-      `deny(clippy::unwrap_used, expect_used, panic, indexing_slicing)` a nivel de crate
-      con `allow` en tests (delta D3). El principio "cero panics" pasa de aspiración a
-      error de compilación.
-      → `chore(rust): enable clippy pedantic and deny unwrap, expect and panic`
-
-- [ ] **F0-5 — Comando `ping` y bindings tipados.** `tauri-specta` pineado a
-      `2.0.0-rc.21` (delta D10), export de `src/bindings.ts` bajo
-      `#[cfg(debug_assertions)]`. Valida el pipeline de generación de tipos de punta a
-      punta **antes** de que todo lo demás dependa de él.
-      → `feat(ipc): add the ping command and generate the typed bindings`
-
-- [ ] **F0-6 — Test del roundtrip IPC.**
-      → `test(ipc): cover the ping command roundtrip`
-
-- [ ] **F0-7 — Hook de pre-commit.** Hook en la raíz + `scripts/install-git-hooks.sh`
-      disparado desde `prepare` de npm, siguiendo el patrón de `ci4-website-suite`. Corre
-      **solo lo instantáneo**: `cargo fmt --check`, `eslint`, `prettier --check`. Clippy
-      y los tests viven en CI, porque `dev` tiene que seguir siendo rápido.
-      → `chore(hooks): add the pre-commit style hook and its installer`
-
-- [ ] **F0-8 — Workflows de CI.** `dev-check.yml` (push a `dev`: typecheck, lint, vitest,
-      `cargo test -p gitcanvas-core`, solo ubuntu) y `quality.yml` (PR a `main`: matriz
-      ubuntu/macos/windows con fmt, clippy `-D warnings`, tests, cobertura contra
-      umbrales, **drift de `bindings.ts`** y `tauri build`) (deltas D6 y D9).
-      → `ci: add the dev push check and the pull request quality matrix`
-
-- [ ] **F0-9 — Workflow de release.** Adaptación del `release.yml` de `ci4-website-suite`:
-      tag `v*.*.*` → extrae la sección del CHANGELOG → crea el GitHub Release.
-      → `ci: add the changelog-driven release workflow`
-
-- [ ] **F0-10 — Nota de arquitectura.** `ARCHITECTURE.md` con la frontera core/tauri/ui y
-      por qué está donde está.
-      → `docs: add the architecture note`
-
-**Hecho cuando:** `cargo clippy --all-targets -- -D warnings` limpio · `npm run typecheck`
-y `npm run lint` limpios · CI verde en los 3 SO · la ventana abre y `ping` hace roundtrip
-Rust → TypeScript.
-
----
-
-## ⏳ Fase 1 — Motor de datos Git (Rust)
-
-> Dado un path local, obtener commits, branches y tags de forma correcta y predecible,
-> sin bloquear la UI, sin importar el tamaño del repositorio.
-
-- [ ] **F1-1 — `AppError` y validación de repositorio.** Enum único con `thiserror` +
-      `serde` + `specta::Type`, y `From<git2::Error>` que convierte el mensaje a String
-      (nunca serializa el objeto crudo). `ActiveRepo` solo se construye a través de la
-      validación —canonicalizar, existe, contiene `.git`—, así que un path inválido es
-      irrepresentable en vez de "validado en algún lado".
-      → `feat(core): add the app error type and canonical repository validation`
-
-- [ ] **F1-2 — Tests de validación.** Fixtures en directorios temporales creados con la
-      API de `git2`, nunca repos `.git` versionados en el proyecto.
-      → `test(core): cover repository validation with temporary fixtures`
-
-- [ ] **F1-3 — Historial paginado por cursor.** Revwalk con
-      `Sort::TOPOLOGICAL | Sort::TIME`, máximo 500 commits por página, cursor = SHA del
-      último commit visto. Por cursor y no por offset: un offset produce bugs
-      intermitentes si el historial cambia entre llamadas.
-      → `feat(core): add the cursor-paginated commit history walk`
-
-- [ ] **F1-4 — Tests de historial.** Lineal, un merge, branches divergentes, octopus,
-      HEAD desprendido, repo vacío y el límite exacto de página.
-      → `test(core): cover linear, merge, diverged and detached head histories`
-
-- [ ] **F1-5 — Resolución de refs.** Branches locales, remotas y tags, con `is_head`.
-      → `feat(core): resolve local branches, remote branches and tags`
-
-- [ ] **F1-6 — Tests de refs.**
-      → `test(core): cover ref resolution against the fixture repositories`
-
-- [ ] **F1-7 — Comandos IPC.** `open_repository`, `validate_repository`, `get_commits`,
-      `get_branches`, `get_tags`. **Todos dentro de `spawn_blocking`**: `git2` es
-      bloqueante y sin eso un repo grande congela la UI entera.
-      → `feat(ipc): expose the repository, history and refs commands`
-
-- [ ] **F1-8 — Tests de la capa de comandos.**
-      → `test(ipc): cover the command layer against a temporary repository`
-
-- [ ] **F1-9 — Logging estructurado.** `tracing` a archivo rotativo en el directorio de
-      datos de la app, para diagnosticar sin reproducir el bug en vivo.
-      → `feat(app): add structured tracing to a rotating log file`
-
-- [ ] **F1-10 — CHANGELOG del motor de datos.**
-      → `docs(changelog): record the git data engine`
-
-**Hecho cuando:** la primera página de `ci4-website-suite` coincide commit por commit con
-`git log` · p95 < 300ms en repos de hasta 10.000 commits (medido a mano y documentado; una
-aserción de tiempo en un runner compartido es flaky por diseño) · cero `unwrap`/`expect`/
-`panic`, garantizado por F0-4.
+**Criterio de cierre:** H2-0 a H2-45 completadas o hallazgos explícitamente descartados
+con evidencia; verificación local y pruebas manuales del plan registradas; docs y TASKS
+sin divergencias. La publicación sigue el proceso `/release` por separado.
 
 ---
 
-## ⏳ Fase 2 — Layout del graph y render
-
-> El núcleo de valor del proyecto. Es la pieza que más cuidado necesita y la más difícil
-> de verificar solo mirando la pantalla.
-
-- [ ] **F2-1 — Algoritmo de carriles reanudable.**
-      `layout(commits, prev?) -> { rows, state }`, TypeScript puro, sin React ni DOM.
-      Reanudable (delta D4) porque recalcular desde cero al cargar la página 2 reordena
-      los carriles de la página 1 y el graph "salta" bajo el cursor: es un bug
-      garantizado, no hipotético. Casos borde diseñados de entrada: octopus merge, commit
-      inicial sin padres, y padres fuera de la página actual (indicador "continúa").
-      → `feat(graph): add the resumable lane layout algorithm`
-
-- [ ] **F2-2 — Tests del layout.** Carril y color **exactos** por commit, no "que no
-      explote". Incluye el test de dos páginas que afirma que los carriles de la primera
-      no cambian al cargar la segunda.
-      → `test(graph): cover linear, merge, octopus and page boundary layouts`
-
-- [ ] **F2-3 — Paleta determinística.** Color como función del índice de carril, ciclando
-      sobre una paleta fija accesible. Nunca aleatorio: los colores no pueden parpadear
-      entre renders o se rompe la sensación de predictibilidad del graph.
-      → `feat(graph): add the deterministic accessible lane palette`
-
-- [ ] **F2-4 — Tabla de commits virtualizada.** `@tanstack/react-virtual`.
-      → `feat(ui): add the virtualized commit table`
-
-- [ ] **F2-5 — Render SVG del graph.** Capa absoluta dentro del **mismo** contenedor de
-      scroll virtualizado (delta D5): dos contenedores sincronizados por JS producen
-      jitter de un frame en cada scroll; con uno solo el código de sincronización no
-      existe y por lo tanto no puede fallar. Bézier en cambios de carril, rectas en el
-      mismo carril.
-      → `feat(ui): render the commit graph as an svg layer over the virtual rows`
-
-- [ ] **F2-6 — Paginación infinita.** React Query `useInfiniteQuery` sobre el cursor de
-      F1-3, alimentando el estado reanudable de F2-1.
-      → `feat(ui): load commit history through cursor-based infinite queries`
-
-- [ ] **F2-7 — Tests de render.**
-      → `test(ui): cover graph rendering for the fixture histories`
-
-- [ ] **F2-8 — CHANGELOG del graph.**
-      → `docs(changelog): record the commit graph`
-
-**Hecho cuando:** el historial real de `ci4-website-suite` se dibuja con el merge de la
-PR #1 y `dev` bifurcándose, como en `docs/mockup.html`, sin cruces innecesarios · scroll a
-60fps con 12 carriles activos · cobertura ≥90% en `lib/graph-layout/`.
-
----
-
-## ⏳ Fase 3 — Detalle de commit y diff
-
-- [ ] **F3-1 — Diff contra el primer padre.** Con guards: binario detectado por `git2` →
-      placeholder (nunca se intenta diffear), y diffs de más de 2000 líneas marcados para
-      carga bajo demanda. El diff combinado de merges queda **documentado como limitación
-      conocida**, no intentado a medias.
-      → `feat(core): add the first-parent commit diff with binary and size guards`
-
-- [ ] **F3-2 — Tests de diff.** Texto, binario, archivo sin newline final, y diff enorme.
-      → `test(core): cover diffs for text, binary and oversized files`
-
-- [ ] **F3-3 — Comando IPC de diff.**
-      → `feat(ipc): expose the commit diff command`
-
-- [ ] **F3-4 — Panel de detalle.** Metadata del commit, autor, refs, archivos modificados.
-      → `feat(ui): add the commit detail panel`
-
-- [ ] **F3-5 — Visor de diff.** `react-diff-view`, librería madura. Construir un visor
-      propio es la deuda técnica silenciosa clásica: parece simple hasta que aparecen
-      encodings raros y archivos sin salto de línea final.
-      → `feat(ui): add the diff viewer with on-demand loading for large diffs`
-
-- [ ] **F3-6 — CHANGELOG del panel de detalle.**
-      → `docs(changelog): record the commit detail panel and diff viewer`
-
-**Hecho cuando:** el diff de cualquier commit coincide con `git show` · un binario o un
-diff gigante no bloquea ni ralentiza perceptiblemente la UI.
-
----
-
-## ⏳ Fase 4 — Integración con GitHub
-
-- [ ] **F4-1 — Token en el keychain del SO.** Crate `keyring` v3 con las features por
-      plataforma explícitas (`apple-native`, `windows-native`, `sync-secret-service`; el
-      crate no tiene features por defecto). Delta D2: Stronghold está deprecado y se
-      elimina en Tauri v3. El token **vive y se usa solo en Rust** — nunca cruza el IPC,
-      ni siquiera enmascarado.
-      → `feat(core): add the github token store backed by the os keychain`
-
-- [ ] **F4-2 — Cliente REST de GitHub.** Se usa **solo** para dos cosas: validar el token
-      y listar repos accesibles. Toda la data del graph sale siempre del clone local vía
-      `git2`. Un solo camino de datos, no dos.
-      → `feat(core): add the github rest client for token and repository listing`
-
-- [ ] **F4-3 — Tests del cliente.** Contra un transporte simulado, sin red real.
-      → `test(core): cover the github client against a mocked transport`
-
-- [ ] **F4-4 — Clone completo con progreso.** **Nunca shallow**: un historial truncado
-      contradice el valor central del producto. A un directorio de caché bajo el app data
-      dir, con evento Tauri tipado `CloneProgress` para que la espera sea visible.
-      → `feat(core): add full repository cloning with progress reporting`
-
-- [ ] **F4-5 — Retención LRU de la caché.** 10 repositorios o 5GB, lo que se cumpla
-      primero, con expulsión del menos usado recientemente.
-      → `feat(core): add the lru retention policy for the clone cache`
-
-- [ ] **F4-6 — Tests de retención.**
-      → `test(core): cover the clone cache retention policy`
-
-- [ ] **F4-7 — Comandos y evento IPC.**
-      → `feat(ipc): expose the github commands and the clone progress event`
-
-- [ ] **F4-8 — Selector de repos y progreso en la UI.**
-      → `feat(ui): add the github repository picker and clone progress`
-
-- [ ] **F4-9 — CHANGELOG de GitHub.**
-      → `docs(changelog): record the github integration`
-
-**Hecho cuando:** una URL pública se clona y muestra su graph completo · un repo privado se
-lista y clona con PAT · `grep -ri "ghp_\|gho_" "$HOME/Library/Application Support/gitcanvas"`
-no devuelve nada.
-
-> David necesita generar un PAT con scope `repo` y pegarlo en la app para probar repos
-> privados. No se toma de `gh auth token`: es su credencial y la app tiene que ejercitar
-> su propio camino de almacenamiento.
-
----
-
-## ⏳ Fase 5 — Acciones básicas
-
-- [ ] **F5-1 — Checkout con guard.** Si el working tree tiene cambios que se perderían, se
-      bloquea y se informa el conflicto. Forzar exige confirmación explícita, nunca
-      silenciosa.
-      → `feat(core): add guarded branch checkout`
-
-- [ ] **F5-2 — Pull solo fast-forward.** Si no resuelve como ff, se informa y la decisión
-      queda en el usuario. Crear commits de merge desde la UI tiene implicancias de UX y
-      corrección que ameritan más cuidado del que el MVP justifica.
-      → `feat(core): add fast-forward only pull`
-
-- [ ] **F5-3 — Push con credenciales del keychain.** Reutiliza F4-1. Fallos de auth con
-      mensaje claro, nunca un error genérico.
-      → `feat(core): add push with keychain-backed credentials`
-
-- [ ] **F5-4 — Tests de acciones.**
-      → `test(core): cover checkout guards, fast-forward pull and push failures`
-
-- [ ] **F5-5 — Comandos IPC de acciones.**
-      → `feat(ipc): expose the checkout, pull and push commands`
-
-- [ ] **F5-6 — Toolbar con confirmaciones.** Toda acción destructiva pide confirmación
-      explícita en la UI, sin excepción.
-      → `feat(ui): add toolbar actions with destructive action confirmations`
-
-- [ ] **F5-7 — E2E del camino crítico.** WebdriverIO + `@wdio/tauri-service` (delta D7:
-      Apple no provee WebDriver para WKWebView, así que `tauri-driver` no corre en macOS).
-      Abrir repo → ver graph → click en commit → ver diff.
-      → `test(e2e): cover the open repository to diff critical path`
-
-- [ ] **F5-8 — CHANGELOG de acciones.**
-      → `docs(changelog): record the checkout, pull and push actions`
-
-**Hecho cuando:** checkout con working tree limpio funciona y con cambios pendientes se
-bloquea con mensaje claro · pull ff funciona y un caso que requiere merge se informa sin
-intentar resolverlo.
-
----
-
-## ⏳ Release v0.1.0
+## 🔴 Pendiente — Release v0.1.0
 
 > Ejecutado con el skill `/release`. Ver `CLAUDE.md` para el procedimiento completo.
-
-- [ ] **R-1 — Auditar y decidir versión.** Último tag en `main`, `git log main..dev`,
-      estado del CHANGELOG. Confirmar `v0.1.0` con David.
-
-- [ ] **R-2 — CHANGELOG a `0.1.0`.** Renombrar `[Unreleased]` a `## [0.1.0] — YYYY-MM-DD`
-      y abrir un `[Unreleased]` vacío arriba.
-
-- [ ] **R-3 — Commit de release.** Último commit de `dev` antes del PR.
-      → `chore: release v0.1.0`
+> R-1 a R-3 están completadas y archivadas en [`ARCHIVES.md`](ARCHIVES.md).
 
 - [ ] **R-4 — PR `dev → main`.** Abrir, esperar `quality` verde, **esperar aprobación de
       David**, y mergear con `--merge` (nunca squash ni rebase).
+      *Estado remoto (2026-10-05):* [PR #1](https://github.com/dcardenasl/gitcanvas/pull/1)
+      ya está abierta. El último `dev-check` y la matriz `quality` (2026-09-26, SHA
+      `7f24bb6`) terminaron en fallo en los primeros 2–6 segundos, sin registrar pasos; GitHub
+      no ofrece logs. No se puede inferir una causa de código ni aprobar el merge con esta
+      evidencia. Cuando la rama del PR contenga los arreglos requeridos y CI genere nuevos
+      resultados, esperar `quality` verde y aprobación de David antes del merge.
 
 - [ ] **R-5 — Tag y GitHub Release.** `v0.1.0` solo sobre `main`; `release.yml` crea el
       Release extrayendo la sección del CHANGELOG. Nunca `gh release create` a mano.
@@ -356,9 +215,3 @@ intentar resolverlo.
 - [ ] **R-6 — Actualizar la ficha del asset.** `docs/ASSET.md` y `docs/SNAPSHOT.md`:
       versión, repositorio, estado del build por componente y log de avances.
       → `docs(asset): record the v0.1.0 release in the asset sheet`
-
----
-
-## ✅ Completado
-
-*(vacío — se llena al cerrar cada fase)*

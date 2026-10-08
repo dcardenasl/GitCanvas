@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Strictness.
+     *
+     * Every flag here is on from the first commit on purpose: turning any of
+     * them on later means fixing hundreds of pre-existing errors at once,
+     * which is how a project ends up with `strict: false` forever.
+     *
+     * - noUncheckedIndexedAccess: `array[i]` is `T | undefined`. The graph
+     *   layout indexes lane arrays constantly; without this, an out-of-range
+     *   lane reads as a valid value and the bug surfaces as a wrong drawing.
+     * - exactOptionalPropertyTypes: `{ a?: string }` stops accepting
+     *   `{ a: undefined }`, so "absent" and "explicitly undefined" cannot be
+     *   confused across the IPC boundary.
+     */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}

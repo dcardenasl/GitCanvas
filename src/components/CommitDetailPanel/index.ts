@@ -1,0 +1,1 @@
+export { CommitDetailPanel } from "./CommitDetailPanel";

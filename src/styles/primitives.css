@@ -1,0 +1,45 @@
+.button {
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--control);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--font-size-ui);
+  cursor: default;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.button:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  opacity: 0.55;
+}
+
+.button--primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.button--destructive {
+  border-color: transparent;
+  background: var(--destructive);
+  color: var(--destructive-ink);
+  font-weight: 600;
+}
+
+.state {
+  color: var(--ink-faint);
+}
+
+.state--error {
+  color: var(--danger);
+}

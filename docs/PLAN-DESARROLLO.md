@@ -2,6 +2,12 @@
 
 > Plan de ejecución técnica completo del MVP. Cada fase incluye decisiones de arquitectura ya tomadas (no "a definir durante la implementación"), criterios de aceptación verificables y las medidas concretas para que nada de esto se convierta en deuda técnica más adelante.
 
+> **Estado 2026-09-11:** las fases del MVP están implementadas. La funcionalidad
+> de cambios locales se mantiene con el contrato final de `WorktreeSnapshot`,
+> detalles bajo demanda, límites de recursos, rutas confinadas, watcher con
+> generaciones y fallback por fingerprint. Este documento queda como guía de
+> mantenimiento y validación, no como descripción de módulos todavía inexistentes.
+
 ---
 
 ## 0. Principios rectores

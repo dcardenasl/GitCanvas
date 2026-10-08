@@ -1,0 +1,38 @@
+.commit-search {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.commit-search__input {
+  width: 220px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--control);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--font-size-body-wide);
+}
+
+.commit-search__input::placeholder {
+  color: var(--ink-faint);
+}
+
+.commit-search__input:focus-visible {
+  border-color: var(--accent);
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.commit-search__status {
+  flex-shrink: 0;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+}
+
+.commit-search__status--empty {
+  color: var(--danger);
+}

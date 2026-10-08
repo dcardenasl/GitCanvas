@@ -156,7 +156,7 @@
   }
   .repo-selector .sep { color: #565e72; }
   .repo-selector .active-branch {
-    color: #f0a63e;
+    color: #c4a3ff;
     font-weight: 600;
   }
   .repo-selector svg { width: 12px; height: 12px; color: #565e72; }
@@ -167,8 +167,8 @@
     width: 26px;
     height: 26px;
     border-radius: 50%;
-    background: linear-gradient(145deg, #f0a63e, #d9832a);
-    color: #1a1206;
+    background: linear-gradient(145deg, #c4a3ff, #8564dc);
+    color: #241832;
     font-family: "JetBrains Mono", monospace;
     font-size: 11px;
     font-weight: 700;
@@ -201,9 +201,9 @@
   }
   .tool-btn svg { width: 13px; height: 13px; }
   .tool-btn.primary {
-    background: #f0a63e;
-    border-color: #f0a63e;
-    color: #1a1206;
+    background: #c4a3ff;
+    border-color: #c4a3ff;
+    color: #241832;
     font-weight: 700;
   }
   .tool-btn .badge {
@@ -270,11 +270,11 @@
   }
   .side-item svg { width: 13px; height: 13px; color: #565e72; flex-shrink: 0; }
   .side-item.active {
-    background: rgba(240, 166, 62, 0.13);
-    color: #f0a63e;
+    background: rgba(196, 163, 255, 0.13);
+    color: #c4a3ff;
     font-weight: 600;
   }
-  .side-item.active svg { color: #f0a63e; }
+  .side-item.active svg { color: #c4a3ff; }
   .side-item .count {
     margin-left: auto;
     font-family: "JetBrains Mono", monospace;
@@ -327,14 +327,14 @@
     font-family: "JetBrains Mono", monospace;
     font-size: 10px;
     font-weight: 600;
-    color: #f0a63e;
-    background: rgba(240,166,62,0.12);
-    border: 1px solid rgba(240,166,62,0.35);
+    color: #c4a3ff;
+    background: rgba(196,163,255,0.12);
+    border: 1px solid rgba(196,163,255,0.35);
     padding: 3px 8px;
     border-radius: 20px;
     white-space: nowrap;
   }
-  .mvp-pill .dot { width: 5px; height: 5px; border-radius: 50%; background: #f0a63e; }
+  .mvp-pill .dot { width: 5px; height: 5px; border-radius: 50%; background: #c4a3ff; }
 
   .commit-rows {
     position: relative;
@@ -357,8 +357,8 @@
     border-bottom: 1px solid #171a22;
   }
   .row.selected {
-    background: rgba(240, 166, 62, 0.07);
-    border-left: 2px solid #f0a63e;
+    background: rgba(196, 163, 255, 0.07);
+    border-left: 2px solid #c4a3ff;
     padding-left: 16px;
   }
   .row .graph-cell { height: 40px; }
@@ -409,7 +409,7 @@
     gap: 4px;
   }
   .ref-pill.dev { color: #4fd1c5; background: rgba(79,209,197,0.12); border: 1px solid rgba(79,209,197,0.35); }
-  .ref-pill.main { color: #f0a63e; background: rgba(240,166,62,0.12); border: 1px solid rgba(240,166,62,0.35); }
+  .ref-pill.main { color: #c4a3ff; background: rgba(196,163,255,0.12); border: 1px solid rgba(196,163,255,0.35); }
   .ref-pill.tag { color: #d9c48a; background: rgba(217,196,138,0.1); border: 1px solid rgba(217,196,138,0.3); }
 
   .author-cell {
@@ -455,7 +455,7 @@
     color: #565e72;
     margin-bottom: 10px;
   }
-  .detail-hash span { color: #f0a63e; }
+  .detail-hash span { color: #c4a3ff; }
 
   .detail-msg {
     font-size: 14.5px;
@@ -475,8 +475,8 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: linear-gradient(145deg, #f0a63e, #d9832a);
-    color: #1a1206;
+    background: linear-gradient(145deg, #c4a3ff, #8564dc);
+    color: #241832;
     font-family: "JetBrains Mono", monospace;
     font-size: 12px;
     font-weight: 700;
@@ -520,7 +520,7 @@
     color: #c7cad4;
     padding: 4px 0;
   }
-  .file-row .file-dot { width: 6px; height: 6px; border-radius: 2px; background: #f0a63e; flex-shrink: 0; }
+  .file-row .file-dot { width: 6px; height: 6px; border-radius: 2px; background: #c4a3ff; flex-shrink: 0; }
   .file-row .stat { margin-left: auto; color: #565e72; font-size: 10.5px; }
 
   .diff-block {
@@ -717,15 +717,15 @@
             <div class="commit-rows">
               <svg class="graph-svg" width="60" height="520" viewBox="0 0 60 520">
                 <!-- main, línea inactiva mientras dev avanza en paralelo -->
-                <path d="M18,8 L18,340" stroke="#f0a63e" stroke-width="2" stroke-dasharray="1.5 4" opacity="0.45" fill="none"/>
-                <circle cx="18" cy="8" r="3.5" fill="#10131a" stroke="#f0a63e" stroke-width="1.5" opacity="0.55"/>
+                <path d="M18,8 L18,340" stroke="#c4a3ff" stroke-width="2" stroke-dasharray="1.5 4" opacity="0.45" fill="none"/>
+                <circle cx="18" cy="8" r="3.5" fill="#10131a" stroke="#c4a3ff" stroke-width="1.5" opacity="0.55"/>
 
                 <!-- dev, trabajo nuevo tras la PR -->
                 <path d="M42,20 L42,260" stroke="#4fd1c5" stroke-width="2" fill="none"/>
                 <!-- fork: dev se ramifica desde el commit de merge -->
                 <path d="M42,260 C42,300 18,300 18,340" stroke="#4fd1c5" stroke-width="2" fill="none"/>
                 <!-- main, continúa hacia atrás desde el merge -->
-                <path d="M18,340 L18,500" stroke="#f0a63e" stroke-width="2" fill="none"/>
+                <path d="M18,340 L18,500" stroke="#c4a3ff" stroke-width="2" fill="none"/>
 
                 <circle cx="42" cy="20" r="4.5" fill="#4fd1c5"/>
                 <circle cx="42" cy="60" r="4.5" fill="#4fd1c5"/>
@@ -735,11 +735,11 @@
                 <circle cx="42" cy="220" r="4.5" fill="#4fd1c5"/>
                 <circle cx="42" cy="260" r="4.5" fill="#4fd1c5"/>
 
-                <circle cx="18" cy="340" r="6" fill="#10131a" stroke="#f0a63e" stroke-width="2.5"/>
-                <circle cx="18" cy="380" r="4.5" fill="#f0a63e"/>
-                <circle cx="18" cy="420" r="4.5" fill="#f0a63e"/>
-                <circle cx="18" cy="460" r="4.5" fill="#f0a63e"/>
-                <circle cx="18" cy="500" r="4.5" fill="#f0a63e"/>
+                <circle cx="18" cy="340" r="6" fill="#10131a" stroke="#c4a3ff" stroke-width="2.5"/>
+                <circle cx="18" cy="380" r="4.5" fill="#c4a3ff"/>
+                <circle cx="18" cy="420" r="4.5" fill="#c4a3ff"/>
+                <circle cx="18" cy="460" r="4.5" fill="#c4a3ff"/>
+                <circle cx="18" cy="500" r="4.5" fill="#c4a3ff"/>
               </svg>
 
               <div class="graph-divider">

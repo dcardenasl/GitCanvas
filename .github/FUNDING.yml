@@ -1,0 +1,4 @@
+# Voluntary support for GitCanvas. Nothing in the app is gated behind it.
+# GitHub reads this file from the default branch, so the Sponsor button appears
+# once it is on `main` (and the repository is public).
+github: dcardenasl

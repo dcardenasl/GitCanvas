@@ -1,0 +1,135 @@
+:root {
+  color-scheme: dark;
+
+  /* Reusable spacing, shape, and typography values for the interface. */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 10px;
+  --space-5: 12px;
+  --space-6: 14px;
+  --space-7: 16px;
+  --space-8: 18px;
+  --space-9: 20px;
+  --space-10: 24px;
+  --radius-sm: 4px;
+  --radius-tight: 5px;
+  --radius-md: 6px;
+  --radius-control: 7px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --font-size-micro: 8.5px;
+  --font-size-caption: 10px;
+  --font-size-caption-wide: 10.5px;
+  --font-size-small: 11px;
+  --font-size-small-wide: 11.5px;
+  --font-size-body: 12px;
+  --font-size-body-wide: 12.5px;
+  --font-size-ui: 13px;
+  --font-size-subheading: 14.5px;
+  --font-size-title: 15px;
+  --font-size-heading: 18px;
+  --focus-ring: 2px solid var(--accent);
+
+  /* Tokens from DESIGN.md. */
+  --surface: #10131a;
+  --surface-sidebar: #14161d;
+  --surface-toolbar: #12141b;
+  --surface-hover: #171a22;
+  --surface-selected: #211d2d;
+  --control: #171a22;
+  --border: #262b38;
+  --divider: #1c2029;
+  --ink: #d3d6e0;
+  --ink-muted: #a1a9bc;
+  --ink-faint: #8b93a6;
+  /* Soft orchid from the GitCanvas mark; warm branch/diff colors stay semantic. */
+  --accent: #c4a3ff;
+  --accent-ink: #241832;
+  --avatar-ink: #241832;
+  --success: #7be3a1;
+  --success-strong: #4ade80;
+  --success-surface: rgb(74 222 128 / 12%);
+  --danger: #f0a3a1;
+  --danger-strong: #f87171;
+  --danger-surface: rgb(248 113 113 / 12%);
+  --local-ref: #4fd1c5;
+  --local-ref-border: rgb(79 209 197 / 35%);
+  --local-ref-surface: rgb(79 209 197 / 12%);
+  --remote-ref: #a1a9bc;
+  --remote-ref-border: rgb(141 137 127 / 35%);
+  --remote-ref-surface: rgb(141 137 127 / 10%);
+  --tag-ref: #d9c48a;
+  --tag-ref-border: rgb(217 196 138 / 30%);
+  --tag-ref-surface: rgb(217 196 138 / 10%);
+  --modified-ref-surface: rgb(196 163 255 / 15%);
+  --destructive: #b3413f;
+  --destructive-ink: #fff;
+  --backdrop: rgb(0 0 0 / 55%);
+  --menu-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+  --empty-brand-surface: #f4eef9;
+  --graph-outline: #10131a;
+  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --surface: #f7f6f3;
+  --surface-sidebar: #f0efeb;
+  --surface-toolbar: #fbfaf8;
+  --surface-hover: #eeece8;
+  --surface-selected: #eee6fa;
+  --control: #fff;
+  --border: #d9d6d0;
+  --divider: #e6e3dd;
+  --ink: #25232c;
+  --ink-muted: #5f5a68;
+  --ink-faint: #716c78;
+  --accent: #6941a5;
+  --accent-ink: #fff;
+  --avatar-ink: #241832;
+  --success: #207443;
+  --success-strong: #176438;
+  --success-surface: rgb(32 116 67 / 10%);
+  --danger: #b83a40;
+  --danger-strong: #a52f36;
+  --danger-surface: rgb(184 58 64 / 10%);
+  --local-ref: #08766d;
+  --local-ref-border: rgb(8 118 109 / 35%);
+  --local-ref-surface: rgb(8 118 109 / 9%);
+  --remote-ref: #655f68;
+  --remote-ref-border: rgb(101 95 104 / 30%);
+  --remote-ref-surface: rgb(101 95 104 / 8%);
+  --tag-ref: #755713;
+  --tag-ref-border: rgb(117 87 19 / 28%);
+  --tag-ref-surface: rgb(170 126 28 / 9%);
+  --modified-ref-surface: rgb(105 65 165 / 10%);
+  --destructive: #a52f36;
+  --destructive-ink: #fff;
+  --backdrop: rgb(24 21 29 / 32%);
+  --menu-shadow: 0 8px 24px rgb(31 27 38 / 18%);
+  --empty-brand-surface: #eee6fa;
+  --graph-outline: #4b4653;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink);
+}
