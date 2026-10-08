@@ -208,9 +208,9 @@ a few days and there is no support SLA.
 GitCanvas is free and nothing in the app is locked behind payment. Starring the repo,
 reporting bugs and telling a colleague help just as much as anything else.
 
-<!-- TODO(David): once .github/FUNDING.yml has a real handle (GitHub Sponsors, Buy Me a
-Coffee or Ko-fi), add: "If it saves you time and you want to help keep it going, use the
-Sponsor button at the top of this repository." -->
+If it saves you time and you want to help keep it going, you can sponsor the project on
+[GitHub Sponsors](https://github.com/sponsors/dcardenasl) — or use the Sponsor button at the top
+of this repository. Entirely optional.
 
 ## License
 
