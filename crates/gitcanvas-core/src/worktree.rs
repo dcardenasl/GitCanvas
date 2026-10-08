@@ -536,7 +536,7 @@ fn verify_open_file(
     let canonical = path.canonicalize().map_err(|_| changed())?;
     if !canonical.starts_with(repository_root)
         || canonical != path
-        || !same_file_identity(&opened, &current)
+        || !same_file_identity(file, path, &opened, &current)
     {
         return Err(changed());
     }
@@ -544,24 +544,29 @@ fn verify_open_file(
 }
 
 #[cfg(unix)]
-fn same_file_identity(opened: &Metadata, current: &Metadata) -> bool {
+fn same_file_identity(_file: &File, _path: &Path, opened: &Metadata, current: &Metadata) -> bool {
     use std::os::unix::fs::MetadataExt;
 
     opened.dev() == current.dev() && opened.ino() == current.ino()
 }
 
 #[cfg(windows)]
-fn same_file_identity(opened: &Metadata, current: &Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-
-    opened.volume_serial_number().is_some()
-        && opened.volume_serial_number() == current.volume_serial_number()
-        && opened.file_index().is_some()
-        && opened.file_index() == current.file_index()
+fn same_file_identity(file: &File, path: &Path, _opened: &Metadata, _current: &Metadata) -> bool {
+    // `MetadataExt::file_index` is still unstable, so compare handles instead.
+    let Ok(clone) = file.try_clone() else {
+        return false;
+    };
+    match (
+        same_file::Handle::from_file(clone),
+        same_file::Handle::from_path(path),
+    ) {
+        (Ok(opened), Ok(current)) => opened == current,
+        _ => false,
+    }
 }
 
 #[cfg(not(any(unix, windows)))]
-fn same_file_identity(opened: &Metadata, current: &Metadata) -> bool {
+fn same_file_identity(_file: &File, _path: &Path, opened: &Metadata, current: &Metadata) -> bool {
     opened.is_file()
         && current.is_file()
         && opened.len() == current.len()

@@ -20,6 +20,9 @@ thiserror.workspace = true
 ureq.workspace = true
 url.workspace = true
 
+[target.'cfg(windows)'.dependencies]
+same-file = "1"
+
 # Deliberately absent: `tauri`. This crate must stay usable, and testable,
 # without starting an application. Adding it here would silently undo the
 # boundary the workspace exists to enforce.

@@ -1346,6 +1346,7 @@ dependencies = [
  "git2",
  "keyring",
  "notify",
+ "same-file",
  "serde",
  "serde_json",
  "specta",
