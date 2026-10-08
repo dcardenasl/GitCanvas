@@ -73,7 +73,7 @@ git2 = { version = "0.21", default-features = false, features = [
     "ssh",
     "https",
 ] }
-rlimit = "0.10"
+rlimit = "0.11"
 thiserror = "2"
 
 # Filesystem notification, for noticing that a repository changed underneath the
