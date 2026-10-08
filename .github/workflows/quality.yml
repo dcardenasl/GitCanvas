@@ -14,6 +14,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Read-only token: nothing here writes to the repository.
+permissions:
+  contents: read
+
 concurrency:
   group: quality-${{ github.ref }}
   cancel-in-progress: true
