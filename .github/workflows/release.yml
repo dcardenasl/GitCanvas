@@ -76,7 +76,7 @@ jobs:
             BEGIN { capture = 0 }
             /^## \[/ {
               if (capture) { exit }
-              if ($0 == heading) { capture = 1; next }
+              if (index($0, heading) == 1) { capture = 1; next }
             }
             capture { print }
           ' CHANGELOG.md)
