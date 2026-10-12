@@ -1643,3 +1643,47 @@ marca.
       El chequeo de enlaces relativos no encontró rutas rotas; `git diff --check` pasó. Los
       archivos Markdown están excluidos intencionalmente de Prettier por `.prettierignore`.
       → `docs: align architecture and product documentation`
+
+## ✅ Fase I18N — Internacionalización (5/5)
+
+Plan: sección 3 de `docs/plan/2026-10-08-plan-tres-funcionalidades.md`; decisiones en
+`docs/adr/0004-internationalization.md`. Alcance: solo la internacionalización. Verificado en
+macOS el 2026-10-12: 402 pruebas, cobertura sobre los umbrales, `tsc`, ESLint, Prettier,
+`npm audit --omit=dev` y 4 specs E2E.
+
+- [x] **I18N-1 — Dependencias.** `i18next` 26.4.4 y `react-i18next` 17.0.16; 0
+      vulnerabilidades de producción.
+      → `build(deps): add i18next and react-i18next for interface localization` (`1212e2b`)
+
+- [x] **I18N-2 — Registro de idiomas y catálogos.** `src/i18n/`: registro único (código BCP
+      47, nombre nativo, dirección), catálogos JSON por namespace con claves tipadas desde el
+      inglés, resolución Sistema/English/Español antes del primer render, almacén
+      `languagePreferences` y `lang`/`dir` del documento. Pruebas de paridad de claves,
+      namespaces, interpolaciones, etiquetas y categorías plurales (`Intl.PluralRules`), y de
+      un resumen por cada tipo de `AppError`.
+      → `feat(i18n): add language registry, typed catalogs and startup resolution` (`0185762`)
+
+- [x] **I18N-3 — Menú de preferencias.** `PreferencesMenu` agrupa tema e idioma tras un botón
+      de la barra; `LanguageSelector` se genera desde el registro. Prueba de propiedades CSS
+      lógicas para los componentes nuevos.
+      *Hallazgo durante la ejecución:* con un selector más, la barra no cabía en la ventana
+      mínima de 940 px (en inglés menos aún). Se agruparon las preferencias en un botón.
+      → `feat(i18n): add preferences menu with theme and language selectors` (`9395d3a`)
+
+- [x] **I18N-4 — Migrar textos y errores.** Todos los textos visibles salen de los catálogos;
+      fechas, números, porcentajes y plurales usan el locale activo. `describeError` y
+      `ErrorMessage` muestran un resumen traducido y el diagnóstico original en un detalle
+      expandible y copiable; los avisos de `useGitActions` y el estado del watcher guardan
+      códigos y parámetros, no frases. Una prueba falla ante cualquier texto literal en JSX.
+      El E2E fija el idioma a español desde la interfaz.
+      *Hallazgos durante la ejecución:* la columna del grid de `.app-shell` crecía hasta el
+      ancho del contenido de la barra y provocaba scroll horizontal (`minmax(0, 1fr)`); la
+      barra pasa a poder envolver, y el buscador y el nombre del repositorio ceden ancho
+      primero. Los avisos de Pull/Push envuelven en vez de truncar. En esta máquina `npm` es
+      un alias a pnpm: se usó la ruta absoluta de npm 10.9.8.
+      → `feat(i18n): translate every interface text and structured backend error` (`530127f`)
+
+- [x] **I18N-5 — Documentación.** ADR 0004, ARCHITECTURE, README, PRODUCT, DESIGN, CLAUDE.md
+      (regla del idioma de la interfaz) y CHANGELOG (`[Unreleased]`).
+      → `docs(i18n): record language, catalog and error decisions in adr 0004` (`5ef7116`)
+
