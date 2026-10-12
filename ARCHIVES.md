@@ -1093,6 +1093,20 @@ marca.
 
 ---
 
+- [x] **R-4 — PR `dev → main`.** Abrir, esperar `quality` verde, **esperar aprobación de
+      David**, y mergear con `--merge` (nunca squash ni rebase).
+      *Estado remoto (2026-10-05):* [PR #1](https://github.com/dcardenasl/gitcanvas/pull/1)
+      ya está abierta. El último `dev-check` y la matriz `quality` (2026-09-26, SHA
+      `7f24bb6`) terminaron en fallo en los primeros 2–6 segundos, sin registrar pasos; GitHub
+      no ofrece logs. No se puede inferir una causa de código ni aprobar el merge con esta
+      evidencia. Cuando la rama del PR contenga los arreglos requeridos y CI genere nuevos
+      resultados, esperar `quality` verde y aprobación de David antes del merge.
+      *Cierre (2026-10-12):* [PR #1](https://github.com/dcardenasl/gitcanvas/pull/1) mergeada con merge commit `59d8d73` (cabeza `476a687`) tras `quality` verde en Linux, macOS y Windows ([run 37857601442](https://github.com/dcardenasl/gitcanvas/actions/runs/37857601442)). El cambio posterior del workflow de release salió por la [PR #8](https://github.com/dcardenasl/gitcanvas/pull/8) (`47d81da`, `quality` [37859421455](https://github.com/dcardenasl/gitcanvas/actions/runs/37859421455) verde).
+
+- [x] **R-5 — Tag y GitHub Release.** `v0.1.0` solo sobre `main`; `release.yml` crea el
+      Release extrayendo la sección del CHANGELOG. Nunca `gh release create` a mano.
+      *Cierre (2026-10-12):* tag `v0.1.0` sobre `47d81da` (ancestro de `main`); el workflow `release` ([37863154001](https://github.com/dcardenasl/gitcanvas/actions/runs/37863154001)) validó, creó el Release y publicó los instaladores de Linux (`.AppImage`, `.deb`, `.rpm`), macOS (`.dmg` x64 y aarch64, `.app.tar.gz`) y Windows (`.msi`, `-setup.exe`).
+
 ## ✅ Completado
 
 - **Fase G — Bootstrap del repositorio** (6/6). Repositorio creado con `main` como punto
@@ -1124,7 +1138,7 @@ marca.
 
 ---
 
-## ✅ Fase H2 — Endurecimiento post-auditoría (43/46 implementadas; 35 cierres con commit)
+## ✅ Fase H2 — Endurecimiento post-auditoría (46/46; 38 cierres con commit; H2-34–41 en `437ff07`)
 
 > Plan de referencia: [`docs/plan/2026-10-04-plan-de-endurecimiento.md`](docs/plan/2026-10-04-plan-de-endurecimiento.md).
 > Se conservan las descripciones, verificaciones y mensajes de commit registrados al
@@ -1643,6 +1657,120 @@ marca.
       El chequeo de enlaces relativos no encontró rutas rotas; `git diff --check` pasó. Los
       archivos Markdown están excluidos intencionalmente de Prettier por `.prettierignore`.
       → `docs: align architecture and product documentation`
+
+### Cierre de H2 (2026-10-12)
+
+- [x] **H2-25 — Reducir permisos Tauri a los usados.** Reemplazar `core:default` por
+      `core:event:default` y `dialog:allow-open`; confirmar arranque y E2E multiplataforma.
+      *Implementación parcial (2026-10-05):* `capabilities/default.json` ya concede solo
+      `core:event:default` y `dialog:allow-open`, coherente con el uso de eventos, comandos
+      IPC de la app y selector nativo de carpetas. `quality.yml` ahora ejecuta la suite E2E
+      en Linux, macOS y Windows, usando Xvfb solo en Linux; las capturas usan `os.tmpdir()`
+      para no asumir `/tmp` en Windows. Se añadió un test de regresión que exige que la
+      allowlist sea exactamente esos dos permisos. El JSON y los usos se verificaron por
+      inspección estática. *Verificado en sandbox aislado y offline:* `cargo test -p gitcanvas
+      --lib default_capability_contains_only_required_permissions --offline --locked` (1 test
+      passed; reejecutado en el working tree actual el 2026-10-05, 1 passed). *Smoke local
+      (2026-10-05):* la app arrancó con el código actual mediante `tauri dev`, usando
+      identificador y `HOME` temporales para aislarla de la instalación abierta; Vite quedó
+      listo y el proceso nativo siguió activo hasta su cierre limpio. Queda pendiente la
+      evidencia E2E de CI en Linux, macOS y Windows. Las últimas ejecuciones remotas
+      disponibles (2026-09-26, SHA
+      `7f24bb6`) de [quality](https://github.com/dcardenasl/gitcanvas/actions/runs/36265828914)
+      y [dev-check](https://github.com/dcardenasl/gitcanvas/actions/runs/36265828257)
+      fallaron antes de registrar pasos y GitHub no tiene logs (`log not found`); no prueban
+      el estado del código ni cuentan como resultado multiplataforma. La PR sigue apuntando
+      a `7f24bb6`; el checkout local de `dev` contiene commits y cambios posteriores que CI
+      todavía no evaluó. El E2E local macOS ha pasado dos veces con `specFileRetries: 0`
+      (4 specs/8 tests por corrida), pero no sustituye la evidencia CI en los tres sistemas.
+      *Cierre (2026-10-12):* la evidencia multiplataforma que faltaba existe. El run de `quality` [37859421455](https://github.com/dcardenasl/gitcanvas/actions/runs/37859421455) sobre `ec6b837` (incluye todo H2) y el [37857601442](https://github.com/dcardenasl/gitcanvas/actions/runs/37857601442) sobre `476a687` pasaron en Linux, macOS y Windows: `typecheck*`, `lint`, `format:check`, `test:coverage`, `cargo clippy -D warnings`, `cargo test --workspace`, bindings sin deriva, auditoría de dependencias, build del bundle y la suite E2E (Linux con Xvfb; macOS y Windows nativos). Los fallos del 2026-09-26 sobre `7f24bb6` quedan superados.
+      → `chore(tauri): narrow application capabilities`
+
+- [x] **H2-42 — Hacer E2E determinista y relevante.** Helper `waitForHistory()`, quitar
+      `browser.pause`, usar `os.tmpdir()`, retirar/fusionar specs sin aserciones, desacoplar
+      `local-changes` y reducir reintentos conforme a evidencia.
+      *Progreso (2026-10-05):* helper común adoptado por los specs de regresión; se
+      eliminaron todas las pausas fijas de `e2e/`. `audit.spec.ts` se retiró porque solo
+      imprimía observaciones; `screenshots.spec.ts` pasó a `e2e/manual/`, fuera del glob CI,
+      conservando capturas mediante esperas observables. `local-changes` recibe por el runner
+      un repositorio temporal mínimo propio e ignora `GITCANVAS_E2E_REPO`, evitando modificar
+      por accidente el repositorio del usuario. `npm run typecheck:e2e`, ESLint de E2E,
+      Prettier y `bash -n scripts/run-e2e.sh` pasan en sandbox aislado. En la revisión
+      (2026-10-05) se encontró que un
+      `GITCANVAS_E2E_FIXTURE` heredado sin procedencia confiable podía usarse como destino
+      de escritura y borrado. `wdio.conf.ts` ahora exige que el hand-off apunte a un hijo
+      directo de `os.tmpdir()` con marcador aleatorio dentro de `.git`; la creación limpia
+      el temporal ante fallos y el cierre solo elimina un fixture cuyo marcador y token
+      coinciden. El token debe tener el formato de UUID y el marcador su tamaño exacto
+      antes de leerlo, para rechazar entradas malformadas y evitar lecturas sin límite.
+      Cualquier `GITCANVAS_E2E_REPO` externo sigue ignorado en el caso
+      `local-changes`. *Verificado (2026-10-05):* `npm run typecheck:e2e` y
+      `prettier --check wdio.conf.ts` pasan. `npm run test:e2e:run` pasó en macOS usando
+      binario E2E con `HOME` e identificador Tauri temporales: los cuatro specs CI
+      (`collapse`, `commit-tree`, `critical-path`, `local-changes`) aprobaron sus 8 tests.
+      La spec `local-changes` ahora comprueba el contrato de `FileDiffView`: conserva la
+      selección y muestra el error localizado cuando un archivo staged desaparece. Sondas
+      de comportamiento confirman que el runner no reutiliza una ruta heredada aun cuando
+      su marcador y token tienen formato válido, deja intacto ese directorio no propio y
+      elimina su fixture temporal al cerrar.
+      La validación del hand-off worker conserva los controles de IPC/ID de WDIO y el
+      marcador; la sonda previa confirmó que el worker reutiliza el fixture creado por el
+      runner. `@wdio/tauri-service` todavía registra un warning no fatal al limpiar mocks
+      después de perder el `sessionId`. El código upstream en `afterSession` intenta restaurar
+      mocks sin comprobar si la sesión sigue activa; la última versión publicada consultada
+      (1.4.0, 2026-10-05) mantiene ese comportamiento. Se deja visible para reevaluarlo al
+      actualizar el servicio, sin silenciar otros diagnósticos.
+      ([paquete](https://www.npmjs.com/package/%40wdio/tauri-service),
+      [código upstream](https://github.com/webdriverio/desktop-mobile/blob/main/packages/tauri-service/src/service.ts)).
+      Se corrigió además la comparación de rutas canónicas de macOS (`/var` frente a
+      `/private/var`), que impedía limpiar fixtures propios.
+      `specFileRetries` quedó en 0: cada spec corre en su propio proceso WDIO, la ventana se
+      selecciona antes de consultar elementos y los tests esperan estado observable. Dos
+      corridas completas consecutivas en macOS pasaron sin reintentos (4 specs/8 tests cada
+      una; compilación aislada con `HOME` e identificador Tauri temporales). El warning no
+      fatal de `@wdio/tauri-service` al limpiar mocks sigue visible después de cada sesión.
+      Queda pendiente evidencia CI Linux y Windows. Los checks remotos más recientes
+      consultables ([quality](https://github.com/dcardenasl/gitcanvas/actions/runs/36265828914),
+      2026-09-26, SHA `7f24bb6`) fallaron sin pasos ni logs; no evalúan el código actual.
+      *Cierre (2026-10-12):* la evidencia CI de Linux y Windows que faltaba existe (el warning no fatal de `@wdio/tauri-service` sigue visible y se reevalúa al actualizar el servicio). El run de `quality` [37859421455](https://github.com/dcardenasl/gitcanvas/actions/runs/37859421455) sobre `ec6b837` (incluye todo H2) y el [37857601442](https://github.com/dcardenasl/gitcanvas/actions/runs/37857601442) sobre `476a687` pasaron en Linux, macOS y Windows: `typecheck*`, `lint`, `format:check`, `test:coverage`, `cargo clippy -D warnings`, `cargo test --workspace`, bindings sin deriva, auditoría de dependencias, build del bundle y la suite E2E (Linux con Xvfb; macOS y Windows nativos). Los fallos del 2026-09-26 sobre `7f24bb6` quedan superados.
+      → `test(e2e): replace fixed waits with observable conditions`
+
+- [x] **H2-45 — Cerrar trazabilidad de H2.** Revisar conteo/estado de tareas, documentar
+      divergencias verificadas frente al plan, commits ya registrados y evidencia final.
+      Ejecutar la verificación local definida por el plan y las comprobaciones manuales
+      aplicables; registrar fallos ambientales sin declararlos verdes.
+      *Reconciliación de commits (2026-10-05):* H2-33 quedó en `03077dd` (`perf(core): bound
+      fingerprints and watcher debounce`), H2-34–41 en el commit de integración `437ff07`
+      (`refactor: consolidate audited hardening work`) y H2-43 en `5d47af3` (`chore(demo):
+      isolate recorder tooling and document prerequisites`). H2-34–41 no tienen un commit
+      individual por tarea; se conservaron juntas porque los cambios atraviesan componentes
+      compartidos y contratos entre frontend, IPC, bindings, Tauri y core. El conteo debe
+      distinguir los 35 cierres con commit dedicado de los 8 IDs cubiertos por el commit de
+      integración. El working tree quedó limpio tras `437ff07`.
+      *Evidencia integrada actual (2026-10-05):* pasaron `cargo fmt --all --check`,
+      `cargo clippy --all-targets --all-features --offline --locked -- -D warnings` y
+      `cargo test --workspace --offline --locked` (150 tests: 23 Tauri, 40 unitarios core y
+      87 de integración). `npm run test:coverage` pasó 40 suites/343 tests con 94,75% de
+      statements, 88,08% de branches, 94,05% de funciones y 95,85% de líneas. También
+      pasaron `npm run typecheck`, `typecheck:e2e`, `typecheck:node`, `lint` y `format:check`.
+      También pasaron `npm audit --omit=dev --audit-level=high` (sin vulnerabilidades),
+      `cargo deny check` y `cargo audit`; `cargo audit` reportó 8 avisos permitidos de
+      dependencias sin mantenimiento o un advisory de soundness configurados en la política.
+      La primera ejecución completa detectó que `touch_if_cached` canonizaba la raíz pero
+      no el repositorio, fallando bajo la ruta `/var` alias de macOS; ambos caminos ahora se
+      canonizan y los 12 tests del cache y la suite workspace completa vuelven a pasar. La
+      verificación repetida sobre el snapshot integrado `437ff07` pasó con Node 24 (40 suites,
+      343 tests; cobertura: 94,75% statements, 88,08% branches, 94,05% funciones y 95,85%
+      líneas), typecheck de app/E2E/Node, lint, formato, `cargo fmt`, `cargo test --workspace`
+      (150 tests) y Clippy `-D warnings`. Node 20 del shell no cumple `engines >=22` y produce
+      un fallo de arranque en undici/jsdom; no usarlo para validar. El smoke de arranque y dos
+      corridas E2E de macOS también pasan. En el checkout actual también pasaron
+      `npm audit --omit=dev --audit-level=high`, `cargo deny check`, `cargo audit` (8 avisos
+      permitidos) y `npm run tauri build -- --ci` en macOS, que produjo `.app` y `.dmg`. La
+      PR #1 sigue en `7f24bb6`, con checks fallidos del 2026-09-26; aún no hay CI sobre el
+      código local. Falta validar H2-25/H2-42 en los tres sistemas antes de cerrar H2.
+      *Cierre (2026-10-12):* conteo final **46/46**: 38 cierres con commit dedicado (35 previos, `ba5b99d` para H2-25, `c8ef381` para H2-42 y este commit para H2-45) y 8 IDs (H2-34–41) integrados en `437ff07`, desviación de la regla de un commit por tarea que queda registrada aquí. La evidencia de CI de H2-25 y H2-42 cubre los tres sistemas, así que la divergencia pendiente de la PR #1 desapareció: esa PR se mergeó en `59d8d73` con `quality` verde, y v0.1.0 está publicado.
+      → `docs(tasks): close post-audit hardening`
 
 ## ✅ Fase I18N — Internacionalización (5/5)
 
