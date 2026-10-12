@@ -6,11 +6,10 @@
 
 | Campo | Estado |
 |---|---|
-| Etapa | v0.1.0 publicado; internacionalización en revisión |
-| H2 | Cerrada: 46/46; 38 cierres con commit dedicado y H2-34–41 integradas en `437ff07` |
-| Release | v0.1.0 publicado el 2026-10-09: PR [#1](https://github.com/dcardenasl/gitcanvas/pull/1) mergeada, tag sobre `main` e instaladores de Linux, macOS y Windows |
-| Trabajo abierto | [PR #9](https://github.com/dcardenasl/GitCanvas/pull/9): interfaz en inglés y español |
-| Siguiente tarea | I18N-6: evidencia de CI en Linux y Windows para la PR #9 |
+| Etapa | v0.2.0 publicado: interfaz en inglés y español |
+| H2 e I18N | Cerradas: H2 46/46 (38 con commit dedicado; H2-34–41 en `437ff07`) e I18N 6/6 |
+| Release | v0.2.0 publicado el 2026-10-12 (PR [#9](https://github.com/dcardenasl/GitCanvas/pull/9), tag sobre `main`, instaladores de Linux, macOS y Windows) |
+| Siguiente tarea | Planificar las secciones 2 y 4 del plan de tres funcionalidades |
 | Fuente de trabajo | [`TASKS.md`](../TASKS.md), criterios detallados en el plan H2 |
 
 El MVP incluye historial y graph, detalle/diffs, cambios locales, GitHub clone y
@@ -20,10 +19,9 @@ modifican estado Git de forma explícita. Pull no crea merges y push nunca fuerz
 
 ## Estado del trabajo en curso
 
-`dev` contiene la internacionalización (I18N-1 a I18N-5, archivadas) y está publicado en la
-PR #9. Solo se verificó localmente en macOS; el run de `quality` de esa PR es la evidencia que
-falta para Linux y Windows. No declarar verde lo que no se haya ejecutado sobre el código
-vigente. Las secciones 2 y 4 del plan de tres funcionalidades no tienen tareas todavía.
+No hay tareas abiertas. `dev` y `main` están sincronizados en el merge de la PR #9. Las
+secciones 2 (commits desde la interfaz) y 4 (pestañas, favoritos y persistencia) del plan de
+tres funcionalidades no tienen tareas todavía; hay que planificarlas antes de implementarlas.
 
 ## Documentos
 

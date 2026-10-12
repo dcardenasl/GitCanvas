@@ -11,8 +11,8 @@
 | Tipo | Aplicación de escritorio para inspección de Git |
 | Repositorio | [`dcardenasl/gitcanvas`](https://github.com/dcardenasl/gitcanvas) |
 | Licencia | Todos los derechos reservados |
-| Versión publicada | [v0.1.0](https://github.com/dcardenasl/gitcanvas/releases/tag/v0.1.0) (2026-10-09) |
-| Estado | v0.1.0 publicado; internacionalización (inglés y español) en la PR #9 |
+| Versión publicada | [v0.2.0](https://github.com/dcardenasl/gitcanvas/releases/tag/v0.2.0) (2026-10-12) |
+| Estado | v0.2.0 publicado, con la interfaz en inglés y español |
 | Stack | Tauri 2, Rust/libgit2, React, TypeScript, Vite |
 
 ## Propósito y alcance
@@ -34,19 +34,19 @@ read-only; véase [`CONTEXT.md`](../CONTEXT.md) y el [ADR 0001](adr/0001-working
 | GitHub: credencial en keychain, listado y clone | Implementado |
 | Checkout, pull fast-forward y push | Implementado con guardias |
 | Endurecimiento H2 | Cerrado: 46 de 46; 38 cierres con commit dedicado y H2-34–41 integradas en `437ff07` |
-| Interfaz en inglés y español | Implementada en `dev` ([PR #9](https://github.com/dcardenasl/GitCanvas/pull/9)); falta la evidencia de CI en Linux y Windows (I18N-6) |
-| Publicación v0.1.0 | Publicada. PR [#1](https://github.com/dcardenasl/gitcanvas/pull/1) mergeada en `59d8d73` y tag `v0.1.0` sobre `main`; el workflow `release` creó el Release con instaladores de Linux, macOS y Windows |
+| Interfaz en inglés y español | Publicada en v0.2.0; CI verde en Linux, macOS y Windows |
+| Publicación | v0.2.0 publicada (PR [#9](https://github.com/dcardenasl/GitCanvas/pull/9), merge `1ca6b73`, tag sobre `main`); el workflow `release` creó el Release con instaladores de Linux, macOS y Windows. v0.1.0 salió el 2026-10-09 |
 
 ## Próximo paso
 
-Continuar en [`TASKS.md`](../TASKS.md): cerrar I18N-6 con el run de `quality` de la PR #9 y
-planificar las secciones 2 y 4 del plan de tres funcionalidades. Cada release usa
-exclusivamente el procedimiento de `CLAUDE.md` y requiere aprobación de David para mergear
-el PR.
+Continuar en [`TASKS.md`](../TASKS.md): planificar las secciones 2 y 4 del plan de tres
+funciones antes de implementarlas. Cada release usa exclusivamente el procedimiento de
+`CLAUDE.md` y requiere aprobación de David para mergear el PR.
 
 ## Registro
 
-- 2026-10-12: v0.1.0 publicado y H2 cerrada; internacionalización implementada en `dev`.
+- 2026-10-12: v0.2.0 publicado con la interfaz en inglés y español; H2 e I18N cerradas.
+- 2026-10-09: v0.1.0 publicado.
 - 2026-10-05: estado, plataforma, capacidades y pendientes sincronizados con el código,
   el plan de endurecimiento y `TASKS.md`.
 - 2026-09-08: creación del concepto y definición inicial de stack y alcance.

@@ -1778,7 +1778,7 @@ marca.
       *Cierre (2026-10-12):* conteo final **46/46**: 38 cierres con commit dedicado (35 previos, `ba5b99d` para H2-25, `c8ef381` para H2-42 y este commit para H2-45) y 8 IDs (H2-34–41) integrados en `437ff07`, desviación de la regla de un commit por tarea que queda registrada aquí. La evidencia de CI de H2-25 y H2-42 cubre los tres sistemas, así que la divergencia pendiente de la PR #1 desapareció: esa PR se mergeó en `59d8d73` con `quality` verde, y v0.1.0 está publicado.
       → `docs(tasks): close post-audit hardening`
 
-## ✅ Fase I18N — Internacionalización (5/5)
+## ✅ Fase I18N — Internacionalización (6/6)
 
 Plan: sección 3 de `docs/plan/2026-10-08-plan-tres-funcionalidades.md`; decisiones en
 `docs/adr/0004-internationalization.md`. Alcance: solo la internacionalización. Verificado en
@@ -1821,3 +1821,14 @@ macOS el 2026-10-12: 402 pruebas, cobertura sobre los umbrales, `tsc`, ESLint, P
       (regla del idioma de la interfaz) y CHANGELOG (`[Unreleased]`).
       → `docs(i18n): record language, catalog and error decisions in adr 0004` (`5ef7116`)
 
+- [x] **I18N-6 — Verificar la internacionalización en Linux y Windows.** Obtener una corrida
+      de `quality` sobre el código vigente y confirmar `test:coverage`, `typecheck*`, `lint` y
+      E2E en los tres sistemas. *Verificado localmente solo en macOS (2026-10-12):* 402
+      pruebas, cobertura, `tsc` (app, e2e y node), ESLint, Prettier y 4 specs E2E. Riesgos
+      cubiertos por inspección: mayúsculas de imports contra el disco, finales de línea
+      (`.gitattributes`), icono SVG en lugar del glifo ⚙, y fijación del idioma del E2E
+      mediante `change` en el `<select>` en vez de clic en su popup nativo. Sin verificar: el
+      renderizado de `Intl` (`style: unit`, porcentajes) en WebKitGTK y WebView2, y la barra a
+      940 px en esos motores.
+      *Cierre (2026-10-12):* el run de `quality` [38282515780](https://github.com/dcardenasl/GitCanvas/actions/runs/38282515780) sobre `d42dde7` (PR #9) pasó en Linux, macOS y Windows: cobertura, Clippy `-D warnings`, `cargo test --workspace`, bindings sin deriva, bundle y E2E (Linux con Xvfb; macOS y Windows nativos). Publicado como v0.2.0: tag sobre `main` y Release con los instaladores de los tres sistemas.
+      → `docs: record the v0.2.0 release and close i18n verification`
