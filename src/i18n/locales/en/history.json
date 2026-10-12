@@ -1,0 +1,54 @@
+{
+  "detail": {
+    "aria": "Commit details",
+    "changedFiles": "Changed files",
+    "commit": "commit",
+    "filesChanged_one": "{{count}} file changed",
+    "filesChanged_other": "{{count, number}} files changed",
+    "mergeNote": "Merge commit: changes are shown against the first parent.",
+    "parent": "parent",
+    "reading": "Reading files…"
+  },
+  "localRow": {
+    "readFailed": "Could not read local changes",
+    "summary": "{{staged, number}} staged · {{unstaged, number}} unstaged",
+    "title": "Local changes"
+  },
+  "search": {
+    "aria": "Search the loaded history",
+    "noMatches": "no matches",
+    "placeholder": "Search commit, author or hash",
+    "position": "{{current, number}} of {{total, number}}",
+    "searching": "Searching…"
+  },
+  "state": {
+    "empty": "This repository has no commits.",
+    "loading": "Reading history…",
+    "nextPageFailed": "Could not load the next page"
+  },
+  "table": {
+    "copied": {
+      "author": "author copied",
+      "fullHash": "full hash copied",
+      "hash": "hash copied",
+      "message": "message copied"
+    },
+    "copyFailed": {
+      "author": "could not copy the author",
+      "fullHash": "could not copy the full hash",
+      "hash": "could not copy the hash",
+      "message": "could not copy the message"
+    },
+    "label": "Commit history",
+    "menu": {
+      "copyAuthor": "Copy author",
+      "copyFullHash": "Copy full hash",
+      "copyHash": "Copy hash ({{id}})",
+      "copyMessage": "Copy message"
+    },
+    "refActive": "{{name}} (active branch)",
+    "rowBy": "by {{author}}",
+    "rowCommit": "commit {{id}}",
+    "rowOn": "on {{refs}}"
+  }
+}

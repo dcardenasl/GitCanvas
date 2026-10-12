@@ -1,11 +1,18 @@
 .commit-search {
   display: flex;
+  min-width: 0;
+
+  /* Takes the free space the toolbar has, up to the input's own width, and
+     counts as only its minimum when the toolbar decides whether to wrap. */
+  flex: 100 1 100px;
+  max-width: 220px;
   gap: var(--space-3);
   align-items: center;
 }
 
 .commit-search__input {
-  width: 220px;
+  width: 100%;
+  min-width: 0;
   padding: 5px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-control);

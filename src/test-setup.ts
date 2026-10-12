@@ -1,3 +1,12 @@
+import { changeLanguage } from "./i18n";
+
+/*
+ * Suites assert on rendered text, so the language is pinned rather than left to
+ * whatever the machine running them reports. Spanish is the one the existing
+ * assertions are written in; the i18n suites exercise the others explicitly.
+ */
+await changeLanguage("es");
+
 /**
  * Test environment shims.
  *

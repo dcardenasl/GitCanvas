@@ -1,5 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { CommitTreeEntry } from "../../bindings";
 import { compareNames, type ChangedFile } from "../../lib/changedFiles";
@@ -34,6 +35,7 @@ export function CommitTreeBrowser({
   selectedFilePath,
   onOpen,
 }: CommitTreeBrowserProps) {
+  const { t } = useTranslation(["files", "common"]);
   const changedByPath = useMemo(
     () => new Map(changedFiles.map((file) => [file.path, file])),
     [changedFiles],
@@ -72,7 +74,7 @@ export function CommitTreeBrowser({
   return (
     <div className="commit-tree-browser">
       {tree.isPending && (
-        <p className="state file-tree__state">Leyendo archivos del commit…</p>
+        <p className="state file-tree__state">{t("tree.readingCommit")}</p>
       )}
       {tree.error !== null && (
         <RetryError
@@ -82,12 +84,10 @@ export function CommitTreeBrowser({
         />
       )}
       {tree.data !== undefined && entries.length === 0 && (
-        <p className="state file-tree__state">
-          Este commit no contiene archivos.
-        </p>
+        <p className="state file-tree__state">{t("tree.emptyCommit")}</p>
       )}
       {entries.length > 0 && (
-        <ul className="file-tree" aria-label="Todos los archivos del commit">
+        <ul className="file-tree" aria-label={t("tree.allFiles")}>
           <TreeEntries
             entries={entries}
             repositoryPath={repositoryPath}
@@ -106,19 +106,19 @@ export function CommitTreeBrowser({
           disabled={tree.isFetchingNextPage}
           onClick={() => void tree.fetchNextPage()}
         >
-          {tree.isFetchingNextPage ? "Cargando…" : "Cargar más entradas"}
+          {tree.isFetchingNextPage
+            ? t("common:actions.loading")
+            : t("tree.loadMore")}
         </button>
       )}
 
       {deletedFiles.length > 0 && (
         <section
           className="commit-tree-browser__deleted"
-          aria-label="Archivos eliminados en este commit"
+          aria-label={t("tree.deletedGroup")}
         >
-          <p className="detail-panel__local-group-head">
-            Eliminados en este commit
-          </p>
-          <ul className="file-list" aria-label="Archivos eliminados">
+          <p className="detail-panel__local-group-head">{t("tree.deleted")}</p>
+          <ul className="file-list" aria-label={t("tree.deletedList")}>
             {deletedFiles.map((file) => (
               <ChangedFileRow
                 key={file.path}
@@ -156,6 +156,8 @@ function TreeEntries({
   selectedFilePath,
   onOpen,
 }: TreeEntriesProps) {
+  const { t } = useTranslation(["files", "common"]);
+
   return entries.map((entry) => {
     if (entry.kind === "Directory") {
       return (
@@ -175,10 +177,13 @@ function TreeEntries({
     if (entry.kind === "Submodule") {
       return (
         <li className="file-tree__submodule" key={`submodule:${entry.path}`}>
-          <span aria-label={`${entry.name}, submódulo`} title="Submódulo">
+          <span
+            aria-label={t("tree.submoduleNamed", { name: entry.name })}
+            title={t("tree.submodule")}
+          >
             {entry.name}
           </span>
-          <span className="file-row__omitted">submódulo</span>
+          <span className="file-row__omitted">{t("tree.submoduleBadge")}</span>
         </li>
       );
     }
@@ -212,6 +217,7 @@ function TreeDirectory({
   selectedFilePath,
   onOpen,
 }: TreeDirectoryProps) {
+  const { t } = useTranslation(["files", "common"]);
   const [expanded, setExpanded] = useState(false);
   const children = useInfiniteQuery({
     queryKey: queryKeys.commitTree(repositoryPath, commitId, entry.path),
@@ -239,7 +245,14 @@ function TreeDirectory({
         type="button"
         className="file-tree__toggle"
         aria-expanded={expanded}
-        aria-label={`${entry.name}, carpeta${changedCount > 0 ? `, ${String(changedCount)} archivo${changedCount === 1 ? "" : "s"} con cambios` : ""}`}
+        aria-label={
+          changedCount > 0
+            ? t("tree.folderChanged", {
+                name: entry.name,
+                count: changedCount,
+              })
+            : t("tree.folder", { name: entry.name })
+        }
         onClick={() => {
           setExpanded((value) => !value);
         }}
@@ -258,7 +271,7 @@ function TreeDirectory({
       {expanded && (
         <div className="file-tree__contents">
           {children.isPending && (
-            <p className="state file-tree__state">Leyendo carpeta…</p>
+            <p className="state file-tree__state">{t("tree.readingFolder")}</p>
           )}
           {children.error !== null && (
             <RetryError
@@ -268,9 +281,7 @@ function TreeDirectory({
             />
           )}
           {children.data !== undefined && entries.length === 0 && (
-            <p className="state file-tree__state">
-              No hay archivos en esta carpeta.
-            </p>
+            <p className="state file-tree__state">{t("tree.emptyFolder")}</p>
           )}
           {entries.length > 0 && (
             <ul className="file-tree file-tree__children">
@@ -293,8 +304,8 @@ function TreeDirectory({
               onClick={() => void children.fetchNextPage()}
             >
               {children.isFetchingNextPage
-                ? "Cargando…"
-                : "Cargar más entradas"}
+                ? t("common:actions.loading")
+                : t("tree.loadMore")}
             </button>
           )}
         </div>

@@ -1,0 +1,47 @@
+{
+  "empty": {
+    "hint": "Abre un repositorio para ver su historial de ramas y commits."
+  },
+  "errorBoundary": {
+    "message": "La aplicación no pudo mostrar esta vista. Reinicia GitCanvas para continuar.",
+    "restart": "Reiniciar GitCanvas",
+    "title": "GitCanvas encontró un problema"
+  },
+  "history": {
+    "label": "Historial"
+  },
+  "language": {
+    "aria": "Idioma de la aplicación",
+    "label": "Idioma",
+    "system": "Sistema"
+  },
+  "picker": {
+    "choosing": "Elige una carpeta…",
+    "open": "Abrir repositorio",
+    "opening": "Abriendo…"
+  },
+  "preferences": {
+    "label": "Preferencias",
+    "panel": "Preferencias de la aplicación"
+  },
+  "resizer": {
+    "inspector": "Ancho del panel de detalle",
+    "sidebar": "Ancho de la barra lateral"
+  },
+  "theme": {
+    "aria": "Tema de la aplicación",
+    "dark": "Oscuro",
+    "label": "Tema",
+    "light": "Claro",
+    "system": "Sistema"
+  },
+  "title": "{{name}} — GitCanvas",
+  "toolbar": {
+    "branches": "Ramas",
+    "branchesHint": "Mostrar las ramas mientras se lee un archivo",
+    "github": "GitHub",
+    "noRepository": "Ningún repositorio abierto",
+    "refresh": "Actualizar",
+    "refreshHint": "Volver a leer el repositorio desde el disco"
+  }
+}

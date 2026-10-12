@@ -99,7 +99,7 @@ describe("GitHubPicker", () => {
     renderPicker();
 
     expect(
-      await screen.findByText(/primeros 1\.000 repositorios/),
+      await screen.findByText(/primeros 1000 repositorios/),
     ).toBeInstanceOf(HTMLElement);
   });
 
@@ -258,8 +258,9 @@ describe("GitHubPicker", () => {
         received_bytes: String(3 * 1024 * 1024),
       });
 
-      expect((await screen.findByRole("status")).textContent).toContain(
-        "25% · 3.0 MB",
+      // Spanish separates the percent sign with a no-break space.
+      expect((await screen.findByRole("status")).textContent).toMatch(
+        /25\s%\s·\s3,0\sMB/,
       );
     });
 
@@ -274,7 +275,7 @@ describe("GitHubPicker", () => {
       });
 
       expect((await screen.findByRole("status")).textContent).toContain(
-        "Preparando… 1.0 MB",
+        "Preparando… 1,0 MB",
       );
     });
 

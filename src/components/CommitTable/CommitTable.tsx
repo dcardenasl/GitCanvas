@@ -7,6 +7,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 
 import type { CommitInfo } from "../../bindings";
 import type { RefBadge } from "../../state/refs";
@@ -62,18 +64,24 @@ interface CommitTableProps {
   readonly refsByCommit?: ReadonlyMap<string, readonly RefBadge[]>;
 }
 
+/** What a context-menu copy puts on the clipboard, and how it is announced. */
+type CopyTarget = "hash" | "fullHash" | "message" | "author";
+
 /** A spoken description of a row: what it is, who wrote it, and when. */
 function rowLabel(
+  t: TFunction<"history">,
   commit: CommitInfo,
   refs: readonly RefBadge[] | undefined,
 ): string {
   const parts = [commit.summary];
   if (refs !== undefined && refs.length > 0) {
-    parts.push(`en ${refs.map((ref) => ref.name).join(", ")}`);
+    parts.push(
+      t("table.rowOn", { refs: refs.map((ref) => ref.name).join(", ") }),
+    );
   }
-  parts.push(`por ${commit.author_name}`);
+  parts.push(t("table.rowBy", { author: commit.author_name }));
   parts.push(formatCommitTime(commit.commit_time));
-  parts.push(`commit ${shortId(commit.id)}`);
+  parts.push(t("table.rowCommit", { id: shortId(commit.id) }));
   return parts.join(". ");
 }
 
@@ -95,6 +103,7 @@ export function CommitTable({
   onRevealed,
   refsByCommit,
 }: CommitTableProps) {
+  const { t } = useTranslation("history");
   const commitIndexById = useMemo(() => {
     if (suppliedCommitIndex !== undefined) return suppliedCommitIndex;
     const index = new Map<string, number>();
@@ -141,14 +150,19 @@ export function CommitTable({
     onRevealed?.();
   }, [revealCommitId, commitIndexById, virtualizer, onRevealed]);
 
-  const copy = useCallback(async (value: string, what: string) => {
-    const ok = await copyText(value);
-    setCopied(ok ? `${what} copiado` : `no se pudo copiar el ${what}`);
-    // Cleared so the same copy announced twice in a row is announced twice.
-    window.setTimeout(() => {
-      setCopied(null);
-    }, 2500);
-  }, []);
+  const copy = useCallback(
+    async (value: string, target: CopyTarget) => {
+      const ok = await copyText(value);
+      setCopied(
+        t(ok ? `table.copied.${target}` : `table.copyFailed.${target}`),
+      );
+      // Cleared so the same copy announced twice in a row is announced twice.
+      window.setTimeout(() => {
+        setCopied(null);
+      }, 2500);
+    },
+    [t],
+  );
 
   const items = virtualizer.getVirtualItems();
   const totalHeight = virtualizer.getTotalSize();
@@ -277,7 +291,7 @@ export function CommitTable({
         <div
           className="commit-table__rows"
           role="listbox"
-          aria-label="Historial de commits"
+          aria-label={t("table.label")}
           // The width the graph column needs. Applied to each row's `left`
           // rather than as padding here: rows are absolutely positioned, and an
           // absolutely positioned box resolves `left` against the padding box,
@@ -309,7 +323,7 @@ export function CommitTable({
                  * the hash straight into the date. Naming the row explicitly
                  * puts the separators a listener needs.
                  */
-                aria-label={rowLabel(commit, refsByCommit?.get(commit.id))}
+                aria-label={rowLabel(t, commit, refsByCommit?.get(commit.id))}
                 tabIndex={
                   selected ||
                   item.index === (selectedIndex < 0 ? 0 : selectedIndex)
@@ -345,7 +359,9 @@ export function CommitTable({
                         ref.isHead ? " ref-pill--head" : ""
                       }`}
                       title={
-                        ref.isHead ? `${ref.name} (rama activa)` : ref.name
+                        ref.isHead
+                          ? t("table.refActive", { name: ref.name })
+                          : ref.name
                       }
                     >
                       {ref.name}
@@ -378,29 +394,29 @@ export function CommitTable({
           onClose={closeMenu}
           items={[
             {
-              label: `Copiar hash (${shortId(menu.commit.id)})`,
+              label: t("table.menu.copyHash", { id: shortId(menu.commit.id) }),
               onSelect: () => {
                 void copy(menu.commit.id, "hash");
               },
             },
             {
-              label: "Copiar hash completo",
+              label: t("table.menu.copyFullHash"),
               onSelect: () => {
-                void copy(menu.commit.id, "hash completo");
+                void copy(menu.commit.id, "fullHash");
               },
             },
             {
-              label: "Copiar mensaje",
+              label: t("table.menu.copyMessage"),
               onSelect: () => {
-                void copy(menu.commit.message, "mensaje");
+                void copy(menu.commit.message, "message");
               },
             },
             {
-              label: "Copiar autor",
+              label: t("table.menu.copyAuthor"),
               onSelect: () => {
                 void copy(
                   `${menu.commit.author_name} <${menu.commit.author_email}>`,
-                  "autor",
+                  "author",
                 );
               },
             },

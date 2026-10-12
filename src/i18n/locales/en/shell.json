@@ -1,0 +1,47 @@
+{
+  "empty": {
+    "hint": "Open a repository to see its branch and commit history."
+  },
+  "errorBoundary": {
+    "message": "The application could not display this view. Restart GitCanvas to continue.",
+    "restart": "Restart GitCanvas",
+    "title": "GitCanvas ran into a problem"
+  },
+  "history": {
+    "label": "History"
+  },
+  "language": {
+    "aria": "Application language",
+    "label": "Language",
+    "system": "System"
+  },
+  "picker": {
+    "choosing": "Choose a folder…",
+    "open": "Open repository",
+    "opening": "Opening…"
+  },
+  "preferences": {
+    "label": "Preferences",
+    "panel": "Application preferences"
+  },
+  "resizer": {
+    "inspector": "Detail panel width",
+    "sidebar": "Sidebar width"
+  },
+  "theme": {
+    "aria": "Application theme",
+    "dark": "Dark",
+    "label": "Theme",
+    "light": "Light",
+    "system": "System"
+  },
+  "title": "{{name}} — GitCanvas",
+  "toolbar": {
+    "branches": "Branches",
+    "branchesHint": "Show the branches while reading a file",
+    "github": "GitHub",
+    "noRepository": "No repository open",
+    "refresh": "Refresh",
+    "refreshHint": "Re-read the repository from disk"
+  }
+}

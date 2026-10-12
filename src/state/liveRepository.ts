@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
-import { appErrorMessage, userMessage } from "../lib/errors";
 import {
   onRepositoryChanged,
   unwatchRepository,
@@ -94,10 +93,10 @@ export function useLiveRepository(path: string | null): {
           path,
           status: {
             kind: "degraded",
-            message: appErrorMessage(
-              "WatchDegraded",
-              payload.kind.Degraded.message,
-            ),
+            error: {
+              kind: "WatchDegraded",
+              message: payload.kind.Degraded.message,
+            },
           },
         });
       }
@@ -131,7 +130,7 @@ export function useLiveRepository(path: string | null): {
           path,
           status: {
             kind: "degraded",
-            message: userMessage(error),
+            error,
           },
         });
       }
@@ -178,4 +177,4 @@ export type WatcherStatus =
   | { kind: "idle" }
   | { kind: "starting" }
   | { kind: "ready" }
-  | { kind: "degraded"; message: string };
+  | { kind: "degraded"; error: unknown };

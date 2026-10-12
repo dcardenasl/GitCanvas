@@ -281,6 +281,30 @@ export const config: WebdriverIO.Config = {
     const driver = browser as WebdriverIO.Browser;
     const [window] = await driver.getWindowHandles();
     if (window !== undefined) await driver.switchToWindow(window);
+
+    // The application starts in the language of the machine it runs on, and the
+    // specs select by that language's text. Choosing it through the interface,
+    // by selectors that do not depend on any language, makes every run read the
+    // same screen on Linux, macOS and Windows alike.
+    const preferences = await driver.$(".preferences-menu__toggle");
+    await preferences.waitForExist({ timeout: 20_000 });
+    await preferences.click();
+    // Set through the page rather than by clicking the option: the options of a
+    // native select open in a popup that WebView2, WebKit and WebKitGTK each
+    // drive differently, and the change event is all the application listens to.
+    await driver.execute(() => {
+      const select = document.querySelector<HTMLSelectElement>(
+        ".language-selector__select",
+      );
+      if (select === null) throw new Error("Language selector is missing");
+      select.value = "es";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await driver.waitUntil(
+      async () => (await driver.$("html").getAttribute("lang")) === "es",
+      { timeoutMsg: "expected the interface to switch to Spanish" },
+    );
+    await preferences.click();
   },
 
   onComplete() {

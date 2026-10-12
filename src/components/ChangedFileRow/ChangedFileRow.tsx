@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import type { FileChange } from "../../bindings";
 import type { ChangedFile } from "../../lib/changedFiles";
 import { DiffStat } from "../DiffStat/DiffStat";
@@ -10,16 +12,6 @@ const CHANGE_MARK: Record<FileChange, string> = {
   Copied: "C",
   TypeChanged: "T",
   Other: "?",
-};
-
-const CHANGE_LABEL: Record<FileChange, string> = {
-  Added: "Añadido",
-  Modified: "Modificado",
-  Deleted: "Eliminado",
-  Renamed: "Renombrado",
-  Copied: "Copiado",
-  TypeChanged: "Tipo cambiado",
-  Other: "Otro",
 };
 
 interface ChangedFileRowProps {
@@ -47,6 +39,8 @@ export function ChangedFileRow({
   onOpen,
   showDirectory = true,
 }: ChangedFileRowProps) {
+  const { t } = useTranslation("files");
+
   return (
     <li>
       <button
@@ -58,16 +52,16 @@ export function ChangedFileRow({
         {file === null ? (
           <span
             className="file-row__mark file-row__mark--unchanged"
-            title="Sin cambios en este commit"
-            aria-label="Sin cambios en este commit"
+            title={t("change.unchanged")}
+            aria-label={t("change.unchanged")}
           >
             ·
           </span>
         ) : (
           <span
             className={`file-row__mark file-row__mark--${file.change.toLowerCase()}`}
-            title={CHANGE_LABEL[file.change]}
-            aria-label={CHANGE_LABEL[file.change]}
+            title={t(`change.${file.change}`)}
+            aria-label={t(`change.${file.change}`)}
           >
             {CHANGE_MARK[file.change]}
           </span>
@@ -83,7 +77,9 @@ export function ChangedFileRow({
             <DiffStat insertions={file.insertions} deletions={file.deletions} />
           ) : (
             <span className="file-row__omitted">
-              {file.omitted === "Binary" ? "binario" : "grande"}
+              {file.omitted === "Binary"
+                ? t("omitted.binary")
+                : t("omitted.large")}
             </span>
           )}
         </span>

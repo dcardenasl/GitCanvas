@@ -5,17 +5,18 @@
  * not fit a JavaScript number safely. Parsing happens here, once.
  */
 
+import { activeLanguage } from "../../i18n";
+
 /** Abbreviated commit id, matching Git's default display length. */
 export function shortId(id: string): string {
   return id.slice(0, 7);
 }
 
-const DEFAULT_LOCALE = "es";
 const FORMATTER_CACHE_LIMIT = 8;
 const dateFormatters = new Map<string, Intl.DateTimeFormat>();
 
 function dateFormatter(locale?: string): Intl.DateTimeFormat {
-  const key = locale ?? DEFAULT_LOCALE;
+  const key = locale ?? activeLanguage();
   const cached = dateFormatters.get(key);
   if (cached !== undefined) return cached;
 
@@ -35,7 +36,8 @@ function dateFormatter(locale?: string): Intl.DateTimeFormat {
 }
 
 /**
- * Formats a commit time for the history table.
+ * Formats a commit time for the history table, in the active language unless a
+ * locale is given.
  *
  * Returns an empty string for values that are not finite seconds rather than
  * rendering "Invalid Date" into the interface.

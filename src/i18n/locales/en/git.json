@@ -1,0 +1,33 @@
+{
+  "blocked": {
+    "body": "Switching to <strong>{{branch}}</strong> would discard these changes, which are not committed:",
+    "confirm": "Discard and switch",
+    "irreversible": "This cannot be undone.",
+    "more_one": "and {{count}} more",
+    "more_other": "and {{count, number}} more",
+    "staged": "in the index",
+    "title": "There are uncommitted changes"
+  },
+  "notice": {
+    "checkedOut": "On {{branch}}.",
+    "close": "Dismiss notice",
+    "diverged": "{{local}} and {{remote}} have diverged. A merge is needed, which is resolved from the command line.",
+    "fastForwarded_one": "Advanced {{count}} commit.",
+    "fastForwarded_other": "Advanced {{count, number}} commits.",
+    "noUpstream": "This branch has no remote tracking branch configured.",
+    "pushRejected": "The remote rejected the push of {{branch}} because it has commits missing from the local branch. Pull them with “{{pull}}” before pushing again.",
+    "pushed": "{{branch}} pushed to {{remote}}.",
+    "upToDate": "Already up to date."
+  },
+  "pull": {
+    "busy": "Pulling…",
+    "label": "Pull changes"
+  },
+  "push": {
+    "busy": "Pushing…",
+    "confirm": "Push",
+    "dialogBody": "The commits of <strong>{{branch}}</strong> will be pushed to the remote. This is visible to anyone with access to the repository.",
+    "dialogTitle": "Push changes",
+    "label": "Push changes"
+  }
+}

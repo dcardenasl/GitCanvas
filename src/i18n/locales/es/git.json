@@ -1,0 +1,35 @@
+{
+  "blocked": {
+    "body": "Cambiar a <strong>{{branch}}</strong> descartaría estos cambios, que no están commiteados:",
+    "confirm": "Descartar y cambiar",
+    "irreversible": "Esto no se puede deshacer.",
+    "more_many": "y {{count, number}} más",
+    "more_one": "y {{count}} más",
+    "more_other": "y {{count, number}} más",
+    "staged": "en el índice",
+    "title": "Hay cambios sin guardar"
+  },
+  "notice": {
+    "checkedOut": "En {{branch}}.",
+    "close": "Cerrar aviso",
+    "diverged": "{{local}} y {{remote}} divergieron. Hace falta una fusión, que se resuelve desde la línea de comandos.",
+    "fastForwarded_many": "Avanzó {{count, number}} commits.",
+    "fastForwarded_one": "Avanzó {{count}} commit.",
+    "fastForwarded_other": "Avanzó {{count, number}} commits.",
+    "noUpstream": "Esta rama no tiene configurada una rama de seguimiento remoto.",
+    "pushRejected": "El remoto rechazó el envío de {{branch}} porque tiene commits que faltan en la rama local. Tráelos con «{{pull}}» antes de volver a enviarla.",
+    "pushed": "{{branch}} enviada a {{remote}}.",
+    "upToDate": "Ya está al día."
+  },
+  "pull": {
+    "busy": "Trayendo…",
+    "label": "Traer cambios"
+  },
+  "push": {
+    "busy": "Enviando…",
+    "confirm": "Enviar",
+    "dialogBody": "Se van a enviar los commits de <strong>{{branch}}</strong> al remoto. Esto es visible para cualquiera que tenga acceso al repositorio.",
+    "dialogTitle": "Enviar cambios",
+    "label": "Enviar cambios"
+  }
+}

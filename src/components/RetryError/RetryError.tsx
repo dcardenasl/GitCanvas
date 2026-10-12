@@ -1,4 +1,6 @@
-import { userMessage } from "../../lib/errors";
+import { useTranslation } from "react-i18next";
+
+import { ErrorMessage } from "../ErrorMessage";
 
 /** Inputs for a localized retryable query error. */
 export interface RetryErrorProps {
@@ -9,16 +11,18 @@ export interface RetryErrorProps {
 
 /** Localized query failure with an explicit, duplicate-safe retry action. */
 export function RetryError({ error, isRetrying, onRetry }: RetryErrorProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="state file-tree__state" role="alert">
-      <p>{userMessage(error)}</p>
+      <ErrorMessage error={error} />
       <button
         type="button"
         className="file-tree__retry"
         disabled={isRetrying}
         onClick={onRetry}
       >
-        Reintentar
+        {t("actions.retry")}
       </button>
     </div>
   );

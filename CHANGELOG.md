@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-10-12
+
+### Added
+
+- **`PreferencesMenu`** — a toolbar button groups theme and the new language choice
+  (System, English, Spanish). System follows the operating system and falls back to
+  English, the choice is remembered, and switching is immediate without losing the
+  open repository or selection.
+
+### Changed
+
+- **Interface text** — every label, message, tooltip and accessible name now comes
+  from per-language catalogs, with dates, numbers and plurals formatted for the
+  active language instead of fixed Spanish.
+- **Error messages** — failures show a translated summary and keep the backend's
+  original English diagnostic in an expandable, copyable detail.
+- **Pull and push notices** — they wrap instead of being cut off with an ellipsis, so
+  an error message can be read in full.
+
+### Fixed
+
+- **Toolbar layout** — at the 940 px minimum window the toolbar could widen the
+  window and scroll sideways; it now stays within the window, and the search field
+  and a long repository name give way before the buttons do.
+
 ## [0.1.0] — 2026-10-08
 
 ### Added
@@ -220,5 +245,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   retried with force: the remote having commits the local branch does not is
   exactly the case where forcing destroys someone else's work.
 
-[Unreleased]: https://github.com/dcardenasl/gitcanvas/compare/v0.1.0...dev
+[Unreleased]: https://github.com/dcardenasl/gitcanvas/compare/v0.2.0...dev
+[0.2.0]: https://github.com/dcardenasl/gitcanvas/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/dcardenasl/gitcanvas/compare/6c8b765...v0.1.0

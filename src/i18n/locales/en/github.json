@@ -1,0 +1,22 @@
+{
+  "connect": {
+    "hint": "Paste a personal access token with the <code>repo</code> scope. It is stored in the system keychain and never leaves the backend.",
+    "submit": "Connect",
+    "title": "Connect to GitHub",
+    "tokenLabel": "Personal access token",
+    "verifying": "Verifying…"
+  },
+  "list": {
+    "clone": "Clone",
+    "cloning": "Cloning…",
+    "disconnect": "Disconnect",
+    "loading": "Loading repositories…",
+    "private": "private",
+    "title": "GitHub repositories",
+    "truncated": "The first {{limit, number}} repositories are shown. Refine the selection on GitHub if the one you are looking for does not appear."
+  },
+  "progress": {
+    "preparing": "Preparing… {{megabytes, number(style: unit; unit: megabyte; unitDisplay: short; minimumFractionDigits: 1; maximumFractionDigits: 1)}}",
+    "transfer": "{{ratio, number(style: percent)}} · {{megabytes, number(style: unit; unit: megabyte; unitDisplay: short; minimumFractionDigits: 1; maximumFractionDigits: 1)}}"
+  }
+}

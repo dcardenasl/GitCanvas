@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { getStartupRepository } from "../../lib/ipc";
 import brandMark from "../../assets/branding/gitcanvas-mark.png";
@@ -7,11 +8,12 @@ import brandHorizontal from "../../assets/branding/gitcanvas-horizontal.png";
 
 import { CommitDetailPanel } from "../CommitDetailPanel";
 import { CommitSearch } from "../CommitSearch";
+import { ErrorMessage } from "../ErrorMessage";
 import { FileDiffView } from "../FileDiffView";
 import { GitHubPicker } from "../GitHubPicker";
+import { PreferencesMenu } from "../PreferencesMenu";
 import { Resizer } from "../Resizer";
 import { Actions, useGitActions } from "../Toolbar";
-import { ThemeSelector } from "../ThemeSelector/ThemeSelector";
 import { INSPECTOR, SIDEBAR, useLayout } from "../../state/layout";
 import { useLiveRepository } from "../../state/liveRepository";
 import { Sidebar } from "../Sidebar";
@@ -32,6 +34,7 @@ import "./AppShell.css";
 
 /** The application window: toolbar, navigation and history. */
 export function AppShell() {
+  const { t } = useTranslation(["shell", "common"]);
   const repository = useSession((state) => state.repository);
   const selection = useSession((state) => state.selection);
   const selectedCommitId = useSession(getSelectedCommitId);
@@ -52,8 +55,8 @@ export function AppShell() {
     // The window says which repository it is showing, so two of them are
     // tellable apart in the dock and in the window switcher.
     document.title =
-      repository === null ? "GitCanvas" : `${repository.name} — GitCanvas`;
-  }, [repository]);
+      repository === null ? "GitCanvas" : t("title", { name: repository.name });
+  }, [repository, t]);
 
   useEffect(() => {
     // `gitcanvas /path/to/repo` opens straight into that repository. Failure is
@@ -110,47 +113,47 @@ export function AppShell() {
             aria-hidden="true"
           />
         )}
-        <span className="toolbar__repository">
-          {repository?.name ?? "Ningún repositorio abierto"}
+        <span className="toolbar__repository" title={repository?.name}>
+          {repository?.name ?? t("toolbar.noRepository")}
         </span>
         {repository !== null && (
           <button
             type="button"
             className="button"
-            title="Volver a leer el repositorio desde el disco"
+            title={t("toolbar.refreshHint")}
             onClick={() => {
               void invalidateLive(queryClient, repository.path);
             }}
           >
-            Actualizar
+            {t("toolbar.refresh")}
           </button>
         )}
         {watcher.status.kind === "degraded" && (
-          <span role="alert" className="toolbar__status">
-            Watcher degradado: {watcher.status.message}
+          <div role="alert" className="toolbar__status">
+            <ErrorMessage error={watcher.status.error} />
             <button type="button" className="button" onClick={watcher.retry}>
-              Reintentar
+              {t("common:actions.retry")}
             </button>
-          </span>
+          </div>
         )}
         {readingFile && (
           <button
             type="button"
             className="button"
             aria-pressed={sidebarPinned}
-            title="Mostrar las ramas mientras se lee un archivo"
+            title={t("toolbar.branchesHint")}
             onClick={() => {
               setSidebarPinned((pinned) => !pinned);
             }}
           >
-            Ramas
+            {t("toolbar.branches")}
           </button>
         )}
         {repository !== null && !readingFile && (
           <CommitSearch commits={history.commits} onGo={revealCommit} />
         )}
         <div className="toolbar__spacer" />
-        <ThemeSelector />
+        <PreferencesMenu />
         {repository !== null && (
           <Actions actions={gitActions} currentBranch={currentBranch} />
         )}
@@ -162,7 +165,7 @@ export function AppShell() {
             setShowGitHub((open) => !open);
           }}
         >
-          GitHub
+          {t("toolbar.github")}
         </button>
         <RepositoryPicker />
       </header>
@@ -180,9 +183,7 @@ export function AppShell() {
             src={brandHorizontal}
             alt="GitCanvas"
           />
-          <p className="app-shell__empty-hint">
-            Abre un repositorio para ver su historial de ramas y commits.
-          </p>
+          <p className="app-shell__empty-hint">{t("empty.hint")}</p>
         </div>
       ) : (
         <div
@@ -210,7 +211,7 @@ export function AppShell() {
         >
           <Sidebar hidden={collapseSidebar} onCheckout={gitActions.checkout} />
           <Resizer
-            label="Ancho de la barra lateral"
+            label={t("resizer.sidebar")}
             width={layout.sidebar}
             initialWidth={SIDEBAR.initial}
             min={SIDEBAR.min}
@@ -219,7 +220,7 @@ export function AppShell() {
             onResize={layout.setSidebar}
             hidden={collapseSidebar}
           />
-          <main className="app-shell__history" aria-label="Historial">
+          <main className="app-shell__history" aria-label={t("history.label")}>
             {selected !== null && selectedFilePath !== null ? (
               <FileDiffView
                 repositoryPath={repository.path}
@@ -241,7 +242,7 @@ export function AppShell() {
             )}
           </main>
           <Resizer
-            label="Ancho del panel de detalle"
+            label={t("resizer.inspector")}
             width={layout.inspector}
             initialWidth={INSPECTOR.initial}
             min={INSPECTOR.min}

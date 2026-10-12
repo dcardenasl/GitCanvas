@@ -1,0 +1,55 @@
+{
+  "detail": {
+    "aria": "Detalle del commit",
+    "changedFiles": "Archivos modificados",
+    "commit": "commit",
+    "filesChanged_many": "{{count, number}} archivos modificados",
+    "filesChanged_one": "{{count}} archivo modificado",
+    "filesChanged_other": "{{count, number}} archivos modificados",
+    "mergeNote": "Commit de merge: se muestran los cambios contra el primer padre.",
+    "parent": "parent",
+    "reading": "Leyendo los archivos…"
+  },
+  "localRow": {
+    "readFailed": "No se pudieron leer los cambios locales",
+    "summary": "{{staged, number}} preparados · {{unstaged, number}} sin preparar",
+    "title": "Cambios locales"
+  },
+  "search": {
+    "aria": "Buscar en el historial cargado",
+    "noMatches": "sin coincidencias",
+    "placeholder": "Buscar commit, autor o hash",
+    "position": "{{current, number}} de {{total, number}}",
+    "searching": "Buscando…"
+  },
+  "state": {
+    "empty": "Este repositorio no tiene commits.",
+    "loading": "Leyendo el historial…",
+    "nextPageFailed": "No se pudo cargar la siguiente página"
+  },
+  "table": {
+    "copied": {
+      "author": "autor copiado",
+      "fullHash": "hash completo copiado",
+      "hash": "hash copiado",
+      "message": "mensaje copiado"
+    },
+    "copyFailed": {
+      "author": "no se pudo copiar el autor",
+      "fullHash": "no se pudo copiar el hash completo",
+      "hash": "no se pudo copiar el hash",
+      "message": "no se pudo copiar el mensaje"
+    },
+    "label": "Historial de commits",
+    "menu": {
+      "copyAuthor": "Copiar autor",
+      "copyFullHash": "Copiar hash completo",
+      "copyHash": "Copiar hash ({{id}})",
+      "copyMessage": "Copiar mensaje"
+    },
+    "refActive": "{{name}} (rama activa)",
+    "rowBy": "por {{author}}",
+    "rowCommit": "commit {{id}}",
+    "rowOn": "en {{refs}}"
+  }
+}

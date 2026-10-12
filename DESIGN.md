@@ -29,6 +29,10 @@ Operate mode. Open repository is the primary entry. Branches and tags are naviga
 into history, and selecting a commit reveals its metadata and diff. Errors and loading
 states occupy their own region without replacing successful repository data. Keyboard
 navigation, visible focus and descriptive accessible names accompany all controls.
+Every label is translated and may grow by half in another language, so controls size
+to their text; new components use logical CSS properties so the layout can mirror for
+right-to-left languages. Window-level preferences (theme, language) live behind one
+toolbar button so the toolbar stays on one row at the 940px minimum.
 
 ## Platform behavior
 

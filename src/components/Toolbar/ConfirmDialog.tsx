@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 /** Content, labels, and callbacks for a modal confirmation. */
 export interface ConfirmDialogProps {
@@ -25,6 +26,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
@@ -54,7 +56,7 @@ export function ConfirmDialog({
           className="button"
           onClick={onCancel}
         >
-          Cancelar
+          {t("actions.cancel")}
         </button>
         <button
           type="button"

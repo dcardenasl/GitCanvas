@@ -1,7 +1,8 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
-import { userMessage } from "../../lib/errors";
 import { CommitTable } from "../CommitTable";
+import { ErrorMessage } from "../ErrorMessage";
 import { GraphCanvas } from "../GraphCanvas";
 import type { HistoryData } from "../../state/history";
 import { useRefsByCommit } from "../../state/refs";
@@ -20,6 +21,7 @@ import { DiffStat } from "../DiffStat/DiffStat";
  * would lay the whole graph out a second time on every page.
  */
 export function HistoryView({ history }: { readonly history: HistoryData }) {
+  const { t } = useTranslation(["history", "common"]);
   const repository = useSession((state) => state.repository);
   const selection = useSession((state) => state.selection);
   const selectedCommitId = useSession(getSelectedCommitId);
@@ -57,10 +59,12 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
         <span className="working-tree-row__marker" aria-hidden="true">
           WIP
         </span>
-        <span className="working-tree-row__title">Cambios locales</span>
+        <span className="working-tree-row__title">{t("localRow.title")}</span>
         <span className="working-tree-row__summary">
-          {local.data.staged.total_files} preparados ·{" "}
-          {local.data.unstaged.total_files} sin preparar
+          {t("localRow.summary", {
+            staged: local.data.staged.total_files,
+            unstaged: local.data.unstaged.total_files,
+          })}
         </span>
         <span className="working-tree-row__stats">
           <DiffStat
@@ -76,9 +80,9 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
     ) : null;
   const localState =
     local.error !== null ? (
-      <p className="state history-view__state" role="alert">
-        No se pudieron leer los cambios locales: {userMessage(local.error)}
-      </p>
+      <div className="state history-view__state" role="alert">
+        <ErrorMessage error={local.error} lead={t("localRow.readFailed")} />
+      </div>
     ) : null;
 
   useEffect(() => {
@@ -104,9 +108,9 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
       <div className="history-view">
         {localRow}
         {localState}
-        <p className="state history-view__state" role="alert">
-          {userMessage(history.error)}
-        </p>
+        <div className="state history-view__state" role="alert">
+          <ErrorMessage error={history.error} />
+        </div>
       </div>
     );
   }
@@ -116,7 +120,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
       <div className="history-view">
         {localRow}
         {localState}
-        <p className="state history-view__state">Leyendo el historial…</p>
+        <p className="state history-view__state">{t("state.loading")}</p>
       </div>
     );
   }
@@ -126,9 +130,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
       <div className="history-view">
         {localRow}
         {localState}
-        <p className="state history-view__state">
-          Este repositorio no tiene commits.
-        </p>
+        <p className="state history-view__state">{t("state.empty")}</p>
       </div>
     );
   }
@@ -138,17 +140,20 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
       {localRow}
       {localState}
       {history.error !== null && (
-        <p className="state history-view__state" role="alert">
-          No se pudo cargar la siguiente página: {userMessage(history.error)}{" "}
+        <div className="state history-view__state" role="alert">
+          <ErrorMessage
+            error={history.error}
+            lead={t("state.nextPageFailed")}
+          />{" "}
           <button
             type="button"
             className="button"
             disabled={isFetchingNextPage}
             onClick={fetchNextPage}
           >
-            Reintentar
+            {t("common:actions.retry")}
           </button>
-        </p>
+        </div>
       )}
       <CommitTable
         commits={commits}

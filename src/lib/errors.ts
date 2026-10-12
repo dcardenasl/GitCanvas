@@ -1,41 +1,54 @@
 import type { AppError } from "../bindings";
+import { i18n } from "../i18n";
 
 /**
- * How each backend failure is introduced to the user.
- *
- * The interface speaks Spanish; the backend's own messages are English
- * diagnostics for whoever reads a log or a bug report. Each is shown after a
- * Spanish summary of what kind of failure it was, so the screen reads in one
- * language and the precise cause is still there to copy.
+ * Every backend failure kind the interface introduces by category.
  *
  * A `Record` over every kind: adding a variant to `AppError` in Rust fails the
- * type check here until it has a summary.
+ * type check here until it is listed, and the `errors:kind.*` catalog keys are
+ * typed from the same names, so it also fails until the base catalog has a
+ * summary for it.
  */
-const KIND_SUMMARY: Record<AppError["kind"], string> = {
-  InvalidRepository: "No es un repositorio válido",
-  Io: "Falló una operación de archivos",
-  Git: "Git no pudo completar la operación",
-  Auth: "Falló la autenticación",
-  Network: "No se pudo completar la operación de red",
-  Conflict: "La operación entra en conflicto con el estado actual",
-  InvalidInput: "La solicitud no es válida",
-  PathOutsideRepository: "La ruta queda fuera del repositorio",
-  WorktreeChanged: "Los cambios locales se modificaron mientras se leían",
-  WorktreeFileUnavailable: "El archivo local no está disponible",
-  ResourceLimitExceeded: "Se superó un límite de recursos",
-  WatchDegraded: "La observación del repositorio está degradada",
-  StaleCursor: "El historial cambió mientras se leía",
-  ResourceExhausted: "El sistema se quedó sin archivos abiertos",
-  Internal: "Falló una operación interna",
+const APP_ERROR_KINDS: Record<AppError["kind"], true> = {
+  InvalidRepository: true,
+  Io: true,
+  Git: true,
+  Auth: true,
+  Network: true,
+  Conflict: true,
+  InvalidInput: true,
+  PathOutsideRepository: true,
+  WorktreeChanged: true,
+  WorktreeFileUnavailable: true,
+  ResourceLimitExceeded: true,
+  WatchDegraded: true,
+  StaleCursor: true,
+  ResourceExhausted: true,
+  Internal: true,
 };
 
-const UNKNOWN_ERROR_MESSAGE = "Ocurrió un error inesperado.";
+/** A failure as the backend reports it: a category and an English diagnostic. */
+export interface StructuredError {
+  readonly kind: AppError["kind"];
+  readonly message: string;
+}
+
+/** An error ready to show: a translated summary and the original diagnostic. */
+export interface ErrorDescription {
+  /** What kind of failure it was, in the interface language. */
+  readonly summary: string;
+  /**
+   * The backend's own English diagnostic, for whoever needs the precise cause.
+   * `null` when there is nothing beyond the summary.
+   */
+  readonly detail: string | null;
+}
 
 /** Whether a value is one of the backend's known, user-facing error kinds. */
 export function isAppErrorKind(kind: unknown): kind is AppError["kind"] {
   return (
     typeof kind === "string" &&
-    Object.prototype.hasOwnProperty.call(KIND_SUMMARY, kind)
+    Object.prototype.hasOwnProperty.call(APP_ERROR_KINDS, kind)
   );
 }
 
@@ -45,23 +58,39 @@ export function errorKind(error: unknown): AppError["kind"] | null {
   return isAppErrorKind(error.kind) ? error.kind : null;
 }
 
-/** Safe Spanish summary for structured errors, including watcher events. */
-export function appErrorMessage(kind: unknown, message: unknown): string {
-  if (!isAppErrorKind(kind) || typeof message !== "string") {
-    return UNKNOWN_ERROR_MESSAGE;
-  }
-  return `${KIND_SUMMARY[kind]}: ${message}`;
+/** Whether a value carries a backend error's category and diagnostic. */
+function isStructuredError(error: unknown): error is StructuredError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "kind" in error &&
+    "message" in error &&
+    isAppErrorKind(error.kind) &&
+    typeof error.message === "string"
+  );
 }
 
 /**
- * Text to show the user for a failure of any origin.
+ * How to introduce a failure of any origin.
  *
- * Backend errors carry a `kind` and get a Spanish summary; anything else keeps
- * its own message. Recognised by shape rather than by class so this module
- * does not depend on the IPC layer it describes.
+ * Backend errors carry a `kind`; React translates that category and the
+ * backend's English diagnostic is kept apart as the detail, never mixed into
+ * the sentence. Anything else is an error the code raised for itself, whose
+ * message is already a diagnostic, and is shown as it is. Recognised by shape
+ * rather than by class so this module does not depend on the IPC layer it
+ * describes.
  */
-export function userMessage(error: unknown): string {
-  if (!(error instanceof Error)) return String(error);
-  if (!("kind" in error)) return error.message;
-  return appErrorMessage(error.kind, error.message);
+export function describeError(error: unknown): ErrorDescription {
+  if (isStructuredError(error)) {
+    return {
+      summary: i18n.t(`errors:kind.${error.kind}`),
+      detail: error.message === "" ? null : error.message,
+    };
+  }
+  // A `kind` this build does not know is a backend newer than the interface;
+  // its message is not for display, so it gets the generic sentence.
+  if (error instanceof Error && !("kind" in error)) {
+    return { summary: error.message, detail: null };
+  }
+  return { summary: i18n.t("errors:unknown"), detail: null };
 }

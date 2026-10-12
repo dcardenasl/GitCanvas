@@ -1,0 +1,14 @@
+{
+  "aria": "Branches and tags",
+  "checkout": "Switch to {{branch}}",
+  "goTo": "Go to the latest commit of {{name}}",
+  "goToWithCheckout": "Go to the latest commit of {{name}}. Right-click to switch to this branch",
+  "groups": {
+    "local": "Local",
+    "remote": "Remote",
+    "tags": "Tags"
+  },
+  "head": "HEAD",
+  "headLabel": "Active branch",
+  "notCommit": "{{name}} does not point to a commit"
+}

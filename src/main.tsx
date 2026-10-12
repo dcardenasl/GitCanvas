@@ -1,6 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 
+// Registers the language before anything renders, so the first frame is in it.
+import "./i18n";
 import "./App.css";
 import "./styles/primitives.css";
 

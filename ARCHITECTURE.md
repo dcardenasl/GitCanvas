@@ -136,8 +136,11 @@ rows of every page it already laid out.
 `AppError` is the only failure type. Transience is a property of the variant —
 `ResourceExhausted` (out of file descriptors) is the one that is retried, and it
 is retried by asking `is_transient()`, never by searching a message. On the
-frontend `userMessage` introduces each kind with a Spanish summary; the
-backend's own text is an English diagnostic shown after it.
+frontend `describeError` introduces each kind with a summary in the interface
+language, and the backend's own text stays an English diagnostic behind an
+expandable detail. State holds the failure or a notice code, never a translated
+sentence, so text follows a change of language. See
+[ADR 0004](docs/adr/0004-internationalization.md).
 
 ## Why the layout lives in TypeScript
 

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { FileDiff } from "../../lib/ipc";
 
@@ -29,25 +30,21 @@ export function DiffViewer({
   expanding,
   wrap,
 }: DiffViewerProps) {
+  const { t } = useTranslation(["files", "common"]);
   const lines = useMemo(
     () => (file.patch === null ? [] : parseHunks(file.patch)),
     [file.patch],
   );
 
   if (file.omitted === "Binary") {
-    return (
-      <p className="diff-viewer__notice">
-        Archivo binario. No hay diferencias de texto que mostrar.
-      </p>
-    );
+    return <p className="diff-viewer__notice">{t("viewer.binary")}</p>;
   }
 
   if (file.omitted === "TooLarge") {
     return (
       <div className="diff-viewer__notice">
         <p className="diff-viewer__notice-text">
-          Diff de {file.insertions + file.deletions} líneas, retenido para no
-          bloquear la vista.
+          {t("viewer.tooLarge", { count: file.insertions + file.deletions })}
         </p>
         <button
           type="button"
@@ -57,14 +54,14 @@ export function DiffViewer({
             onExpand(file.path);
           }}
         >
-          {expanding ? "Cargando…" : "Ver diff completo"}
+          {expanding ? t("common:actions.loading") : t("viewer.loadFull")}
         </button>
       </div>
     );
   }
 
   if (lines.length === 0) {
-    return <p className="diff-viewer__notice">Sin cambios de contenido.</p>;
+    return <p className="diff-viewer__notice">{t("viewer.noChanges")}</p>;
   }
 
   return <LineTable lines={lines} wrap={wrap} showOldColumn />;

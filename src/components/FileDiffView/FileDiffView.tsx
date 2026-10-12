@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import type {
   CommitInfo,
   FileContent,
   WorktreeFileContent,
 } from "../../bindings";
-import { errorKind, userMessage } from "../../lib/errors";
+import { errorKind } from "../../lib/errors";
 import { getFileContent, getWorktreeFileContent } from "../../lib/ipc";
 import { useCommitDiff } from "../../state/diff";
 import { useSession } from "../../state/session";
@@ -15,6 +16,7 @@ import { queryKeys } from "../../state/queryKeys";
 import { shortId } from "../CommitTable/format";
 import { DiffViewer, LineTable, parseWholeFile } from "../DiffViewer";
 import { DiffStat } from "../DiffStat/DiffStat";
+import { ErrorMessage } from "../ErrorMessage";
 
 import "./FileDiffView.css";
 
@@ -40,6 +42,7 @@ type Mode = "diff" | "file";
 
 /** One commit or one local file, with an impossible-to-confuse source. */
 export function FileDiffView(props: FileDiffViewProps) {
+  const { t } = useTranslation(["files", "common"]);
   const { repositoryPath, path } = props;
   const selectFile = useSession((state) => state.selectFile);
   const expandPath = useSession((state) => state.expandedFilePath);
@@ -170,7 +173,7 @@ export function FileDiffView(props: FileDiffViewProps) {
   return (
     <section
       className="file-diff"
-      aria-label={`${isSnapshot ? "Archivo en" : "Cambios en"} ${path}`}
+      aria-label={t(isSnapshot ? "diff.fileAt" : "diff.changes", { path })}
     >
       <header className="file-diff__head">
         <button
@@ -180,7 +183,7 @@ export function FileDiffView(props: FileDiffViewProps) {
             selectFile(null);
           }}
         >
-          ← Volver al graph
+          {t("diff.back")}
         </button>
 
         <div className="file-diff__title">
@@ -189,8 +192,15 @@ export function FileDiffView(props: FileDiffViewProps) {
           </span>
           <span className="file-diff__commit">
             {isWorktree
-              ? `cambios locales · ${props.worktree.side === "staged" ? "preparado" : "sin preparar"}`
-              : `en ${shortId(props.commit.id)} · ${props.commit.summary}`}
+              ? t(
+                  props.worktree.side === "staged"
+                    ? "diff.localStaged"
+                    : "diff.localUnstaged",
+                )
+              : t("diff.inCommit", {
+                  id: shortId(props.commit.id),
+                  summary: props.commit.summary,
+                })}
           </span>
         </div>
 
@@ -199,7 +209,7 @@ export function FileDiffView(props: FileDiffViewProps) {
             <div
               className="segmented"
               role="group"
-              aria-label="Qué mostrar del archivo"
+              aria-label={t("diff.modeLabel")}
             >
               <button
                 type="button"
@@ -209,7 +219,7 @@ export function FileDiffView(props: FileDiffViewProps) {
                   setMode("diff");
                 }}
               >
-                Cambios
+                {t("diff.modeChanges")}
               </button>
               <button
                 type="button"
@@ -219,7 +229,7 @@ export function FileDiffView(props: FileDiffViewProps) {
                   setMode("file");
                 }}
               >
-                Archivo completo
+                {t("diff.modeWhole")}
               </button>
             </div>
           )}
@@ -228,12 +238,12 @@ export function FileDiffView(props: FileDiffViewProps) {
             type="button"
             className="file-diff__toggle"
             aria-pressed={wrap}
-            title="Ajustar las líneas largas en vez de desplazarlas"
+            title={t("diff.wrapHint")}
             onClick={() => {
               setWrap((on) => !on);
             }}
           >
-            Ajustar líneas
+            {t("diff.wrap")}
           </button>
 
           {file !== undefined && mode === "diff" && (
@@ -245,32 +255,34 @@ export function FileDiffView(props: FileDiffViewProps) {
             </span>
           )}
           {mode === "file" && whole.data !== undefined && (
-            <span className="file-diff__stat">{whole.data.lines} líneas</span>
+            <span className="file-diff__stat">
+              {t("diff.lines", { count: whole.data.lines })}
+            </span>
           )}
         </div>
       </header>
 
       <div className="file-diff__body">
         {isWorktree && localSnapshot.error !== null && (
-          <p className="state file-diff__state" role="alert">
-            {userMessage(localSnapshot.error)}
-          </p>
+          <div className="state file-diff__state" role="alert">
+            <ErrorMessage error={localSnapshot.error} />
+          </div>
         )}
         {mode === "diff" ? (
           <>
             {diff.isPending && (
-              <p className="state file-diff__state">Leyendo el diff…</p>
+              <p className="state file-diff__state">{t("diff.readingDiff")}</p>
             )}
             {diff.error !== null && (
-              <p className="state file-diff__state" role="alert">
-                {userMessage(diff.error)}
-              </p>
+              <div className="state file-diff__state" role="alert">
+                <ErrorMessage error={diff.error} />
+              </div>
             )}
             {diff.data !== undefined && file === undefined && (
               <p className="state file-diff__state" role="alert">
                 {isWorktree
-                  ? "Este archivo ya no forma parte de los cambios locales."
-                  : `Este commit no modifica ${path}.`}
+                  ? t("diff.notInLocal")
+                  : t("diff.notInCommit", { path })}
               </p>
             )}
             {file !== undefined && (
@@ -287,24 +299,22 @@ export function FileDiffView(props: FileDiffViewProps) {
         ) : (
           <>
             {whole.isPending && (
-              <p className="state file-diff__state">Leyendo el archivo…</p>
+              <p className="state file-diff__state">{t("diff.readingFile")}</p>
             )}
             {whole.error !== null && (
-              <p className="state file-diff__state" role="alert">
-                {userMessage(whole.error)}
-              </p>
+              <div className="state file-diff__state" role="alert">
+                <ErrorMessage error={whole.error} />
+              </div>
             )}
             {whole.data?.omitted === "Binary" && (
               <p className="diff-viewer__notice">
-                Archivo binario de {whole.data.bytes} bytes. No hay texto que
-                mostrar.
+                {t("diff.binaryFile", { count: Number(whole.data.bytes) })}
               </p>
             )}
             {whole.data?.omitted === "TooLarge" && (
               <div className="diff-viewer__notice">
                 <p className="diff-viewer__notice-text">
-                  Archivo de {whole.data.bytes} bytes, retenido para no bloquear
-                  la vista.
+                  {t("diff.tooLarge", { count: Number(whole.data.bytes) })}
                 </p>
                 <button
                   type="button"
@@ -314,12 +324,14 @@ export function FileDiffView(props: FileDiffViewProps) {
                     expandFile(path);
                   }}
                 >
-                  {whole.isFetching ? "Cargando…" : "Ver archivo completo"}
+                  {whole.isFetching
+                    ? t("common:actions.loading")
+                    : t("diff.loadWhole")}
                 </button>
               </div>
             )}
             {whole.data?.text === "" && (
-              <p className="state file-diff__state">El archivo está vacío.</p>
+              <p className="state file-diff__state">{t("diff.emptyFile")}</p>
             )}
             {wholeLines.length > 0 && (
               <LineTable lines={wholeLines} wrap={wrap} />

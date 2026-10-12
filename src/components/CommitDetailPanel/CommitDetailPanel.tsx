@@ -1,7 +1,7 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { CommitInfo } from "../../bindings";
-import { userMessage } from "../../lib/errors";
 import { useCommitDiff } from "../../state/diff";
 import { selectedFileSource, useSession } from "../../state/session";
 import {
@@ -14,6 +14,7 @@ import {
   shortId,
 } from "../CommitTable/format";
 import { DiffStat } from "../DiffStat/DiffStat";
+import { ErrorMessage } from "../ErrorMessage";
 
 import "./CommitDetailPanel.css";
 
@@ -35,6 +36,7 @@ export function CommitDetailPanel({
   repositoryPath,
   commit,
 }: CommitDetailPanelProps) {
+  const { t } = useTranslation("history");
   const selection = useSession((state) => state.selection);
   const selectedFilePath =
     selection.kind === "commit" ? selection.filePath : null;
@@ -50,18 +52,21 @@ export function CommitDetailPanel({
             {
               files: diff.data.files,
               source: "commit",
-              listLabel: "Archivos modificados",
+              listLabel: t("detail.changedFiles"),
             },
           ],
-    [diff.data],
+    [diff.data, t],
   );
 
   return (
-    <aside className="detail-panel" aria-label="Detalle del commit">
+    <aside className="detail-panel" aria-label={t("detail.aria")}>
       <p className="detail-panel__hash">
-        commit <span>{shortId(commit.id)}</span>
+        {t("detail.commit")} <span>{shortId(commit.id)}</span>
         {commit.parents[0] !== undefined && (
-          <> · parent {shortId(commit.parents[0])}</>
+          <>
+            {" "}
+            · {t("detail.parent")} {shortId(commit.parents[0])}
+          </>
         )}
       </p>
 
@@ -84,26 +89,22 @@ export function CommitDetailPanel({
       )}
 
       {diff.isPending && (
-        <p className="state detail-panel__state">Leyendo los archivos…</p>
+        <p className="state detail-panel__state">{t("detail.reading")}</p>
       )}
 
       {diff.error !== null && (
-        <p className="state detail-panel__state" role="alert">
-          {userMessage(diff.error)}
-        </p>
+        <div className="state detail-panel__state" role="alert">
+          <ErrorMessage error={diff.error} />
+        </div>
       )}
 
       {diff.data !== undefined && (
         <>
           {diff.data.is_merge && (
-            <p className="detail-panel__note">
-              Commit de merge: se muestran los cambios contra el primer padre.
-            </p>
+            <p className="detail-panel__note">{t("detail.mergeNote")}</p>
           )}
           <p className="detail-panel__files-label">
-            {diff.data.files.length === 1
-              ? "1 archivo modificado"
-              : `${String(diff.data.files.length)} archivos modificados`}
+            {t("detail.filesChanged", { count: diff.data.files.length })}
             {" · "}
             <DiffStat
               insertions={diff.data.insertions}
