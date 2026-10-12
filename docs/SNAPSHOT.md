@@ -1,15 +1,16 @@
 # GitCanvas — snapshot
 
-> Actualizado: 2026-10-05 · Ficha completa: [ASSET.md](ASSET.md)
+> Actualizado: 2026-10-12 · Ficha completa: [ASSET.md](ASSET.md)
 
 ## Retomar
 
 | Campo | Estado |
 |---|---|
-| Etapa | MVP implementado; endurecimiento H2 en curso |
-| H2 | 43/46 implementadas y archivadas; 35 cierres con commit; H2-34–41 requieren reconciliar commits |
-| Release | PR [#1](https://github.com/dcardenasl/gitcanvas/pull/1) abierta en SHA `7f24bb6`; el checkout `dev` tiene commits y cambios locales posteriores que la PR aún no evalúa. Los checks visibles son de 2026-09-26 y fallaron antes de ejecutar pasos; aprobación/merge y R-5/R-6 pendientes |
-| Siguiente tarea | H2-25: confirmar arranque y E2E en Linux, macOS y Windows |
+| Etapa | v0.1.0 publicado; internacionalización en revisión |
+| H2 | Cerrada: 46/46; 38 cierres con commit dedicado y H2-34–41 integradas en `437ff07` |
+| Release | v0.1.0 publicado el 2026-10-09: PR [#1](https://github.com/dcardenasl/gitcanvas/pull/1) mergeada, tag sobre `main` e instaladores de Linux, macOS y Windows |
+| Trabajo abierto | [PR #9](https://github.com/dcardenasl/GitCanvas/pull/9): interfaz en inglés y español |
+| Siguiente tarea | I18N-6: evidencia de CI en Linux y Windows para la PR #9 |
 | Fuente de trabajo | [`TASKS.md`](../TASKS.md), criterios detallados en el plan H2 |
 
 El MVP incluye historial y graph, detalle/diffs, cambios locales, GitHub clone y
@@ -19,21 +20,15 @@ modifican estado Git de forma explícita. Pull no crea merges y push nunca fuerz
 
 ## Estado del trabajo en curso
 
-El checkout compartido contiene cambios de varias tareas H2. Antes de editar, inspeccionar
-`git status`, revisar el criterio de la tarea activa y confirmar qué cambios pertenecen a
-ella. No archivar una tarea hasta que su implementación y evidencia requerida estén
-completas. La suite E2E pasó en macOS local (4 specs/8 tests); aún falta evidencia de CI
-Linux/macOS/Windows para los cambios actuales. No declarar verde lo que no se haya ejecutado
-sobre el código vigente.
-
-`ARCHIVES.md` declara H2-34–H2-41 completadas, pero esas entradas no tienen commits
-dedicados; sus cambios siguen en el working tree. H2-33 está reconciliada con `03077dd` y
-H2-43 con un commit propio. H2-45 está abierta para reconciliar la divergencia restante con
-la convención de un commit por tarea.
+`dev` contiene la internacionalización (I18N-1 a I18N-5, archivadas) y está publicado en la
+PR #9. Solo se verificó localmente en macOS; el run de `quality` de esa PR es la evidencia que
+falta para Linux y Windows. No declarar verde lo que no se haya ejecutado sobre el código
+vigente. Las secciones 2 y 4 del plan de tres funcionalidades no tienen tareas todavía.
 
 ## Documentos
 
 - [Plan de endurecimiento](plan/2026-10-04-plan-de-endurecimiento.md)
+- [Plan de tres funcionalidades](plan/2026-10-08-plan-tres-funcionalidades.md)
 - [Plan rector](plans/2026-09-08-plan-de-implementacion.md)
 - [Contexto arquitectónico](../CONTEXT.md)
 - [Decisiones de arquitectura](adr/)

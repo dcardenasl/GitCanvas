@@ -8,9 +8,9 @@
 
 **Estado al 2026-10-12:** v0.1.0 está publicado (tag sobre `main`, instaladores de Linux, macOS
 y Windows). La fase H2 está cerrada, 46 de 46 tareas, y archivada. Queda abierta la
-internacionalización en lo que le falta de verificación (I18N-6) y el cierre de la ficha del
-asset (R-6). Las secciones 2 (commits desde la interfaz) y 4 (pestañas, favoritos y
-persistencia) del plan de tres funcionalidades todavía no tienen tareas.
+verificación multiplataforma de la internacionalización (I18N-6). Las secciones 2 (commits
+desde la interfaz) y 4 (pestañas, favoritos y persistencia) del plan de tres funcionalidades
+todavía no tienen tareas.
 
 **Estado del checkout:** `dev` está publicado y abierto en la
 [PR #9](https://github.com/dcardenasl/GitCanvas/pull/9) hacia `main`, con el trabajo de
@@ -20,15 +20,13 @@ internacionalización. Antes de editar, inspeccionar `git status` y el historial
 
 1. Esperar el run de `quality` de la PR #9 y, con él, cerrar **I18N-6** (E2E en Linux y
    Windows, que no se pueden ejecutar localmente desde macOS).
-2. Cerrar **R-6** (ficha del asset) con el commit indicado en su tarea.
-3. Planificar las secciones 2 y 4 del plan de tres funcionalidades y convertirlas en tareas
+2. Planificar las secciones 2 y 4 del plan de tres funcionalidades y convertirlas en tareas
    aquí antes de implementarlas. El orden de entrega del plan es: fundamentos de workspace y
    persistencia, internacionalización (hecha), pestañas y favoritos, preparación y commits.
 
 ## Cola de trabajo
 
 1. **I18N-6 — Evidencia multiplataforma de la internacionalización.**
-2. **R-6 — Ficha del asset.**
 
 ## Cómo se usa este archivo
 
@@ -62,14 +60,3 @@ implementación.
       renderizado de `Intl` (`style: unit`, porcentajes) en WebKitGTK y WebView2, y la barra a
       940 px en esos motores.
       → `docs(tasks): record cross-platform i18n verification`
-
----
-
-## 🔴 Pendiente — Release v0.1.0
-
-> Ejecutado con el skill `/release`. Ver `CLAUDE.md` para el procedimiento completo.
-> R-1 a R-5 están completadas y archivadas en [`ARCHIVES.md`](ARCHIVES.md).
-
-- [ ] **R-6 — Actualizar la ficha del asset.** `docs/ASSET.md` y `docs/SNAPSHOT.md`:
-      versión, repositorio, estado del build por componente y log de avances.
-      → `docs(asset): record the v0.1.0 release in the asset sheet`

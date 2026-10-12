@@ -1107,6 +1107,12 @@ marca.
       Release extrayendo la sección del CHANGELOG. Nunca `gh release create` a mano.
       *Cierre (2026-10-12):* tag `v0.1.0` sobre `47d81da` (ancestro de `main`); el workflow `release` ([37863154001](https://github.com/dcardenasl/gitcanvas/actions/runs/37863154001)) validó, creó el Release y publicó los instaladores de Linux (`.AppImage`, `.deb`, `.rpm`), macOS (`.dmg` x64 y aarch64, `.app.tar.gz`) y Windows (`.msi`, `-setup.exe`).
 
+- [x] **R-6 — Actualizar la ficha del asset.** `docs/ASSET.md` y `docs/SNAPSHOT.md`:
+      versión, repositorio, estado del build por componente y log de avances.
+      *Cierre (2026-10-12):* `ASSET.md` y `SNAPSHOT.md` reflejan v0.1.0 publicado, H2 cerrada y la
+      internacionalización en la PR #9.
+      → `docs(asset): record the v0.1.0 release in the asset sheet`
+
 ## ✅ Completado
 
 - **Fase G — Bootstrap del repositorio** (6/6). Repositorio creado con `main` como punto
