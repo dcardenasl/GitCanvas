@@ -1,0 +1,14 @@
+{
+  "aria": "Ramas y etiquetas",
+  "checkout": "Cambiar a {{branch}}",
+  "goTo": "Ir al último commit de {{name}}",
+  "goToWithCheckout": "Ir al último commit de {{name}}. Clic derecho para cambiar a esta rama",
+  "groups": {
+    "local": "Local",
+    "remote": "Remotas",
+    "tags": "Etiquetas"
+  },
+  "head": "HEAD",
+  "headLabel": "Rama activa",
+  "notCommit": "{{name}} no apunta a un commit"
+}

@@ -1,0 +1,89 @@
+{
+  "browser": {
+    "collapseAll": "Collapse all",
+    "expandAll": "Expand all",
+    "path": "Path",
+    "showAll": "Show all files",
+    "tree": "Tree",
+    "viewLabel": "File view"
+  },
+  "change": {
+    "Added": "Added",
+    "Copied": "Copied",
+    "Deleted": "Deleted",
+    "Modified": "Modified",
+    "Other": "Other",
+    "Renamed": "Renamed",
+    "TypeChanged": "Type changed",
+    "unchanged": "Unchanged in this commit"
+  },
+  "diff": {
+    "back": "← Back to graph",
+    "binaryFile_one": "Binary file of {{count}} byte. There is no text to show.",
+    "binaryFile_other": "Binary file of {{count, number}} bytes. There is no text to show.",
+    "changes": "Changes in {{path}}",
+    "emptyFile": "The file is empty.",
+    "fileAt": "File at {{path}}",
+    "inCommit": "at {{id}} · {{summary}}",
+    "lines_one": "{{count}} line",
+    "lines_other": "{{count, number}} lines",
+    "loadWhole": "View whole file",
+    "localStaged": "local changes · staged",
+    "localUnstaged": "local changes · unstaged",
+    "modeChanges": "Changes",
+    "modeLabel": "What to show of the file",
+    "modeWhole": "Whole file",
+    "notInCommit": "This commit does not modify {{path}}.",
+    "notInLocal": "This file is no longer part of the local changes.",
+    "readingDiff": "Reading the diff…",
+    "readingFile": "Reading the file…",
+    "tooLarge_one": "File of {{count}} byte, held back so the view does not freeze.",
+    "tooLarge_other": "File of {{count, number}} bytes, held back so the view does not freeze.",
+    "wrap": "Wrap lines",
+    "wrapHint": "Wrap long lines instead of scrolling them"
+  },
+  "omitted": {
+    "binary": "binary",
+    "large": "large"
+  },
+  "tree": {
+    "allFiles": "All files in the commit",
+    "changedDirectory_one": "{{name}}, {{count}} changed file",
+    "changedDirectory_other": "{{name}}, {{count, number}} changed files",
+    "deleted": "Deleted in this commit",
+    "deletedGroup": "Files deleted in this commit",
+    "deletedList": "Deleted files",
+    "emptyCommit": "This commit contains no files.",
+    "emptyFolder": "There are no files in this folder.",
+    "folder": "{{name}}, folder",
+    "folderChanged_one": "{{name}}, folder, {{count}} file with changes",
+    "folderChanged_other": "{{name}}, folder, {{count, number}} files with changes",
+    "loadMore": "Load more entries",
+    "readingCommit": "Reading commit files…",
+    "readingFolder": "Reading folder…",
+    "submodule": "Submodule",
+    "submoduleBadge": "submodule",
+    "submoduleNamed": "{{name}}, submodule"
+  },
+  "viewer": {
+    "binary": "Binary file. There are no text differences to show.",
+    "loadFull": "View full diff",
+    "noChanges": "No content changes.",
+    "tooLarge_one": "Diff of {{count}} line, held back so the view does not freeze.",
+    "tooLarge_other": "Diff of {{count, number}} lines, held back so the view does not freeze."
+  },
+  "workingTree": {
+    "aria": "Local changes",
+    "eyebrow": "Working tree",
+    "hint": "What changed on disk since the last commit.",
+    "loadMore_one": "Load {{count}} more file",
+    "loadMore_other": "Load {{count, number}} more files",
+    "none": "There are no local changes.",
+    "reading": "Reading local changes…",
+    "staged": "Staged",
+    "stagedList": "Staged files",
+    "title": "Local changes",
+    "unstaged": "Unstaged",
+    "unstagedList": "Unstaged files"
+  }
+}

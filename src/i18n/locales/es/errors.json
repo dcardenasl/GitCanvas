@@ -1,0 +1,27 @@
+{
+  "details": {
+    "copied": "Detalles técnicos copiados",
+    "copy": "Copiar detalles",
+    "copyFailed": "No se pudieron copiar los detalles técnicos",
+    "show": "Detalles técnicos"
+  },
+  "kind": {
+    "Auth": "Falló la autenticación",
+    "Conflict": "La operación entra en conflicto con el estado actual",
+    "Git": "Git no pudo completar la operación",
+    "Internal": "Falló una operación interna",
+    "InvalidInput": "La solicitud no es válida",
+    "InvalidRepository": "No es un repositorio válido",
+    "Io": "Falló una operación de archivos",
+    "Network": "No se pudo completar la operación de red",
+    "PathOutsideRepository": "La ruta queda fuera del repositorio",
+    "ResourceExhausted": "El sistema se quedó sin archivos abiertos",
+    "ResourceLimitExceeded": "Se superó un límite de recursos",
+    "StaleCursor": "El historial cambió mientras se leía",
+    "WatchDegraded": "La observación del repositorio está degradada",
+    "WorktreeChanged": "Los cambios locales se modificaron mientras se leían",
+    "WorktreeFileUnavailable": "El archivo local no está disponible"
+  },
+  "unknown": "Ocurrió un error inesperado.",
+  "withLead": "{{lead}}: {{summary}}"
+}

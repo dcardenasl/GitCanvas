@@ -1,0 +1,7 @@
+{
+  "actions": {
+    "cancel": "Cancelar",
+    "loading": "Cargando…",
+    "retry": "Reintentar"
+  }
+}

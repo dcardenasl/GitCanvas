@@ -1,0 +1,27 @@
+{
+  "details": {
+    "copied": "Technical details copied",
+    "copy": "Copy details",
+    "copyFailed": "Could not copy the technical details",
+    "show": "Technical details"
+  },
+  "kind": {
+    "Auth": "Authentication failed",
+    "Conflict": "The operation conflicts with the current state",
+    "Git": "Git could not complete the operation",
+    "Internal": "An internal operation failed",
+    "InvalidInput": "The request is not valid",
+    "InvalidRepository": "Not a valid repository",
+    "Io": "A file operation failed",
+    "Network": "The network operation could not be completed",
+    "PathOutsideRepository": "The path is outside the repository",
+    "ResourceExhausted": "The system ran out of open files",
+    "ResourceLimitExceeded": "A resource limit was exceeded",
+    "StaleCursor": "The history changed while it was being read",
+    "WatchDegraded": "Repository watching is degraded",
+    "WorktreeChanged": "Local changes were modified while they were being read",
+    "WorktreeFileUnavailable": "The local file is not available"
+  },
+  "unknown": "An unexpected error occurred.",
+  "withLead": "{{lead}}: {{summary}}"
+}

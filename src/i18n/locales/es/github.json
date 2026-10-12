@@ -1,0 +1,22 @@
+{
+  "connect": {
+    "hint": "Pega un token de acceso personal con permiso <code>repo</code>. Se guarda en el llavero del sistema y nunca sale del backend.",
+    "submit": "Conectar",
+    "title": "Conectar con GitHub",
+    "tokenLabel": "Token de acceso personal",
+    "verifying": "Verificando…"
+  },
+  "list": {
+    "clone": "Clonar",
+    "cloning": "Clonando…",
+    "disconnect": "Desconectar",
+    "loading": "Cargando repositorios…",
+    "private": "privado",
+    "title": "Repositorios de GitHub",
+    "truncated": "Se muestran los primeros {{limit, number}} repositorios. Refina la selección en GitHub si el que buscas no aparece."
+  },
+  "progress": {
+    "preparing": "Preparando… {{megabytes, number(style: unit; unit: megabyte; unitDisplay: short; minimumFractionDigits: 1; maximumFractionDigits: 1)}}",
+    "transfer": "{{ratio, number(style: percent)}} · {{megabytes, number(style: unit; unit: megabyte; unitDisplay: short; minimumFractionDigits: 1; maximumFractionDigits: 1)}}"
+  }
+}
