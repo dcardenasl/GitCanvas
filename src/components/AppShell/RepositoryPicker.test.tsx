@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -156,7 +162,7 @@ describe("RepositoryPicker", () => {
     expect(screen.getByRole("button").hasAttribute("disabled")).toBe(false);
   });
 
-  it("uses the shared Spanish summary for backend errors", async () => {
+  it("summarizes backend errors and keeps the diagnostic behind a disclosure", async () => {
     open.mockResolvedValue("/not/a/repo");
     openRepository.mockRejectedValue(
       Object.assign(new Error("Choose a working-tree root containing .git"), {
@@ -167,9 +173,10 @@ describe("RepositoryPicker", () => {
     render(<RepositoryPicker />);
     await userEvent.click(screen.getByRole("button"));
 
-    expect(await screen.findByRole("alert")).toHaveProperty(
-      "textContent",
-      "No es un repositorio válido: Choose a working-tree root containing .git",
-    );
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("No es un repositorio válido");
+    expect(
+      within(alert).getByText("Choose a working-tree root containing .git"),
+    ).toBeInstanceOf(HTMLElement);
   });
 });

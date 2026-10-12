@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import type { TFunction } from "i18next";
+import { Trans, useTranslation } from "react-i18next";
 
 import type { CloneProgressEvent } from "../../bindings";
-import { userMessage } from "../../lib/errors";
 import {
   cloneGithubRepository,
   forgetGithubToken,
@@ -14,24 +15,32 @@ import {
 } from "../../lib/ipc";
 import { useSession } from "../../state/session";
 import { queryKeys } from "../../state/queryKeys";
+import { ErrorMessage } from "../ErrorMessage";
 
 import "./GitHubPicker.css";
 
+/** How many repositories GitHub's listing is cut at before it says so. */
+const REPOSITORY_LIST_LIMIT = 1000;
+
 /** Human-readable transfer progress for an in-flight clone. */
-function progressLabel(progress: CloneProgressEvent): string {
+function progressLabel(
+  t: TFunction<"github">,
+  progress: CloneProgressEvent,
+): string {
   const megabytes = Number(progress.received_bytes) / (1024 * 1024);
   if (progress.total_objects === 0) {
     // GitHub is still counting objects; a percentage would be a lie.
-    return `Preparando… ${megabytes.toFixed(1)} MB`;
+    return t("progress.preparing", { megabytes });
   }
-  const percent = Math.round(
-    (progress.received_objects / progress.total_objects) * 100,
-  );
-  return `${String(percent)}% · ${megabytes.toFixed(1)} MB`;
+  return t("progress.transfer", {
+    ratio: progress.received_objects / progress.total_objects,
+    megabytes,
+  });
 }
 
 /** Signs in to GitHub, lists repositories and clones the chosen one. */
 export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
+  const { t } = useTranslation("github");
   const queryClient = useQueryClient();
   const setRepository = useSession((state) => state.openRepository);
   const activeRepositoryPath = useSession(
@@ -92,15 +101,14 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
   if (signedIn.data !== true) {
     return (
       <div className="github-picker">
-        <h2 className="github-picker__title">Conectar con GitHub</h2>
+        <h2 className="github-picker__title">{t("connect.title")}</h2>
         <p className="github-picker__hint">
-          Pega un token de acceso personal con permiso <code>repo</code>. Se
-          guarda en el llavero del sistema y nunca sale del backend.
+          <Trans t={t} i18nKey="connect.hint" components={{ code: <code /> }} />
         </p>
         {signedIn.error !== null && (
-          <p className="github-picker__error" role="alert">
-            {userMessage(signedIn.error)}
-          </p>
+          <div className="github-picker__error" role="alert">
+            <ErrorMessage error={signedIn.error} />
+          </div>
         )}
         <form
           className="github-picker__form"
@@ -114,7 +122,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
             type="password"
             value={token}
             placeholder="ghp_…"
-            aria-label="Token de acceso personal"
+            aria-label={t("connect.tokenLabel")}
             onChange={(event) => {
               setToken(event.currentTarget.value);
             }}
@@ -124,13 +132,13 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
             className="button button--primary"
             disabled={token.trim() === "" || signIn.isPending}
           >
-            {signIn.isPending ? "Verificando…" : "Conectar"}
+            {signIn.isPending ? t("connect.verifying") : t("connect.submit")}
           </button>
         </form>
         {signIn.error !== null && (
-          <p className="github-picker__error" role="alert">
-            {userMessage(signIn.error)}
-          </p>
+          <div className="github-picker__error" role="alert">
+            <ErrorMessage error={signIn.error} />
+          </div>
         )}
       </div>
     );
@@ -139,7 +147,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
   return (
     <div className="github-picker">
       <header className="github-picker__header">
-        <h2 className="github-picker__title">Repositorios de GitHub</h2>
+        <h2 className="github-picker__title">{t("list.title")}</h2>
         <button
           type="button"
           className="button"
@@ -147,36 +155,35 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
             signOut.mutate();
           }}
         >
-          Desconectar
+          {t("list.disconnect")}
         </button>
       </header>
 
       {repositories.isPending && (
-        <p className="github-picker__hint">Cargando repositorios…</p>
+        <p className="github-picker__hint">{t("list.loading")}</p>
       )}
 
       {repositories.error !== null && (
-        <p className="github-picker__error" role="alert">
-          {userMessage(repositories.error)}
-        </p>
+        <div className="github-picker__error" role="alert">
+          <ErrorMessage error={repositories.error} />
+        </div>
       )}
 
       {clone.isPending && (
         <p className="github-picker__hint" role="status">
-          Clonando… {progress !== null && progressLabel(progress)}
+          {t("list.cloning")} {progress !== null && progressLabel(t, progress)}
         </p>
       )}
 
       {clone.error !== null && (
-        <p className="github-picker__error" role="alert">
-          {userMessage(clone.error)}
-        </p>
+        <div className="github-picker__error" role="alert">
+          <ErrorMessage error={clone.error} />
+        </div>
       )}
 
       {repositories.data?.truncated === true && (
         <p className="github-picker__hint" role="status">
-          Se muestran los primeros 1.000 repositorios. Refina la selección en
-          GitHub si el que buscas no aparece.
+          {t("list.truncated", { limit: REPOSITORY_LIST_LIMIT })}
         </p>
       )}
 
@@ -186,7 +193,9 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
             <div className="github-picker__item-main">
               <span className="github-picker__name">{repo.full_name}</span>
               {repo.private && (
-                <span className="github-picker__badge">privado</span>
+                <span className="github-picker__badge">
+                  {t("list.private")}
+                </span>
               )}
               {repo.description !== null && (
                 <span className="github-picker__description">
@@ -202,7 +211,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
                 clone.mutate({ name: repo.full_name });
               }}
             >
-              Clonar
+              {t("list.clone")}
             </button>
           </li>
         ))}

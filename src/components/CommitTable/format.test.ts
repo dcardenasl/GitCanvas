@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
+import { changeLanguage } from "../../i18n";
 import { authorInitials, formatCommitTime, shortId } from "./format";
 
 describe("shortId", () => {
@@ -13,8 +14,20 @@ describe("shortId", () => {
 });
 
 describe("formatCommitTime", () => {
-  it("defaults to Spanish and includes the year", () => {
+  afterEach(async () => {
+    await changeLanguage("es");
+  });
+
+  it("defaults to the active language and includes the year", async () => {
     expect(formatCommitTime("1788815520")).toMatch(/2026/);
+    const spanish = formatCommitTime("1788815520");
+
+    await changeLanguage("en");
+    const english = formatCommitTime("1788815520");
+
+    expect(english).toMatch(/2026/);
+    expect(english).not.toBe(spanish);
+    expect(english).toBe(formatCommitTime("1788815520", "en"));
   });
 
   it("formats decimal Unix seconds", () => {

@@ -1,12 +1,22 @@
 .app-shell {
   display: grid;
+
+  /* The column may be narrower than the toolbar's text: without `minmax(0, …)`
+     the track grows to the toolbar's full width and the window scrolls sideways
+     instead of the toolbar giving way, which longer labels make easy to hit. */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   height: 100%;
 }
 
 .toolbar {
   display: flex;
-  gap: var(--space-5);
+
+  /* Longer labels in other languages can outgrow one row at the 940px minimum.
+     Wrapping is the safety net, so nothing is clipped or pushed out of the
+     window; the metrics below are tight enough that two languages fit in one. */
+  flex-wrap: wrap;
+  gap: var(--space-3);
   align-items: center;
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
@@ -14,6 +24,15 @@
 }
 
 .toolbar__repository {
+  /* A long name is capped instead of pushing the controls out of the window,
+     which at the 940px minimum has no room to spare. A normal one never shrinks:
+     the search field is what gives way first. */
+  min-width: 0;
+  max-width: 16ch;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--ink);
   font-size: var(--font-size-ui);
   font-weight: 600;
@@ -25,6 +44,10 @@
   height: 24px;
   flex: 0 0 24px;
   border-radius: var(--radius-tight);
+}
+
+.toolbar .button {
+  white-space: nowrap;
 }
 
 .toolbar__spacer {

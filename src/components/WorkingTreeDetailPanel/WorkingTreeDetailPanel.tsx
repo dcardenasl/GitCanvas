@@ -1,7 +1,10 @@
-import { userMessage } from "../../lib/errors";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
+
 import { selectedFileSource, useSession } from "../../state/session";
 import { useWorktreeFiles, type LocalSide } from "../../state/worktree";
 import { DiffStat } from "../DiffStat/DiffStat";
+import { ErrorMessage } from "../ErrorMessage";
 import {
   ChangedFilesBrowser,
   type ChangedFilesGroup,
@@ -18,6 +21,7 @@ export interface WorkingTreeDetailPanelProps {
 export function WorkingTreeDetailPanel({
   repositoryPath,
 }: WorkingTreeDetailPanelProps) {
+  const { t } = useTranslation(["files", "common"]);
   const selectFile = useSession((state) => state.selectFile);
   const selection = useSession((state) => state.selection);
   const {
@@ -38,7 +42,7 @@ export function WorkingTreeDetailPanel({
 
   if (staged !== null && staged.files.length > 0) {
     groups.push(
-      localFileGroup("Preparados", staged, "staged", {
+      localFileGroup(t, "staged", staged, {
         loading: loadingSide === "staged",
         onLoadMore: () => {
           void loadMore("staged");
@@ -48,7 +52,7 @@ export function WorkingTreeDetailPanel({
   }
   if (unstaged !== null && unstaged.files.length > 0) {
     groups.push(
-      localFileGroup("Sin preparar", unstaged, "unstaged", {
+      localFileGroup(t, "unstaged", unstaged, {
         loading: loadingSide === "unstaged",
         onLoadMore: () => {
           void loadMore("unstaged");
@@ -58,33 +62,31 @@ export function WorkingTreeDetailPanel({
   }
 
   return (
-    <aside className="detail-panel" aria-label="Cambios locales">
-      <p className="detail-panel__hash">Árbol de trabajo</p>
-      <h2 className="detail-panel__summary">Cambios locales</h2>
-      <p className="detail-panel__local-hint">
-        Lo que cambió en disco desde el último commit.
-      </p>
+    <aside className="detail-panel" aria-label={t("workingTree.aria")}>
+      <p className="detail-panel__hash">{t("workingTree.eyebrow")}</p>
+      <h2 className="detail-panel__summary">{t("workingTree.title")}</h2>
+      <p className="detail-panel__local-hint">{t("workingTree.hint")}</p>
 
       {local.isPending && !localData && (
-        <p className="state detail-panel__state">Leyendo cambios locales…</p>
+        <p className="state detail-panel__state">{t("workingTree.reading")}</p>
       )}
       {local.error !== null && groups.length === 0 && (
-        <p className="state detail-panel__state" role="alert">
-          {userMessage(local.error)}
-        </p>
+        <div className="state detail-panel__state" role="alert">
+          <ErrorMessage error={local.error} />
+        </div>
       )}
 
       {!local.isPending &&
         local.error === null &&
         stagedFiles.length === 0 &&
         unstagedFiles.length === 0 && (
-          <p className="state detail-panel__state">No hay cambios locales.</p>
+          <p className="state detail-panel__state">{t("workingTree.none")}</p>
         )}
 
       {loadError !== null && (
-        <p className="state detail-panel__state" role="alert">
-          {userMessage(loadError)}
-        </p>
+        <div className="state detail-panel__state" role="alert">
+          <ErrorMessage error={loadError} />
+        </div>
       )}
 
       {groups.length > 0 && (
@@ -102,16 +104,18 @@ export function WorkingTreeDetailPanel({
 }
 
 function localFileGroup(
-  label: string,
-  side: LocalSide,
+  t: TFunction<readonly ["files", "common"]>,
   source: "staged" | "unstaged",
+  side: LocalSide,
   more: { readonly loading: boolean; readonly onLoadMore: () => void },
 ): ChangedFilesGroup {
+  const label = t(`workingTree.${source}`);
+
   return {
     files: side.files,
     source,
     sectionLabel: label,
-    listLabel: `Archivos ${label.toLowerCase()}`,
+    listLabel: t(`workingTree.${source}List`),
     heading: (
       <div className="detail-panel__local-group-head">
         <span>{label}</span>
@@ -130,8 +134,8 @@ function localFileGroup(
           onClick={more.onLoadMore}
         >
           {more.loading
-            ? "Cargando…"
-            : `Cargar ${String(side.remaining)} archivos más`}
+            ? t("common:actions.loading")
+            : t("workingTree.loadMore", { count: side.remaining })}
         </button>
       ) : null,
   };

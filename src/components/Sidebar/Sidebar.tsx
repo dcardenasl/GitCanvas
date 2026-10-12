@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useBranches, useTags } from "../../state/refs";
 import { ContextMenu } from "../ContextMenu";
@@ -44,6 +45,7 @@ export interface SidebarProps {
 
 /** Branch and tag navigation for the open repository. */
 export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
+  const { t } = useTranslation("refs");
   const repository = useSession((state) => state.repository);
   const selectedCommitId = useSession(getSelectedCommitId);
   const revealCommit = useSession((state) => state.revealCommit);
@@ -65,9 +67,9 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
   const remote = (branches.data ?? []).filter((branch) => branch.is_remote);
 
   return (
-    <aside className="sidebar" hidden={hidden} aria-label="Ramas y etiquetas">
+    <aside className="sidebar" hidden={hidden} aria-label={t("aria")}>
       <RefGroup
-        label="Local"
+        label={t("groups.local")}
         refs={local.map((branch) => ({
           name: branch.name,
           commitId: branch.target,
@@ -82,7 +84,7 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
       />
 
       <RefGroup
-        label="Remotas"
+        label={t("groups.remote")}
         refs={remote.map((branch) => ({
           name: branch.name,
           commitId: branch.target,
@@ -92,7 +94,7 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
       />
 
       <RefGroup
-        label="Etiquetas"
+        label={t("groups.tags")}
         monospace
         refs={(tags.data ?? []).map((tag) => ({
           name: tag.name,
@@ -111,7 +113,7 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
           }}
           items={[
             {
-              label: `Cambiar a ${menu.branch}`,
+              label: t("checkout", { branch: menu.branch }),
               onSelect: () => {
                 onCheckout(menu.branch);
               },
@@ -148,6 +150,7 @@ function RefGroup({
   onMenu,
   monospace = false,
 }: RefGroupProps) {
+  const { t } = useTranslation("refs");
   if (refs.length === 0) return null;
 
   return (
@@ -166,12 +169,13 @@ function RefGroup({
                 aria-current={current ? "true" : undefined}
                 title={
                   reachable
-                    ? `Ir al último commit de ${entry.name}${
+                    ? t(
                         entry.checkoutBranch === undefined
-                          ? ""
-                          : ". Clic derecho para cambiar a esta rama"
-                      }`
-                    : `${entry.name} no apunta a un commit`
+                          ? "goTo"
+                          : "goToWithCheckout",
+                        { name: entry.name },
+                      )
+                    : t("notCommit", { name: entry.name })
                 }
                 className={[
                   "sidebar__item",
@@ -210,8 +214,8 @@ function RefGroup({
               >
                 <span className="sidebar__name">{entry.name}</span>
                 {entry.isHead === true && (
-                  <span className="sidebar__badge" aria-label="Rama activa">
-                    HEAD
+                  <span className="sidebar__badge" aria-label={t("headLabel")}>
+                    {t("head")}
                   </span>
                 )}
               </button>

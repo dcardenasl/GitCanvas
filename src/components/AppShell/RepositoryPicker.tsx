@@ -1,11 +1,12 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
-import { userMessage } from "../../lib/errors";
 import { openRepository } from "../../lib/ipc";
 import { afterPaint } from "../../lib/paint";
 import { safeStorage } from "../../lib/safeStorage";
 import { useSession } from "../../state/session";
+import { ErrorMessage } from "../ErrorMessage";
 
 /** Where the picker last opened, so it starts there next time. */
 const LAST_DIRECTORY_KEY = "gitcanvas.lastDirectory";
@@ -25,8 +26,11 @@ type Phase = "idle" | "choosing" | "opening";
 
 /** Opens a local repository through the native folder picker. */
 export function RepositoryPicker() {
+  const { t } = useTranslation("shell");
   const setRepository = useSession((state) => state.openRepository);
-  const [error, setError] = useState<string | null>(null);
+  // The failure itself, not its text: it is translated where it is shown, so
+  // it follows a language change instead of staying in the old one.
+  const [error, setError] = useState<{ readonly cause: unknown } | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
 
   /*
@@ -74,7 +78,7 @@ export function RepositoryPicker() {
       rememberDirectory(selected);
       setRepository(await openRepository(selected));
     } catch (cause) {
-      setError(userMessage(cause));
+      setError({ cause });
     } finally {
       // Runs on cancel too, so the button cannot be left disabled by someone
       // dismissing the panel.
@@ -85,10 +89,10 @@ export function RepositoryPicker() {
 
   const label =
     phase === "choosing"
-      ? "Elige una carpeta…"
+      ? t("picker.choosing")
       : phase === "opening"
-        ? "Abriendo…"
-        : "Abrir repositorio";
+        ? t("picker.opening")
+        : t("picker.open");
 
   return (
     <div className="repository-picker">
@@ -107,9 +111,12 @@ export function RepositoryPicker() {
         {label}
       </button>
       {error !== null && (
-        <p className="state state--error repository-picker__error" role="alert">
-          {error}
-        </p>
+        <div
+          className="state state--error repository-picker__error"
+          role="alert"
+        >
+          <ErrorMessage error={error.cause} />
+        </div>
       )}
     </div>
   );

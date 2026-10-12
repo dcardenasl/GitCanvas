@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { ChangedFile } from "../../lib/changedFiles";
 import type { FileSource } from "../../state/session";
@@ -45,6 +46,7 @@ export function ChangedFilesBrowser({
   onOpen,
   allCommitFiles,
 }: ChangedFilesBrowserProps) {
+  const { t } = useTranslation("files");
   const view = useFileListPreferences((state) => state.view);
   const setView = useFileListPreferences((state) => state.setView);
   const [showAllCommitFiles, setShowAllCommitFiles] = useState(false);
@@ -85,7 +87,7 @@ export function ChangedFilesBrowser({
           <div
             className="file-view-mode"
             role="group"
-            aria-label="Vista de archivos"
+            aria-label={t("browser.viewLabel")}
           >
             <button
               type="button"
@@ -96,7 +98,7 @@ export function ChangedFilesBrowser({
                 setView("path");
               }}
             >
-              Ruta
+              {t("browser.path")}
             </button>
             <button
               type="button"
@@ -106,7 +108,7 @@ export function ChangedFilesBrowser({
                 setView("tree");
               }}
             >
-              Árbol
+              {t("browser.tree")}
             </button>
           </div>
 
@@ -118,7 +120,9 @@ export function ChangedFilesBrowser({
                 className="file-tree__all-toggle"
                 onClick={toggleAll}
               >
-                {allExpanded ? "Contraer todo" : "Expandir todo"}
+                {allExpanded
+                  ? t("browser.collapseAll")
+                  : t("browser.expandAll")}
               </button>
             )}
           {allCommitFiles !== undefined && (
@@ -132,7 +136,7 @@ export function ChangedFilesBrowser({
                   if (checked) setView("tree");
                 }}
               />
-              <span>Ver todos los archivos</span>
+              <span>{t("browser.showAll")}</span>
             </label>
           )}
         </div>
@@ -228,6 +232,8 @@ function TreeEntries({
   onOpen,
   onToggleDirectory,
 }: TreeEntriesProps) {
+  const { t } = useTranslation("files");
+
   return entries.map((entry) => {
     if (entry.kind === "file") {
       return (
@@ -255,7 +261,10 @@ function TreeEntries({
           type="button"
           className="file-tree__toggle"
           aria-expanded={isExpanded}
-          aria-label={`${entry.name}, ${String(entry.fileCount)} ${entry.fileCount === 1 ? "archivo modificado" : "archivos modificados"}`}
+          aria-label={t("tree.changedDirectory", {
+            name: entry.name,
+            count: entry.fileCount,
+          })}
           onClick={() => {
             onToggleDirectory(entry.path);
           }}

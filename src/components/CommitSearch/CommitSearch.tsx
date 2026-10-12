@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { CommitInfo } from "../../bindings";
 
@@ -22,6 +23,7 @@ export interface CommitSearchProps {
  * hits is still navigable.
  */
 export function CommitSearch({ commits, onGo }: CommitSearchProps) {
+  const { t } = useTranslation("history");
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -67,12 +69,15 @@ export function CommitSearch({ commits, onGo }: CommitSearchProps) {
 
   const status =
     query !== deferredQuery
-      ? "Buscando…"
+      ? t("search.searching")
       : deferredQuery.trim() === ""
         ? ""
         : found.length === 0
-          ? "sin coincidencias"
-          : `${String(position + 1)} de ${String(found.length)}`;
+          ? t("search.noMatches")
+          : t("search.position", {
+              current: position + 1,
+              total: found.length,
+            });
 
   return (
     <div className="commit-search">
@@ -81,8 +86,8 @@ export function CommitSearch({ commits, onGo }: CommitSearchProps) {
         type="search"
         className="commit-search__input"
         value={query}
-        placeholder="Buscar commit, autor o hash"
-        aria-label="Buscar en el historial cargado"
+        placeholder={t("search.placeholder")}
+        aria-label={t("search.aria")}
         onChange={(event) => {
           setQuery(event.currentTarget.value);
         }}

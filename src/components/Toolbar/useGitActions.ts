@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import type { CheckoutOutcome, DirtyPath } from "../../bindings";
-import { userMessage } from "../../lib/errors";
 import {
   checkoutBranch,
   pullFastForward,
@@ -10,10 +9,35 @@ import {
 } from "../../lib/ipc";
 import { invalidateLive } from "../../state/queryKeys";
 
+/**
+ * What an action left to say, as a code and its parameters.
+ *
+ * Never a sentence: the text is composed when the notice is rendered, so a
+ * notice already on screen follows a change of language instead of freezing in
+ * the one that was active when the action finished.
+ */
+export type NoticeContent =
+  | { readonly code: "checkedOut"; readonly branch: string }
+  | { readonly code: "upToDate" }
+  | { readonly code: "fastForwarded"; readonly commits: number }
+  | {
+      readonly code: "diverged";
+      readonly local: string;
+      readonly remote: string;
+    }
+  | { readonly code: "noUpstream" }
+  | { readonly code: "pushRejected"; readonly branch: string }
+  | {
+      readonly code: "pushed";
+      readonly branch: string;
+      readonly remote: string;
+    }
+  | { readonly code: "failed"; readonly error: unknown };
+
 /** What the last action left for the user to read. */
 export interface Notice {
   readonly tone: "info" | "error";
-  readonly text: string;
+  readonly content: NoticeContent;
 }
 
 /** A checkout the backend refused because it would discard work. */
@@ -86,7 +110,7 @@ export function useGitActions(repositoryPath: string | null): GitActions {
   }, [repositoryPath]);
 
   const fail = (error: Error, path: string) => {
-    setNotice(path, { tone: "error", text: userMessage(error) });
+    setNotice(path, { tone: "error", content: { code: "failed", error } });
   };
 
   const checkout = useMutation({
@@ -108,7 +132,7 @@ export function useGitActions(repositoryPath: string | null): GitActions {
       setBlocked(null);
       setNotice(variables.path, {
         tone: "info",
-        text: `En ${outcome.branch}.`,
+        content: { code: "checkedOut", branch: outcome.branch },
       });
       void refresh(variables.path);
     },
@@ -122,32 +146,32 @@ export function useGitActions(repositoryPath: string | null): GitActions {
     onSuccess: (outcome, variables) => {
       switch (outcome.kind) {
         case "UpToDate":
-          setNotice(variables.path, { tone: "info", text: "Ya está al día." });
-          break;
-        case "FastForwarded": {
-          const count = `${String(outcome.commits)} ${
-            outcome.commits === 1 ? "commit" : "commits"
-          }`;
           setNotice(variables.path, {
             tone: "info",
-            text: `Avanzó ${count}.`,
+            content: { code: "upToDate" },
+          });
+          break;
+        case "FastForwarded":
+          setNotice(variables.path, {
+            tone: "info",
+            content: { code: "fastForwarded", commits: outcome.commits },
           });
           void refresh(variables.path);
           break;
-        }
         case "DivergedRequiresMerge":
           setNotice(variables.path, {
             tone: "error",
-            text: [
-              `${outcome.local} y ${outcome.remote} divergieron. Hace falta una fusión,`,
-              "que se resuelve desde la línea de comandos.",
-            ].join(" "),
+            content: {
+              code: "diverged",
+              local: outcome.local,
+              remote: outcome.remote,
+            },
           });
           break;
         case "NoUpstream":
           setNotice(variables.path, {
             tone: "error",
-            text: "Esta rama no tiene configurada una rama de seguimiento remoto.",
+            content: { code: "noUpstream" },
           });
           break;
       }
@@ -163,17 +187,17 @@ export function useGitActions(repositoryPath: string | null): GitActions {
       if (outcome.kind === "RejectedNonFastForward") {
         setNotice(variables.path, {
           tone: "error",
-          text: [
-            `El remoto rechazó el envío de ${outcome.branch} porque tiene commits que`,
-            "faltan en la rama local.",
-            `Tráelos con «Traer cambios» antes de volver a enviarla.`,
-          ].join(" "),
+          content: { code: "pushRejected", branch: outcome.branch },
         });
         return;
       }
       setNotice(variables.path, {
         tone: "info",
-        text: `${outcome.branch} enviada a ${outcome.remote}.`,
+        content: {
+          code: "pushed",
+          branch: outcome.branch,
+          remote: outcome.remote,
+        },
       });
       void refresh(variables.path);
     },

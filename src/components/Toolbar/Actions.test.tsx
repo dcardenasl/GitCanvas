@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PullOutcome } from "../../bindings";
+import { changeLanguage } from "../../i18n";
 import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
 
 const mockIpc = createIpcMocks([
@@ -45,9 +46,56 @@ beforeEach(() => {
   HTMLDialogElement.prototype.showModal = vi.fn();
   HTMLDialogElement.prototype.close = vi.fn();
 });
-afterEach(cleanup);
+afterEach(async () => {
+  cleanup();
+  await changeLanguage("es");
+});
 
 describe("Actions", () => {
+  it("re-composes a notice already on screen when the language changes", async () => {
+    pullFastForward.mockResolvedValue({
+      kind: "UpToDate",
+    } satisfies PullOutcome);
+    renderActions();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Traer cambios" }),
+    );
+    expect(await screen.findByText("Ya está al día.")).toBeInstanceOf(
+      HTMLElement,
+    );
+
+    await act(async () => {
+      await changeLanguage("en");
+    });
+
+    expect(screen.getByText("Already up to date.")).toBeInstanceOf(HTMLElement);
+    expect(screen.getByRole("button", { name: "Pull changes" })).toBeInstanceOf(
+      HTMLElement,
+    );
+  });
+
+  it("pluralizes the commits a pull advanced in each language", async () => {
+    pullFastForward.mockResolvedValue({
+      kind: "FastForwarded",
+      commits: 1,
+      to: "abc123",
+    } satisfies PullOutcome);
+    renderActions();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Traer cambios" }),
+    );
+    expect(await screen.findByText("Avanzó 1 commit.")).toBeInstanceOf(
+      HTMLElement,
+    );
+
+    await act(async () => {
+      await changeLanguage("en");
+    });
+    expect(screen.getByText("Advanced 1 commit.")).toBeInstanceOf(HTMLElement);
+  });
+
   it("never pushes without an explicit confirmation", async () => {
     renderActions();
 

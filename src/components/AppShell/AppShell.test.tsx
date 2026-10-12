@@ -353,7 +353,6 @@ describe("AppShell toolbar", () => {
     renderShell();
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("Watcher degradado");
     expect(alert.textContent).toContain("too many watches");
     const attempts = watchRepository.mock.calls.length;
 
@@ -364,7 +363,7 @@ describe("AppShell toolbar", () => {
       expect(watchRepository.mock.calls.length).toBeGreaterThan(attempts);
     });
     await waitFor(() => {
-      expect(screen.queryByText(/Watcher degradado/)).toBeNull();
+      expect(screen.queryByText(/too many watches/)).toBeNull();
     });
   });
 

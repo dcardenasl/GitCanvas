@@ -207,7 +207,7 @@ describe("useLiveRepository", () => {
     await waitFor(() => {
       expect(result.current.status).toEqual({
         kind: "degraded",
-        message: "permission denied",
+        error: new Error("permission denied"),
       });
     });
   });
@@ -261,7 +261,7 @@ describe("useLiveRepository", () => {
     });
   });
 
-  it("summarizes watcher degradation events in Spanish", async () => {
+  it("keeps the kind and diagnostic of watcher degradation events", async () => {
     const { result } = renderHook(() => useLiveRepository("/tmp/repo"), {
       wrapper,
     });
@@ -282,7 +282,7 @@ describe("useLiveRepository", () => {
     });
     expect(result.current.status).toEqual({
       kind: "degraded",
-      message: "La observación del repositorio está degradada: watch failed",
+      error: { kind: "WatchDegraded", message: "watch failed" },
     });
   });
 
@@ -321,8 +321,7 @@ describe("useLiveRepository", () => {
 
     expect(result.current.status).toEqual({
       kind: "degraded",
-      message:
-        "La observación del repositorio está degradada: early watch failure",
+      error: { kind: "WatchDegraded", message: "early watch failure" },
     });
   });
 
