@@ -53,7 +53,8 @@ GitCanvas is the opposite trade: small, fast, free, and focused on reading histo
 - **No telemetry.** GitCanvas makes no analytics or tracking requests. Its only network
   access is Git itself (clone, fetch, pull, push) and, if you sign in, the GitHub API.
 
-> The interface is currently in Spanish. Localization is not built yet.
+> The interface is available in English and Spanish. It follows the system language by
+> default and can be switched from the toolbar.
 
 ## Install
 
@@ -131,7 +132,7 @@ Documented on purpose rather than discovered later:
   subsequent pages reuse a bounded SHA cache. Git reads run off the UI thread.
 - Graph layout is optimised for the common case, not for histories with a very large
   number of simultaneously active branches.
-- The installers are unsigned (see above) and the interface is in Spanish only.
+- The installers are unsigned (see above) and the interface is available in English and Spanish only.
 
 ## Build from source
 

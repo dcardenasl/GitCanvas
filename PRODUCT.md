@@ -41,6 +41,9 @@ repositories identified in CLAUDE.md. Display repository content only from real 
 
 - The graph is the central task surface.
 - Loading another page preserves previous lane assignments.
+- The interface language is window-level, persisted locally, and follows the operating
+  system (Spanish on a Spanish system, English otherwise) unless the user picks one.
+  Git data, paths and backend diagnostics are never translated.
 - Errors provide a recoverable state; checkout that may discard local changes requires
   explicit confirmation. Pull is fast-forward only and push never forces.
 - Keep expensive work off the desktop event loop and bound rendered content.

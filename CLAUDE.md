@@ -157,10 +157,15 @@ Cada una está hecha para fallar el build, no para depender de que alguien se ac
 - **Idioma:** la conversación con David es en español. **Código, comentarios, mensajes
   de commit, CHANGELOG y docs técnicos del repo van en inglés.** `TASKS.md` y `docs/`
   son la excepción: español.
-- **Idioma de la interfaz:** todo texto que ve el usuario va en español. Los mensajes de
-  error del backend son diagnósticos en inglés y se muestran detrás de un resumen en
-  español por tipo de error (`src/lib/errors.ts`, `userMessage`); nunca se pintan crudos.
-  Los errores que el código lanza para sí mismo (`throw new Error(…)`) van en inglés.
+- **Idioma de la interfaz:** todo texto que ve el usuario sale de los catálogos de
+  `src/i18n/locales/` (inglés base, español), nunca de un literal en el JSX; un test lo
+  hace fallar. Los mensajes de error del backend son diagnósticos en inglés: se
+  muestran detrás de un resumen traducido por tipo de error (`describeError` y
+  `ErrorMessage`), con el original en un detalle expandible. El estado guarda el fallo
+  o un código con parámetros, nunca una frase ya traducida. Un idioma nuevo es una
+  carpeta de catálogos y una entrada en `src/i18n/languages.ts`
+  ([ADR 0004](docs/adr/0004-internationalization.md)). Los errores que el código lanza
+  para sí mismo (`throw new Error(…)`) van en inglés.
 - **Indentación** (de `~/Developer/AGENTS.md`): 4 espacios en Rust, 2 en JS/TS.
 - **Nombres:** `PascalCase` clases y componentes, `camelCase` variables y funciones,
   `kebab-case` archivos web.

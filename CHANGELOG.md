@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`PreferencesMenu`** — a toolbar button groups theme and the new language choice
+  (System, English, Spanish). System follows the operating system and falls back to
+  English, the choice is remembered, and switching is immediate without losing the
+  open repository or selection.
+
+### Changed
+
+- **Interface text** — every label, message, tooltip and accessible name now comes
+  from per-language catalogs, with dates, numbers and plurals formatted for the
+  active language instead of fixed Spanish.
+- **Error messages** — failures show a translated summary and keep the backend's
+  original English diagnostic in an expandable, copyable detail.
+
 ## [0.1.0] — 2026-10-08
 
 ### Added
