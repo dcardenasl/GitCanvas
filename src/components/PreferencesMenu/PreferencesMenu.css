@@ -1,0 +1,48 @@
+.preferences-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.preferences-menu__toggle {
+  padding-inline: var(--space-4);
+  line-height: 1;
+}
+
+.preferences-menu__icon {
+  display: block;
+  inline-size: 14px;
+  block-size: 14px;
+}
+
+.preferences-menu__panel {
+  position: absolute;
+  z-index: 10;
+  inset-block-start: calc(100% + var(--space-2));
+  inset-inline-end: 0;
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-toolbar);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.28);
+}
+
+.preferences-menu__panel[hidden] {
+  display: none;
+}
+
+/* Each row is its label and its control, the label taking what the longest one
+   needs so the controls line up whatever the language. */
+.preferences-menu__panel .theme-selector,
+.preferences-menu__panel .language-selector {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) 1fr;
+  gap: var(--space-5);
+  align-items: center;
+}
+
+.preferences-menu__panel .theme-selector__select,
+.preferences-menu__panel .language-selector__select {
+  max-inline-size: none;
+}

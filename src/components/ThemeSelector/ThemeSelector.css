@@ -19,17 +19,6 @@
   cursor: default;
 }
 
-@media (max-width: 1100px) {
-  .theme-selector__label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-  }
-}
-
 .theme-selector__select:hover {
   border-color: var(--accent);
 }
