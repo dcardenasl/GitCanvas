@@ -67,7 +67,6 @@
   --destructive-ink: #fff;
   --backdrop: rgb(0 0 0 / 55%);
   --menu-shadow: 0 8px 24px rgb(0 0 0 / 45%);
-  --empty-brand-surface: #f4eef9;
   --graph-outline: #10131a;
   --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -114,7 +113,6 @@
   --destructive-ink: #fff;
   --backdrop: rgb(24 21 29 / 32%);
   --menu-shadow: 0 8px 24px rgb(31 27 38 / 18%);
-  --empty-brand-surface: #eee6fa;
   --graph-outline: #4b4653;
 }
 

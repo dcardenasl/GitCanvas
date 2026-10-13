@@ -3,9 +3,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getStartupRepository } from "../../lib/ipc";
-import brandMark from "../../assets/branding/gitcanvas-mark.png";
-import brandHorizontal from "../../assets/branding/gitcanvas-horizontal.png";
 
+import { BrandLogo } from "../BrandLogo/BrandLogo";
 import { CommitDetailPanel } from "../CommitDetailPanel";
 import { CommitSearch } from "../CommitSearch";
 import { ErrorMessage } from "../ErrorMessage";
@@ -105,14 +104,13 @@ export function AppShell() {
   return (
     <div className="app-shell">
       <header className="toolbar">
-        {repository !== null && (
-          <img
-            className="toolbar__brand"
-            src={brandMark}
-            alt=""
-            aria-hidden="true"
-          />
-        )}
+        <BrandLogo
+          className={
+            repository === null ? "toolbar__brand-wordmark" : "toolbar__brand"
+          }
+          variant={repository === null ? "horizontal" : "mark"}
+          alt={repository === null ? "GitCanvas" : ""}
+        />
         <span className="toolbar__repository" title={repository?.name}>
           {repository?.name ?? t("toolbar.noRepository")}
         </span>
@@ -178,9 +176,9 @@ export function AppShell() {
         />
       ) : repository === null ? (
         <div className="app-shell__empty">
-          <img
+          <BrandLogo
             className="app-shell__empty-logo"
-            src={brandHorizontal}
+            variant="stacked"
             alt="GitCanvas"
           />
           <p className="app-shell__empty-hint">{t("empty.hint")}</p>

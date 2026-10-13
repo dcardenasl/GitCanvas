@@ -43,7 +43,15 @@
   width: 24px;
   height: 24px;
   flex: 0 0 24px;
-  border-radius: var(--radius-tight);
+  object-fit: contain;
+}
+
+.toolbar__brand-wordmark {
+  display: block;
+  width: 104px;
+  height: 24px;
+  flex: 0 0 104px;
+  object-fit: contain;
 }
 
 .toolbar .button {
@@ -101,12 +109,9 @@
 
 .app-shell__empty-logo {
   display: block;
-  width: min(280px, calc(100vw - 48px));
+  width: min(250px, calc(100vw - 48px));
   height: auto;
-  margin-bottom: var(--space-2);
-  padding: 8px 14px;
-  border-radius: 9px;
-  background: var(--empty-brand-surface);
+  object-fit: contain;
 }
 
 .app-shell__empty-hint {
