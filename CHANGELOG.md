@@ -7,13 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`LineTable`** — colors supported source languages (CSS, JavaScript, JSON, JSX,
+  Markdown, HTML, PHP, Rust, TypeScript, TSX) in diffs and whole-file views. It runs in a
+  background worker, so a large file never freezes scrolling; unknown or oversized files
+  stay readable as plain text.
+
 ### Changed
 
-- **File previews** — highlight supported source languages in diffs and whole-file views, in a background worker so a large file never freezes scrolling, while keeping large and unknown files readable as plain text.
-- **GitCanvas branding** — use the final vertical, horizontal and mark logos, selecting
-  the high-contrast wordmark for the active theme.
-- **File diffs** — wrap long lines by default and keep added/deleted code readable with
-  theme-aware text and semantic row backgrounds.
+- **`BrandLogo`** — uses the final vertical, horizontal and mark artwork, picking the
+  high-contrast wordmark for the active theme; the files are exported at display
+  resolution, about 60% smaller than the originals.
+- **`FileDiffView`** — wraps long lines by default, and the wrap toggle shows when it is
+  on.
+- **`DiffViewer`** — added and deleted rows keep their green and red background, while
+  the code uses the ordinary text color so it stays readable in both themes.
 
 ## [0.2.0] — 2026-10-12
 

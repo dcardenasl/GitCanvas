@@ -77,7 +77,7 @@ Origen: auditoría del 2026-10-13 sobre los commits `a1e0f1f`, `4bf72e9` y `4bf6
       `--syntax-*`, lenguajes soportados y cómo agregar uno).
       → `docs(syntax): record highlighting decisions in adr 0005`
 
-- [ ] **AUD-8 — CHANGELOG con el formato del proyecto.**
+- [x] **AUD-8 — CHANGELOG con el formato del proyecto.**
       → `docs(changelog): name the components in unreleased entries`
 
 ## Cómo se usa este archivo
