@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **File previews** — highlight supported source languages in diffs and whole-file views, while keeping large and unknown files readable as plain text.
 - **GitCanvas branding** — use the final vertical, horizontal and mark logos, selecting
   the high-contrast wordmark for the active theme.
 - **File diffs** — wrap long lines by default and keep added/deleted code readable with

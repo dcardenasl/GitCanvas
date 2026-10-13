@@ -334,7 +334,12 @@ export function FileDiffView(props: FileDiffViewProps) {
               <p className="state file-diff__state">{t("diff.emptyFile")}</p>
             )}
             {wholeLines.length > 0 && (
-              <LineTable lines={wholeLines} wrap={wrap} />
+              <LineTable
+                lines={wholeLines}
+                wrap={wrap}
+                path={path}
+                mode="file"
+              />
             )}
           </>
         )}
