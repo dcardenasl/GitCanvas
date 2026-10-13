@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { FileDiff } from "../../lib/ipc";
-import type { SyntaxSegment } from "./tokens";
-
-import { canHighlightPath, syntaxLanguageForPath } from "./language";
 import { parseHunks, type DiffLine } from "./parse";
+import type { HighlightedRow } from "./tokens";
+import { useSyntaxHighlight, type HighlightTarget } from "./useSyntaxHighlight";
 
 import "./DiffViewer.css";
 
@@ -71,8 +70,7 @@ export function DiffViewer({
       lines={lines}
       wrap={wrap}
       showOldColumn
-      path={file.path}
-      mode="diff"
+      highlight={{ path: file.path, mode: "diff" }}
     />
   );
 }
@@ -81,8 +79,8 @@ export function DiffViewer({
 export interface LineTableProps {
   readonly lines: readonly DiffLine[];
   readonly wrap: boolean;
-  readonly path?: string;
-  readonly mode?: "diff" | "file";
+  /** Colors the code for this file; omitted, the rows stay plain text. */
+  readonly highlight?: HighlightTarget;
   /** Whether to show the parent-revision numbers; a whole file has only one side. */
   readonly showOldColumn?: boolean;
 }
@@ -93,6 +91,24 @@ const LINE_CLASS: Record<DiffLine["kind"], string> = {
   context: "diff-line",
   meta: "diff-line diff-line--meta",
 };
+
+/** A row's text, split into the colored runs the highlighter found. */
+function HighlightedText({ row }: { readonly row: HighlightedRow }) {
+  return row.map((segment, index) =>
+    segment.categories.length === 0 ? (
+      segment.text
+    ) : (
+      <span
+        key={index}
+        className={segment.categories
+          .map((category) => `syntax-token--${category}`)
+          .join(" ")}
+      >
+        {segment.text}
+      </span>
+    ),
+  );
+}
 
 /**
  * The numbered line grid, shared by the patch and whole-file views.
@@ -105,67 +121,9 @@ export function LineTable({
   lines,
   wrap,
   showOldColumn = false,
-  path,
-  mode = "file",
+  highlight,
 }: LineTableProps) {
-  const language = path === undefined ? null : syntaxLanguageForPath(path);
-  const characterCount = useMemo(
-    () => lines.reduce((total, line) => total + line.text.length, 0),
-    [lines],
-  );
-  const [highlightResult, setHighlightResult] = useState<{
-    readonly input: readonly DiffLine[];
-    readonly path: string;
-    readonly mode: "diff" | "file";
-    readonly lines: readonly (readonly SyntaxSegment[] | null)[];
-  } | null>(null);
-
-  useEffect(() => {
-    const requestedLanguage = language;
-    if (
-      path === undefined ||
-      requestedLanguage === null ||
-      !canHighlightPath(path, lines.length, characterCount)
-    ) {
-      return;
-    }
-    let current = true;
-
-    void import("./syntax")
-      .then((syntax) => {
-        const highlighted =
-          mode === "diff"
-            ? syntax.highlightDiff(lines, requestedLanguage)
-            : syntax.highlightSource(
-                lines.map((line) => line.text).join("\n"),
-                requestedLanguage,
-              );
-        if (!current) return;
-        setHighlightResult({
-          input: lines,
-          path,
-          mode,
-          lines:
-            mode === "diff"
-              ? highlighted
-              : lines.map((_, index) => highlighted[index] ?? []),
-        });
-      })
-      .catch(() => {
-        // A grammar failure should never make source content unavailable.
-      });
-
-    return () => {
-      current = false;
-    };
-  }, [characterCount, language, lines, mode, path]);
-
-  const highlightedLines =
-    highlightResult?.input === lines &&
-    highlightResult.path === path &&
-    highlightResult.mode === mode
-      ? highlightResult.lines
-      : null;
+  const highlighted = useSyntaxHighlight(lines, highlight);
 
   return (
     <div
@@ -177,41 +135,29 @@ export function LineTable({
         .filter(Boolean)
         .join(" ")}
     >
-      {lines.map((line, index) => (
-        <div
-          // Patch lines have no identity of their own; position is the only key.
-          key={`${String(index)}-${line.text.slice(0, 12)}`}
-          className={LINE_CLASS[line.kind]}
-        >
-          {showOldColumn && (
+      {lines.map((line, index) => {
+        const row = highlighted?.[index];
+        return (
+          <div
+            // Patch lines have no identity of their own; position is the only key.
+            key={`${String(index)}-${line.text.slice(0, 12)}`}
+            className={LINE_CLASS[line.kind]}
+          >
+            {showOldColumn && (
+              <span className="diff-line__number" aria-hidden="true">
+                {line.oldLine ?? ""}
+              </span>
+            )}
             <span className="diff-line__number" aria-hidden="true">
-              {line.oldLine ?? ""}
+              {line.newLine ?? ""}
             </span>
-          )}
-          <span className="diff-line__number" aria-hidden="true">
-            {line.newLine ?? ""}
-          </span>
-          <span className="diff-line__marker" aria-hidden="true" />
-          <span className="diff-line__text">
-            {highlightedLines?.[index] == null
-              ? line.text
-              : highlightedLines[index].map((segment, segmentIndex) =>
-                  segment.categories.length === 0 ? (
-                    segment.text
-                  ) : (
-                    <span
-                      key={segmentIndex}
-                      className={segment.categories
-                        .map((category) => `syntax-token--${category}`)
-                        .join(" ")}
-                    >
-                      {segment.text}
-                    </span>
-                  ),
-                )}
-          </span>
-        </div>
-      ))}
+            <span className="diff-line__marker" aria-hidden="true" />
+            <span className="diff-line__text">
+              {row == null ? line.text : <HighlightedText row={row} />}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

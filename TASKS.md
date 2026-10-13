@@ -57,9 +57,16 @@ Origen: auditoría del 2026-10-13 sobre los commits `a1e0f1f`, `4bf72e9` y `4bf6
       cumple la regla de propiedades lógicas.
       → `refactor(syntax): derive languages from one registry and type the highlighter`
 
-- [ ] **AUD-5 — Resaltar fuera del hilo de la interfaz.** Web Worker clásico con protocolo
+- [x] **AUD-5 — Resaltar fuera del hilo de la interfaz.** Web Worker clásico con protocolo
       por identificador, cliente con cancelación y recuperación ante fallo, y el hook
-      `useSyntaxHighlight` que reemplaza la lógica incrustada en `LineTable`.
+      `useSyntaxHighlight` que reemplaza la lógica incrustada en `LineTable`, que recibe un
+      único `highlight` en lugar de `path` y `mode` sueltos.
+      *Hallazgo durante la ejecución:* en el navegador el worker lanzaba `document is not
+      defined`: `decode-named-character-reference` (dependencia de `refractor`) resuelve a una
+      entrada con DOM para la condición `browser` y Vite la prefiere a la `worker`. Los tests
+      no pueden verlo (sin `Worker`), así que `vite.config.ts` la redirige a la entrada de
+      JavaScript puro y un E2E comprueba que aparecen tokens en la aplicación empaquetada
+      (pasa en WKWebView con la CSP de producción).
       → `perf(diff): run syntax highlighting in a worker behind a dedicated hook`
 
 - [ ] **AUD-6 — Logos del tamaño que se muestran.** Exportes a resolución útil (hasta 4x),

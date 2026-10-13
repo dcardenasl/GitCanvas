@@ -1,9 +1,14 @@
 // @vitest-environment jsdom
 import { cleanup, render, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { parseHunks, parseWholeFile } from "./parse";
 import { LineTable } from "./DiffViewer";
+
+vi.mock("./highlighter", async () => ({
+  syntaxHighlighter: (await import("../../test/inlineHighlighter"))
+    .inlineHighlighter,
+}));
 
 afterEach(cleanup);
 
@@ -14,8 +19,7 @@ describe("LineTable syntax highlighting", () => {
       <LineTable
         lines={parseWholeFile(source)}
         wrap
-        path="src/app.ts"
-        mode="file"
+        highlight={{ path: "src/app.ts", mode: "source" }}
       />,
     );
 
@@ -34,7 +38,11 @@ describe("LineTable syntax highlighting", () => {
       "@@ -1 +1 @@\n-const value = 1;\n+const value = 'hello';",
     );
     const { container } = render(
-      <LineTable lines={lines} wrap path="src/app.ts" mode="diff" />,
+      <LineTable
+        lines={lines}
+        wrap
+        highlight={{ path: "src/app.ts", mode: "diff" }}
+      />,
     );
 
     await waitFor(() => {
@@ -52,8 +60,7 @@ describe("LineTable syntax highlighting", () => {
       <LineTable
         lines={parseWholeFile("const value = 1;")}
         wrap
-        path="Dockerfile"
-        mode="file"
+        highlight={{ path: "Dockerfile", mode: "source" }}
       />,
     );
 
@@ -61,5 +68,13 @@ describe("LineTable syntax highlighting", () => {
     expect(container.querySelector(".diff-line__text")?.textContent).toBe(
       "const value = 1;",
     );
+  });
+
+  it("stays plain text when no highlight target is given", () => {
+    const { container } = render(
+      <LineTable lines={parseWholeFile("const value = 1;")} wrap />,
+    );
+
+    expect(container.querySelector(".syntax-token--keyword")).toBeNull();
   });
 });

@@ -337,8 +337,7 @@ export function FileDiffView(props: FileDiffViewProps) {
               <LineTable
                 lines={wholeLines}
                 wrap={wrap}
-                path={path}
-                mode="file"
+                highlight={{ path, mode: "source" }}
               />
             )}
           </>
