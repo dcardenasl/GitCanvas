@@ -73,7 +73,7 @@ git2 = { version = "0.21", default-features = false, features = [
     "ssh",
     "https",
 ] }
-rlimit = "0.10"
+rlimit = "0.11"
 thiserror = "2"
 
 # Filesystem notification, for noticing that a repository changed underneath the
@@ -108,7 +108,7 @@ objc2-foundation = "0.3"
 specta = { version = "=2.0.0-rc.25", features = ["derive"] }
 specta-typescript = "=0.0.12"
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
-syn = { version = "2", features = ["full", "visit"] }
+syn = { version = "3", features = ["full", "visit"] }
 
 # Profiles live at the workspace root; cargo ignores them in member manifests.
 # See https://tauri.app/concept/size/#cargo-configuration
