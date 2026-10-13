@@ -109,7 +109,7 @@ export function AppShell() {
             repository === null ? "toolbar__brand-wordmark" : "toolbar__brand"
           }
           variant={repository === null ? "horizontal" : "mark"}
-          alt={repository === null ? "GitCanvas" : ""}
+          decorative
         />
         <span className="toolbar__repository" title={repository?.name}>
           {repository?.name ?? t("toolbar.noRepository")}
@@ -176,11 +176,7 @@ export function AppShell() {
         />
       ) : repository === null ? (
         <div className="app-shell__empty">
-          <BrandLogo
-            className="app-shell__empty-logo"
-            variant="stacked"
-            alt="GitCanvas"
-          />
+          <BrandLogo className="app-shell__empty-logo" variant="stacked" />
           <p className="app-shell__empty-hint">{t("empty.hint")}</p>
         </div>
       ) : (
