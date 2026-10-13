@@ -1832,3 +1832,64 @@ macOS el 2026-10-12: 402 pruebas, cobertura sobre los umbrales, `tsc`, ESLint, P
       940 px en esos motores.
       *Cierre (2026-10-12):* el run de `quality` [38282515780](https://github.com/dcardenasl/GitCanvas/actions/runs/38282515780) sobre `d42dde7` (PR #9) pasó en Linux, macOS y Windows: cobertura, Clippy `-D warnings`, `cargo test --workspace`, bindings sin deriva, bundle y E2E (Linux con Xvfb; macOS y Windows nativos). Publicado como v0.2.0: tag sobre `main` y Release con los instaladores de los tres sistemas.
       → `docs: record the v0.2.0 release and close i18n verification`
+
+## ✅ Auditoría posterior a v0.2.0 (8/8)
+
+Origen: auditoría del 2026-10-13 sobre los commits `a1e0f1f`, `4bf72e9` y `4bf6cd3`.
+
+- [x] **AUD-1 — Versionar el plan de tres funcionalidades.** TASKS, ARCHIVES y SNAPSHOT lo
+      enlazan; sin versionar, el enlace se rompía al clonar.
+      → `docs(plan): add the three-feature plan referenced by tasks and archives` (`cd73b71`)
+
+- [x] **AUD-2 — Sacar la salida de la revisión de diseño del repositorio.** `.impeccable/`
+      es salida de herramienta con rutas de otra máquina; pasa a `.gitignore`.
+      → `chore: stop tracking design review output` (`457cb66`)
+
+- [x] **AUD-3 — Alinear dependencias con el runtime.** `@types/node` en la mayor del Node
+      de `engines` y CI (22), `@types/hast` declarado (se importa directo), `@wdio/*` en una
+      sola mayor y Dependabot agrupado para que no vuelvan a separarse.
+      *Hallazgo durante la ejecución:* `@wdio/tauri-service` (1.4.0 y 1.5.0) exige
+      `webdriverio ^9`, así que la v10 de `@wdio/mocha-framework` era la incompatible y el
+      conjunto vuelve a la v9. `npm audit` completo marca `basic-ftp` en la cadena de
+      desarrollo de wdio 9; es una herramienta de pruebas que no se distribuye y la puerta
+      de CI audita solo producción.
+      → `build(deps): align node types and webdriverio majors with the runtime` (`e7b0dc4`)
+
+- [x] **AUD-4 — Un registro de lenguajes y un resaltador sin restos.** Registro único de
+      lenguajes cuyo tipo se deriva de él; gramáticas como `Record` exhaustivo (agregar un
+      lenguaje sin gramática no compila); tabla de categorías en lugar de `includes`;
+      `kind` tipado con `DiffLine["kind"]`; sin bandera mutable ni rama inerte. Prueba de que
+      cada categoría tiene regla de visor y color en ambos temas.
+      *Hallazgo durante la ejecución:* `import x from "./a.css?raw"` devuelve una cadena vacía
+      en Vitest, así que `logical-css.test.ts` pasaba sin comprobar nada. Se reemplaza por
+      `readStylesheet` (lectura de disco que falla si el archivo está vacío); el contenido real
+      cumple la regla de propiedades lógicas.
+      → `refactor(syntax): derive languages from one registry and type the highlighter` (`06f6b97`)
+
+- [x] **AUD-5 — Resaltar fuera del hilo de la interfaz.** Web Worker clásico con protocolo
+      por identificador, cliente con cancelación y recuperación ante fallo, y el hook
+      `useSyntaxHighlight` que reemplaza la lógica incrustada en `LineTable`, que recibe un
+      único `highlight` en lugar de `path` y `mode` sueltos.
+      *Hallazgo durante la ejecución:* en el navegador el worker lanzaba `document is not
+      defined`: `decode-named-character-reference` (dependencia de `refractor`) resuelve a una
+      entrada con DOM para la condición `browser` y Vite la prefiere a la `worker`. Los tests
+      no pueden verlo (sin `Worker`), así que `vite.config.ts` la redirige a la entrada de
+      JavaScript puro y un E2E comprueba que aparecen tokens en la aplicación empaquetada
+      (pasa en WKWebView con la CSP de producción).
+      → `perf(diff): run syntax highlighting in a worker behind a dedicated hook` (`1de93b2`)
+
+- [x] **AUD-6 — Logos del tamaño que se muestran.** Exportes a resolución útil (hasta 4x),
+      `BrandLogo` decide el `alt` y el nombre de marca deja de repetirse.
+      → `perf(branding): ship logos at display resolution and own the alt text` (`da0036a`)
+
+- [x] **AUD-7 — Documentar la decisión.** ADR 0005, ARCHITECTURE y DESIGN (tokens
+      `--syntax-*`, lenguajes soportados y cómo agregar uno).
+      → `docs(syntax): record highlighting decisions in adr 0005` (`6f88da3`)
+
+- [x] **AUD-8 — CHANGELOG con el formato del proyecto.**
+      → `docs(changelog): name the components in unreleased entries` (`1a7048f`)
+
+*Cierre (2026-10-13):* typecheck (app, e2e y node), ESLint, Prettier, 500 pruebas con
+cobertura, `npm audit --omit=dev` y los 4 specs E2E en macOS (WKWebView, CSP de producción)
+pasan. Sin verificar todavía en Linux y Windows: el worker clásico y la prueba E2E nueva
+corren por primera vez en la próxima corrida de `quality`.
