@@ -50,7 +50,7 @@
 
 .diff-line--add {
   background: var(--success-surface);
-  color: var(--success);
+  color: var(--ink);
 }
 
 .diff-line--add .diff-line__marker::before {
@@ -60,7 +60,7 @@
 
 .diff-line--del {
   background: var(--danger-surface);
-  color: var(--danger);
+  color: var(--ink);
 }
 
 .diff-line--del .diff-line__marker::before {

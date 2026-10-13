@@ -47,7 +47,7 @@ export function FileDiffView(props: FileDiffViewProps) {
   const selectFile = useSession((state) => state.selectFile);
   const expandPath = useSession((state) => state.expandedFilePath);
   const expandFile = useSession((state) => state.expandFile);
-  const [wrap, setWrap] = useState(false);
+  const [wrap, setWrap] = useState(true);
   const [choice, setChoice] = useState<{
     key: string;
     mode: Mode;
@@ -236,7 +236,7 @@ export function FileDiffView(props: FileDiffViewProps) {
 
           <button
             type="button"
-            className="file-diff__toggle"
+            className="button file-diff__toggle"
             aria-pressed={wrap}
             title={t("diff.wrapHint")}
             onClick={() => {

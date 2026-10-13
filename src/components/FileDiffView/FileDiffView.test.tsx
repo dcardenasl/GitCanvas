@@ -343,6 +343,8 @@ describe("FileDiffView", () => {
     await screen.findByText("const b = 3;");
     const wrap = screen.getByRole("button", { name: "Ajustar líneas" });
 
+    expect(wrap.getAttribute("aria-pressed")).toBe("true");
+    await userEvent.click(wrap);
     expect(wrap.getAttribute("aria-pressed")).toBe("false");
     await userEvent.click(wrap);
     expect(wrap.getAttribute("aria-pressed")).toBe("true");

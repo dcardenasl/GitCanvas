@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **GitCanvas branding** — use the final vertical, horizontal and mark logos, selecting
   the high-contrast wordmark for the active theme.
+- **File diffs** — wrap long lines by default and keep added/deleted code readable with
+  theme-aware text and semantic row backgrounds.
 
 ## [0.2.0] — 2026-10-12
 
