@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { FileDiff } from "../../lib/ipc";
-import type { SyntaxSegment } from "./syntax";
+import type { SyntaxSegment } from "./tokens";
 
 import { canHighlightPath, syntaxLanguageForPath } from "./language";
 import { parseHunks, type DiffLine } from "./parse";

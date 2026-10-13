@@ -46,10 +46,15 @@ Origen: auditoría del 2026-10-13 sobre los commits `a1e0f1f`, `4bf72e9` y `4bf6
       de CI audita solo producción.
       → `build(deps): align node types and webdriverio majors with the runtime`
 
-- [ ] **AUD-4 — Un registro de lenguajes y un resaltador sin restos.** Registro único de
+- [x] **AUD-4 — Un registro de lenguajes y un resaltador sin restos.** Registro único de
       lenguajes cuyo tipo se deriva de él; gramáticas como `Record` exhaustivo (agregar un
       lenguaje sin gramática no compila); tabla de categorías en lugar de `includes`;
-      `kind` tipado con `DiffLine["kind"]`; sin bandera mutable ni rama inerte.
+      `kind` tipado con `DiffLine["kind"]`; sin bandera mutable ni rama inerte. Prueba de que
+      cada categoría tiene regla de visor y color en ambos temas.
+      *Hallazgo durante la ejecución:* `import x from "./a.css?raw"` devuelve una cadena vacía
+      en Vitest, así que `logical-css.test.ts` pasaba sin comprobar nada. Se reemplaza por
+      `readStylesheet` (lectura de disco que falla si el archivo está vacío); el contenido real
+      cumple la regla de propiedades lógicas.
       → `refactor(syntax): derive languages from one registry and type the highlighter`
 
 - [ ] **AUD-5 — Resaltar fuera del hilo de la interfaz.** Web Worker clásico con protocolo

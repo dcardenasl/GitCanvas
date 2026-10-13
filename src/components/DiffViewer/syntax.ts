@@ -1,133 +1,134 @@
-import type { Element, Root, Text } from "hast";
-import { refractor } from "refractor/core";
+import type { RootContent } from "hast";
+import { refractor, type Syntax } from "refractor/core";
 import css from "refractor/css";
 import javascript from "refractor/javascript";
-import jsx from "refractor/jsx";
 import json from "refractor/json";
+import jsx from "refractor/jsx";
 import markdown from "refractor/markdown";
 import markup from "refractor/markup";
 import php from "refractor/php";
 import rust from "refractor/rust";
-import typescript from "refractor/typescript";
 import tsx from "refractor/tsx";
+import typescript from "refractor/typescript";
 import type { SyntaxLanguage } from "./language";
-export type { SyntaxLanguage } from "./language";
+import type { DiffLine } from "./parse";
+import type {
+  HighlightedLines,
+  HighlightedRow,
+  SyntaxCategory,
+  SyntaxSegment,
+} from "./tokens";
 
-/** Stable syntax categories used by the viewer's theme-aware token palette. */
-export type SyntaxCategory =
-  | "keyword"
-  | "string"
-  | "number"
-  | "function"
-  | "comment"
-  | "operator"
-  | "tag"
-  | "attribute"
-  | "property"
-  | "punctuation"
-  | "heading"
-  | "emphasis"
-  | "code";
-
-/** Source text and any semantic color categories applied to that exact text. */
-export interface SyntaxSegment {
-  readonly text: string;
-  readonly categories: readonly SyntaxCategory[];
-}
-
-/** Highlighted source split into rows without changing its original characters. */
-export type HighlightedLines = readonly (readonly SyntaxSegment[])[];
-
-const grammars = [
-  markdown,
-  markup,
+/**
+ * One grammar per supported language. The `Record` is exhaustive on purpose:
+ * adding a language to `SYNTAX_LANGUAGES` without a grammar here is a type
+ * error. Grammars that extend others (`tsx` over `jsx` and `typescript`,
+ * `markdown` over `markup`) are registered together, so order is irrelevant.
+ */
+const GRAMMARS: Readonly<Record<SyntaxLanguage, Syntax>> = {
   css,
   javascript,
+  json,
   jsx,
-  typescript,
-  tsx,
+  markdown,
+  markup,
   php,
   rust,
-  json,
-] as const;
+  typescript,
+  tsx,
+};
 
-let registered = false;
+for (const grammar of Object.values(GRAMMARS)) refractor.register(grammar);
 
-function registerGrammars(): void {
-  if (registered) return;
-  for (const grammar of grammars) refractor.register(grammar);
-  registered = true;
+/** Prism token scopes folded into the viewer's smaller set of categories. */
+const SCOPE_CATEGORY: ReadonlyMap<string, SyntaxCategory> = new Map([
+  ["keyword", "keyword"],
+  ["boolean", "keyword"],
+  ["important", "keyword"],
+  ["string", "string"],
+  ["char", "string"],
+  ["regex", "string"],
+  ["template-string", "string"],
+  ["number", "number"],
+  ["constant", "number"],
+  ["function", "function"],
+  ["function-variable", "function"],
+  ["comment", "comment"],
+  ["prolog", "comment"],
+  ["doctype", "comment"],
+  ["cdata", "comment"],
+  ["operator", "operator"],
+  ["entity", "operator"],
+  ["tag", "tag"],
+  ["namespace", "tag"],
+  ["attr-name", "attribute"],
+  ["attribute-name", "attribute"],
+  ["property", "property"],
+  ["selector", "property"],
+  ["class-name", "property"],
+  ["builtin", "property"],
+  ["punctuation", "punctuation"],
+  ["title", "heading"],
+  ["bold", "emphasis"],
+  ["italic", "emphasis"],
+  ["strike", "emphasis"],
+  ["code", "code"],
+  ["code-snippet", "code"],
+]);
+
+function sameCategories(
+  a: readonly SyntaxCategory[],
+  b: readonly SyntaxCategory[],
+): boolean {
+  return a.length === b.length && a.every((category, i) => category === b[i]);
 }
 
-function categoryFor(scope: string): SyntaxCategory | null {
-  if (["keyword", "boolean", "important"].includes(scope)) return "keyword";
-  if (["string", "char", "regex", "template-string"].includes(scope)) {
-    return "string";
-  }
-  if (["number", "constant"].includes(scope)) return "number";
-  if (["function", "function-variable"].includes(scope)) return "function";
-  if (["comment", "prolog", "doctype", "cdata"].includes(scope)) {
-    return "comment";
-  }
-  if (["operator", "entity"].includes(scope)) return "operator";
-  if (["tag", "namespace"].includes(scope)) return "tag";
-  if (["attr-name", "attribute-name"].includes(scope)) return "attribute";
-  if (["property", "selector", "class-name", "builtin"].includes(scope)) {
-    return "property";
-  }
-  if (["punctuation"].includes(scope)) return "punctuation";
-  if (["title"].includes(scope)) return "heading";
-  if (["bold", "italic", "strike"].includes(scope)) return "emphasis";
-  if (["code", "code-snippet"].includes(scope)) return "code";
-  return null;
-}
-
+/** Appends text to the last row, splitting on newlines and merging equal runs. */
 function appendText(
   value: string,
   categories: readonly SyntaxCategory[],
-  lines: SyntaxSegment[][],
+  rows: SyntaxSegment[][],
 ): void {
   const chunks = value.split("\n");
   chunks.forEach((chunk, index) => {
     if (chunk !== "") {
-      const currentLine = lines.at(-1) ?? [];
-      const previous = currentLine.at(-1);
-      if (previous?.categories.join(" ") === categories.join(" ")) {
-        currentLine.pop();
-        currentLine.push({
-          text: previous.text + chunk,
-          categories,
-        });
+      const row = rows.at(-1) ?? [];
+      const previous = row.at(-1);
+      if (
+        previous !== undefined &&
+        sameCategories(previous.categories, categories)
+      ) {
+        row[row.length - 1] = { text: previous.text + chunk, categories };
       } else {
-        currentLine.push({ text: chunk, categories });
+        row.push({ text: chunk, categories });
       }
     }
-    if (index < chunks.length - 1) lines.push([]);
+    if (index < chunks.length - 1) rows.push([]);
   });
 }
 
-function visitNode(
-  node: Element | Text,
+function visit(
+  node: RootContent,
   inherited: readonly SyntaxCategory[],
-  lines: SyntaxSegment[][],
+  rows: SyntaxSegment[][],
 ): void {
   if (node.type === "text") {
-    appendText(node.value, inherited, lines);
+    appendText(node.value, inherited, rows);
     return;
   }
+  if (node.type !== "element") return;
 
-  const scopeClasses = node.properties.className;
-  const ownCategories = Array.isArray(scopeClasses)
-    ? scopeClasses
-        .filter((scope): scope is string => typeof scope === "string")
-        .map(categoryFor)
-        .filter((category): category is SyntaxCategory => category !== null)
+  const scopes = node.properties.className;
+  const own = Array.isArray(scopes)
+    ? scopes.flatMap((scope) => {
+        const category =
+          typeof scope === "string" ? SCOPE_CATEGORY.get(scope) : undefined;
+        return category === undefined ? [] : [category];
+      })
     : [];
-  const categories = [...new Set([...inherited, ...ownCategories])];
-  for (const child of node.children) {
-    if (child.type === "text") visitNode(child, categories, lines);
-    else if (child.type === "element") visitNode(child, categories, lines);
-  }
+  const categories =
+    own.length === 0 ? inherited : [...new Set([...inherited, ...own])];
+  for (const child of node.children) visit(child, categories, rows);
 }
 
 /** Tokenizes a complete source sequence and keeps token scopes across newlines. */
@@ -135,77 +136,76 @@ export function highlightSource(
   source: string,
   language: SyntaxLanguage,
 ): HighlightedLines {
-  registerGrammars();
-  const grammar = language === "javascript" ? "javascript" : language;
-  const tree: Root = refractor.highlight(source, grammar);
-  const lines: SyntaxSegment[][] = [[]];
-  for (const child of tree.children) {
-    if (child.type === "text") visitNode(child, [], lines);
-    else if (child.type === "element") visitNode(child, [], lines);
+  const rows: SyntaxSegment[][] = [[]];
+  for (const node of refractor.highlight(source, language).children) {
+    visit(node, [], rows);
   }
-  return lines;
+  return rows;
 }
 
-function isHunkHeader(line: string): boolean {
-  return line.startsWith("@@ ");
+/** The part of a diff row the highlighter reads. */
+export type HighlightableLine = Pick<DiffLine, "kind" | "text">;
+
+interface HunkRow {
+  readonly index: number;
+  readonly line: HighlightableLine;
+}
+
+/** Groups content rows by hunk; a hunk header starts a new, independent group. */
+function splitHunks(lines: readonly HighlightableLine[]): HunkRow[][] {
+  const hunks: HunkRow[][] = [];
+  let current: HunkRow[] = [];
+  lines.forEach((line, index) => {
+    if (line.kind === "meta") {
+      if (line.text.startsWith("@@ ") && current.length > 0) {
+        hunks.push(current);
+        current = [];
+      }
+      return;
+    }
+    current.push({ index, line });
+  });
+  if (current.length > 0) hunks.push(current);
+  return hunks;
+}
+
+/** Tokenizes one side of a hunk and maps each of its rows to its tokens. */
+function highlightSide(
+  rows: readonly HunkRow[],
+  language: SyntaxLanguage,
+): ReadonlyMap<number, HighlightedRow> {
+  const tokens = highlightSource(
+    rows.map(({ line }) => line.text).join("\n"),
+    language,
+  );
+  return new Map(
+    rows.map(({ index }, position) => [index, tokens[position] ?? []]),
+  );
 }
 
 /**
  * Highlights each visible diff hunk as independent old/new source sequences.
  * Deleted rows use old-side scopes; added and context rows use new-side scopes.
+ * Hunk headers and "no newline" notices have no tokens (`null`).
  */
 export function highlightDiff(
-  lines: readonly { readonly kind: string; readonly text: string }[],
+  lines: readonly HighlightableLine[],
   language: SyntaxLanguage,
-): readonly (readonly SyntaxSegment[] | null)[] {
-  const result: (readonly SyntaxSegment[] | null)[] = lines.map(() => null);
-  let hunkRows: number[] = [];
-
-  const flushHunk = () => {
-    if (hunkRows.length === 0) return;
-
-    const oldRows: number[] = [];
-    const newRows: number[] = [];
-    for (const rowIndex of hunkRows) {
-      const kind = lines[rowIndex]?.kind;
-      if (kind === "context" || kind === "del") oldRows.push(rowIndex);
-      if (kind === "context" || kind === "add") newRows.push(rowIndex);
+): readonly (HighlightedRow | null)[] {
+  const result: (HighlightedRow | null)[] = lines.map(() => null);
+  for (const hunk of splitHunks(lines)) {
+    const oldSide = highlightSide(
+      hunk.filter(({ line }) => line.kind !== "add"),
+      language,
+    );
+    const newSide = highlightSide(
+      hunk.filter(({ line }) => line.kind !== "del"),
+      language,
+    );
+    for (const { index, line } of hunk) {
+      result[index] =
+        (line.kind === "del" ? oldSide : newSide).get(index) ?? [];
     }
-
-    const oldTokens = oldRows.length
-      ? highlightSource(
-          oldRows.map((index) => lines[index]?.text ?? "").join("\n"),
-          language,
-        )
-      : [];
-    const newTokens = newRows.length
-      ? highlightSource(
-          newRows.map((index) => lines[index]?.text ?? "").join("\n"),
-          language,
-        )
-      : [];
-    const oldPosition = new Map(oldRows.map((row, index) => [row, index]));
-    const newPosition = new Map(newRows.map((row, index) => [row, index]));
-
-    for (const rowIndex of hunkRows) {
-      const kind = lines[rowIndex]?.kind;
-      const position =
-        kind === "del" ? oldPosition.get(rowIndex) : newPosition.get(rowIndex);
-      const tokens = kind === "del" ? oldTokens : newTokens;
-      if (position !== undefined) result[rowIndex] = tokens[position] ?? [];
-    }
-    hunkRows = [];
-  };
-
-  lines.forEach((line, index) => {
-    if (line.kind === "meta") {
-      if (isHunkHeader(line.text)) flushHunk();
-      return;
-    }
-    if (["context", "add", "del"].includes(line.kind)) {
-      hunkRows.push(index);
-    }
-  });
-  flushHunk();
+  }
   return result;
 }

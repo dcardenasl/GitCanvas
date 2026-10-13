@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { SYNTAX_LANGUAGES } from "./language";
 import { parseHunks } from "./parse";
 import { highlightDiff, highlightSource } from "./syntax";
 
@@ -12,6 +13,12 @@ function sourceOf(
 }
 
 describe("syntax highlighting", () => {
+  it("has a working grammar for every registered language", () => {
+    for (const { id } of SYNTAX_LANGUAGES) {
+      expect(sourceOf(highlightSource("a\nb", id))).toBe("a\nb");
+    }
+  });
+
   it.each([
     ["# Heading", "markdown", "heading"],
     ["<?php echo 'value';", "php", "string"],
@@ -78,5 +85,43 @@ describe("syntax highlighting", () => {
     expect(
       highlighted[3]?.some((segment) => segment.categories.includes("string")),
     ).toBe(true);
+  });
+});
+
+describe("highlightDiff rows", () => {
+  it("leaves hunk headers and notices untokenized and keeps row positions", () => {
+    const rows = parseHunks(
+      "@@ -1,2 +1,2 @@\n const a = 1;\n-const b = 2;\n+const b = 3;\n\\ No newline at end of file",
+    );
+    const highlighted = highlightDiff(rows, "typescript");
+
+    expect(highlighted).toHaveLength(rows.length);
+    expect(highlighted[0]).toBeNull();
+    expect(highlighted.at(-1)).toBeNull();
+    expect(highlighted[1]).not.toBeNull();
+  });
+
+  it("treats context as both sides so open scopes carry across it", () => {
+    const rows = parseHunks("@@ -1,3 +1,3 @@\n /* open\n-old\n+new\n close */");
+    const highlighted = highlightDiff(rows, "javascript");
+
+    expect(
+      highlighted[2]?.every((segment) =>
+        segment.categories.includes("comment"),
+      ),
+    ).toBe(true);
+    expect(
+      highlighted[3]?.every((segment) =>
+        segment.categories.includes("comment"),
+      ),
+    ).toBe(true);
+  });
+
+  it("handles a hunk with only additions", () => {
+    const rows = parseHunks("@@ -0,0 +1,2 @@\n+let a = 1;\n+let b = 2;");
+    const highlighted = highlightDiff(rows, "javascript");
+
+    expect(highlighted[1]?.length).toBeGreaterThan(0);
+    expect(highlighted[2]?.length).toBeGreaterThan(0);
   });
 });
