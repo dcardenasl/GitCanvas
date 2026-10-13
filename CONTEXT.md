@@ -40,7 +40,8 @@ Git handle.
 History pages are capped at 500 commits. Worktree snapshots page at most 250 files per
 side. Initial file content is capped at 2 MiB and explicit reads at 32 MiB; initial
 patches are capped at 1 MiB and explicit patches at 16 MiB. Oversized or omitted
-content is reported through typed outcomes. Commit diffs compare against the first
+content is reported through typed outcomes. Syntax highlighting is a frontend concern with
+its own bounds (5 000 rows, 2 MiB) and falls back to plain text. Commit diffs compare against the first
 parent. Pull is fast-forward only. GitHub credentials are stored in the operating
 system keychain and remain inside Rust after entry.
 

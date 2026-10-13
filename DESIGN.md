@@ -18,6 +18,12 @@ horizontal graph scrolling for many lanes.
 - Light theme: background #f7f6f3; sidebar #f0efeb; toolbar #fbfaf8; controls white; borders #d9d6d0; text #25232c.
 - Orchid remains the brand accent (#c4a3ff dark, #6941a5 light); selected rows use a subtle violet tint in both themes.
 - Green and red remain reserved for added and removed code; graph lane hues stay stable and receive a subtle surface outline for separation.
+- Code colors: 13 semantic tokens (`--syntax-keyword`, `--syntax-string`, …), each defined
+  in both themes and checked at 4.5:1 or more over plain, added and deleted rows. Added and
+  deleted rows keep their green and red as a row surface and marker; the text itself uses
+  the ordinary ink so the code, not the change status, carries the color.
+- Brand artwork: the wordmark is white on the dark theme and near-black on the light one;
+  the mark is shared. Files are exported at up to 4× their drawn size.
 - Theme preference is window-level, persisted locally, defaults to dark, and can follow the operating system.
 - Sans: `ui-sans-serif`, `system-ui`, `-apple-system`, `Segoe UI`, sans-serif. Code and
   SHAs: `ui-monospace`, JetBrains Mono, SF Mono, Menlo, monospace.
@@ -33,6 +39,13 @@ Every label is translated and may grow by half in another language, so controls 
 to their text; new components use logical CSS properties so the layout can mirror for
 right-to-left languages. Window-level preferences (theme, language) live behind one
 toolbar button so the toolbar stays on one row at the 940px minimum.
+
+## File previews
+
+Long lines wrap by default, and the toggle shows its pressed state with the accent. Code is
+colored only for the registered languages and within the size budgets; everything else is
+plain text and equally complete. See [ADR 0005](docs/adr/0005-syntax-highlighting.md) for
+how to register a language.
 
 ## Platform behavior
 

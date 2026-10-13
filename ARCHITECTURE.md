@@ -155,6 +155,14 @@ page of history continues the walk instead of recomputing it. Recomputing would
 reshuffle the lanes of the commits already on screen, and the graph would jump
 under the cursor.
 
+## File previews and syntax highlighting
+
+Code in diffs and whole-file views is colored by `components/DiffViewer`, on the
+frontend, in a dedicated Web Worker, and never at the cost of the content: any
+failure or limit leaves plain text. Languages come from one registry, the grammar table
+must cover it, and the colors are theme tokens. See
+[ADR 0005](docs/adr/0005-syntax-highlighting.md).
+
 ## Where things run
 
 | Concern | Lives in | Runs on |
@@ -163,6 +171,7 @@ under the cursor.
 | IPC translation | `src-tauri/commands/` | Tauri's async runtime |
 | Lane assignment | `lib/graph-layout/` | The renderer, synchronously |
 | Drawing | `components/GraphCanvas/` | The webview |
+| Syntax highlighting | `components/DiffViewer/` | A dedicated Web Worker |
 
 ## Verification
 

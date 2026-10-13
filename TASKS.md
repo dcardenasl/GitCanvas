@@ -73,7 +73,7 @@ Origen: auditoría del 2026-10-13 sobre los commits `a1e0f1f`, `4bf72e9` y `4bf6
       `BrandLogo` decide el `alt` y el nombre de marca deja de repetirse.
       → `perf(branding): ship logos at display resolution and own the alt text`
 
-- [ ] **AUD-7 — Documentar la decisión.** ADR 0005, ARCHITECTURE y DESIGN (tokens
+- [x] **AUD-7 — Documentar la decisión.** ADR 0005, ARCHITECTURE y DESIGN (tokens
       `--syntax-*`, lenguajes soportados y cómo agregar uno).
       → `docs(syntax): record highlighting decisions in adr 0005`
 
