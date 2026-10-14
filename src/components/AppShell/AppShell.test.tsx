@@ -12,6 +12,7 @@ import type {
 import { renderWithQueryClient } from "../../test/test-utils";
 
 const getCommits = vi.fn<() => Promise<HistoryPage>>();
+const getCommit = vi.fn<() => Promise<CommitInfo>>();
 const getCommitDiff = vi.fn<() => Promise<CommitDiff>>();
 const getBranches = vi.fn<() => Promise<BranchInfo[]>>();
 const getStartupRepository =
@@ -21,6 +22,7 @@ const syncOpenRepositories = vi.fn<(request: unknown) => Promise<null>>();
 
 vi.mock("../../lib/ipc", () => ({
   getCommits: () => getCommits(),
+  getCommit: () => getCommit(),
   getCommitDiff: () => getCommitDiff(),
   getWorktreeSnapshot: () =>
     Promise.resolve({
@@ -129,6 +131,7 @@ function expectGridOrder(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getCommit.mockResolvedValue(COMMIT);
   getCommits.mockResolvedValue({
     commits: [COMMIT],
     next_cursor: null,
@@ -525,4 +528,25 @@ describe("AppShell toolbar", () => {
     expect(pin.getAttribute("aria-pressed")).toBe("true");
     expect(sidebar.hasAttribute("hidden")).toBe(false);
   });
+});
+
+it("restores a selected commit outside loaded history without fetching another page", async () => {
+  const remembered = {
+    ...COMMIT,
+    id: "b".repeat(40),
+    summary: "remembered outside page",
+  };
+  getCommit.mockResolvedValue(remembered);
+  patchNavigation({
+    selection: { kind: "commit", commitId: remembered.id, filePath: null },
+  });
+  renderShell();
+  const panel = await screen.findByRole("complementary", {
+    name: "Detalle del commit",
+  });
+  expect(within(panel).getByText("remembered outside page")).toBeInstanceOf(
+    HTMLElement,
+  );
+  expect(getCommit).toHaveBeenCalledTimes(1);
+  expect(getCommits).toHaveBeenCalledTimes(1);
 });

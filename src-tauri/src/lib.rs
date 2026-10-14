@@ -59,6 +59,7 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::open_repos::sync_open_repositories,
             commands::repository::get_startup_repository,
             commands::repository::get_commits,
+            commands::repository::get_commit,
             commands::repository::get_branches,
             commands::repository::get_tags,
             commands::diff::get_commit_diff,

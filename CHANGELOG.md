@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   background worker, so a large file never freezes scrolling; unknown or oversized files
   stay readable as plain text.
 
+### Fixed
+
+- **`AppShell`** — reads restored commit metadata by id when it is outside loaded
+  history, preserving the inspector and reporting unavailable objects without hidden paging.
+
 ### Changed
 
 - **`ProjectCache`** — releases closed project queries and keeps heavy data for

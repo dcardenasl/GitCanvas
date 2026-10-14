@@ -10,7 +10,7 @@ mod support;
 
 use gitcanvas_core::{
     error::AppError,
-    history::{get_commits, HistoryReader, HistoryRequest},
+    history::{get_commit, get_commits, HistoryReader, HistoryRequest},
     repository::ActiveRepo,
 };
 use support::Fixture;
@@ -319,4 +319,32 @@ fn a_continuation_cannot_carry_an_unbounded_number_of_roots() {
     )
     .unwrap_err();
     assert!(matches!(error, AppError::InvalidInput(_)));
+}
+
+#[test]
+fn a_selected_commit_is_read_without_being_in_the_current_walk() {
+    let fixture = Fixture::new();
+    let root = fixture.commit("HEAD", "root", &[], 1);
+    let orphan = fixture.commit("refs/heads/orphan", "remembered\n\nbody", &[], 2);
+    fixture
+        .repo
+        .find_reference("refs/heads/orphan")
+        .unwrap()
+        .delete()
+        .unwrap();
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let page = get_commits(&active, &request(1)).unwrap();
+    assert_eq!(page.commits[0].id, root.to_string());
+    let selected = get_commit(&active, &orphan.to_string()).unwrap();
+    assert_eq!(selected.id, orphan.to_string());
+    assert_eq!(selected.message, "remembered\n\nbody");
+    assert!(selected.parents.is_empty());
+    assert!(matches!(
+        get_commit(&active, "short"),
+        Err(AppError::InvalidInput(_))
+    ));
+    assert!(matches!(
+        get_commit(&active, &"0".repeat(40)),
+        Err(AppError::Git(_))
+    ));
 }

@@ -5,7 +5,7 @@
 use gitcanvas_core::{
     error::AppError,
     github::cache,
-    history::{HistoryPage, HistoryReader, HistoryRequest},
+    history::{self, CommitInfo, HistoryPage, HistoryReader, HistoryRequest},
     refs::{self, BranchInfo, TagInfo},
     repository::{ActiveRepo, RepositoryInfo},
 };
@@ -52,6 +52,23 @@ pub async fn get_commits(
     read("get_commits", move || {
         with_repo(&allowed, &path, |active| {
             reader.get_commits(active, &request)
+        })
+    })
+    .await
+}
+
+/// Reads a selected commit by full id, independently of the loaded history pages.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_commit(
+    path: String,
+    commit_id: String,
+    allowed: tauri::State<'_, AllowedRepos>,
+) -> Result<CommitInfo, AppError> {
+    let allowed = allowed.inner().clone();
+    read("get_commit", move || {
+        with_repo(&allowed, &path, |active| {
+            history::get_commit(active, &commit_id)
         })
     })
     .await

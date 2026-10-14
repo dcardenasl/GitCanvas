@@ -139,6 +139,14 @@ fn git_commands_require_a_repository_to_be_opened_first() {
         .unwrap()
         .contains("has not been opened"));
 
+    let denied_commit = invoke(
+        &webview,
+        "get_commit",
+        json!({"path": path, "commitId": "a".repeat(40)}),
+    )
+    .unwrap_err();
+    assert_eq!(denied_commit["kind"], "InvalidRepository");
+
     invoke(&webview, "open_repository", json!({"path": path})).unwrap();
     assert_eq!(
         invoke(&webview, "get_branches", json!({"path": path})).unwrap(),

@@ -20,6 +20,7 @@ import { useLiveRepository } from "../../state/liveRepository";
 import { Sidebar } from "../Sidebar";
 import { TabBar, useTabShortcuts } from "../TabBar";
 import { WorkingTreeDetailPanel } from "../WorkingTreeDetailPanel";
+import { useCommitMetadata } from "../../state/commitMetadata";
 import { useHistory } from "../../state/history";
 import { useCurrentBranch } from "../../state/refs";
 import {
@@ -130,10 +131,16 @@ export function AppShell() {
     selectedCommitId === null
       ? undefined
       : history.commitIndexById.get(selectedCommitId);
-  const selected =
+  const loadedSelection =
     selectedIndex === undefined
       ? null
       : (history.commits[selectedIndex] ?? null);
+  const metadata = useCommitMetadata(
+    readableRoot,
+    selectedCommitId,
+    loadedSelection,
+  );
+  const selected = metadata.data ?? null;
   const readingCommitFile = selected !== null && selectedFilePath !== null;
   const worktreeFile = selection.kind === "worktree" ? selection : null;
   const readingWorktreeFile =
@@ -345,7 +352,34 @@ export function AppShell() {
             grows="left"
             onResize={layout.setInspector}
           />
-          {selected === null ? (
+          {selected === null && selectedCommitId !== null ? (
+            <aside
+              className="detail-panel"
+              aria-label={t("workspace.commitDetails")}
+            >
+              {metadata.isError ? (
+                <div role="alert">
+                  <ErrorMessage
+                    error={metadata.error}
+                    lead={t("workspace.commitFailed")}
+                  />
+                  <button
+                    type="button"
+                    className="button"
+                    onClick={() => {
+                      void metadata.refetch();
+                    }}
+                  >
+                    {t("common:actions.retry")}
+                  </button>
+                </div>
+              ) : (
+                <p role="status" className="state">
+                  {t("workspace.commitLoading")}
+                </p>
+              )}
+            </aside>
+          ) : selected === null ? (
             <WorkingTreeDetailPanel repositoryPath={repository.path} />
           ) : (
             <CommitDetailPanel

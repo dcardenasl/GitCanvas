@@ -324,11 +324,14 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       WDIO aparece después de cerrar su sesión; no es un error de la aplicación.
       → `test(e2e): cover switching, reopening and closing tabs across two repositories`
 
-- [ ] **WS-11a — Detalle restaurado fuera de la página cargada.** Consultar metadatos del
+- [x] **WS-11a — Detalle restaurado fuera de la página cargada.** Consultar metadatos del
       commit por id a través del motor y del flujo autorizado, sin paginar ocultamente.
       Conservar la selección y mostrar error/reintento cuando el objeto desaparezca.
       *Hallazgo:* AppShell solo resolvía la selección en las filas cargadas, aunque WS-5
       indicaba que el detalle se consultaba por id. Añadir prueba sobre un commit fuera del walk.
+      *Evidencia:* metadatos inmutables por id, wrapper IPC generado, autorización probada;
+      hook sin lectura previa a verificar y sin mezcla entre respuestas tardías. Pruebas
+      del motor sobre un objeto fuera del walk y del inspector sin pedir otra página.
       → `fix(workspace): resolve restored commit details independently of history pages`
 
 - [ ] **WS-11b — Reinicio nativo después de un fallo de render.** El botón de recuperación

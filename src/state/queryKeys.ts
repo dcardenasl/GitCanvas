@@ -14,6 +14,8 @@ import type {
 export const queryKeys = {
   history: (repositoryPath: string | null) =>
     ["history", repositoryPath] as const,
+  commit: (repositoryPath: string | null, commitId: string | null) =>
+    ["commit", repositoryPath, commitId] as const,
   branches: (repositoryPath: string | null) =>
     ["branches", repositoryPath] as const,
   tags: (repositoryPath: string | null) => ["tags", repositoryPath] as const,

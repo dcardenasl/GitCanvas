@@ -80,6 +80,9 @@
     "unfavorite": "Remove {{name}} from favorites",
     "removeRecent": "Remove {{name}} from recents",
     "favoriteLimit": "At most {{max}} favorites can be saved. Remove one to add another.",
-    "back": "Back"
+    "back": "Back",
+    "commitDetails": "Selected commit",
+    "commitLoading": "Reading the selected commit…",
+    "commitFailed": "The selected commit could not be read"
   }
 }

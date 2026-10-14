@@ -80,6 +80,9 @@
     "unfavorite": "Quitar {{name}} de favoritos",
     "removeRecent": "Quitar {{name}} de recientes",
     "favoriteLimit": "Se pueden guardar hasta {{max}} favoritos. Quita uno para agregar otro.",
-    "back": "Volver"
+    "back": "Volver",
+    "commitDetails": "Commit seleccionado",
+    "commitLoading": "Leyendo el commit seleccionado…",
+    "commitFailed": "No se pudo leer el commit seleccionado"
   }
 }

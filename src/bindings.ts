@@ -34,6 +34,8 @@ export const commands = {
 } | null, AppError>(__TAURI_INVOKE("get_startup_repository")),
 	/**  Reads a bounded history page using the selected repository's canonical path. */
 	getCommits: (path: string, request: HistoryRequest) => typedError<HistoryPage, AppError>(__TAURI_INVOKE("get_commits", { path, request })),
+	/**  Reads a selected commit by full id, independently of the loaded history pages. */
+	getCommit: (path: string, commitId: string) => typedError<CommitInfo, AppError>(__TAURI_INVOKE("get_commit", { path, commitId })),
 	/**  Lists local and remote branches and identifies the current branch. */
 	getBranches: (path: string) => typedError<BranchInfo[], AppError>(__TAURI_INVOKE("get_branches", { path })),
 	/**  Lists tags, peeling annotated tags to commits when applicable. */
