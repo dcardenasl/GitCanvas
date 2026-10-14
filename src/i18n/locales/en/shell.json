@@ -47,7 +47,8 @@
     "noRepository": "No repository open",
     "openSyncFailed": "Could not tell the backend which repositories are open",
     "refresh": "Refresh",
-    "refreshHint": "Re-read the repository from disk"
+    "refreshHint": "Re-read the repository from disk",
+    "verifyFailed": "Could not check the project against its folder"
   },
   "workspace": {
     "dismiss": "Dismiss",

@@ -32,6 +32,7 @@ import {
 } from "../../state/workspace";
 import { useGitActions } from "../../state/gitActions";
 import { useOpenRepositoriesSync } from "../../state/openRepositories";
+import { useVerifyActiveProject } from "../../state/verifyProject";
 import { invalidateLive } from "../../state/queryKeys";
 
 import { HistoryView } from "./HistoryView";
@@ -69,6 +70,7 @@ export function AppShell() {
     useShallow((state) => state.tabs.map((tab) => tab.repository.path)),
   );
   const openSync = useOpenRepositoriesSync(openPaths);
+  const verification = useVerifyActiveProject();
 
   useEffect(() => {
     // The window says which repository it is showing, so two of them are
@@ -159,6 +161,21 @@ export function AppShell() {
             <span>{t("workspace.tabLimit", { max: notice.max })}</span>
             <button type="button" className="button" onClick={dismissNotice}>
               {t("workspace.dismiss")}
+            </button>
+          </div>
+        )}
+        {verification.error !== null && (
+          <div role="alert" className="toolbar__status">
+            <ErrorMessage
+              error={verification.error}
+              lead={t("toolbar.verifyFailed")}
+            />
+            <button
+              type="button"
+              className="button"
+              onClick={verification.retry}
+            >
+              {t("common:actions.retry")}
             </button>
           </div>
         )}

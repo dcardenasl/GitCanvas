@@ -257,6 +257,30 @@ describe("Actions", () => {
     expect(screen.getByText("Ya está al día.")).toBeInstanceOf(HTMLElement);
   });
 
+  it("keeps the buttons disabled while the project is being verified", async () => {
+    const { useWorkspace } = await import("../../state/workspace");
+    renderActions();
+    const pull = () =>
+      screen.getByRole<HTMLButtonElement>("button", {
+        name: "Traer cambios",
+      });
+    expect(pull().disabled).toBe(false);
+
+    act(() => {
+      useWorkspace
+        .getState()
+        .setVerification("/tmp/repo", { status: "verifying" });
+    });
+    expect(pull().disabled).toBe(true);
+
+    act(() => {
+      useWorkspace
+        .getState()
+        .setVerification("/tmp/repo", { status: "verified" });
+    });
+    expect(pull().disabled).toBe(false);
+  });
+
   it("does not start a second action in a project while one is running", async () => {
     pullFastForward.mockReturnValue(new Promise(() => undefined));
     renderActions();

@@ -11,11 +11,14 @@ import {
   type RunningAction,
 } from "./gitActionState";
 import { invalidateLive } from "./queryKeys";
-import { gitActionsOf, useWorkspace } from "./workspace";
+import { gitActionsOf, tabOf, useWorkspace } from "./workspace";
 
 /** Checkout, pull and push for one project, and the state around them. */
 export interface GitActions {
-  /** Whether any action is running; a second one must wait. */
+  /**
+   * Whether an action must not start: one is running, or the project has not
+   * been verified since it was last on screen.
+   */
   readonly busy: boolean;
   readonly pulling: boolean;
   readonly pushing: boolean;
@@ -224,11 +227,10 @@ export function createGitActionCommands(
  */
 export function useGitActions(path: string | null): GitActions {
   const queryClient = useQueryClient();
-  const state: GitActionState = useWorkspace(
-    (workspace) =>
-      (path === null ? null : gitActionsOf(workspace, path)) ??
-      IDLE_GIT_ACTIONS,
+  const tab = useWorkspace((workspace) =>
+    path === null ? null : tabOf(workspace, path),
   );
+  const state: GitActionState = tab?.gitActions ?? IDLE_GIT_ACTIONS;
   const commands = useMemo(
     () =>
       path === null ? NO_COMMANDS : createGitActionCommands(path, queryClient),
@@ -236,7 +238,9 @@ export function useGitActions(path: string | null): GitActions {
   );
 
   return {
-    busy: state.running !== null,
+    // A project that has not been checked since it was last on screen is not
+    // written to: what the buttons would act on may no longer be there.
+    busy: state.running !== null || tab?.verification.status !== "verified",
     pulling: state.running === "pull",
     pushing: state.running === "push",
     notice: state.notice,

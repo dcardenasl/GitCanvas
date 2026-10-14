@@ -162,7 +162,7 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       prueba falla si se vuelve a la versión anterior.
       → `fix(workspace): bind queries and git actions to the project that started them`
 
-- [ ] **WS-7 — Observación del proyecto activo y verificación al activar.** Un único watcher y
+- [x] **WS-7 — Observación del proyecto activo y verificación al activar.** Un único watcher y
       poller, solo para la pestaña activa (se reutiliza el control de generaciones); los
       inactivos no consultan. Al activar una pestaña: revalidar identidad con el flujo de
       apertura (que también la **autoriza** si venía de la restauración), releer ramas y etiquetas
@@ -172,6 +172,20 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       *Pruebas:* solo un watcher vivo tras varios cambios rápidos; referencias iguales
       reutilizan páginas; referencias distintas las invalidan; ruta desaparecida al activar;
       pestaña restaurada se autoriza al activarse.
+      *Decisiones al implementar:* `Tab.verification` (`unverified`, `verifying`, `verified`,
+      `unreachable`) y `verifyProject`: reabre la ruta con el flujo de apertura (que también la
+      autoriza), exige que siga resolviendo a la misma raíz, relee ramas y etiquetas y las compara
+      con las del caché; si coinciden conserva todas las páginas de historial ya cargadas y si
+      difieren las descarta; el árbol de trabajo se relee siempre. Se ejecuta en cada activación
+      (`useVerifyActiveProject`) y no se lanza dos veces para el mismo proyecto. `busy` incluye
+      «no verificado», así que checkout, pull y push quedan deshabilitados hasta terminar. La
+      consulta de ramas y etiquetas se define una sola vez (`branchesQuery`, `tagsQuery`) y la usan
+      las vistas y la verificación. Si falla, la barra muestra el error con «Reintentar»; la
+      recuperación completa de una pestaña inaccesible llega con WS-12. Ya había un solo watcher y
+      poller, atados a la ruta activa, y los proyectos inactivos no tienen consultas observadas.
+      *Observado:* en un E2E completo posterior a recompilar, `local-changes` falló una vez (el
+      aviso del archivo desaparecido no llegó en 20 s); no se reprodujo en 8 corridas siguientes,
+      con y sin la verificación, y se atribuye al primer arranque de un binario recién generado.
       → `feat(workspace): observe only the active tab and verify it on activation`
 
 - [ ] **WS-8 — Barra de pestañas y menú de apertura.** Componente accesible sobre la toolbar:

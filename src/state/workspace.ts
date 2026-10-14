@@ -7,6 +7,7 @@ import {
   type GitActionState,
   type GitTransition,
 } from "./gitActionState";
+import { VERIFIED, type Verification } from "./verification";
 import {
   clearOrphanedReveal,
   clearReveal,
@@ -34,6 +35,8 @@ export interface Tab {
   readonly navigation: Navigation;
   /** Checkout, pull and push for this project, whichever tab is showing. */
   readonly gitActions: GitActionState;
+  /** Whether the folder has been checked since it was last on screen. */
+  readonly verification: Verification;
 }
 
 /** What opening a project did. */
@@ -88,6 +91,8 @@ interface WorkspaceState {
   navigate: (root: string, transition: Transition) => void;
   /** Applies a change to the git action state of the project with this root. */
   updateGitActions: (root: string, transition: GitTransition) => void;
+  /** Records the outcome of checking the project with this root. */
+  setVerification: (root: string, verification: Verification) => void;
   /** Dismisses the current notice. */
   dismissNotice: () => void;
   /** Shows or hides the clone-from-GitHub view. */
@@ -163,6 +168,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
           repository,
           navigation: EMPTY_NAVIGATION,
           gitActions: IDLE_GIT_ACTIONS,
+          verification: VERIFIED,
         },
       ],
       activeRoot: root,
@@ -209,6 +215,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
         return gitActions === tab.gitActions ? tab : { ...tab, gitActions };
       }),
     );
+  },
+
+  setVerification: (root, verification) => {
+    set((state) => changeTab(state, root, (tab) => ({ ...tab, verification })));
   },
 
   dismissNotice: () => {
@@ -324,7 +334,13 @@ export function gitActionsOf(
   state: Pick<WorkspaceState, "tabs">,
   root: string,
 ): GitActionState | null {
-  return (
-    state.tabs.find((tab) => tab.repository.path === root)?.gitActions ?? null
-  );
+  return tabOf(state, root)?.gitActions ?? null;
+}
+
+/** The tab for the project with `root`, or `null` when it is not open. */
+export function tabOf(
+  state: Pick<WorkspaceState, "tabs">,
+  root: string,
+): Tab | null {
+  return state.tabs.find((tab) => tab.repository.path === root) ?? null;
 }
