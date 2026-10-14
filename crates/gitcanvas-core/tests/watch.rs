@@ -51,6 +51,35 @@ fn wait_until_quiet<T>(receiver: &Receiver<T>) {
     }
 }
 
+/// How long to wait for a report before changing the repository again.
+const ATTEMPT: Duration = Duration::from_secs(2);
+
+/// Makes a change and waits for the watcher to report it, changing the
+/// repository again if nothing arrives.
+///
+/// A file-system event stream does not promise to deliver what happened in the
+/// moments after it started, and a quiet period does not prove it is live. So
+/// the first change is allowed to go unnoticed; the test is about what the
+/// watcher reports once it is live, and that is what a later change checks.
+/// `change` receives the attempt number, so every attempt makes a new change.
+fn event_after_changing<T>(receiver: &Receiver<T>, mut change: impl FnMut(u64)) -> T {
+    let deadline = Instant::now()
+        .checked_add(WAIT)
+        .expect("deadline is representable");
+    for attempt in 0_u64.. {
+        change(attempt);
+        match receiver.recv_timeout(ATTEMPT) {
+            Ok(event) => return event,
+            Err(mpsc::RecvTimeoutError::Timeout) if Instant::now() < deadline => {}
+            Err(mpsc::RecvTimeoutError::Timeout) => break,
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                panic!("watcher event channel disconnected before reporting")
+            }
+        }
+    }
+    panic!("the watcher reported nothing for any change before the timeout")
+}
+
 fn wait_until_disconnected<T>(receiver: &Receiver<T>) {
     let deadline = Instant::now()
         .checked_add(WAIT)
@@ -86,19 +115,17 @@ fn reports_a_commit_made_after_the_repository_was_opened() {
 
     // The exact situation this exists for: work arriving while the window is
     // already open.
-    fixture.commit_files(
-        "refs/heads/main",
-        "second",
-        &[first],
-        2_000,
-        &[("a.txt", b"a\nb\n")],
-    );
+    let event = event_after_changing(&rx, |attempt| {
+        fixture.commit_files(
+            "refs/heads/main",
+            &format!("second {attempt}"),
+            &[first],
+            2_000 + i64::try_from(attempt).unwrap(),
+            &[("a.txt", b"a\nb\n")],
+        );
+    });
 
-    assert!(matches!(
-        rx.recv_timeout(WAIT)
-            .expect("a new commit should have been reported"),
-        WatchEvent::Changed(ChangeScope::Metadata)
-    ));
+    assert!(matches!(event, WatchEvent::Changed(ChangeScope::Metadata)));
 }
 
 #[test]
@@ -114,13 +141,17 @@ fn reports_a_branch_moving() {
     .unwrap();
     wait_until_quiet(&rx);
 
-    fixture.commit_files("refs/heads/feature", "on a branch", &[base], 2_000, &[]);
+    let event = event_after_changing(&rx, |attempt| {
+        fixture.commit_files(
+            &format!("refs/heads/feature{attempt}"),
+            "on a branch",
+            &[base],
+            2_000,
+            &[],
+        );
+    });
 
-    assert!(matches!(
-        rx.recv_timeout(WAIT)
-            .expect("a new branch should have been reported"),
-        WatchEvent::Changed(ChangeScope::Metadata)
-    ));
+    assert!(matches!(event, WatchEvent::Changed(ChangeScope::Metadata)));
 }
 
 #[test]
@@ -209,16 +240,18 @@ fn reports_index_changes_as_worktree_changes() {
     .unwrap();
     wait_until_quiet(&rx);
 
-    std::fs::write(fixture.dir.path().join("a.txt"), "changed\n").unwrap();
-    let mut index = fixture.repo.index().unwrap();
-    index.add_path(std::path::Path::new("a.txt")).unwrap();
-    index.write().unwrap();
+    let event = event_after_changing(&rx, |attempt| {
+        std::fs::write(
+            fixture.dir.path().join("a.txt"),
+            format!("changed {attempt}\n"),
+        )
+        .unwrap();
+        let mut index = fixture.repo.index().unwrap();
+        index.add_path(std::path::Path::new("a.txt")).unwrap();
+        index.write().unwrap();
+    });
 
-    assert!(matches!(
-        rx.recv_timeout(WAIT)
-            .expect("a worktree change should be reported"),
-        WatchEvent::Changed(ChangeScope::Worktree)
-    ));
+    assert!(matches!(event, WatchEvent::Changed(ChangeScope::Worktree)));
 }
 
 #[test]
