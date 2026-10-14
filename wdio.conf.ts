@@ -285,6 +285,9 @@ function canonicalForApplication(location: string): string {
     : native;
 }
 
+/** The fixture repository's root as the application stores it. */
+export const e2eRepositoryRoot = canonicalForApplication(fixture);
+
 export const e2eDataDir = path.join(
   os.tmpdir(),
   `gitcanvas-e2e-data-${path.basename(fixture)}`,
@@ -292,7 +295,7 @@ export const e2eDataDir = path.join(
 if (process.env.WDIO_WORKER_ID === undefined) {
   fs.rmSync(e2eDataDir, { recursive: true, force: true });
   if (secondFixture !== null) {
-    const restoredRoot = canonicalForApplication(fixture);
+    const restoredRoot = e2eRepositoryRoot;
     fs.mkdirSync(e2eDataDir, { recursive: true });
     fs.writeFileSync(
       path.join(e2eDataDir, "workspace.json"),

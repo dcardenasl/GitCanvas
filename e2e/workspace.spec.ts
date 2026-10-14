@@ -2,7 +2,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { $, $$, browser, expect } from "@wdio/globals";
-import { e2eRepository, e2eSecondRepository, e2eDataDir } from "../wdio.conf";
+import {
+  e2eRepository,
+  e2eRepositoryRoot,
+  e2eSecondRepository,
+  e2eDataDir,
+} from "../wdio.conf";
 import { waitForHistory } from "./history";
 
 const alpha = path.basename(e2eRepository);
@@ -214,7 +219,7 @@ describe("workspace projects", () => {
           workspace.tabs.length === 0 &&
           "favorites" in workspace &&
           Array.isArray(workspace.favorites) &&
-          workspace.favorites.includes(e2eRepository)
+          workspace.favorites.includes(e2eRepositoryRoot)
         );
       },
       {
