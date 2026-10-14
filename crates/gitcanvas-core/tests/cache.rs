@@ -13,7 +13,9 @@ use std::{
 };
 
 use gitcanvas_core::github::{
-    cache::{cached_entry_name, enforce_retention, status, touch_if_cached, MAX_REPOSITORIES},
+    cache::{
+        cached_entry_name, enforce_retention, status, touch_if_cached, unguarded, MAX_REPOSITORIES,
+    },
     clone::cache_entry_name,
 };
 
@@ -58,7 +60,9 @@ fn nothing_is_evicted_while_both_limits_are_respected() {
     seed(root.path(), "a", 100, Duration::from_secs(10));
     seed(root.path(), "b", 100, Duration::from_secs(20));
 
-    assert!(enforce_retention(root.path(), &[]).unwrap().is_empty());
+    assert!(enforce_retention(root.path(), &[], &unguarded)
+        .unwrap()
+        .is_empty());
     assert_eq!(status(root.path()).unwrap().entries.len(), 2);
 }
 
@@ -75,7 +79,7 @@ fn the_least_recently_used_repositories_go_first() {
         MAX_REPOSITORIES + 1
     );
 
-    let evicted = enforce_retention(root.path(), &[]).unwrap();
+    let evicted = enforce_retention(root.path(), &[], &unguarded).unwrap();
 
     assert_eq!(evicted, vec!["repo0".to_owned()]);
     assert_eq!(status(root.path()).unwrap().entries.len(), MAX_REPOSITORIES);
@@ -95,7 +99,7 @@ fn the_repository_in_use_is_never_evicted_by_its_own_arrival() {
         );
     }
 
-    let evicted = enforce_retention(root.path(), &["keep-me".to_owned()]).unwrap();
+    let evicted = enforce_retention(root.path(), &["keep-me".to_owned()], &unguarded).unwrap();
 
     assert!(!evicted.contains(&"keep-me".to_owned()));
     assert!(root.path().join("keep-me").exists());
@@ -167,7 +171,7 @@ fn a_used_clone_survives_retention_over_a_newer_unused_one() {
         &root.path().join("oldest-but-used")
     ));
 
-    let evicted = enforce_retention(root.path(), &[]).unwrap();
+    let evicted = enforce_retention(root.path(), &[], &unguarded).unwrap();
 
     assert!(
         !evicted.contains(&"oldest-but-used".to_owned()),
@@ -191,7 +195,7 @@ fn retention_keeps_every_active_entry_named_by_the_caller() {
     }
 
     let keep = vec!["active-one".to_owned(), "active-two".to_owned()];
-    let evicted = enforce_retention(root.path(), &keep).unwrap();
+    let evicted = enforce_retention(root.path(), &keep, &unguarded).unwrap();
 
     assert_eq!(evicted.len(), 2);
     assert!(root.path().join("active-one").exists());
@@ -215,19 +219,121 @@ fn only_repositories_inside_the_cache_are_marked() {
 }
 
 #[test]
-fn active_repository_resolves_only_to_a_direct_cache_entry() {
+fn active_repository_resolves_to_its_containing_cache_entry() {
     let root = tempfile::tempdir().unwrap();
     let outside = tempfile::tempdir().unwrap();
     fs::create_dir_all(root.path().join("owner__repo/.git")).unwrap();
     fs::create_dir_all(root.path().join("nested/owner__repo/.git")).unwrap();
 
+    git2::Repository::init(outside.path()).unwrap();
     assert_eq!(
-        cached_entry_name(root.path(), &root.path().join("owner__repo")).as_deref(),
+        cached_entry_name(root.path(), &root.path().join("owner__repo"))
+            .unwrap()
+            .as_deref(),
         Some("owner__repo")
     );
     assert_eq!(
-        cached_entry_name(root.path(), &root.path().join("nested/owner__repo")),
+        cached_entry_name(root.path(), &root.path().join("nested/owner__repo"))
+            .unwrap()
+            .as_deref(),
+        Some("nested")
+    );
+    assert_eq!(
+        cached_entry_name(root.path(), outside.path()).unwrap(),
         None
     );
-    assert_eq!(cached_entry_name(root.path(), outside.path()), None);
+}
+
+#[test]
+fn an_external_worktree_keeps_its_cached_object_database() {
+    let root = tempfile::tempdir().unwrap();
+    let external = tempfile::tempdir().unwrap();
+    let clone = root.path().join("owner__repo");
+    let repo = git2::Repository::init(&clone).unwrap();
+    let signature = git2::Signature::now("Test", "test@example.com").unwrap();
+    let tree_id = repo.treebuilder(None).unwrap().write().unwrap();
+    let tree = repo.find_tree(tree_id).unwrap();
+    repo.commit(Some("HEAD"), &signature, &signature, "initial", &tree, &[])
+        .unwrap();
+    let linked = external.path().join("linked");
+    repo.worktree("linked", &linked, None).unwrap();
+    assert_eq!(
+        cached_entry_name(root.path(), &linked).unwrap().as_deref(),
+        Some("owner__repo")
+    );
+    assert!(touch_if_cached(root.path(), &linked));
+    assert!(clone.join(".git/gitcanvas-last-used").exists());
+}
+
+#[test]
+fn unresolved_open_project_metadata_blocks_retention_instead_of_assuming_it_is_unused() {
+    let root = tempfile::tempdir().unwrap();
+    let external = tempfile::tempdir().unwrap();
+    assert!(matches!(
+        cached_entry_name(root.path(), external.path()),
+        Err(gitcanvas_core::error::AppError::InvalidRepository(_))
+    ));
+}
+
+/// Seeds `count` entries named `repo0…`, `repo0` being the oldest.
+fn seed_oldest_first(root: &Path, count: usize) {
+    for index in 0..count {
+        let rank = u64::try_from(count.checked_sub(index).unwrap()).unwrap();
+        let age = Duration::from_secs(rank.checked_mul(1_000).unwrap());
+        seed(root, &format!("repo{index}"), 10, age);
+    }
+}
+
+#[test]
+fn a_refusing_guard_keeps_that_entry_and_eviction_moves_to_the_next() {
+    let root = tempfile::tempdir().unwrap();
+    seed_oldest_first(root.path(), MAX_REPOSITORIES + 2);
+
+    let evicted = enforce_retention(root.path(), &[], &|name, removal| {
+        if name == "repo0" {
+            return Ok(false);
+        }
+        removal()?;
+        Ok(true)
+    })
+    .unwrap();
+
+    assert_eq!(evicted, vec!["repo1".to_owned(), "repo2".to_owned()]);
+    assert!(root.path().join("repo0").exists());
+}
+
+#[test]
+fn the_guard_is_given_the_deletion_and_decides_when_it_runs() {
+    let root = tempfile::tempdir().unwrap();
+    seed_oldest_first(root.path(), MAX_REPOSITORIES + 1);
+    let seen = std::cell::RefCell::new(Vec::new());
+
+    let evicted = enforce_retention(root.path(), &[], &|name, removal| {
+        // Nothing has been deleted yet when the guard is asked.
+        seen.borrow_mut()
+            .push((name.to_owned(), root.path().join(name).exists()));
+        removal()?;
+        Ok(true)
+    })
+    .unwrap();
+
+    assert_eq!(evicted, vec!["repo0".to_owned()]);
+    assert_eq!(*seen.borrow(), vec![("repo0".to_owned(), true)]);
+    assert!(!root.path().join("repo0").exists());
+}
+
+#[test]
+fn a_guard_that_fails_is_reported_and_leaves_the_entry() {
+    let root = tempfile::tempdir().unwrap();
+    seed_oldest_first(root.path(), MAX_REPOSITORIES + 1);
+
+    let result = enforce_retention(root.path(), &[], &|_, _| {
+        Err(gitcanvas_core::error::AppError::Conflict(
+            "uncertain".to_owned(),
+        ))
+    });
+
+    let message = format!("{}", result.unwrap_err());
+    assert!(message.contains("repo0"), "{message}");
+    assert!(root.path().join("repo0").exists());
 }

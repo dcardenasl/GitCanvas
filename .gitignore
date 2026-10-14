@@ -26,6 +26,9 @@ coverage/
 /e2e-results/
 docs/videos/*.mp4
 
+# Design-review tool output
+.impeccable/
+
 # Editors and OS
 .DS_Store
 .idea/

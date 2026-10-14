@@ -26,6 +26,7 @@ el render SVG. El graph es el núcleo de valor: todo lo demás está subordinado
 | `TASKS.md` | **Fuente de verdad de ejecución.** Qué falta, qué se hizo, qué se descubrió |
 | `CONTEXT.md` | Contexto vigente de arquitectura, observación del repositorio y límites de mutación |
 | `docs/plans/2026-09-08-plan-de-implementacion.md` | Plan rector: fases, deltas, ledger de commits |
+| `docs/plan/2026-10-08-plan-tres-funcionalidades.md` | Workspace v0.3 and commit creation v0.4 |
 | `docs/plan/2026-10-04-plan-de-endurecimiento.md` | Plan de endurecimiento H2 y sus criterios de verificación |
 | `docs/PLAN-DESARROLLO.md` | Plan de diseño original. El plan rector lo endurece en 10 puntos (D1–D10) |
 | `PRODUCT.md` | Propósito, plataforma, capacidades y límites del producto |
@@ -171,6 +172,18 @@ Cada una está hecha para fallar el build, no para depender de que alguien se ac
   `kebab-case` archivos web.
 - Funciones públicas documentadas: rustdoc en Rust, TSDoc en TypeScript.
 - Sin `TODO` sueltos: si algo queda pendiente, va como tarea en `TASKS.md`.
+
+## Workspace
+
+`state/workspace.ts` owns ordered tabs by canonical worktree root and independent
+navigation/Git actions. No global single-repository session remains. Every callback
+names its originating root. Only the verified active tab observes Git; restored tabs
+are presentation data until reopened and authorized. Keep structural persistence,
+serialized saves, recoverable tabs and the five-inactive-project cache bound intact.
+Do not move synchronous theme/language preferences into the Rust store. Native macOS
+menu and page shortcuts call the same workspace actions. E2E runs use temporary Rust
+data and private webviews so user sessions and localStorage are never touched.
+See ADR 0006 and the WS task evidence.
 
 ## Verificación
 

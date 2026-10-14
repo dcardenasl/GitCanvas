@@ -13,6 +13,22 @@ pub(super) fn test_webview() -> tauri::WebviewWindow<MockRuntime> {
             gitcanvas_core::history::HistoryReader::default(),
         ))
         .manage(crate::commands::repo_access::AllowedRepos::default())
+        .manage(crate::commands::open_repos::OpenRepos::default())
+        .manage(std::sync::Arc::new(
+            crate::lifecycle::ShutdownGate::default(),
+        ))
+        .manage(std::sync::Arc::new(
+            gitcanvas_core::workspace::store::WorkspaceStore::new(
+                std::env::temp_dir()
+                    .join(format!("gitcanvas-test-workspace-{}", std::process::id())),
+            ),
+        ))
+        .manage(crate::commands::menu::MenuApplier(std::sync::Arc::new(
+            |_| Ok(()),
+        )))
+        .manage(crate::commands::lifecycle::RestartApplication(
+            std::sync::Arc::new(|| Ok(())),
+        ))
         .manage(crate::commands::watch::ActiveWatch::default())
         .manage(crate::commands::watch::ChangeNotifier(std::sync::Arc::new(
             |_| {},
@@ -128,6 +144,14 @@ fn git_commands_require_a_repository_to_be_opened_first() {
         .as_str()
         .unwrap()
         .contains("has not been opened"));
+
+    let denied_commit = invoke(
+        &webview,
+        "get_commit",
+        json!({"path": path, "commitId": "a".repeat(40)}),
+    )
+    .unwrap_err();
+    assert_eq!(denied_commit["kind"], "InvalidRepository");
 
     invoke(&webview, "open_repository", json!({"path": path})).unwrap();
     assert_eq!(

@@ -29,6 +29,7 @@ vi.mock("../../bindings", () => ({
   events: {
     cloneProgressEvent: { listen: (...args: unknown[]) => listen(...args) },
     repositoryChangedEvent: { listen: (...args: unknown[]) => listen(...args) },
+    menuActionEvent: { listen: (...args: unknown[]) => listen(...args) },
   },
 }));
 
@@ -97,9 +98,54 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
   ],
   [
     "cloneGithubRepository",
-    () => ipc.cloneGithubRepository("o/r", null),
+    () => ipc.cloneGithubRepository("o/r"),
     "cloneGithubRepository",
-    ["o/r", null],
+    ["o/r"],
+  ],
+  [
+    "setMenuLabels",
+    () =>
+      ipc.setMenuLabels({
+        about: "a",
+        hide: "h",
+        hide_others: "ho",
+        show_all: "sa",
+        quit: "q",
+        file: "f",
+        open_folder: "of",
+        close_tab: "ct",
+        reopen_tab: "rt",
+        edit: "e",
+        undo: "u",
+        redo: "r",
+        cut: "c",
+        copy: "cp",
+        paste: "p",
+        select_all: "sl",
+        window: "w",
+        minimize: "m",
+        zoom: "z",
+      }),
+    "setMenuLabels",
+    [expect.objectContaining({ file: "f", close_tab: "ct" })],
+  ],
+  [
+    "acknowledgeShutdown",
+    () => ipc.acknowledgeShutdown(),
+    "acknowledgeShutdown",
+    [],
+  ],
+  [
+    "getWorkspaceLimits",
+    () => ipc.getWorkspaceLimits(),
+    "getWorkspaceLimits",
+    [],
+  ],
+  [
+    "syncOpenRepositories",
+    () => ipc.syncOpenRepositories({ revision: 1, paths: [PATH] }),
+    "syncOpenRepositories",
+    [{ revision: 1, paths: [PATH] }],
   ],
   [
     "checkoutBranch",
@@ -228,7 +274,8 @@ describe("the typed IPC boundary", () => {
   it("subscribes to events through the generated listeners", () => {
     void ipc.onCloneProgress(() => undefined);
     void ipc.onRepositoryChanged(() => undefined);
+    void ipc.onMenuAction(() => undefined);
 
-    expect(listen).toHaveBeenCalledTimes(2);
+    expect(listen).toHaveBeenCalledTimes(3);
   });
 });

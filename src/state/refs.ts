@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import type { BranchInfo, TagInfo } from "../bindings";
@@ -20,16 +20,15 @@ const ORDER: Record<RefBadge["kind"], number> = {
 };
 
 /**
- * Branches of the open repository.
+ * The branch query: the one place it is defined.
  *
- * The one place the branch query is defined: the sidebar, the row badges and
- * the toolbar all read it, so they share a cache entry and can never disagree
+ * The sidebar, the row badges, the toolbar and the check made when a tab is
+ * activated all use it, so they share a cache entry and can never disagree
  * about which branch is checked out.
  */
-export function useBranches(path: string | null) {
-  return useQuery<BranchInfo[]>({
+export function branchesQuery(path: string | null) {
+  return queryOptions<BranchInfo[]>({
     queryKey: queryKeys.branches(path),
-    enabled: path !== null,
     queryFn: () => {
       if (path === null) throw new Error("No repository is open");
       return getBranches(path);
@@ -37,16 +36,25 @@ export function useBranches(path: string | null) {
   });
 }
 
-/** Tags of the open repository. See {@link useBranches}. */
-export function useTags(path: string | null) {
-  return useQuery<TagInfo[]>({
+/** The tag query, defined once for the same reason as {@link branchesQuery}. */
+export function tagsQuery(path: string | null) {
+  return queryOptions<TagInfo[]>({
     queryKey: queryKeys.tags(path),
-    enabled: path !== null,
     queryFn: () => {
       if (path === null) throw new Error("No repository is open");
       return getTags(path);
     },
   });
+}
+
+/** Branches of the open repository. See {@link branchesQuery}. */
+export function useBranches(path: string | null) {
+  return useQuery({ ...branchesQuery(path), enabled: path !== null });
+}
+
+/** Tags of the open repository. See {@link branchesQuery}. */
+export function useTags(path: string | null) {
+  return useQuery({ ...tagsQuery(path), enabled: path !== null });
 }
 
 /**

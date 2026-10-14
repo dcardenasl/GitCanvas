@@ -16,7 +16,7 @@ use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::error::AppError;
+use crate::{error::AppError, repository::ActiveRepo};
 
 /// Maximum cached repositories.
 pub const MAX_REPOSITORIES: usize = 10;
@@ -158,35 +158,47 @@ pub(crate) fn touch_locked(entry: &Path) -> bool {
 /// from their own folders are not the cache's to mark.
 #[must_use]
 pub fn touch_if_cached(cache_root: &Path, repository: &Path) -> bool {
-    let Ok(root) = cache_root.canonicalize() else {
-        return false;
-    };
-    let Ok(repository) = repository.canonicalize() else {
-        return false;
-    };
-    let Ok(relative) = repository.strip_prefix(&root) else {
-        return false;
-    };
-    match relative.components().next() {
-        Some(entry) => touch(&root.join(entry)),
-        None => false,
+    match cached_entry_name(cache_root, repository) {
+        Ok(Some(entry)) => touch(&cache_root.join(entry)),
+        // Recording recency is best effort; destructive retention propagates
+        // this lookup's failure instead of guessing that a clone is unused.
+        Ok(None) | Err(_) => false,
     }
 }
 
-/// Returns the direct cache entry containing `repository`, if it is cached.
-#[must_use]
-pub fn cached_entry_name(cache_root: &Path, repository: &Path) -> Option<String> {
-    let root = cache_root.canonicalize().ok()?;
-    let repository = repository.canonicalize().ok()?;
-    let relative = repository.strip_prefix(root).ok()?;
-    let mut components = relative.components();
-    let Component::Normal(name) = components.next()? else {
+fn containing_entry(root: &Path, path: &Path) -> Option<String> {
+    let relative = path.strip_prefix(root).ok()?;
+    let Component::Normal(name) = relative.components().next()? else {
         return None;
     };
-    components
-        .next()
-        .is_none()
-        .then(|| name.to_string_lossy().into_owned())
+    Some(name.to_string_lossy().into_owned())
+}
+
+/// Returns the cache entry containing a project or its shared Git metadata.
+///
+/// Linked worktrees may live outside the cache while depending on a cached
+/// clone's object database. Nested projects also keep their containing entry.
+///
+/// # Errors
+/// Returns an error if an existing project's metadata cannot be resolved;
+/// retention must then leave the cache untouched rather than delete a dependency.
+pub fn cached_entry_name(cache_root: &Path, repository: &Path) -> Result<Option<String>, AppError> {
+    let root = match cache_root.canonicalize() {
+        Ok(root) => root,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.into()),
+    };
+    let repository = match repository.canonicalize() {
+        Ok(path) => path,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.into()),
+    };
+    if let Some(entry) = containing_entry(&root, &repository) {
+        return Ok(Some(entry));
+    }
+    let repo = ActiveRepo::validate(&repository)?.open()?;
+    let common = repo.commondir().canonicalize()?;
+    Ok(containing_entry(&root, &common))
 }
 
 /// Parses a decimal string back to bytes, treating malformed input as zero.
@@ -238,15 +250,43 @@ pub fn status(cache_root: &Path) -> Result<CacheStatus, AppError> {
     })
 }
 
+/// Decides whether a cache entry may be deleted, and deletes it if so.
+///
+/// It receives the entry's name and the deletion itself, and returns whether
+/// the deletion ran. Handing over the deletion — rather than asking a question
+/// and acting on the answer afterwards — is what lets the caller keep its answer
+/// true for exactly as long as the deletion takes: whoever knows which entries
+/// are in use can hold that knowledge still while the entry goes.
+pub type RemoveGuard<'a> =
+    dyn Fn(&str, &mut dyn FnMut() -> Result<(), AppError>) -> Result<bool, AppError> + 'a;
+
+/// A guard that allows every deletion, for callers that have nothing to protect.
+///
+/// # Errors
+/// Returns whatever the deletion returns.
+pub fn unguarded(
+    _entry: &str,
+    removal: &mut dyn FnMut() -> Result<(), AppError>,
+) -> Result<bool, AppError> {
+    removal()?;
+    Ok(true)
+}
+
 /// Evicts least-recently-used clones until both limits are satisfied.
 ///
 /// `keep` is never evicted, so the repository the user just opened cannot be
-/// deleted out from under them by its own arrival.
+/// deleted out from under them by its own arrival. `guard` is asked before each
+/// deletion and may refuse it, which leaves that entry and moves on to the next
+/// candidate.
 ///
 /// # Errors
 ///
 /// Returns [`AppError`] when the cache cannot be read or an eviction fails.
-pub fn enforce_retention(cache_root: &Path, keep: &[String]) -> Result<Vec<String>, AppError> {
+pub fn enforce_retention(
+    cache_root: &Path,
+    keep: &[String],
+    guard: &RemoveGuard<'_>,
+) -> Result<Vec<String>, AppError> {
     let initial_status = status(cache_root)?;
 
     // Oldest first: those are the eviction candidates.
@@ -279,8 +319,13 @@ pub fn enforce_retention(cache_root: &Path, keep: &[String]) -> Result<Vec<Strin
         if current_entry.last_used != entry.last_used {
             continue;
         }
-        match std::fs::remove_dir_all(PathBuf::from(&current_entry.path)) {
-            Ok(()) => evicted.push(entry.name.clone()),
+        let path = PathBuf::from(&current_entry.path);
+        match guard(&entry.name, &mut || {
+            std::fs::remove_dir_all(&path).map_err(AppError::from)
+        }) {
+            Ok(true) => evicted.push(entry.name.clone()),
+            // In use: it stays, and the budget is met by another entry or not at all.
+            Ok(false) => {}
             Err(error) => failures.push(format!("{}: {error}", entry.name)),
         }
     }

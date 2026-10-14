@@ -3,10 +3,12 @@ import { useTranslation } from "react-i18next";
 
 import { useBranches, useTags } from "../../state/refs";
 import { ContextMenu } from "../ContextMenu";
+import { selectedCommitId as getSelectedCommitId } from "../../state/navigation";
 import {
-  selectedCommitId as getSelectedCommitId,
-  useSession,
-} from "../../state/session";
+  useActiveRepository,
+  useNavigation,
+  useNavigationActions,
+} from "../../state/workspace";
 
 import "./Sidebar.css";
 
@@ -46,9 +48,10 @@ export interface SidebarProps {
 /** Branch and tag navigation for the open repository. */
 export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
   const { t } = useTranslation("refs");
-  const repository = useSession((state) => state.repository);
-  const selectedCommitId = useSession(getSelectedCommitId);
-  const revealCommit = useSession((state) => state.revealCommit);
+  const repository = useActiveRepository();
+  const selectedCommitId = useNavigation(getSelectedCommitId);
+
+  const { revealCommit } = useNavigationActions();
   const path = repository?.path ?? null;
 
   const branches = useBranches(path);

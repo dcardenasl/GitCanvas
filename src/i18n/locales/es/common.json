@@ -2,6 +2,7 @@
   "actions": {
     "cancel": "Cancelar",
     "loading": "Cargando…",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "close": "Cerrar"
   }
 }

@@ -28,7 +28,8 @@ const {
 vi.mock("../../lib/ipc", () => mockIpc);
 
 const { GitHubPicker } = await import("./GitHubPicker");
-const { useSession } = await import("../../state/session");
+const { resetWorkspace, openTestProject } =
+  await import("../../test/workspace");
 
 const REPO: GitHubRepository = {
   full_name: "dcardenasl/gitcanvas",
@@ -51,12 +52,31 @@ function renderPicker(onClose = vi.fn()) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useSession.setState({ repository: null });
+  resetWorkspace();
   onCloneProgress.mockImplementation(() => Promise.resolve(() => undefined));
 });
 afterEach(cleanup);
 
 describe("GitHubPicker", () => {
+  it("leaves the GitHub view without cloning, from either state", async () => {
+    hasGithubToken.mockResolvedValue(false);
+    const onClose = renderPicker();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Volver" }),
+    );
+    expect(onClose).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    hasGithubToken.mockResolvedValue(true);
+    listGithubRepositories.mockResolvedValue(repositoryList([REPO]));
+    const onCloseSignedIn = renderPicker();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Volver" }),
+    );
+    expect(onCloseSignedIn).toHaveBeenCalledTimes(1);
+    expect(cloneGithubRepository).not.toHaveBeenCalled();
+  });
+
   it("asks for a token when none is stored", async () => {
     hasGithubToken.mockResolvedValue(false);
     renderPicker();
@@ -104,9 +124,7 @@ describe("GitHubPicker", () => {
   });
 
   it("clones the chosen repository and opens it", async () => {
-    useSession.setState({
-      repository: { path: "/cache/current", name: "current" },
-    });
+    openTestProject({ path: "/cache/current", name: "current" });
     hasGithubToken.mockResolvedValue(true);
     listGithubRepositories.mockResolvedValue(repositoryList([REPO]));
     cloneGithubRepository.mockResolvedValue({
@@ -124,10 +142,7 @@ describe("GitHubPicker", () => {
     );
 
     await waitFor(() => {
-      expect(cloneGithubRepository).toHaveBeenCalledWith(
-        REPO.full_name,
-        "/cache/current",
-      );
+      expect(cloneGithubRepository).toHaveBeenCalledWith(REPO.full_name);
     });
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled();

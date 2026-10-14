@@ -4,6 +4,7 @@ import files from "./files.json";
 import git from "./git.json";
 import github from "./github.json";
 import history from "./history.json";
+import menu from "./menu.json";
 import refs from "./refs.json";
 import shell from "./shell.json";
 
@@ -15,6 +16,7 @@ export const en = {
   git,
   github,
   history,
+  menu,
   refs,
   shell,
 };

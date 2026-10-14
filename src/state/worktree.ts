@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
 import type {
@@ -38,7 +38,11 @@ export function useWorktreeSnapshot(
       }
       return getWorktreeSnapshot(repositoryPath, request);
     },
-    placeholderData: keepPreviousData,
+    // Another request for the same project may borrow the last answer while
+    // it loads; another project never may, or its files would show — and
+    // enable actions — in a project they do not belong to.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === repositoryPath ? previous : undefined,
     staleTime: 1_000,
     retry: shouldRetryLocalRead,
   });

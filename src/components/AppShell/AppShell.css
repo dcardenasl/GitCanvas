@@ -9,6 +9,10 @@
   height: 100%;
 }
 
+.app-shell__chrome {
+  min-inline-size: 0;
+}
+
 .toolbar {
   display: flex;
 
@@ -43,7 +47,7 @@
   width: 24px;
   height: 24px;
   flex: 0 0 24px;
-  border-radius: var(--radius-tight);
+  object-fit: contain;
 }
 
 .toolbar .button {
@@ -96,23 +100,42 @@
   flex-direction: column;
   gap: var(--space-3);
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  min-block-size: 0;
+  overflow: auto;
+  padding-block: var(--space-10) var(--space-7);
+}
+
+.app-shell__empty > .project-library {
+  flex: 0 0 auto;
+  overflow: visible;
+  margin-block-start: var(--space-9);
 }
 
 .app-shell__empty-logo {
   display: block;
-  width: min(280px, calc(100vw - 48px));
-  height: auto;
-  margin-bottom: var(--space-2);
-  padding: 8px 14px;
-  border-radius: 9px;
-  background: var(--empty-brand-surface);
+  inline-size: min(180px, calc(100vw - 48px));
+  block-size: auto;
+  object-fit: contain;
+}
+
+.app-shell__empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-start;
+  justify-content: center;
+  margin-block-start: var(--space-3);
 }
 
 .app-shell__empty-hint {
   margin: 0;
-  color: var(--ink-faint);
+  max-inline-size: 36ch;
+  color: var(--ink-muted);
   font-size: var(--font-size-ui);
+  line-height: 1.5;
+  text-align: center;
+  text-wrap: balance;
 }
 
 .history-view__state {
@@ -224,4 +247,38 @@
   .button__spinner {
     animation-duration: 2.4s;
   }
+}
+
+.app-shell__recovery {
+  padding: var(--space-7);
+  overflow: auto;
+  min-inline-size: 0;
+}
+
+.app-shell__recovery h1 {
+  font-size: var(--font-size-ui);
+  font-weight: 600;
+}
+
+.app-shell__recovery-path {
+  overflow-wrap: anywhere;
+  color: var(--ink-faint);
+}
+
+/* Says where a dragged folder would land. It lets the pointer through, so the
+   drop itself is still delivered by the system to the window. */
+.app-shell__drop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: var(--space-3);
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--backdrop);
+  color: var(--ink);
+  font-size: var(--font-size-body-wide);
+  pointer-events: none;
 }

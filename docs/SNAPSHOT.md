@@ -1,16 +1,15 @@
 # GitCanvas — snapshot
 
-> Actualizado: 2026-10-12 · Ficha completa: [ASSET.md](ASSET.md)
+> Actualizado: 2026-10-14 · Ficha completa: [ASSET.md](ASSET.md)
 
 ## Retomar
 
 | Campo | Estado |
 |---|---|
-| Etapa | v0.1.0 publicado; internacionalización en revisión |
-| H2 | Cerrada: 46/46; 38 cierres con commit dedicado y H2-34–41 integradas en `437ff07` |
-| Release | v0.1.0 publicado el 2026-10-09: PR [#1](https://github.com/dcardenasl/gitcanvas/pull/1) mergeada, tag sobre `main` e instaladores de Linux, macOS y Windows |
-| Trabajo abierto | [PR #9](https://github.com/dcardenasl/GitCanvas/pull/9): interfaz en inglés y español |
-| Siguiente tarea | I18N-6: evidencia de CI en Linux y Windows para la PR #9 |
+| Etapa | v0.2.0 publicado: interfaz en inglés y español |
+| H2 e I18N | Cerradas: H2 46/46 (38 con commit dedicado; H2-34–41 en `437ff07`) e I18N 6/6 |
+| Release | v0.2.0 publicado el 2026-10-12 (PR [#9](https://github.com/dcardenasl/GitCanvas/pull/9), tag sobre `main`, instaladores de Linux, macOS y Windows) |
+| Siguiente tarea | Verificación externa de WS-17; publicación fuera del alcance autorizado |
 | Fuente de trabajo | [`TASKS.md`](../TASKS.md), criterios detallados en el plan H2 |
 
 El MVP incluye historial y graph, detalle/diffs, cambios locales, GitHub clone y
@@ -20,10 +19,12 @@ modifican estado Git de forma explícita. Pull no crea merges y push nunca fuerz
 
 ## Estado del trabajo en curso
 
-`dev` contiene la internacionalización (I18N-1 a I18N-5, archivadas) y está publicado en la
-PR #9. Solo se verificó localmente en macOS; el run de `quality` de esa PR es la evidencia que
-falta para Linux y Windows. No declarar verde lo que no se haya ejecutado sobre el código
-vigente. Las secciones 2 y 4 del plan de tres funcionalidades no tienen tareas todavía.
+La implementación del workspace está en `dev`, con pestañas, restauración perezosa,
+favoritos, recientes, recuperación de rutas y persistencia atómica. Los commits son
+locales por instrucción de David; no se hicieron push, PR ni release. Los controles
+locales y E2E se ejecutan en macOS; la matriz Linux/Windows y los atajos del menú nativo
+siguen pendientes en WS-17. La creación de commits desde la interfaz sigue reservada
+para v0.4. Consultar TASKS.md para evidencia y resultados actuales.
 
 ## Documentos
 

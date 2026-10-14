@@ -21,7 +21,15 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
 vi.mock("../../lib/ipc", () => mockIpc);
 
 const { RepositoryPicker } = await import("./RepositoryPicker");
-const { useSession } = await import("../../state/session");
+const { useOpenFolder } = await import("./useOpenFolder");
+const { resetWorkspace, activeRepository } =
+  await import("../../test/workspace");
+
+/** Wires the picker to a folder opener the way the shell does. */
+function Picker() {
+  const folder = useOpenFolder();
+  return <RepositoryPicker folder={folder} />;
+}
 
 /** A promise the test resolves when it chooses to, to observe the wait. */
 function deferred<T>() {
@@ -35,7 +43,7 @@ function deferred<T>() {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
-  useSession.setState({ repository: null });
+  resetWorkspace();
 });
 afterEach(cleanup);
 
@@ -46,7 +54,7 @@ describe("RepositoryPicker", () => {
     const panel = deferred<string | null>();
     open.mockReturnValue(panel.promise);
 
-    render(<RepositoryPicker />);
+    render(<Picker />);
     await userEvent.click(screen.getByRole("button"));
 
     const button = screen.getByRole("button");
@@ -60,7 +68,7 @@ describe("RepositoryPicker", () => {
   it("returns the button to normal when the panel is dismissed", async () => {
     open.mockResolvedValue(null);
 
-    render(<RepositoryPicker />);
+    render(<Picker />);
     await userEvent.click(screen.getByRole("button"));
 
     // Cancelling must not leave the button disabled forever.
@@ -76,7 +84,7 @@ describe("RepositoryPicker", () => {
     const panel = deferred<string | null>();
     open.mockReturnValue(panel.promise);
 
-    render(<RepositoryPicker />);
+    render(<Picker />);
     const button = screen.getByRole("button");
     await userEvent.click(button);
     await userEvent.click(button);
@@ -100,7 +108,7 @@ describe("RepositoryPicker", () => {
     const panel = deferred<string | null>();
     open.mockReturnValue(panel.promise);
 
-    render(<RepositoryPicker />);
+    render(<Picker />);
     await userEvent.click(screen.getByRole("button"));
 
     // Busy immediately...
@@ -120,14 +128,14 @@ describe("RepositoryPicker", () => {
       name: "repo",
     });
 
-    const { unmount } = render(<RepositoryPicker />);
+    const { unmount } = render(<Picker />);
     await userEvent.click(screen.getByRole("button"));
     await waitFor(() => {
-      expect(useSession.getState().repository).not.toBeNull();
+      expect(activeRepository()).not.toBeNull();
     });
     unmount();
 
-    render(<RepositoryPicker />);
+    render(<Picker />);
     await userEvent.click(screen.getByRole("button"));
 
     await waitFor(() => {
@@ -141,7 +149,7 @@ describe("RepositoryPicker", () => {
   it("omits the default path rather than passing undefined", async () => {
     open.mockResolvedValue(null);
 
-    render(<RepositoryPicker />);
+    render(<Picker />);
     await userEvent.click(screen.getByRole("button"));
 
     // An explicit undefined is a different thing from an absent option.
@@ -155,7 +163,7 @@ describe("RepositoryPicker", () => {
     open.mockResolvedValue("/not/a/repo");
     openRepository.mockRejectedValue(new Error("boom"));
 
-    render(<RepositoryPicker />);
+    render(<Picker />);
     await userEvent.click(screen.getByRole("button"));
 
     expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
@@ -170,7 +178,7 @@ describe("RepositoryPicker", () => {
       }),
     );
 
-    render(<RepositoryPicker />);
+    render(<Picker />);
     await userEvent.click(screen.getByRole("button"));
 
     const alert = await screen.findByRole("alert");

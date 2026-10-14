@@ -1,4 +1,10 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import "./ContextMenu.css";
 
@@ -6,6 +12,13 @@ import "./ContextMenu.css";
 export interface MenuItem {
   readonly label: string;
   readonly onSelect: () => void;
+  /**
+   * The keyboard shortcut that does the same, shown beside the label. Only a
+   * hint: the menu does not listen for it.
+   */
+  readonly shortcut?: string;
+  /** Starts a new group: a rule is drawn above this item. */
+  readonly startsGroup?: boolean;
 }
 
 /** Pointer position, available actions, and close callback for the menu. */
@@ -28,6 +41,21 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   const opener = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [position, setPosition] = useState({ left: 0, top: 0 });
+
+  useLayoutEffect(() => {
+    const bounds = ref.current?.getBoundingClientRect();
+    if (bounds === undefined) return;
+    const next = {
+      left: Math.max(8, Math.min(x, window.innerWidth - bounds.width - 8)),
+      top: Math.max(8, Math.min(y, window.innerHeight - bounds.height - 8)),
+    };
+    setPosition((previous) =>
+      previous.left === next.left && previous.top === next.top
+        ? previous
+        : next,
+    );
+  }, [x, y, items]);
 
   useLayoutEffect(() => {
     onCloseRef.current = onClose;
@@ -44,12 +72,16 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
     const activeElement = document.activeElement;
     opener.current =
       activeElement instanceof HTMLElement ? activeElement : null;
-    ref.current?.querySelector("button")?.focus();
+    ref.current?.querySelector("button")?.focus({ preventScroll: true });
 
     function onPointerDown(event: PointerEvent) {
       if (!ref.current?.contains(event.target as Node)) close(false);
     }
-    const closeOnAnchorMove = () => {
+    const closeOnAnchorMove = (event: Event) => {
+      // Scrolling the menu itself leaves its anchor in place, including the
+      // scroll caused by focusing an item near the end of a long menu.
+      if (event.target instanceof Node && ref.current?.contains(event.target))
+        return;
       close(false);
     };
 
@@ -105,28 +137,37 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
       onKeyDown={onKeyDown}
       // Kept inside the window: a menu opened near the right or bottom edge
       // would otherwise open partly off screen.
-      style={{
-        left: Math.min(x, window.innerWidth - 220),
-        top: Math.min(y, window.innerHeight - items.length * 30 - 12),
-      }}
+      style={position}
     >
       {items.map((item, index) => (
-        <button
-          key={item.label}
-          type="button"
-          role="menuitem"
-          tabIndex={index === activeIndex ? 0 : -1}
-          className="context-menu__item"
-          onClick={() => {
-            try {
-              item.onSelect();
-            } finally {
-              close(true);
-            }
-          }}
-        >
-          {item.label}
-        </button>
+        <Fragment key={item.label}>
+          {item.startsGroup === true && index > 0 && (
+            <div className="context-menu__separator" role="separator" />
+          )}
+          <button
+            type="button"
+            role="menuitem"
+            tabIndex={index === activeIndex ? 0 : -1}
+            className="context-menu__item"
+            aria-keyshortcuts={item.shortcut}
+            onClick={() => {
+              try {
+                item.onSelect();
+              } finally {
+                close(true);
+              }
+            }}
+          >
+            <span>{item.label}</span>
+            {item.shortcut !== undefined && (
+              // Announced through `aria-keyshortcuts`; read again as part of the
+              // name, it would be said twice.
+              <kbd className="context-menu__shortcut" aria-hidden="true">
+                {item.shortcut}
+              </kbd>
+            )}
+          </button>
+        </Fragment>
       ))}
     </div>
   );

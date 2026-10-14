@@ -13,7 +13,10 @@ use syn::{
     Expr, ExprCall, ExprMacro, Item, ItemFn, Path, Token, TypePath, UseTree,
 };
 
-const COMMAND_GATE_EXCEPTIONS: &[(&str, &str)] = &[];
+const COMMAND_GATE_EXCEPTIONS: &[(&str, &str)] = &[(
+    "acknowledge_shutdown",
+    "must answer while every write slot is held by a long clone or push; it only sets a flag",
+)];
 
 fn command_sources() -> Vec<PathBuf> {
     let directory = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/commands");

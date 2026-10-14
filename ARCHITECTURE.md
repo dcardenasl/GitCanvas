@@ -89,7 +89,7 @@ a changed command signature breaks one file instead of every call site.
   history reads would freeze the window until it finished.
 - **State holds authorized canonical paths, never a live `git2::Repository`.**
   `AllowedRepos` records paths admitted by `open_repository`, startup selection or
-  clone. The 14 commands that operate on a repository go through `with_repo`, which
+  clone. Commands that operate on a repository go through `with_repo`, which
   checks that allowlist and builds a new `ActiveRepo`. `Repository` is not safely
   shareable across threads, and forcing it behind a lock buys contention and bugs.
   Each command opens its own handle.
@@ -131,6 +131,41 @@ Every list is bounded and resumable:
 On the frontend, `layoutHistory` extends the graph page by page and keeps the
 rows of every page it already laid out.
 
+## Workspace and persistence
+
+`state/workspace.ts` composes the workspace store from focused slices in
+`state/workspaceStore/` (tabs, library, view, storage, bounds, closed tabs); each slice
+updates the store in a single atomic `set` and cross-slice rules are pure helpers. It
+coordinates ordered tabs identified by canonical worktree root.
+Each owns navigation and Git action state; callbacks address their originating root.
+Only the active view mounts, observes Git and polls local changes. Activation reopens
+and authorizes the root before reads, compares refs, and keeps matching history pages.
+A missing project stays recoverable. `ProjectCache` retains heavy data for the active
+project and five inactive ones; closing removes all queries for the root. Activation
+marks the target unverified synchronously, the write executor enforces that state, and
+verification waits for a fresh worktree fingerprint as well as repository identity and refs.
+
+The Rust workspace store owns schema validation and atomic replacement. The frontend
+projects only durable navigation, favorites and recents, queues structural changes
+immediately and debounces navigation. One writer drains before normal window close or
+system quit. Saved paths grant no permissions; inactive restored tabs authorize only
+on activation. `OpenRepos` protects every open tab's clone from retention, independently
+of the active watcher. Shared Git metadata also protects a cached clone used by an
+external worktree. Pending protection reports or unresolved dependencies stop retention,
+and an in-use cache entry cannot be repaired by replacement. Retention and replacement hand
+the deletion to the registry through a `RemoveGuard`, so the decision that no tab uses an
+entry and its removal are one step and a tab cannot open it in between. Favorites alone do
+not protect a clone.
+
+Quitting is bounded. The window close request first asks the frontend to flush and
+acknowledge (`acknowledge_shutdown`); a watchdog in `lifecycle.rs` destroys the window
+after a three-second deadline if the renderer never answers, so an unresponsive webview
+cannot keep the app alive.
+
+Theme, language and panel sizes remain synchronous webview preferences. E2E builds use
+private webviews as well as a temporary Rust data directory, isolating both stores.
+See [ADR 0006](docs/adr/0006-workspace.md) for the complete contract and bounds.
+
 ## Errors across the boundary
 
 `AppError` is the only failure type. Transience is a property of the variant —
@@ -155,6 +190,14 @@ page of history continues the walk instead of recomputing it. Recomputing would
 reshuffle the lanes of the commits already on screen, and the graph would jump
 under the cursor.
 
+## File previews and syntax highlighting
+
+Code in diffs and whole-file views is colored by `components/DiffViewer`, on the
+frontend, in a dedicated Web Worker, and never at the cost of the content: any
+failure or limit leaves plain text. Languages come from one registry, the grammar table
+must cover it, and the colors are theme tokens. See
+[ADR 0005](docs/adr/0005-syntax-highlighting.md).
+
 ## Where things run
 
 | Concern | Lives in | Runs on |
@@ -163,12 +206,13 @@ under the cursor.
 | IPC translation | `src-tauri/commands/` | Tauri's async runtime |
 | Lane assignment | `lib/graph-layout/` | The renderer, synchronously |
 | Drawing | `components/GraphCanvas/` | The webview |
+| Syntax highlighting | `components/DiffViewer/` | A dedicated Web Worker |
 
 ## Verification
 
 | When | What runs |
 |---|---|
-| Every commit | `cargo fmt`, ESLint, Prettier — about two seconds |
+| Every commit | `cargo fmt`, ESLint, Prettier on staged files |
 | Push to `dev` | Types, lint, frontend tests, git engine tests, on Linux |
 | Pull request to `main` | The full matrix on three operating systems: clippy with `-D warnings`, all tests, coverage floors (project-wide, plus stricter ones for `graph-layout`, `state/` and `components/`), the bindings drift check, and a real bundle build |
 | Tag `v*.*.*` | Release notes from `CHANGELOG.md`, plus installers per platform |

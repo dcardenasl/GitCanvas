@@ -1,0 +1,21 @@
+{
+  "about": "About GitCanvas",
+  "closeTab": "Close Tab",
+  "copy": "Copy",
+  "cut": "Cut",
+  "edit": "Edit",
+  "file": "File",
+  "hide": "Hide GitCanvas",
+  "hideOthers": "Hide Others",
+  "minimize": "Minimize",
+  "openFolder": "Open Folder…",
+  "paste": "Paste",
+  "quit": "Quit GitCanvas",
+  "redo": "Redo",
+  "reopenTab": "Reopen Closed Tab",
+  "selectAll": "Select All",
+  "showAll": "Show All",
+  "undo": "Undo",
+  "window": "Window",
+  "zoom": "Zoom"
+}

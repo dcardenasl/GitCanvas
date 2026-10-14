@@ -36,6 +36,58 @@
   white-space: pre;
 }
 
+.syntax-token--keyword {
+  color: var(--syntax-keyword);
+}
+
+.syntax-token--string {
+  color: var(--syntax-string);
+}
+
+.syntax-token--number {
+  color: var(--syntax-number);
+}
+
+.syntax-token--function {
+  color: var(--syntax-function);
+}
+
+.syntax-token--comment {
+  color: var(--syntax-comment);
+}
+
+.syntax-token--operator {
+  color: var(--syntax-operator);
+}
+
+.syntax-token--tag {
+  color: var(--syntax-tag);
+}
+
+.syntax-token--attribute {
+  color: var(--syntax-attribute);
+}
+
+.syntax-token--property {
+  color: var(--syntax-property);
+}
+
+.syntax-token--punctuation {
+  color: var(--syntax-punctuation);
+}
+
+.syntax-token--heading {
+  color: var(--syntax-heading);
+}
+
+.syntax-token--emphasis {
+  color: var(--syntax-emphasis);
+}
+
+.syntax-token--code {
+  color: var(--syntax-code);
+}
+
 /* Wrapping keeps a long line on screen at the cost of the row grid staying
    aligned, which is the right trade when the alternative is scrolling
    sideways to read one line. */
@@ -50,7 +102,7 @@
 
 .diff-line--add {
   background: var(--success-surface);
-  color: var(--success);
+  color: var(--ink);
 }
 
 .diff-line--add .diff-line__marker::before {
@@ -60,7 +112,7 @@
 
 .diff-line--del {
   background: var(--danger-surface);
-  color: var(--danger);
+  color: var(--ink);
 }
 
 .diff-line--del .diff-line__marker::before {

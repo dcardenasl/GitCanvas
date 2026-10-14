@@ -34,7 +34,8 @@ const {
 vi.mock("../../lib/ipc", () => mockIpc);
 
 const { FileDiffView } = await import("./FileDiffView");
-const { useSession } = await import("../../state/session");
+const { resetWorkspace, patchNavigation, activeNavigation } =
+  await import("../../test/workspace");
 
 const COMMIT: CommitInfo = {
   id: "a".repeat(40),
@@ -119,6 +120,14 @@ function renderView(
   );
 }
 
+function findLine(text: string) {
+  return screen.findByText(
+    (_content, element) =>
+      element?.classList.contains("diff-line__text") === true &&
+      element.textContent === text,
+  );
+}
+
 function content(overrides: Partial<FileContent> = {}): FileContent {
   return {
     path: "src/app.ts",
@@ -137,7 +146,8 @@ beforeEach(() => {
   getWorktreeSnapshot.mockReset();
   getWorktreeFileDiff.mockReset();
   getWorktreeFileContent.mockReset();
-  useSession.setState({
+  resetWorkspace();
+  patchNavigation({
     selection: { kind: "commit", commitId: COMMIT.id, filePath: "src/app.ts" },
     expandedFilePath: null,
   });
@@ -154,7 +164,7 @@ describe("FileDiffView", () => {
     );
     renderView();
 
-    expect(await screen.findByText("const b = 3;")).toBeInstanceOf(HTMLElement);
+    expect(await findLine("const b = 3;")).toBeInstanceOf(HTMLElement);
     expect(screen.queryByText("other")).toBeNull();
   });
 
@@ -163,7 +173,7 @@ describe("FileDiffView", () => {
     getFileContent.mockResolvedValue(content({ path: "src/stable.ts" }));
     renderView("src/stable.ts", undefined, true);
 
-    expect(await screen.findByText("export {};")).toBeInstanceOf(HTMLElement);
+    await findLine("export {};");
     expect(screen.queryByRole("button", { name: "Cambios" })).toBeNull();
     expect(getFileContent.mock.calls[0]?.[1]).toMatchObject({
       commit_id: COMMIT.id,
@@ -179,7 +189,7 @@ describe("FileDiffView", () => {
   it("switches to the diff if the commit tree opens a file before the diff arrives", async () => {
     getCommitDiff.mockResolvedValue(diff([file({ path: "src/stable.ts" })]));
     getFileContent.mockResolvedValue(content({ path: "src/stable.ts" }));
-    useSession.setState({
+    patchNavigation({
       selection: {
         kind: "commit",
         commitId: COMMIT.id,
@@ -189,8 +199,8 @@ describe("FileDiffView", () => {
     });
     renderView("src/stable.ts", undefined, true);
 
-    expect(await screen.findByText("const b = 3;")).toBeInstanceOf(HTMLElement);
-    expect(useSession.getState().selection).toEqual({
+    expect(await findLine("const b = 3;")).toBeInstanceOf(HTMLElement);
+    expect(activeNavigation().selection).toEqual({
       kind: "commit",
       commitId: COMMIT.id,
       filePath: "src/stable.ts",
@@ -205,17 +215,17 @@ describe("FileDiffView", () => {
       await screen.findByRole("button", { name: "← Volver al graph" }),
     );
 
-    expect(useSession.getState().selection).toMatchObject({ filePath: null });
+    expect(activeNavigation().selection).toMatchObject({ filePath: null });
   });
 
   it("returns to the graph on Escape", async () => {
     getCommitDiff.mockResolvedValue(diff([file()]));
     renderView();
-    await screen.findByText("const b = 3;");
+    await findLine("const b = 3;");
 
     await userEvent.keyboard("{Escape}");
 
-    expect(useSession.getState().selection).toMatchObject({ filePath: null });
+    expect(activeNavigation().selection).toMatchObject({ filePath: null });
   });
 
   it("says so when the commit does not touch the file", async () => {
@@ -264,7 +274,7 @@ describe("FileDiffView", () => {
 
     await userEvent.click(button);
 
-    expect(useSession.getState().expandedFilePath).toBe("bundle.js");
+    expect(activeNavigation().expandedFilePath).toBe("bundle.js");
     expect(getCommitDiff.mock.calls.at(-1)?.[1]).toMatchObject({
       file_path: "bundle.js",
       expand_path: "bundle.js",
@@ -281,7 +291,7 @@ describe("FileDiffView", () => {
   it("numbers the lines of a patch on both sides", async () => {
     getCommitDiff.mockResolvedValue(diff([file()]));
     renderView();
-    await screen.findByText("const b = 3;");
+    await findLine("const b = 3;");
 
     // The numbers come from the hunk header, so they are the file's, not the
     // row's position on screen.
@@ -292,13 +302,13 @@ describe("FileDiffView", () => {
     getCommitDiff.mockResolvedValue(diff([file()]));
     getFileContent.mockResolvedValue(content());
     renderView();
-    await screen.findByText("const b = 3;");
+    await findLine("const b = 3;");
 
     await userEvent.click(
       screen.getByRole("button", { name: "Archivo completo" }),
     );
 
-    expect(await screen.findByText("export {};")).toBeInstanceOf(HTMLElement);
+    expect(await findLine("export {};")).toBeInstanceOf(HTMLElement);
     expect(getFileContent.mock.calls[0]?.[1]).toMatchObject({
       path: "src/app.ts",
       expand: false,
@@ -308,7 +318,7 @@ describe("FileDiffView", () => {
   it("does not offer the whole file for one the commit deleted", async () => {
     getCommitDiff.mockResolvedValue(diff([file({ change: "Deleted" })]));
     renderView();
-    await screen.findByText("const b = 3;");
+    await findLine("const b = 3;");
 
     // There is nothing to read: offering it and then failing is worse than not
     // offering it.
@@ -323,7 +333,7 @@ describe("FileDiffView", () => {
       content({ omitted: "TooLarge", text: null, lines: 9000 }),
     );
     renderView();
-    await screen.findByText("const b = 3;");
+    await findLine("const b = 3;");
 
     await userEvent.click(
       screen.getByRole("button", { name: "Archivo completo" }),
@@ -340,9 +350,11 @@ describe("FileDiffView", () => {
   it("toggles wrapping for long lines", async () => {
     getCommitDiff.mockResolvedValue(diff([file()]));
     renderView();
-    await screen.findByText("const b = 3;");
+    await findLine("const b = 3;");
     const wrap = screen.getByRole("button", { name: "Ajustar líneas" });
 
+    expect(wrap.getAttribute("aria-pressed")).toBe("true");
+    await userEvent.click(wrap);
     expect(wrap.getAttribute("aria-pressed")).toBe("false");
     await userEvent.click(wrap);
     expect(wrap.getAttribute("aria-pressed")).toBe("true");
@@ -357,13 +369,13 @@ describe("FileDiffView", () => {
       revision: "revision",
       file: file({ path: "local.ts" }),
     });
-    useSession.setState({
+    patchNavigation({
       selection: { kind: "worktree", side: "unstaged", filePath: "local.ts" },
     });
 
     renderView("local.ts", { side: "unstaged" });
 
-    expect(await screen.findByText("const b = 3;")).toBeInstanceOf(HTMLElement);
+    expect(await findLine("const b = 3;")).toBeInstanceOf(HTMLElement);
     expect(screen.getByText(/cambios locales · sin preparar/)).toBeInstanceOf(
       HTMLElement,
     );
@@ -377,7 +389,7 @@ describe("FileDiffView", () => {
     const local = () => file({ path: "local.ts" });
 
     function open() {
-      useSession.setState({
+      patchNavigation({
         selection: { kind: "worktree", side: "unstaged", filePath: "local.ts" },
       });
       renderView("local.ts", { side: "unstaged" });
@@ -402,10 +414,8 @@ describe("FileDiffView", () => {
       });
       open();
 
-      expect(await screen.findByText("const b = 3;")).toBeInstanceOf(
-        HTMLElement,
-      );
-      expect(useSession.getState().selection).toEqual({
+      expect(await findLine("const b = 3;")).toBeInstanceOf(HTMLElement);
+      expect(activeNavigation().selection).toEqual({
         kind: "worktree",
         side: "unstaged",
         filePath: "local.ts",
@@ -435,7 +445,7 @@ describe("FileDiffView", () => {
       open();
 
       expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
-      expect(useSession.getState().selection).toMatchObject({
+      expect(activeNavigation().selection).toMatchObject({
         kind: "worktree",
         filePath: "local.ts",
       });
@@ -452,7 +462,7 @@ describe("FileDiffView", () => {
         revision: "revision",
         file: local(),
       });
-      useSession.setState({
+      patchNavigation({
         selection: { kind: "worktree", side: "unstaged", filePath: "local.ts" },
       });
       const client = createTestQueryClient();
@@ -464,9 +474,7 @@ describe("FileDiffView", () => {
         />,
         client,
       );
-      expect(await screen.findByText("const b = 3;")).toBeInstanceOf(
-        HTMLElement,
-      );
+      expect(await findLine("const b = 3;")).toBeInstanceOf(HTMLElement);
 
       getWorktreeSnapshot.mockResolvedValue({
         ...worktreeSnapshot([]),
@@ -489,7 +497,7 @@ describe("FileDiffView", () => {
       });
 
       expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
-      expect(useSession.getState().selection).toMatchObject({
+      expect(activeNavigation().selection).toMatchObject({
         kind: "worktree",
         filePath: "local.ts",
       });
@@ -505,7 +513,7 @@ describe("FileDiffView", () => {
       open();
 
       expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
-      expect(useSession.getState().selection).toMatchObject({
+      expect(activeNavigation().selection).toMatchObject({
         kind: "worktree",
         filePath: "local.ts",
       });

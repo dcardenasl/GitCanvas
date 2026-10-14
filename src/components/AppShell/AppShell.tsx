@@ -1,83 +1,131 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/react/shallow";
 
 import { getStartupRepository } from "../../lib/ipc";
-import brandMark from "../../assets/branding/gitcanvas-mark.png";
-import brandHorizontal from "../../assets/branding/gitcanvas-horizontal.png";
 
+import { BrandLogo } from "../BrandLogo/BrandLogo";
 import { CommitDetailPanel } from "../CommitDetailPanel";
 import { CommitSearch } from "../CommitSearch";
 import { ErrorMessage } from "../ErrorMessage";
 import { FileDiffView } from "../FileDiffView";
 import { GitHubPicker } from "../GitHubPicker";
+import { ProjectLibrary } from "../ProjectLibrary/ProjectLibrary";
 import { PreferencesMenu } from "../PreferencesMenu";
 import { Resizer } from "../Resizer";
-import { Actions, useGitActions } from "../Toolbar";
+import { Actions } from "../Toolbar";
 import { INSPECTOR, SIDEBAR, useLayout } from "../../state/layout";
 import { useLiveRepository } from "../../state/liveRepository";
 import { Sidebar } from "../Sidebar";
+import { TabBar, useTabShortcuts } from "../TabBar";
 import { WorkingTreeDetailPanel } from "../WorkingTreeDetailPanel";
+import { useCommitMetadata } from "../../state/commitMetadata";
 import { useHistory } from "../../state/history";
 import { useCurrentBranch } from "../../state/refs";
 import {
   selectedCommitId as getSelectedCommitId,
   selectedFilePath as getSelectedFilePath,
-  useSession,
-} from "../../state/session";
+} from "../../state/navigation";
+import {
+  useActiveRepository,
+  useNavigation,
+  useNavigationActions,
+  useWorkspace,
+  tabOf,
+} from "../../state/workspace";
+import { useGitActions } from "../../state/gitActions";
+import { useProjectCache } from "../../state/projectCache";
+import { useNativeMenu } from "../../state/nativeMenu";
+import { useOpenRepositoriesSync } from "../../state/openRepositories";
+import { useVerifyActiveProject } from "../../state/verifyProject";
 import { invalidateLive } from "../../state/queryKeys";
 
+import { UnreachableProject } from "./UnreachableProject";
 import { HistoryView } from "./HistoryView";
 import { RepositoryPicker } from "./RepositoryPicker";
+import { useDroppedFolders } from "./useDroppedFolders";
+import { useOpenFolder } from "./useOpenFolder";
 
 import "./AppShell.css";
 
 /** The application window: toolbar, navigation and history. */
 export function AppShell() {
   const { t } = useTranslation(["shell", "common"]);
-  const repository = useSession((state) => state.repository);
-  const selection = useSession((state) => state.selection);
-  const selectedCommitId = useSession(getSelectedCommitId);
-  const history = useHistory(repository?.path ?? null);
-  const selectedFilePath = useSession(getSelectedFilePath);
-  const [showGitHub, setShowGitHub] = useState(false);
+  const repository = useActiveRepository();
+  const verified = useWorkspace(
+    (state) =>
+      state.activeRoot !== null &&
+      tabOf(state, state.activeRoot)?.verification.status === "verified",
+  );
+  const homeOpen = useWorkspace((state) => state.homeOpen);
+  // The home screen takes the window without closing the project behind it,
+  // so what belongs to a project shows only while that project does.
+  const project = homeOpen ? null : repository;
+  const readableRoot = verified ? (repository?.path ?? null) : null;
+  const selection = useNavigation((navigation) => navigation.selection);
+  const selectedCommitId = useNavigation(getSelectedCommitId);
+  const history = useHistory(readableRoot);
+  const selectedFilePath = useNavigation(getSelectedFilePath);
+  const showGitHub = useWorkspace((state) => state.githubOpen);
+  const setShowGitHub = useWorkspace((state) => state.setGitHubOpen);
   const layout = useLayout();
   const queryClient = useQueryClient();
 
-  const watcher = useLiveRepository(repository?.path ?? null);
-  const currentBranch = useCurrentBranch(repository?.path ?? null);
+  const watcher = useLiveRepository(readableRoot);
+  const currentBranch = useCurrentBranch(readableRoot);
   const gitActions = useGitActions(repository?.path ?? null);
-  const [sidebarPinned, setSidebarPinned] = useState(false);
-  const revealCommit = useSession((state) => state.revealCommit);
-  const setRepository = useSession((state) => state.openRepository);
+  const sidebarPinned = useNavigation((navigation) => navigation.sidebarPinned);
+  const searchQuery = useNavigation((navigation) => navigation.searchQuery);
+
+  const { revealCommit, setSidebarPinned, setSearchQuery } =
+    useNavigationActions();
+  const openProject = useWorkspace((state) => state.openProject);
+  const notice = useWorkspace((state) => state.notice);
+  const dismissNotice = useWorkspace((state) => state.dismissNotice);
+  // Compared by value: a tab's own navigation changing is not a change of
+  // which projects are open.
+  const openPaths = useWorkspace(
+    useShallow((state) => state.tabs.map((tab) => tab.repository.path)),
+  );
+  const openSync = useOpenRepositoriesSync(openPaths);
+  const verification = useVerifyActiveProject();
+  useProjectCache();
+  const folder = useOpenFolder();
+  const dragging = useDroppedFolders(folder.openDropped);
+  useTabShortcuts(folder.choose);
+  const nativeMenu = useNativeMenu(folder.choose);
 
   useEffect(() => {
     // The window says which repository it is showing, so two of them are
     // tellable apart in the dock and in the window switcher.
     document.title =
-      repository === null ? "GitCanvas" : t("title", { name: repository.name });
-  }, [repository, t]);
+      project === null ? "GitCanvas" : t("title", { name: project.name });
+  }, [project, t]);
 
   useEffect(() => {
     // `gitcanvas /path/to/repo` opens straight into that repository. Failure is
     // deliberately quiet: the window still opens and the picker is right there,
     // which beats a startup error over an argument the user may have mistyped.
-    if (useSession.getState().repository !== null) return;
-
     let cancelled = false;
-    let repositoryChanged = false;
-    const unsubscribe = useSession.subscribe((state, previous) => {
-      if (state.repository !== previous.repository) repositoryChanged = true;
+    let projectsChanged = false;
+    const unsubscribe = useWorkspace.subscribe((state, previous) => {
+      const now = state.tabs.map((tab) => tab.repository.path);
+      const before = previous.tabs.map((tab) => tab.repository.path);
+      if (
+        state.activeRoot !== previous.activeRoot ||
+        state.githubOpen !== previous.githubOpen ||
+        state.homeOpen !== previous.homeOpen ||
+        now.length !== before.length ||
+        now.some((root, i) => root !== before[i])
+      ) {
+        projectsChanged = true;
+      }
     });
     void getStartupRepository()
       .then((startup) => {
-        if (
-          !cancelled &&
-          !repositoryChanged &&
-          startup !== null &&
-          useSession.getState().repository === null
-        ) {
-          setRepository(startup);
+        if (!cancelled && !projectsChanged && startup !== null) {
+          openProject(startup);
         }
       })
       .catch(() => undefined);
@@ -86,15 +134,21 @@ export function AppShell() {
       cancelled = true;
       unsubscribe();
     };
-  }, [setRepository]);
+  }, [openProject]);
   const selectedIndex =
     selectedCommitId === null
       ? undefined
       : history.commitIndexById.get(selectedCommitId);
-  const selected =
+  const loadedSelection =
     selectedIndex === undefined
       ? null
       : (history.commits[selectedIndex] ?? null);
+  const metadata = useCommitMetadata(
+    readableRoot,
+    selectedCommitId,
+    loadedSelection,
+  );
+  const selected = metadata.data ?? null;
   const readingCommitFile = selected !== null && selectedFilePath !== null;
   const worktreeFile = selection.kind === "worktree" ? selection : null;
   const readingWorktreeFile =
@@ -104,71 +158,107 @@ export function AppShell() {
 
   return (
     <div className="app-shell">
-      <header className="toolbar">
-        {repository !== null && (
-          <img
-            className="toolbar__brand"
-            src={brandMark}
-            alt=""
-            aria-hidden="true"
-          />
-        )}
-        <span className="toolbar__repository" title={repository?.name}>
-          {repository?.name ?? t("toolbar.noRepository")}
-        </span>
-        {repository !== null && (
-          <button
-            type="button"
-            className="button"
-            title={t("toolbar.refreshHint")}
-            onClick={() => {
-              void invalidateLive(queryClient, repository.path);
-            }}
-          >
-            {t("toolbar.refresh")}
-          </button>
-        )}
-        {watcher.status.kind === "degraded" && (
-          <div role="alert" className="toolbar__status">
-            <ErrorMessage error={watcher.status.error} />
-            <button type="button" className="button" onClick={watcher.retry}>
-              {t("common:actions.retry")}
+      {dragging && (
+        <div className="app-shell__drop" role="status">
+          {t("drop.hint")}
+        </div>
+      )}
+      <div className="app-shell__chrome">
+        <TabBar folder={folder} />
+        <header className="toolbar">
+          <BrandLogo className="toolbar__brand" variant="mark" decorative />
+          {project !== null && (
+            <span className="toolbar__repository" title={project.name}>
+              {project.name}
+            </span>
+          )}
+          {project !== null && (
+            <button
+              type="button"
+              className="button"
+              title={t("toolbar.refreshHint")}
+              onClick={() => {
+                void invalidateLive(queryClient, project.path);
+              }}
+            >
+              {t("toolbar.refresh")}
             </button>
-          </div>
-        )}
-        {readingFile && (
-          <button
-            type="button"
-            className="button"
-            aria-pressed={sidebarPinned}
-            title={t("toolbar.branchesHint")}
-            onClick={() => {
-              setSidebarPinned((pinned) => !pinned);
-            }}
-          >
-            {t("toolbar.branches")}
-          </button>
-        )}
-        {repository !== null && !readingFile && (
-          <CommitSearch commits={history.commits} onGo={revealCommit} />
-        )}
-        <div className="toolbar__spacer" />
-        <PreferencesMenu />
-        {repository !== null && (
-          <Actions actions={gitActions} currentBranch={currentBranch} />
-        )}
-        <button
-          type="button"
-          className="button"
-          aria-pressed={showGitHub}
-          onClick={() => {
-            setShowGitHub((open) => !open);
-          }}
-        >
-          {t("toolbar.github")}
-        </button>
-        <RepositoryPicker />
-      </header>
+          )}
+          {watcher.status.kind === "degraded" && (
+            <div role="alert" className="toolbar__status">
+              <ErrorMessage error={watcher.status.error} />
+              <button type="button" className="button" onClick={watcher.retry}>
+                {t("common:actions.retry")}
+              </button>
+            </div>
+          )}
+          {notice !== null && (
+            <div role="status" className="toolbar__status">
+              <span>
+                {notice.code === "pathCopyFailed"
+                  ? t("workspace.pathCopyFailed", { path: notice.path })
+                  : t(`workspace.${notice.code}`, { max: notice.max })}
+              </span>
+              <button type="button" className="button" onClick={dismissNotice}>
+                {t("workspace.dismiss")}
+              </button>
+            </div>
+          )}
+          {nativeMenu.error !== null && (
+            <div role="alert" className="toolbar__status">
+              <ErrorMessage
+                error={nativeMenu.error}
+                lead={t("toolbar.menuFailed")}
+              />
+              <button
+                type="button"
+                className="button"
+                onClick={nativeMenu.retry}
+              >
+                {t("common:actions.retry")}
+              </button>
+            </div>
+          )}
+          {openSync.error !== null && (
+            <div role="alert" className="toolbar__status">
+              <ErrorMessage
+                error={openSync.error}
+                lead={t("toolbar.openSyncFailed")}
+              />
+              <button type="button" className="button" onClick={openSync.retry}>
+                {t("common:actions.retry")}
+              </button>
+            </div>
+          )}
+          {project !== null && readingFile && (
+            <button
+              type="button"
+              className="button"
+              aria-pressed={sidebarPinned}
+              title={t("toolbar.branchesHint")}
+              onClick={() => {
+                setSidebarPinned(!sidebarPinned);
+              }}
+            >
+              {t("toolbar.branches")}
+            </button>
+          )}
+          {project !== null && !readingFile && (
+            <CommitSearch
+              key={project.path}
+              commits={history.commits}
+              query={searchQuery}
+              onQueryChange={setSearchQuery}
+              onGo={revealCommit}
+            />
+          )}
+          <div className="toolbar__spacer" />
+          <PreferencesMenu />
+          {project !== null && (
+            <Actions actions={gitActions} currentBranch={currentBranch} />
+          )}
+        </header>
+      </div>
 
       {showGitHub ? (
         <GitHubPicker
@@ -176,17 +266,40 @@ export function AppShell() {
             setShowGitHub(false);
           }}
         />
-      ) : repository === null ? (
+      ) : project === null ? (
         <div className="app-shell__empty">
-          <img
-            className="app-shell__empty-logo"
-            src={brandHorizontal}
-            alt="GitCanvas"
-          />
+          <BrandLogo className="app-shell__empty-logo" variant="stacked" />
           <p className="app-shell__empty-hint">{t("empty.hint")}</p>
+          <div className="app-shell__empty-actions">
+            <RepositoryPicker folder={folder} />
+            <button
+              type="button"
+              className="button"
+              onClick={() => {
+                setShowGitHub(true);
+              }}
+            >
+              {t("empty.clone")}
+            </button>
+          </div>
+          <ProjectLibrary />
         </div>
+      ) : verification.error !== null ? (
+        <UnreachableProject
+          root={project.path}
+          error={verification.error}
+          retry={verification.retry}
+        />
+      ) : !verified ? (
+        <p className="state" role="status">
+          {t("workspace.verifying")}
+        </p>
       ) : (
         <div
+          // Replaced, not updated, when another project is shown, so nothing a
+          // view keeps for itself (scroll offset, focus, a half-typed field)
+          // carries over from the project that was on screen before.
+          key={project.path}
           className="app-shell__body"
           style={
             {
@@ -223,7 +336,7 @@ export function AppShell() {
           <main className="app-shell__history" aria-label={t("history.label")}>
             {selected !== null && selectedFilePath !== null ? (
               <FileDiffView
-                repositoryPath={repository.path}
+                repositoryPath={project.path}
                 commit={selected}
                 path={selectedFilePath}
                 snapshot={
@@ -233,7 +346,7 @@ export function AppShell() {
               />
             ) : worktreeFile !== null && worktreeFile.filePath !== null ? (
               <FileDiffView
-                repositoryPath={repository.path}
+                repositoryPath={project.path}
                 path={worktreeFile.filePath}
                 worktree={{ side: worktreeFile.side }}
               />
@@ -250,11 +363,38 @@ export function AppShell() {
             grows="left"
             onResize={layout.setInspector}
           />
-          {selected === null ? (
-            <WorkingTreeDetailPanel repositoryPath={repository.path} />
+          {selected === null && selectedCommitId !== null ? (
+            <aside
+              className="detail-panel"
+              aria-label={t("workspace.commitDetails")}
+            >
+              {metadata.isError ? (
+                <div role="alert">
+                  <ErrorMessage
+                    error={metadata.error}
+                    lead={t("workspace.commitFailed")}
+                  />
+                  <button
+                    type="button"
+                    className="button"
+                    onClick={() => {
+                      void metadata.refetch();
+                    }}
+                  >
+                    {t("common:actions.retry")}
+                  </button>
+                </div>
+              ) : (
+                <p role="status" className="state">
+                  {t("workspace.commitLoading")}
+                </p>
+              )}
+            </aside>
+          ) : selected === null ? (
+            <WorkingTreeDetailPanel repositoryPath={project.path} />
           ) : (
             <CommitDetailPanel
-              repositoryPath={repository.path}
+              repositoryPath={project.path}
               commit={selected}
             />
           )}

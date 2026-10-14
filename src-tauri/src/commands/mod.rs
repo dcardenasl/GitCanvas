@@ -17,9 +17,17 @@ pub mod diff;
 
 pub mod github;
 
+pub mod lifecycle;
+
+pub mod menu;
+
+pub mod open_repos;
+
 pub mod repo_access;
 pub mod repository;
 
 pub mod runtime;
 
 pub mod watch;
+
+pub mod workspace;

@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 
 import type { CommitInfo } from "../../bindings";
 import { useCommitDiff } from "../../state/diff";
-import { selectedFileSource, useSession } from "../../state/session";
+import { selectedFileSource } from "../../state/navigation";
+import { useNavigation, useNavigationActions } from "../../state/workspace";
 import {
   ChangedFilesBrowser,
   type ChangedFilesGroup,
@@ -37,12 +38,12 @@ export function CommitDetailPanel({
   commit,
 }: CommitDetailPanelProps) {
   const { t } = useTranslation("history");
-  const selection = useSession((state) => state.selection);
+  const selection = useNavigation((navigation) => navigation.selection);
   const selectedFilePath =
     selection.kind === "commit" ? selection.filePath : null;
   const fileSource = selectedFileSource(selection);
-  const selectFile = useSession((state) => state.selectFile);
 
+  const { selectFile } = useNavigationActions();
   const diff = useCommitDiff(repositoryPath, commit.id);
   const changedGroups = useMemo<ChangedFilesGroup[]>(
     () =>

@@ -1,7 +1,8 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
-import { selectedFileSource, useSession } from "../../state/session";
+import { selectedFileSource } from "../../state/navigation";
+import { useNavigation, useNavigationActions } from "../../state/workspace";
 import { useWorktreeFiles, type LocalSide } from "../../state/worktree";
 import { DiffStat } from "../DiffStat/DiffStat";
 import { ErrorMessage } from "../ErrorMessage";
@@ -22,8 +23,9 @@ export function WorkingTreeDetailPanel({
   repositoryPath,
 }: WorkingTreeDetailPanelProps) {
   const { t } = useTranslation(["files", "common"]);
-  const selectFile = useSession((state) => state.selectFile);
-  const selection = useSession((state) => state.selection);
+
+  const { selectFile } = useNavigationActions();
+  const selection = useNavigation((navigation) => navigation.selection);
   const {
     snapshot: local,
     staged,

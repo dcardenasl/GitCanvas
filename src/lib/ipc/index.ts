@@ -2,14 +2,17 @@
 import { commands, events } from "../../bindings";
 import type {
   AppError,
+  SaveWorkspaceRequest,
   DiffRequest,
   CommitTreeRequest,
   FileContentRequest,
   HistoryRequest,
+  OpenRepositoriesRequest,
   WorktreeFileDiffRequest,
   WorktreeFileContentRequest,
   WorktreeSnapshotRequest,
   WatchRequest,
+  MenuLabels,
 } from "../../bindings";
 
 export type {
@@ -69,6 +72,9 @@ export const getStartupRepository = () =>
 /** Reads the next bounded history page from its original snapshot. */
 export const getCommits = (path: string, request: HistoryRequest) =>
   result(commands.getCommits(path, request));
+/** Reads immutable metadata for one full commit id without paging history. */
+export const getCommit = (path: string, commitId: string) =>
+  result(commands.getCommit(path, commitId));
 /** Lists local and remote branches. */
 export const getBranches = (path: string) => result(commands.getBranches(path));
 /** Lists lightweight and annotated tags. */
@@ -91,10 +97,8 @@ export const forgetGithubToken = () => result(commands.forgetGithubToken());
 export const listGithubRepositories = () =>
   result(commands.listGithubRepositories());
 /** Clones a repository into the application cache. */
-export const cloneGithubRepository = (
-  fullName: string,
-  activeRepositoryPath: string | null = null,
-) => result(commands.cloneGithubRepository(fullName, activeRepositoryPath));
+export const cloneGithubRepository = (fullName: string) =>
+  result(commands.cloneGithubRepository(fullName));
 /** Subscribes to clone progress. Returns the unsubscribe function. */
 export const onCloneProgress = events.cloneProgressEvent.listen;
 
@@ -130,6 +134,17 @@ export const getWorktreeFileContent = (
 export const getWorktreeFingerprint = (path: string) =>
   result(commands.getWorktreeFingerprint(path));
 
+/** Reads the bounds the workspace is held to; they do not depend on what is stored. */
+export const getWorkspaceLimits = () => result(commands.getWorkspaceLimits());
+
+/**
+ * Reports the complete set of open repositories, so the backend never evicts a
+ * cached clone a tab is using. A request no newer than the last one applied is
+ * ignored.
+ */
+export const syncOpenRepositories = (request: OpenRepositoriesRequest) =>
+  result(commands.syncOpenRepositories(request));
+
 /** Starts watching the open repository, replacing any previous watch. */
 export const watchRepository = (request: WatchRequest) =>
   result(commands.watchRepository(request));
@@ -139,3 +154,28 @@ export const unwatchRepository = (generation: number) =>
 
 /** Subscribes to repository changes. Returns the unsubscribe function. */
 export const onRepositoryChanged = events.repositoryChangedEvent.listen;
+
+/**
+ * Sets the macOS menu bar's text. Accepted and ignored on platforms with no
+ * menu bar to set.
+ */
+export const setMenuLabels = (labels: MenuLabels) =>
+  result(commands.setMenuLabels(labels));
+
+/** Subscribes to menu items chosen in the menu bar. Returns the unsubscribe function. */
+export const onMenuAction = events.menuActionEvent.listen;
+
+/** Reads the validated durable workspace, preserving damaged data for recovery. */
+export const loadWorkspace = () => result(commands.loadWorkspace());
+/** Replaces the durable workspace with a revision-ordered snapshot. */
+export const saveWorkspace = (request: SaveWorkspaceRequest) =>
+  result(commands.saveWorkspace(request));
+
+/** Restarts the native application after an explicit recovery request. */
+export const restartApplication = () => result(commands.restartApplication());
+
+/**
+ * Tells the backend a close request reached the interface, so it does not
+ * presume the interface hung and destroy the window before the session is saved.
+ */
+export const acknowledgeShutdown = () => result(commands.acknowledgeShutdown());

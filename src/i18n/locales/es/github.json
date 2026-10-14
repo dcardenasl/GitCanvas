@@ -1,4 +1,5 @@
 {
+  "back": "Volver",
   "connect": {
     "hint": "Pega un token de acceso personal con permiso <code>repo</code>. Se guarda en el llavero del sistema y nunca sale del backend.",
     "submit": "Conectar",

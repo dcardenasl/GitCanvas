@@ -1,11 +1,16 @@
 {
+  "drop": {
+    "hint": "Drop a folder to open it as a project"
+  },
   "empty": {
+    "clone": "Clone from GitHub",
     "hint": "Open a repository to see its branch and commit history."
   },
   "errorBoundary": {
     "message": "The application could not display this view. Restart GitCanvas to continue.",
     "restart": "Restart GitCanvas",
-    "title": "GitCanvas ran into a problem"
+    "title": "GitCanvas ran into a problem",
+    "waitingWrites": "Wait for the repository operation to finish before restarting."
   },
   "history": {
     "label": "History"
@@ -28,6 +33,31 @@
     "inspector": "Detail panel width",
     "sidebar": "Sidebar width"
   },
+  "startup": {
+    "failed": "GitCanvas could not start its workspace",
+    "loading": "Starting GitCanvas…"
+  },
+  "tabs": {
+    "all": "All open projects",
+    "close": "Close {{name}}",
+    "closeBusy": "{{name}} is still being written to",
+    "context": {
+      "close": "Close",
+      "closeAfter": "Close tabs to the right",
+      "closeOthers": "Close other tabs",
+      "copyPath": "Copy path"
+    },
+    "home": "Home",
+    "label": "Open projects",
+    "menu": {
+      "cloneGitHub": "Clone from GitHub…",
+      "openFolder": "Open folder…",
+      "reopen": "Reopen closed tab"
+    },
+    "new": "Open a project",
+    "unreachable": "Could not be opened",
+    "writing": "Writing to the repository"
+  },
   "theme": {
     "aria": "Application theme",
     "dark": "Dark",
@@ -39,9 +69,31 @@
   "toolbar": {
     "branches": "Branches",
     "branchesHint": "Show the branches while reading a file",
-    "github": "GitHub",
-    "noRepository": "No repository open",
+    "menuFailed": "Could not set the menu bar",
+    "openSyncFailed": "Could not tell the backend which repositories are open",
     "refresh": "Refresh",
-    "refreshHint": "Re-read the repository from disk"
+    "refreshHint": "Re-read the repository from disk",
+    "verifyFailed": "Could not check the project against its folder"
+  },
+  "workspace": {
+    "commitDetails": "Selected commit",
+    "commitFailed": "The selected commit could not be read",
+    "commitLoading": "Reading the selected commit…",
+    "dismiss": "Dismiss",
+    "favorite": "Add {{name}} to favorites",
+    "favoriteLimit": "At most {{max}} favorites can be saved. Remove one to add another.",
+    "favorites": "Favorites",
+    "favoritesEmpty": "No favorite projects yet. Add one with the star on its tab.",
+    "locate": "Locate folder…",
+    "pathCopyFailed": "Could not copy {{path}} to the clipboard.",
+    "recents": "Recent projects",
+    "recentsEmpty": "No recent projects yet.",
+    "recovered": "Saved workspace data could not be restored. The original has been preserved.",
+    "removeRecent": "Remove {{name}} from recents",
+    "saveFailed": "Your workspace could not be saved. Changes remain in memory.",
+    "tabLimit": "At most {{max}} projects can be open at once. Close one to open another.",
+    "unfavorite": "Remove {{name}} from favorites",
+    "unreachable": "This project could not be opened",
+    "verifying": "Checking the project…"
   }
 }

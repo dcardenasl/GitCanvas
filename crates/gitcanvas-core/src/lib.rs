@@ -31,4 +31,5 @@ pub mod refs;
 pub mod repository;
 pub mod retry;
 pub mod watch;
+pub mod workspace;
 pub mod worktree;

@@ -146,15 +146,16 @@ pub fn cache_entry_name(full_name: &str) -> Result<String, AppError> {
 /// # Errors
 ///
 /// Returns [`AppError`] when the name or URL is not a GitHub repository, the
-/// destination cannot be prepared, credentials are rejected, or libgit2 fails
-/// the transfer.
+/// destination cannot be prepared, credentials are rejected, libgit2 fails
+/// the transfer, or the replacement policy protects an existing cache entry.
 pub fn clone_repository(
     full_name: &str,
     cache_root: &Path,
     on_progress: impl FnMut(CloneProgress),
+    guard: &cache::RemoveGuard<'_>,
 ) -> Result<ClonedRepository, AppError> {
     let name = RepositoryName::parse(full_name)?;
-    clone_into_cache(&name.https_url(), &name, cache_root, on_progress)
+    clone_into_cache(&name.https_url(), &name, cache_root, on_progress, guard)
 }
 
 /// Whether the repository at `path` opens and its `origin` is `url`.
@@ -178,6 +179,7 @@ fn clone_into_cache(
     name: &RepositoryName,
     cache_root: &Path,
     mut on_progress: impl FnMut(CloneProgress),
+    guard: &cache::RemoveGuard<'_>,
 ) -> Result<ClonedRepository, AppError> {
     std::fs::create_dir_all(cache_root)?;
     let cache_root = cache_root.canonicalize()?;
@@ -198,9 +200,14 @@ fn clone_into_cache(
             let _recorded = cache::touch_locked(&destination);
             return Ok(cloned());
         }
-        // The cache is application-owned, so an unusable or foreign entry is
-        // safe to replace.
-        std::fs::remove_dir_all(&destination)?;
+        // A broken or foreign entry may still contain a tab's local work or
+        // the common object database of an external worktree.
+        let replaced = guard(&entry, &mut || {
+            std::fs::remove_dir_all(&destination).map_err(AppError::from)
+        })?;
+        if !replaced {
+            return Err(AppError::Conflict("an open project uses this cache entry; close or recover it before replacing the clone".into()));
+        }
     }
 
     // The entry lock guarantees no other clone for this repository is active,
@@ -376,7 +383,7 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let name = RepositoryName::parse("owner/repo").unwrap();
 
-        let first = clone_into_cache(&url, &name, root.path(), |_| {}).unwrap();
+        let first = clone_into_cache(&url, &name, root.path(), |_| {}, &cache::unguarded).unwrap();
         assert!(Path::new(&first.path).ends_with("owner__repo"));
         assert!(Repository::open(&first.path).is_ok());
         assert!(root.path().read_dir().unwrap().all(|entry| !entry
@@ -395,11 +402,28 @@ mod tests {
         // A marker proves the second call reuses the directory rather than
         // recloning over it.
         std::fs::write(Path::new(&first.path).join("marker"), b"kept").unwrap();
-        let second = clone_into_cache(&url, &name, root.path(), |_| {}).unwrap();
+        let second = clone_into_cache(&url, &name, root.path(), |_| {}, &cache::unguarded).unwrap();
         assert_eq!(first.path, second.path);
         assert!(Path::new(&second.path).join("marker").exists());
     }
 
+    #[test]
+    fn an_open_foreign_entry_is_never_replaced() {
+        let wanted = tempfile::tempdir().unwrap();
+        let other = tempfile::tempdir().unwrap();
+        let wanted_url = source_repository(wanted.path());
+        let other_url = source_repository(other.path());
+        let root = tempfile::tempdir().unwrap();
+        let name = RepositoryName::parse("owner/repo").unwrap();
+        let original =
+            clone_into_cache(&other_url, &name, root.path(), |_| {}, &cache::unguarded).unwrap();
+        let marker = Path::new(&original.path).join("local-work");
+        std::fs::write(&marker, b"preserved").unwrap();
+        let denied = clone_into_cache(&wanted_url, &name, root.path(), |_| {}, &|_, _| Ok(false));
+        assert!(matches!(denied, Err(AppError::Conflict(_))));
+        assert_eq!(std::fs::read(&marker).unwrap(), b"preserved");
+        assert!(origin_matches(Path::new(&original.path), &other_url));
+    }
     #[test]
     fn an_entry_cloned_from_elsewhere_is_replaced_not_served() {
         let wanted = tempfile::tempdir().unwrap();
@@ -409,8 +433,9 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let name = RepositoryName::parse("owner/repo").unwrap();
 
-        clone_into_cache(&other_url, &name, root.path(), |_| {}).unwrap();
-        let replaced = clone_into_cache(&wanted_url, &name, root.path(), |_| {}).unwrap();
+        clone_into_cache(&other_url, &name, root.path(), |_| {}, &cache::unguarded).unwrap();
+        let replaced =
+            clone_into_cache(&wanted_url, &name, root.path(), |_| {}, &cache::unguarded).unwrap();
 
         let origin = Repository::open(&replaced.path)
             .unwrap()
@@ -428,7 +453,13 @@ mod tests {
         let name = RepositoryName::parse("owner/repo").unwrap();
         let missing = root.path().join("does-not-exist");
 
-        let result = clone_into_cache(missing.to_str().unwrap(), &name, root.path(), |_| {});
+        let result = clone_into_cache(
+            missing.to_str().unwrap(),
+            &name,
+            root.path(),
+            |_| {},
+            &cache::unguarded,
+        );
 
         assert!(result.is_err());
         assert!(!root.path().join("owner__repo").exists());
@@ -462,11 +493,11 @@ mod tests {
             let name_ref = &name;
             let first = scope.spawn(move || {
                 first_start.wait();
-                clone_into_cache(url_ref, name_ref, &first_root, |_| {})
+                clone_into_cache(url_ref, name_ref, &first_root, |_| {}, &cache::unguarded)
             });
             let second = scope.spawn(move || {
                 second_start.wait();
-                clone_into_cache(url_ref, name_ref, &second_root, |_| {})
+                clone_into_cache(url_ref, name_ref, &second_root, |_| {}, &cache::unguarded)
             });
             let reader = scope.spawn(move || {
                 reader_start.wait();

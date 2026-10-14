@@ -18,6 +18,12 @@ horizontal graph scrolling for many lanes.
 - Light theme: background #f7f6f3; sidebar #f0efeb; toolbar #fbfaf8; controls white; borders #d9d6d0; text #25232c.
 - Orchid remains the brand accent (#c4a3ff dark, #6941a5 light); selected rows use a subtle violet tint in both themes.
 - Green and red remain reserved for added and removed code; graph lane hues stay stable and receive a subtle surface outline for separation.
+- Code colors: 13 semantic tokens (`--syntax-keyword`, `--syntax-string`, …), each defined
+  in both themes and checked at 4.5:1 or more over plain, added and deleted rows. Added and
+  deleted rows keep their green and red as a row surface and marker; the text itself uses
+  the ordinary ink so the code, not the change status, carries the color.
+- Brand artwork: the wordmark is white on the dark theme and near-black on the light one;
+  the mark is shared. Files are exported at up to 4× their drawn size.
 - Theme preference is window-level, persisted locally, defaults to dark, and can follow the operating system.
 - Sans: `ui-sans-serif`, `system-ui`, `-apple-system`, `Segoe UI`, sans-serif. Code and
   SHAs: `ui-monospace`, JetBrains Mono, SF Mono, Menlo, monospace.
@@ -33,6 +39,39 @@ Every label is translated and may grow by half in another language, so controls 
 to their text; new components use logical CSS properties so the layout can mirror for
 right-to-left languages. Window-level preferences (theme, language) live behind one
 toolbar button so the toolbar stays on one row at the 940px minimum.
+
+## Project navigation
+
+A compact tab row sits above the toolbar. Its first tab is Home, always present and never
+closable, draggable or starred; it shows the start screen without closing the project behind
+it, and Ctrl+Tab walks through it. The rest of the row is the open projects. The active tab uses the ordinary surface,
+favorites use the orchid star, and close, open and overflow controls retain the same
+focus and hover treatment. Long names truncate inside the tab, with the full path in
+the tooltip; duplicate names include their containing folder. Pointer dragging and
+keyboard reordering share the workspace actions. Tabs show only writing, unverified
+or inaccessible status, and the unverified mark stays quiet; inactive Git metadata is never
+presented as current. A context menu on a tab lists close, close others, close to the right
+and copy path; entries show their shortcut in a quiet `kbd` and group with separators. The
+open menu groups folder and GitHub actions apart from favorites, recents and reopening the
+last closed tab. While a folder is dragged over the window, a centered notice invites to
+drop it.
+
+Home exposes folder opening, GitHub, favorites and recent projects; the opening menu keeps
+only the actions. On the empty screen a 180px logo, one line of guidance and the two actions sit
+above a single centered column (at most 40rem) shared by both lists; the toolbar keeps only
+the mark so the name is not repeated. Each list is one bordered group of plain rows, a name
+over a one-line monospace path (truncated, full path in the tooltip), with an icon-only remove
+button on recents and the favorite star always in the last slot. No cards or modal. Recovery replaces the inaccessible repository
+view with Retry, Locate and Close. Storage errors occupy a wrapping banner above the
+workspace and retain their original diagnostic. All new styles use logical properties
+and are checked in both themes at the 940×600 window minimum.
+
+## File previews
+
+Long lines wrap by default, and the toggle shows its pressed state with the accent. Code is
+colored only for the registered languages and within the size budgets; everything else is
+plain text and equally complete. See [ADR 0005](docs/adr/0005-syntax-highlighting.md) for
+how to register a language.
 
 ## Platform behavior
 

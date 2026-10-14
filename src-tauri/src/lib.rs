@@ -16,7 +16,13 @@
 //! depend on Tauri.
 
 mod commands;
+mod data_dir;
+mod lifecycle;
 mod logging;
+// The menu bar is installed on macOS only, but what it contains is built and
+// checked on every platform, so elsewhere that code is exercised by tests alone.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+mod menu;
 mod resources;
 mod warmup;
 
@@ -51,8 +57,12 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
     tauri_specta::Builder::<R>::new()
         .commands(collect_commands![
             commands::repository::open_repository,
+            commands::open_repos::sync_open_repositories,
             commands::repository::get_startup_repository,
+            commands::lifecycle::restart_application,
+            commands::lifecycle::acknowledge_shutdown,
             commands::repository::get_commits,
+            commands::repository::get_commit,
             commands::repository::get_branches,
             commands::repository::get_tags,
             commands::diff::get_commit_diff,
@@ -71,10 +81,15 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::actions::pull_fast_forward,
             commands::actions::push_current_branch,
             commands::watch::watch_repository,
+            commands::menu::set_menu_labels,
             commands::watch::unwatch_repository,
+            commands::workspace::get_workspace_limits,
+            commands::workspace::load_workspace,
+            commands::workspace::save_workspace,
         ])
         .events(collect_events![
             commands::github::CloneProgressEvent,
+            commands::menu::MenuActionEvent,
             commands::watch::RepositoryChangedEvent
         ])
 }
@@ -86,7 +101,45 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
 /// expansion duplicates the embedded Info.plist symbol — so both the running
 /// application and the tests come through here.
 fn app_context<R: tauri::Runtime>() -> tauri::Context<R> {
-    tauri::generate_context!()
+    let context = tauri::generate_context!();
+    #[cfg(feature = "e2e")]
+    let context = {
+        let mut context: tauri::Context<R> = context;
+        // The Rust data override does not isolate the system webview's own
+        // localStorage. E2E windows must never read or change user preferences.
+        for window in &mut context.config_mut().app.windows {
+            window.incognito = true;
+        }
+        context
+    };
+    context
+}
+
+/// Replaces the menu bar with one in the given language, on the main thread
+/// where the system requires menus to be built.
+#[cfg(target_os = "macos")]
+fn install_menu(
+    handle: &tauri::AppHandle,
+    labels: &commands::menu::MenuLabels,
+) -> Result<(), gitcanvas_core::error::AppError> {
+    use gitcanvas_core::error::AppError;
+    let internal = |error: &dyn std::fmt::Display| AppError::Internal(error.to_string());
+
+    let (sender, receiver) = std::sync::mpsc::channel();
+    let (main_handle, labels) = (handle.clone(), labels.clone());
+    handle
+        .run_on_main_thread(move || {
+            let name = main_handle.package_info().name.clone();
+            let installed = menu::to_native(&main_handle, &menu::full_spec(&name, &labels))
+                .and_then(|menu| main_handle.set_menu(menu).map(|_previous| ()));
+            // The caller may have given up waiting; nothing is left to tell.
+            let _ = sender.send(installed);
+        })
+        .map_err(|error| internal(&error))?;
+    receiver
+        .recv_timeout(std::time::Duration::from_secs(5))
+        .map_err(|error| internal(&error))?
+        .map_err(|error| internal(&error))
 }
 
 /// Writes a startup diagnostic before the file logger has been initialized.
@@ -145,10 +198,16 @@ pub fn run() {
             gitcanvas_core::history::HistoryReader::default(),
         ))
         .manage(commands::repo_access::AllowedRepos::default())
+        .manage(commands::open_repos::OpenRepos::default())
+        .manage(std::sync::Arc::new(lifecycle::ShutdownGate::default()))
+        .on_window_event(lifecycle::on_window_event)
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             use tauri::Manager;
-            let data_dir = app.path().app_data_dir()?;
+            let data_dir = data_dir::resolve(
+                std::env::var_os(data_dir::DATA_DIR_ENV),
+                app.path().app_data_dir()?,
+            )?;
             let guard = logging::initialize(&data_dir.join("logs"))?;
             app.manage(guard);
 
@@ -156,7 +215,14 @@ pub fn run() {
             // commands themselves stay free of `AppHandle`, which is what lets
             // the typed builder collect them without a runtime parameter.
             app.manage(commands::github::CacheRoot(data_dir.join("clones")));
+            app.manage(std::sync::Arc::new(
+                gitcanvas_core::workspace::store::WorkspaceStore::new(data_dir),
+            ));
 
+            let restart_handle = app.handle().clone();
+            app.manage(commands::lifecycle::RestartApplication(
+                std::sync::Arc::new(move || restart_handle.restart()),
+            ));
             let handle = app.handle().clone();
             app.manage(commands::watch::ActiveWatch::default());
 
@@ -176,6 +242,28 @@ pub fn run() {
                     let _ = event.emit(&handle);
                 },
             )));
+
+            // The menu bar exists only on macOS. Elsewhere the applier accepts
+            // the labels and does nothing, so the interface asks the same way
+            // on every platform.
+            #[cfg(target_os = "macos")]
+            {
+                use tauri_specta::Event as _;
+                let name = app.package_info().name.clone();
+                app.set_menu(menu::to_native(app, &menu::initial_spec(&name))?)?;
+                let applier_handle = app.handle().clone();
+                app.manage(commands::menu::MenuApplier(std::sync::Arc::new(
+                    move |labels| install_menu(&applier_handle, &labels),
+                )));
+                app.on_menu_event(|app, event| {
+                    if let Some(action) = menu::action_for(event.id().as_ref()) {
+                        let _ = commands::menu::MenuActionEvent { action }.emit(app);
+                    }
+                });
+            }
+            #[cfg(not(target_os = "macos"))]
+            app.manage(commands::menu::MenuApplier(std::sync::Arc::new(|_| Ok(()))));
+
             tracing::info!(version = env!("CARGO_PKG_VERSION"), "GitCanvas started");
 
             // Paid here, on the main thread, while nobody is waiting for it.
@@ -183,7 +271,10 @@ pub fn run() {
             builder.mount_events(app);
             Ok(())
         })
-        .run(app_context())
+        .build(app_context())
+        .map(|app| {
+            app.run(lifecycle::on_run_event);
+        })
     {
         report_early_startup_error(&format!("fatal: could not start GitCanvas: {error}"));
         std::process::exit(1);
@@ -193,6 +284,19 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::specta_builder;
+
+    #[cfg(feature = "e2e")]
+    #[test]
+    fn e2e_windows_never_share_user_webview_storage() {
+        let context = super::app_context::<tauri::test::MockRuntime>();
+        assert!(!context.config().app.windows.is_empty());
+        assert!(context
+            .config()
+            .app
+            .windows
+            .iter()
+            .all(|window| window.incognito));
+    }
 
     /// Keep the shipped window on the smallest permission set the app uses.
     ///
@@ -214,9 +318,13 @@ mod tests {
                     .expect("capability permissions must be strings")
             })
             .collect::<std::collections::BTreeSet<_>>();
-        let expected = ["core:event:default", "dialog:allow-open"]
-            .into_iter()
-            .collect::<std::collections::BTreeSet<_>>();
+        let expected = [
+            "core:event:default",
+            "dialog:allow-open",
+            "core:window:allow-destroy",
+        ]
+        .into_iter()
+        .collect::<std::collections::BTreeSet<_>>();
 
         assert_eq!(permissions, expected);
     }

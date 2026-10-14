@@ -10,7 +10,7 @@ import type {
 import { errorKind } from "../../lib/errors";
 import { getFileContent, getWorktreeFileContent } from "../../lib/ipc";
 import { useCommitDiff } from "../../state/diff";
-import { useSession } from "../../state/session";
+import { useNavigation, useNavigationActions } from "../../state/workspace";
 import { useWorktreeFileDiff, useWorktreeSnapshot } from "../../state/worktree";
 import { queryKeys } from "../../state/queryKeys";
 import { shortId } from "../CommitTable/format";
@@ -44,10 +44,10 @@ type Mode = "diff" | "file";
 export function FileDiffView(props: FileDiffViewProps) {
   const { t } = useTranslation(["files", "common"]);
   const { repositoryPath, path } = props;
-  const selectFile = useSession((state) => state.selectFile);
-  const expandPath = useSession((state) => state.expandedFilePath);
-  const expandFile = useSession((state) => state.expandFile);
-  const [wrap, setWrap] = useState(false);
+
+  const { selectFile, expandFile } = useNavigationActions();
+  const expandPath = useNavigation((navigation) => navigation.expandedFilePath);
+  const [wrap, setWrap] = useState(true);
   const [choice, setChoice] = useState<{
     key: string;
     mode: Mode;
@@ -236,7 +236,7 @@ export function FileDiffView(props: FileDiffViewProps) {
 
           <button
             type="button"
-            className="file-diff__toggle"
+            className="button file-diff__toggle"
             aria-pressed={wrap}
             title={t("diff.wrapHint")}
             onClick={() => {
@@ -334,7 +334,11 @@ export function FileDiffView(props: FileDiffViewProps) {
               <p className="state file-diff__state">{t("diff.emptyFile")}</p>
             )}
             {wholeLines.length > 0 && (
-              <LineTable lines={wholeLines} wrap={wrap} />
+              <LineTable
+                lines={wholeLines}
+                wrap={wrap}
+                highlight={{ path, mode: "source" }}
+              />
             )}
           </>
         )}

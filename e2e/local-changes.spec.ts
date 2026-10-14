@@ -17,6 +17,10 @@ describe("local changes", () => {
 
     fs.writeFileSync(path.join(e2eRepository, "a.txt"), "one\ntwo\nthree\n");
     fs.writeFileSync(path.join(e2eRepository, "untracked.txt"), "new\n");
+    fs.writeFileSync(
+      path.join(e2eRepository, "highlight.ts"),
+      "export const answer: number = 42;\n",
+    );
     fs.writeFileSync(path.join(e2eRepository, "staged.txt"), "before\n");
     git("add", "staged.txt");
   });
@@ -40,6 +44,25 @@ describe("local changes", () => {
       .getText();
     expect(localText).toContain("staged.txt");
     expect(localText).toContain("untracked.txt");
+  });
+
+  it("colors the code of a supported file from the highlighting worker", async () => {
+    await (
+      await browser.$(
+        '//*[@aria-label="Sin preparar"]//button[contains(., "highlight.ts")]',
+      )
+    ).click();
+
+    // Tokens exist only if the bundled worker started and answered under the
+    // production CSP; a worker that fails to load leaves the file as plain text.
+    await browser.waitUntil(
+      async () =>
+        (await browser.$$(".file-diff .syntax-token--keyword").length) > 0,
+      {
+        timeout: 20_000,
+        timeoutMsg: "the highlighting worker never colored the file",
+      },
+    );
   });
 
   it("reports when a staged file disappears from local changes", async () => {

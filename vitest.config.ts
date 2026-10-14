@@ -25,6 +25,13 @@ export default defineConfig({
         "src/main.tsx",
         "src/App.tsx",
         "src/**/*.{test,spec}.{ts,tsx}",
+        // Wiring that needs a real Worker, which no test environment has: the
+        // worker entry only forwards to `answerHighlightRequest`, and the
+        // spawner only constructs it. The protocol and the client carry the
+        // logic and are tested with a fake worker.
+        "src/**/*.worker.ts",
+        "src/components/DiffViewer/spawnHighlightWorker.ts",
+        "src/components/DiffViewer/highlighter.ts",
       ],
       reporter: ["text-summary", "lcov"],
       thresholds: {

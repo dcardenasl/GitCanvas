@@ -1,0 +1,209 @@
+.tab-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  padding-block-start: 6px;
+  padding-inline: 8px;
+  border-block-end: 1px solid var(--border);
+  background: var(--surface-sidebar);
+}
+
+/* The tabs scroll sideways instead of squeezing or wrapping; the list menu
+   next to them reaches every one regardless of how many fit. */
+.tab-bar__tabs {
+  display: flex;
+  min-inline-size: 0;
+  flex: 1 1 auto;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab-bar__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-bar__tab {
+  display: flex;
+  min-inline-size: 0;
+  flex: 0 1 180px;
+  align-items: center;
+  border: 1px solid transparent;
+  border-block-end: 0;
+  border-start-start-radius: var(--radius-lg);
+  border-start-end-radius: var(--radius-lg);
+  color: var(--ink-muted);
+}
+
+/* Home is the fixed first tab: only as wide as its icon and name. */
+.tab-bar__tab--home {
+  flex: 0 0 auto;
+  padding-inline-end: 6px;
+}
+
+.tab-bar__home-icon {
+  flex: 0 0 auto;
+  inline-size: 14px;
+  block-size: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tab-bar__tab:hover {
+  background: var(--surface-hover);
+}
+
+.tab-bar__tab--active {
+  border-color: var(--border);
+  margin-block-end: -1px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.tab-bar__select {
+  display: flex;
+  min-inline-size: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 4px 6px 10px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--font-size-ui);
+  cursor: default;
+}
+
+.tab-bar__select:focus-visible,
+.tab-bar__close:focus-visible,
+.tab-bar__control:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.tab-bar__name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-bar__status {
+  flex: 0 0 auto;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+}
+
+.tab-bar__status--writing {
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  animation: tab-bar-spin 0.8s linear infinite;
+}
+
+.tab-bar__status--unreachable {
+  background: var(--danger-strong);
+}
+
+@keyframes tab-bar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-bar__status--writing {
+    animation: none;
+    border-top-color: var(--accent);
+  }
+}
+
+.tab-bar__close,
+.tab-bar__control {
+  position: relative;
+  flex: 0 0 auto;
+  inline-size: 24px;
+  block-size: 24px;
+  margin-inline: 2px;
+  border: 0;
+  border-radius: var(--radius-tight);
+  background: none;
+  color: var(--ink-muted);
+  cursor: default;
+}
+
+.tab-bar__control {
+  align-self: center;
+  margin-block-end: 4px;
+}
+
+.tab-bar__close:hover:not(:disabled),
+.tab-bar__control:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.tab-bar__close:disabled,
+.tab-bar__control:disabled {
+  opacity: 0.4;
+}
+
+/* The glyphs are drawn, not typed, so they need no translation and cannot be
+   read aloud as stray characters; the accessible names carry the meaning. */
+.tab-bar__close::before,
+.tab-bar__close::after {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: 10px;
+  block-size: 1.5px;
+  background: currentcolor;
+  content: "";
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.tab-bar__close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.tab-bar__new::before,
+.tab-bar__new::after {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: 12px;
+  block-size: 1.5px;
+  background: currentcolor;
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.tab-bar__new::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.tab-bar__all::before {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: 6px;
+  block-size: 6px;
+  border-block-end: 1.5px solid currentcolor;
+  border-inline-end: 1.5px solid currentcolor;
+  content: "";
+  transform: translate(-50%, -70%) rotate(45deg);
+}
+
+.tab-bar__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-2);
+  color: var(--danger);
+  font-size: var(--font-size-ui);
+}

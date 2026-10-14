@@ -12,14 +12,33 @@ import type {
 import { renderWithQueryClient } from "../../test/test-utils";
 
 const getCommits = vi.fn<() => Promise<HistoryPage>>();
+const getCommit = vi.fn<() => Promise<CommitInfo>>();
 const getCommitDiff = vi.fn<() => Promise<CommitDiff>>();
 const getBranches = vi.fn<() => Promise<BranchInfo[]>>();
 const getStartupRepository =
   vi.fn<() => Promise<{ path: string; name: string } | null>>();
 const watchRepository = vi.fn<(request: unknown) => Promise<null>>();
+const syncOpenRepositories = vi.fn<(request: unknown) => Promise<null>>();
+const openRepository =
+  vi.fn<(path: string) => Promise<{ path: string; name: string }>>();
+
+type DragDrop =
+  | { type: "enter" | "over"; paths: string[] }
+  | { type: "drop"; paths: string[] }
+  | { type: "leave" };
+let dragDrop: (event: { payload: DragDrop }) => void = () => undefined;
+vi.mock("@tauri-apps/api/webview", () => ({
+  getCurrentWebview: () => ({
+    onDragDropEvent: (handler: typeof dragDrop) => {
+      dragDrop = handler;
+      return Promise.resolve(() => undefined);
+    },
+  }),
+}));
 
 vi.mock("../../lib/ipc", () => ({
   getCommits: () => getCommits(),
+  getCommit: () => getCommit(),
   getCommitDiff: () => getCommitDiff(),
   getWorktreeSnapshot: () =>
     Promise.resolve({
@@ -52,7 +71,10 @@ vi.mock("../../lib/ipc", () => ({
   storeGithubToken: () => Promise.resolve(null),
   forgetGithubToken: () => Promise.resolve(null),
   cloneGithubRepository: () => Promise.resolve(null),
-  openRepository: () => Promise.resolve(null),
+  syncOpenRepositories: (request: unknown) => syncOpenRepositories(request),
+  setMenuLabels: () => Promise.resolve(null),
+  onMenuAction: () => Promise.resolve(() => undefined),
+  openRepository: (path: string) => openRepository(path),
   listGithubRepositories: () =>
     Promise.resolve({ repositories: [], truncated: false }),
   onCloneProgress: () => Promise.resolve(() => undefined),
@@ -67,7 +89,15 @@ vi.mock("../../lib/ipc", () => ({
 }));
 
 const { AppShell } = await import("./AppShell");
-const { useSession } = await import("../../state/session");
+const { useWorkspace } = await import("../../state/workspace");
+const {
+  resetWorkspace,
+  openTestProject,
+  patchNavigation,
+  activeNavigation,
+  activeRepository,
+  navigationActions,
+} = await import("../../test/workspace");
 
 const COMMIT: CommitInfo = {
   id: "a".repeat(40),
@@ -117,6 +147,7 @@ function expectGridOrder(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getCommit.mockResolvedValue(COMMIT);
   getCommits.mockResolvedValue({
     commits: [COMMIT],
     next_cursor: null,
@@ -126,6 +157,10 @@ beforeEach(() => {
   getBranches.mockResolvedValue([]);
   getStartupRepository.mockResolvedValue(null);
   watchRepository.mockResolvedValue(null);
+  syncOpenRepositories.mockResolvedValue(null);
+  openRepository.mockImplementation((path) =>
+    Promise.resolve({ path, name: "repo" }),
+  );
   getCommitDiff.mockResolvedValue({
     commit_id: COMMIT.id,
     parent_id: null,
@@ -144,8 +179,9 @@ beforeEach(() => {
     deletions: 0,
     is_merge: false,
   });
-  useSession.setState({
-    repository: { path: "/tmp/repo", name: "repo" },
+  resetWorkspace();
+  openTestProject({ path: "/tmp/repo", name: "repo" });
+  patchNavigation({
     selection: { kind: "history" },
     expandedFilePath: null,
     revealCommitId: null,
@@ -161,7 +197,7 @@ describe("AppShell layout", () => {
   });
 
   it("keeps them matched with a commit selected", async () => {
-    useSession.setState({
+    patchNavigation({
       selection: { kind: "commit", commitId: COMMIT.id, filePath: null },
     });
     renderShell();
@@ -170,7 +206,7 @@ describe("AppShell layout", () => {
   });
 
   it("keeps them matched while a file is open and the sidebar is collapsed", async () => {
-    useSession.setState({
+    patchNavigation({
       selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },
     });
     renderShell();
@@ -186,7 +222,7 @@ describe("AppShell layout", () => {
   });
 
   it("collapses the sidebar to zero width rather than unmounting it", async () => {
-    useSession.setState({
+    patchNavigation({
       selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },
     });
     renderShell();
@@ -238,24 +274,45 @@ describe("AppShell push confirmation", () => {
 
 describe("AppShell toolbar", () => {
   it("shows the empty state until a repository is open", async () => {
-    useSession.setState({ repository: null });
+    resetWorkspace();
     renderShell();
 
     expect(
       await screen.findByText(/Abre un repositorio para ver su historial/),
     ).toBeInstanceOf(HTMLElement);
-    expect(screen.getByText("Ningún repositorio abierto")).toBeInstanceOf(
-      HTMLElement,
-    );
+    expect(
+      screen.getByText(
+        "Abre un repositorio para ver su historial de ramas y commits.",
+      ),
+    ).toBeInstanceOf(HTMLElement);
+  });
+
+  it("shows the start screen from the Home tab without closing the project, and returns to it", async () => {
+    renderShell();
+    await screen.findByRole("button", { name: "Actualizar" });
+
+    await userEvent.click(screen.getByRole("tab", { name: "Inicio" }));
+
+    expect(
+      await screen.findByText(/Abre un repositorio para ver su historial/),
+    ).toBeInstanceOf(HTMLElement);
+    // Nothing that belongs to the project shows while Home does.
+    expect(screen.queryByRole("button", { name: "Actualizar" })).toBeNull();
+    expect(useWorkspace.getState().tabs).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole("tab", { name: /^repo/ }));
+    expect(
+      await screen.findByRole("button", { name: "Actualizar" }),
+    ).toBeInstanceOf(HTMLElement);
   });
 
   it("opens the repository named on the command line", async () => {
-    useSession.setState({ repository: null });
+    resetWorkspace();
     getStartupRepository.mockResolvedValue({ path: "/tmp/cli", name: "cli" });
     renderShell();
 
     await waitFor(() => {
-      expect(useSession.getState().repository).toEqual({
+      expect(activeRepository()).toEqual({
         path: "/tmp/cli",
         name: "cli",
       });
@@ -266,7 +323,7 @@ describe("AppShell toolbar", () => {
     let finishStartup: (
       repository: { path: string; name: string } | null,
     ) => void = () => undefined;
-    useSession.setState({ repository: null });
+    resetWorkspace();
     getStartupRepository.mockReturnValue(
       new Promise((resolve) => {
         finishStartup = resolve;
@@ -274,39 +331,74 @@ describe("AppShell toolbar", () => {
     );
     renderShell();
 
-    useSession
-      .getState()
-      .openRepository({ path: "/tmp/manual", name: "manual" });
+    openTestProject({ path: "/tmp/manual", name: "manual" });
     await act(async () => {
       finishStartup({ path: "/tmp/cli", name: "cli" });
       await Promise.resolve();
     });
 
     await waitFor(() => {
-      expect(useSession.getState().repository).toEqual({
+      expect(activeRepository()).toEqual({
         path: "/tmp/manual",
         name: "manual",
       });
     });
   });
 
-  it("clears an orphaned reveal selection after history is exhausted", async () => {
-    useSession.getState().revealCommit("missing-commit");
+  it("opens the command-line repository next to the tabs already open", async () => {
+    getStartupRepository.mockResolvedValue({ path: "/tmp/cli", name: "cli" });
     renderShell();
 
     await waitFor(() => {
-      expect(useSession.getState().revealCommitId).toBeNull();
+      expect(activeRepository()).toEqual({ path: "/tmp/cli", name: "cli" });
     });
-    expect(useSession.getState().selection).toEqual({ kind: "history" });
+    expect(
+      useWorkspace.getState().tabs.map((tab) => tab.repository.path),
+    ).toEqual(["/tmp/repo", "/tmp/cli"]);
+  });
+
+  it("does not let a tab's own navigation count as the person opening a project", async () => {
+    let finishStartup: (value: { path: string; name: string }) => void = () =>
+      undefined;
+    getStartupRepository.mockReturnValue(
+      new Promise((resolve) => {
+        finishStartup = resolve;
+      }),
+    );
+    renderShell();
+
+    act(() => {
+      navigationActions().selectCommit("a".repeat(40));
+    });
+    await act(async () => {
+      finishStartup({ path: "/tmp/cli", name: "cli" });
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(activeRepository()).toEqual({ path: "/tmp/cli", name: "cli" });
+    });
+  });
+
+  it("clears an orphaned reveal selection after history is exhausted", async () => {
+    navigationActions().revealCommit("missing-commit");
+    renderShell();
+
+    await waitFor(() => {
+      expect(activeNavigation().revealCommitId).toBeNull();
+    });
+    expect(activeNavigation().selection).toEqual({ kind: "history" });
   });
 
   it("still opens when the command-line lookup fails", async () => {
-    useSession.setState({ repository: null });
+    resetWorkspace();
     getStartupRepository.mockRejectedValue(new Error("no argv"));
     renderShell();
 
     expect(
-      await screen.findByText("Ningún repositorio abierto"),
+      await screen.findByText(
+        "Abre un repositorio para ver su historial de ramas y commits.",
+      ),
     ).toBeInstanceOf(HTMLElement);
   });
 
@@ -332,20 +424,55 @@ describe("AppShell toolbar", () => {
     });
   });
 
-  it("swaps the history for the GitHub picker and back", async () => {
+  it("swaps the history for the GitHub picker from the open menu, and back", async () => {
     renderShell();
-    const toggle = await screen.findByRole("button", { name: "GitHub" });
 
-    await userEvent.click(toggle);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Abrir un proyecto" }),
+    );
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: "Clonar de GitHub…" }),
+    );
     expect(await screen.findByText("Conectar con GitHub")).toBeInstanceOf(
       HTMLElement,
     );
-    expect(toggle.getAttribute("aria-pressed")).toBe("true");
 
-    await userEvent.click(toggle);
+    await userEvent.click(screen.getByRole("button", { name: "Volver" }));
     await waitFor(() => {
       expect(screen.queryByText("Conectar con GitHub")).toBeNull();
     });
+    expect(useWorkspace.getState().githubOpen).toBe(false);
+  });
+
+  it("offers Open and Clone on the start screen when no project is open", async () => {
+    resetWorkspace();
+    renderShell();
+
+    expect(
+      await screen.findByRole("button", { name: "Abrir repositorio" }),
+    ).toBeInstanceOf(HTMLElement);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Clonar de GitHub" }),
+    );
+    expect(await screen.findByText("Conectar con GitHub")).toBeInstanceOf(
+      HTMLElement,
+    );
+  });
+
+  it("keeps the open buttons out of the toolbar and shows only Home in the tab bar without a project", async () => {
+    resetWorkspace();
+    const { container } = renderShell();
+    await screen.findByText(
+      "Abre un repositorio para ver su historial de ramas y commits.",
+    );
+
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Inicio",
+    ]);
+    expect(container.querySelector(".toolbar .repository-picker")).toBeNull();
+    expect(
+      container.querySelector(".toolbar")?.textContent ?? "",
+    ).not.toContain("GitHub");
   });
 
   it("says when the watcher is degraded and retries on request", async () => {
@@ -367,8 +494,159 @@ describe("AppShell toolbar", () => {
     });
   });
 
+  it("tells the backend which repository is open", async () => {
+    openTestProject({ path: "/tmp/repo", name: "repo" });
+    renderShell();
+
+    await waitFor(() => {
+      expect(syncOpenRepositories).toHaveBeenCalledWith(
+        expect.objectContaining({ paths: ["/tmp/repo"] }),
+      );
+    });
+  });
+
+  it("says when the open repository could not be reported and retries on request", async () => {
+    openTestProject({ path: "/tmp/repo", name: "repo" });
+    syncOpenRepositories.mockRejectedValueOnce(new Error("registry poisoned"));
+    renderShell();
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("registry poisoned");
+    await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/registry poisoned/)).toBeNull();
+    });
+    expect(syncOpenRepositories).toHaveBeenCalledTimes(2);
+  });
+
+  it("tells the person the tab limit was reached and lets them dismiss it", async () => {
+    openTestProject();
+    renderShell();
+    act(() => {
+      useWorkspace.setState({ notice: { code: "tabLimit", max: 30 } });
+    });
+
+    expect(await screen.findByText(/como máximo 30 proyectos/)).toBeInstanceOf(
+      HTMLElement,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Descartar" }));
+
+    expect(screen.queryByText(/como máximo 30 proyectos/)).toBeNull();
+    expect(useWorkspace.getState().notice).toBeNull();
+  });
+
+  it("gives each project back the search it was left with", async () => {
+    renderShell();
+    const search = () =>
+      screen.getByRole<HTMLInputElement>("searchbox", {
+        name: "Buscar en el historial cargado",
+      });
+    await userEvent.type(search(), "feat");
+    expect(search().value).toBe("feat");
+
+    act(() => {
+      openTestProject({ path: "/tmp/other", name: "other" });
+    });
+    expect(search().value).toBe("");
+
+    act(() => {
+      useWorkspace.getState().activate("/tmp/repo");
+    });
+    expect(search().value).toBe("feat");
+  });
+
+  it("tells the person when a project's path could not be copied", async () => {
+    openTestProject();
+    renderShell();
+    act(() => {
+      useWorkspace
+        .getState()
+        .notify({ code: "pathCopyFailed", path: "/tmp/repo" });
+    });
+
+    expect(
+      await screen.findByText(/No se pudo copiar \/tmp\/repo al portapapeles/),
+    ).toBeInstanceOf(HTMLElement);
+  });
+
+  describe("dropping folders on the window", () => {
+    it("says where a dragged folder would land, and stops when it leaves", async () => {
+      renderShell();
+      await screen.findByRole("tablist");
+
+      act(() => {
+        dragDrop({ payload: { type: "enter", paths: ["/tmp/other"] } });
+      });
+      expect(
+        await screen.findByText(
+          "Suelta una carpeta para abrirla como proyecto",
+        ),
+      ).toBeInstanceOf(HTMLElement);
+
+      act(() => {
+        dragDrop({ payload: { type: "leave" } });
+      });
+      expect(
+        screen.queryByText("Suelta una carpeta para abrirla como proyecto"),
+      ).toBeNull();
+    });
+
+    it("opens each dropped folder as a project, through the backend", async () => {
+      renderShell();
+      await screen.findByRole("tablist");
+
+      act(() => {
+        dragDrop({
+          payload: { type: "drop", paths: ["/tmp/one", "/tmp/two"] },
+        });
+      });
+
+      await waitFor(() => {
+        expect(
+          useWorkspace.getState().tabs.map((tab) => tab.repository.path),
+        ).toEqual(["/tmp/repo", "/tmp/one", "/tmp/two"]);
+      });
+      expect(activeRepository()?.path).toBe("/tmp/two");
+      expect(
+        screen.queryByText("Suelta una carpeta para abrirla como proyecto"),
+      ).toBeNull();
+    });
+
+    it("works from the start screen too", async () => {
+      resetWorkspace();
+      renderShell();
+      await screen.findByText(
+        "Abre un repositorio para ver su historial de ramas y commits.",
+      );
+
+      act(() => {
+        dragDrop({ payload: { type: "drop", paths: ["/tmp/one"] } });
+      });
+
+      await waitFor(() => {
+        expect(activeRepository()?.path).toBe("/tmp/one");
+      });
+    });
+
+    it("reports a dropped path the backend refuses, without opening it", async () => {
+      renderShell();
+      await screen.findByRole("tablist");
+      openRepository.mockRejectedValueOnce(new Error("not a repository"));
+
+      act(() => {
+        dragDrop({ payload: { type: "drop", paths: ["/tmp/plain.txt"] } });
+      });
+
+      expect((await screen.findByRole("alert")).textContent).toContain(
+        "not a repository",
+      );
+      expect(useWorkspace.getState().tabs).toHaveLength(1);
+    });
+  });
+
   it("offers to pin the branch list while a file is open", async () => {
-    useSession.setState({
+    patchNavigation({
       selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },
     });
     renderShell();
@@ -385,4 +663,44 @@ describe("AppShell toolbar", () => {
     expect(pin.getAttribute("aria-pressed")).toBe("true");
     expect(sidebar.hasAttribute("hidden")).toBe(false);
   });
+});
+
+it("restores a selected commit outside loaded history without fetching another page", async () => {
+  const remembered = {
+    ...COMMIT,
+    id: "b".repeat(40),
+    summary: "remembered outside page",
+  };
+  getCommit.mockResolvedValue(remembered);
+  patchNavigation({
+    selection: { kind: "commit", commitId: remembered.id, filePath: null },
+  });
+  renderShell();
+  const panel = await screen.findByRole("complementary", {
+    name: "Detalle del commit",
+  });
+  expect(within(panel).getByText("remembered outside page")).toBeInstanceOf(
+    HTMLElement,
+  );
+  expect(getCommit).toHaveBeenCalledTimes(1);
+  expect(getCommits).toHaveBeenCalledTimes(1);
+});
+
+it("does not let a late startup argument replace a tab the person activated", async () => {
+  let finish: ((value: { path: string; name: string }) => void) | undefined;
+  getStartupRepository.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  openTestProject({ path: "/tmp/other", name: "other" });
+  renderShell();
+  await userEvent.click(screen.getByRole("tab", { name: "repo" }));
+  await act(async () => {
+    finish?.({ path: "/tmp/cli", name: "cli" });
+    await Promise.resolve();
+  });
+  expect(activeRepository()?.path).toBe("/tmp/repo");
+  expect(useWorkspace.getState().tabs).toHaveLength(2);
 });

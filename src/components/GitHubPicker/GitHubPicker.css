@@ -6,6 +6,10 @@
   padding: var(--space-9);
 }
 
+.github-picker__back {
+  align-self: flex-start;
+}
+
 .github-picker__header {
   display: flex;
   gap: var(--space-5);

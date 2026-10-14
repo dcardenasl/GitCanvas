@@ -185,6 +185,16 @@ pub fn get_commits(active: &ActiveRepo, request: &HistoryRequest) -> Result<Hist
     read_page(active, request, None)
 }
 
+/// Reads one immutable commit's metadata without walking or paging history.
+///
+/// # Errors
+/// Returns an error when the repository, full commit id or commit object is unavailable.
+pub fn get_commit(active: &ActiveRepo, commit_id: &str) -> Result<CommitInfo, AppError> {
+    let repo = active.open()?;
+    let commit = repo.find_commit(parse_commit_id(commit_id)?)?;
+    Ok(commit_info(&commit))
+}
+
 fn read_page(
     active: &ActiveRepo,
     request: &HistoryRequest,

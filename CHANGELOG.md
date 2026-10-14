@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-14
+
+### Added
+
+- **Home tab** — the first tab is always Home: the start screen with open, clone, favorites
+  and recent projects. Go back to it at any time without closing the project you were in.
+- **Project tabs** — keep several projects open at once in ordered tabs. Drag or use the keyboard
+  to reorder them, and use the open and overflow menus to switch. Your tabs and where you were in
+  each one come back when you reopen the app.
+- **Tab context menu** — right-click a tab (or press the menu key) to close it, close the other
+  tabs, close the tabs to its right, or copy its path.
+- **Reopen closed tab** — brings back the most recently closed tab with its selection and search
+  (Ctrl+Shift+T, ⇧⌘T on macOS, or the open menu).
+- **Drop a folder** — drag a folder onto the window to open it as a project in a new tab.
+- **Favorites and recent projects** — pin projects and pick from the last twenty from the open menu
+  and the start screen. Entries whose folder is gone can be removed.
+- **Missing projects** — a tab whose folder disappeared stays open so you can retry, locate the new
+  folder, or close it. If saving your workspace fails, the app tells you and keeps working.
+- **macOS menu** — open and close a project with the native shortcuts, and reopen a closed tab.
+- **Syntax highlighting** — diffs and whole-file views color CSS, JavaScript, JSON, JSX, Markdown,
+  HTML, PHP, Rust, TypeScript and TSX. Large or unknown files stay readable as plain text and
+  never freeze scrolling.
+
+### Fixed
+
+- **Start screen** — the logo is smaller and the toolbar no longer repeats it; favorites and
+  recent projects share one centered column with a path on each row and a compact remove button.
+  The oversized Back button is gone, replaced by the Home tab.
+- **Quitting** — the app now closes even if its window stops responding, instead of hanging.
+- **History table** — the commit summary stays readable at the minimum window size with both
+  panels open; the hash, then the author's name, then the date drop out as the table narrows.
+- **Cloned repositories** — a clone that an open tab is using is never removed to make room for
+  another, including repositories shared through external worktrees and tabs you have not
+  visited yet.
+- **Project menus** — long menus stay inside the window and scroll without closing, including
+  with the keyboard.
+- **Library views** — going back returns to the tab you were on, and long project lists scroll.
+- **Restored tabs** — the inspector keeps a restored commit even when it is outside the loaded
+  history, and reports when the commit no longer exists.
+- **Error recovery** — restarting after an error waits for any repository change in progress
+  before relaunching.
+
+### Changed
+
+- **Memory use** — closed tabs release their data, and only the active tab plus the five most
+  recently used inactive ones keep theirs in memory.
+- **Logo** — uses the final artwork and picks the high-contrast wordmark for the active theme;
+  the files are about 60% smaller.
+- **Diff wrapping** — long lines wrap by default, and the wrap toggle shows when it is on.
+- **Diff colors** — added and deleted rows keep their green and red background while the code uses
+  the normal text color, so it stays readable in both themes.
+
 ## [0.2.0] — 2026-10-12
 
 ### Added

@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { fireEvent, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 function renderMenu(
   onClose = vi.fn(),
@@ -126,5 +129,75 @@ describe("ContextMenu", () => {
     expect(Number.parseInt(menu?.style.left ?? "0", 10)).toBeLessThan(
       window.innerWidth,
     );
+  });
+  it("bounds a long menu by its measured height and stays open when its own items scroll", async () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      right: 240,
+      bottom: 752,
+      width: 240,
+      height: 752,
+      toJSON: () => ({}),
+    });
+    const onClose = vi.fn();
+    const items = Array.from({ length: 30 }, (_, i) => ({
+      label: `Project ${String(i)}`,
+      onSelect: vi.fn(),
+    }));
+    render(<ContextMenu x={99999} y={99999} items={items} onClose={onClose} />);
+    const menu = screen.getByRole("menu");
+    expect(Number.parseInt(menu.style.top, 10)).toBe(8);
+    expect(Number.parseInt(menu.style.left, 10) + 240).toBeLessThanOrEqual(
+      window.innerWidth - 8,
+    );
+    await userEvent.keyboard("{End}");
+    expect(document.activeElement).toBe(
+      screen.getByRole("menuitem", { name: "Project 29" }),
+    );
+    fireEvent.scroll(menu);
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.scroll(window);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("draws a rule where a group starts, never before the first item", () => {
+    renderMenu(vi.fn(), vi.fn(), [
+      { label: "One", onSelect: vi.fn(), startsGroup: true },
+      { label: "Two", onSelect: vi.fn() },
+      { label: "Three", onSelect: vi.fn(), startsGroup: true },
+    ]);
+
+    const rules = screen.getAllByRole("separator");
+    expect(rules).toHaveLength(1);
+    expect(rules[0]?.previousElementSibling?.textContent).toBe("Two");
+    expect(rules[0]?.nextElementSibling?.textContent).toContain("Three");
+  });
+
+  it("shows a shortcut beside its label and names it to assistive technology", () => {
+    renderMenu(vi.fn(), vi.fn(), [
+      { label: "Open", onSelect: vi.fn(), shortcut: "Ctrl+O" },
+      { label: "Plain", onSelect: vi.fn() },
+    ]);
+
+    const open = screen.getByRole("menuitem", { name: /Open/ });
+    expect(open.querySelector("kbd")?.textContent).toBe("Ctrl+O");
+    expect(open.getAttribute("aria-keyshortcuts")).toBe("Ctrl+O");
+    const plain = screen.getByRole("menuitem", { name: "Plain" });
+    expect(plain.querySelector("kbd")).toBeNull();
+    expect(plain.hasAttribute("aria-keyshortcuts")).toBe(false);
+  });
+
+  it("keeps arrow-key navigation to the items, skipping the rules", async () => {
+    renderMenu(vi.fn(), vi.fn(), [
+      { label: "One", onSelect: vi.fn() },
+      { label: "Two", onSelect: vi.fn(), startsGroup: true },
+    ]);
+
+    await userEvent.keyboard("{ArrowDown}");
+
+    expect(document.activeElement?.textContent).toContain("Two");
   });
 });

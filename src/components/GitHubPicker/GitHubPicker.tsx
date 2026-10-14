@@ -10,10 +10,9 @@ import {
   hasGithubToken,
   listGithubRepositories,
   onCloneProgress,
-  openRepository,
   storeGithubToken,
 } from "../../lib/ipc";
-import { useSession } from "../../state/session";
+import { openProjectAt } from "../../state/openProject";
 import { queryKeys } from "../../state/queryKeys";
 import { ErrorMessage } from "../ErrorMessage";
 
@@ -38,14 +37,24 @@ function progressLabel(
   });
 }
 
+/** Leaves the GitHub view for the projects, without cloning anything. */
+function BackButton({ onClose }: { readonly onClose: () => void }) {
+  const { t } = useTranslation("github");
+  return (
+    <button
+      type="button"
+      className="button github-picker__back"
+      onClick={onClose}
+    >
+      {t("back")}
+    </button>
+  );
+}
+
 /** Signs in to GitHub, lists repositories and clones the chosen one. */
 export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
   const { t } = useTranslation("github");
   const queryClient = useQueryClient();
-  const setRepository = useSession((state) => state.openRepository);
-  const activeRepositoryPath = useSession(
-    (state) => state.repository?.path ?? null,
-  );
 
   const [token, setToken] = useState("");
   const [progress, setProgress] = useState<CloneProgressEvent | null>(null);
@@ -89,11 +98,10 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
   });
 
   const clone = useMutation({
-    mutationFn: ({ name }: { name: string }) =>
-      cloneGithubRepository(name, activeRepositoryPath),
+    mutationFn: ({ name }: { name: string }) => cloneGithubRepository(name),
     onSuccess: async (cloned) => {
       setProgress(null);
-      setRepository(await openRepository(cloned.path));
+      await openProjectAt(cloned.path);
       onClose();
     },
   });
@@ -101,6 +109,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
   if (signedIn.data !== true) {
     return (
       <div className="github-picker">
+        <BackButton onClose={onClose} />
         <h2 className="github-picker__title">{t("connect.title")}</h2>
         <p className="github-picker__hint">
           <Trans t={t} i18nKey="connect.hint" components={{ code: <code /> }} />
@@ -146,6 +155,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
 
   return (
     <div className="github-picker">
+      <BackButton onClose={onClose} />
       <header className="github-picker__header">
         <h2 className="github-picker__title">{t("list.title")}</h2>
         <button

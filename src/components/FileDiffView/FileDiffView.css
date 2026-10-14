@@ -76,6 +76,13 @@
   font-size: var(--font-size-ui);
 }
 
+.file-diff__toggle[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--surface-selected);
+  color: var(--accent);
+  font-weight: 600;
+}
+
 /* Full width means the diff no longer needs its own scroller for ordinary
    code; only genuinely long lines reach for one. */
 .file-diff__body .diff-viewer {

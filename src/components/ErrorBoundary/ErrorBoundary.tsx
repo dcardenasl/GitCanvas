@@ -1,6 +1,9 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { useState, Component, type ErrorInfo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { restartApplication } from "../../lib/ipc";
+import { useWorkspace } from "../../state/workspace";
+import { ErrorMessage } from "../ErrorMessage";
 import "./ErrorBoundary.css";
 
 interface ErrorBoundaryProps {
@@ -14,6 +17,13 @@ interface ErrorBoundaryState {
 /** The recovery screen, translated; a hook cannot live in the class itself. */
 function ErrorFallback() {
   const { t } = useTranslation("shell");
+  const writing = useWorkspace((state) =>
+    state.tabs.some((tab) => tab.gitActions.running !== null),
+  );
+  const [restarting, setRestarting] = useState(false);
+  const [failure, setFailure] = useState<{ readonly cause: unknown } | null>(
+    null,
+  );
 
   return (
     <main className="error-boundary" role="alert">
@@ -23,12 +33,20 @@ function ErrorFallback() {
         <button
           className="button"
           type="button"
+          disabled={writing || restarting}
           onClick={() => {
-            window.location.reload();
+            setRestarting(true);
+            setFailure(null);
+            void restartApplication().catch((cause: unknown) => {
+              setFailure({ cause });
+              setRestarting(false);
+            });
           }}
         >
           {t("errorBoundary.restart")}
         </button>
+        {writing && <p role="status">{t("errorBoundary.waitingWrites")}</p>}
+        {failure !== null && <ErrorMessage error={failure.cause} />}
       </section>
     </main>
   );

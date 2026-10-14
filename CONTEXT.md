@@ -40,9 +40,30 @@ Git handle.
 History pages are capped at 500 commits. Worktree snapshots page at most 250 files per
 side. Initial file content is capped at 2 MiB and explicit reads at 32 MiB; initial
 patches are capped at 1 MiB and explicit patches at 16 MiB. Oversized or omitted
-content is reported through typed outcomes. Commit diffs compare against the first
+content is reported through typed outcomes. Syntax highlighting is a frontend concern with
+its own bounds (5 000 rows, 2 MiB) and falls back to plain text. Commit diffs compare against the first
 parent. Pull is fast-forward only. GitHub credentials are stored in the operating
 system keychain and remain inside Rust after entry.
+
+## Workspace
+
+Canonical worktree roots identify ordered tabs. Each keeps independent navigation and
+Git action state. One watcher and poller follow the verified active root; inactive tabs
+perform no periodic reads. Activation reopens and authorizes the root, compares refs and
+reuses matching history pages. The target is gated synchronously before effects run;
+verification awaits the local fingerprint and the write executor rejects unverified roots.
+Heavy query data is retained for the active root and at
+most five inactive roots by last activation; closing removes all queries for that root.
+
+The Rust versioned workspace store remembers tabs, active root, durable navigation,
+favorites and twenty recents through atomic replacement. Restoration precedes rendering;
+only the active tab is validated initially. Stored paths authorize nothing. Missing tabs
+remain recoverable; storage errors allow in-memory work with a visible notice. The
+frontend serializes saves, debounces navigation and flushes before normal close or quit.
+`OpenRepos` protects all open clones, including inactive and unverified tabs, rather than
+one active path, including shared Git data used by external worktrees. Pending reports
+and unknown dependencies prevent retention, and in-use entries cannot be replaced for
+repair. Favorites and recents do not protect clones. See ADR 0006.
 
 ## Session entry points
 
