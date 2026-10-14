@@ -40,3 +40,29 @@ export function closeActiveTab(): CloseOutcome | null {
 export function reopenClosedTab(): ReopenOutcome {
   return useWorkspace.getState().reopenClosedTab();
 }
+
+/**
+ * Closes every tab but the one named, which becomes the active one. A tab whose
+ * project is being written to stays open, as it would on its own.
+ */
+export function closeOtherTabs(root: string): void {
+  const { tabs, activate, closeTab } = useWorkspace.getState();
+  if (!tabs.some((tab) => tab.repository.path === root)) return;
+  activate(root);
+  for (const tab of tabs) {
+    if (tab.repository.path !== root) closeTab(tab.repository.path);
+  }
+}
+
+/**
+ * Closes the tabs after the one named, in tab order. The named tab becomes the
+ * active one only if the active tab was among those closed.
+ */
+export function closeTabsAfter(root: string): void {
+  const { tabs, activeRoot, activate, closeTab } = useWorkspace.getState();
+  const index = tabs.findIndex((tab) => tab.repository.path === root);
+  if (index < 0) return;
+  const after = tabs.slice(index + 1);
+  if (after.some((tab) => tab.repository.path === activeRoot)) activate(root);
+  for (const tab of after) closeTab(tab.repository.path);
+}

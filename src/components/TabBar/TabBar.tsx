@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 
 import type { OpenFolder } from "../AppShell/useOpenFolder";
+import { copyText } from "../../lib/clipboard";
 import { shortcutLabel } from "../../lib/platform";
+import { closeOtherTabs, closeTabsAfter } from "../../state/tabCommands";
 import { ContextMenu, type MenuItem } from "../ContextMenu";
 import { FavoriteToggle } from "../FavoriteToggle/FavoriteToggle";
 import { ErrorMessage } from "../ErrorMessage";
@@ -12,15 +14,20 @@ import { labelTabs } from "./tabLabels";
 
 import "./TabBar.css";
 
-/** An open menu and the point just under the control that opened it. */
-interface OpenMenu {
-  readonly kind: "new" | "all";
-  readonly x: number;
-  readonly y: number;
-}
+/** An open menu and the point it opened at. */
+type OpenMenu =
+  /** Under the control that opened it: the open menu or the list of all tabs. */
+  | { readonly kind: "new" | "all"; readonly x: number; readonly y: number }
+  /** At the pointer, for one tab. */
+  | {
+      readonly kind: "tab";
+      readonly root: string;
+      readonly x: number;
+      readonly y: number;
+    };
 
 /** Opens `kind` under the control that was clicked. */
-function openUnder(kind: OpenMenu["kind"], control: HTMLElement): OpenMenu {
+function openUnder(kind: "new" | "all", control: HTMLElement): OpenMenu {
   const { left, bottom } = control.getBoundingClientRect();
   return { kind, x: left, y: bottom };
 }
@@ -95,6 +102,7 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
   const closeTab = useWorkspace((state) => state.closeTab);
   const moveTab = useWorkspace((state) => state.moveTab);
   const closedTabs = useWorkspace((state) => state.closedTabs);
+  const notify = useWorkspace((state) => state.notify);
   const reopenClosedTab = useWorkspace((state) => state.reopenClosedTab);
   const favorites = useWorkspace((state) => state.favorites);
   const setLibraryView = useWorkspace((state) => state.setLibraryView);
@@ -252,6 +260,49 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
           },
         ]),
   ];
+  const tabItems = (root: string): readonly MenuItem[] => {
+    const index = tabs.findIndex((tab) => tab.repository.path === root);
+    const others = tabs.length > 1;
+    const after = index >= 0 && index < tabs.length - 1;
+    return [
+      {
+        label: t("tabs.context.close"),
+        onSelect: () => {
+          closeTab(root);
+        },
+      },
+      // Offered only when they would do something, so none is a dead end.
+      ...(others
+        ? [
+            {
+              label: t("tabs.context.closeOthers"),
+              onSelect: () => {
+                closeOtherTabs(root);
+              },
+            },
+          ]
+        : []),
+      ...(after
+        ? [
+            {
+              label: t("tabs.context.closeAfter"),
+              onSelect: () => {
+                closeTabsAfter(root);
+              },
+            },
+          ]
+        : []),
+      {
+        label: t("tabs.context.copyPath"),
+        startsGroup: true,
+        onSelect: () => {
+          void copyText(root).then((copied) => {
+            if (!copied) notify({ code: "pathCopyFailed", path: root });
+          });
+        },
+      },
+    ];
+  };
   const allItems: readonly MenuItem[] = tabs.map((tab, index) => ({
     label: labels[index]?.text ?? tab.repository.path,
     onSelect: () => {
@@ -281,6 +332,16 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
               className={
                 active ? "tab-bar__tab tab-bar__tab--active" : "tab-bar__tab"
               }
+              onContextMenu={(event) => {
+                // Also what the menu key and Shift+F10 raise on a focused tab.
+                event.preventDefault();
+                setMenu({
+                  kind: "tab",
+                  root,
+                  x: event.clientX,
+                  y: event.clientY,
+                });
+              }}
             >
               <button
                 type="button"
@@ -373,7 +434,13 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
         <ContextMenu
           x={menu.x}
           y={menu.y}
-          items={menu.kind === "all" ? allItems : newItems}
+          items={
+            menu.kind === "tab"
+              ? tabItems(menu.root)
+              : menu.kind === "all"
+                ? allItems
+                : newItems
+          }
           onClose={() => {
             setMenu(null);
           }}

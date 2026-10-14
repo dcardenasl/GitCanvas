@@ -17,6 +17,11 @@ export const createBoundsSlice: StateCreator<
     set({ limits });
   },
 
+  /** Tells the person something, replacing whatever was there. */
+  notify: (notice) => {
+    set({ notice });
+  },
+
   /** Dismisses the current notice. */
   dismissNotice: () => {
     set({ notice: null });

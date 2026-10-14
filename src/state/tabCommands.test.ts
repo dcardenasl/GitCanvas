@@ -5,6 +5,8 @@ import {
   activatePosition,
   activateRelative,
   closeActiveTab,
+  closeOtherTabs,
+  closeTabsAfter,
   reopenClosedTab,
 } from "./tabCommands";
 import { useWorkspace } from "./workspace";
@@ -115,5 +117,84 @@ describe("reopenClosedTab", () => {
     open(2);
 
     expect(reopenClosedTab()).toBe("none");
+  });
+});
+
+describe("closeOtherTabs", () => {
+  it("keeps only the named tab and makes it the active one", () => {
+    open(4);
+    useWorkspace.getState().activate("/work/d");
+
+    closeOtherTabs("/work/b");
+
+    expect(useWorkspace.getState().tabs.map((t) => t.repository.name)).toEqual([
+      "b",
+    ]);
+    expect(activeRoot()).toBe("/work/b");
+  });
+
+  it("leaves a tab that is being written to open, with the named one active", () => {
+    open(3);
+    useWorkspace
+      .getState()
+      .updateGitActions("/work/c", (state) => ({ ...state, running: "push" }));
+
+    closeOtherTabs("/work/a");
+
+    expect(useWorkspace.getState().tabs.map((t) => t.repository.name)).toEqual([
+      "a",
+      "c",
+    ]);
+    expect(activeRoot()).toBe("/work/a");
+  });
+
+  it("does nothing for a project that is not open", () => {
+    open(2);
+
+    closeOtherTabs("/work/zzz");
+
+    expect(useWorkspace.getState().tabs).toHaveLength(2);
+  });
+
+  it("remembers what it closed, so it can be undone one tab at a time", () => {
+    open(3);
+
+    closeOtherTabs("/work/a");
+
+    expect(useWorkspace.getState().closedTabs).toHaveLength(2);
+  });
+});
+
+describe("closeTabsAfter", () => {
+  it("closes the tabs after the named one and leaves those before", () => {
+    open(4);
+
+    closeTabsAfter("/work/b");
+
+    expect(useWorkspace.getState().tabs.map((t) => t.repository.name)).toEqual([
+      "a",
+      "b",
+    ]);
+  });
+
+  it("makes the named tab active only when the active tab was closed", () => {
+    open(4);
+    useWorkspace.getState().activate("/work/a");
+    closeTabsAfter("/work/b");
+    expect(activeRoot()).toBe("/work/a");
+
+    open(4);
+    useWorkspace.getState().activate("/work/d");
+    closeTabsAfter("/work/b");
+    expect(activeRoot()).toBe("/work/b");
+  });
+
+  it("does nothing for the last tab, or a project that is not open", () => {
+    open(2);
+
+    closeTabsAfter("/work/b");
+    closeTabsAfter("/work/zzz");
+
+    expect(useWorkspace.getState().tabs).toHaveLength(2);
   });
 });

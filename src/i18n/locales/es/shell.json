@@ -38,6 +38,12 @@
     "all": "Todos los proyectos abiertos",
     "close": "Cerrar {{name}}",
     "closeBusy": "Todavía se está escribiendo en {{name}}",
+    "context": {
+      "close": "Cerrar",
+      "closeAfter": "Cerrar las pestañas a la derecha",
+      "closeOthers": "Cerrar las otras pestañas",
+      "copyPath": "Copiar ruta"
+    },
     "label": "Proyectos abiertos",
     "menu": {
       "cloneGitHub": "Clonar de GitHub…",
@@ -67,24 +73,25 @@
     "verifyFailed": "No se pudo comprobar el proyecto contra su carpeta"
   },
   "workspace": {
-    "dismiss": "Descartar",
-    "tabLimit": "Se pueden abrir como máximo {{max}} proyectos a la vez. Cierra uno para abrir otro.",
-    "unreachable": "No se pudo abrir este proyecto",
-    "locate": "Localizar carpeta…",
-    "saveFailed": "No se pudo guardar el workspace. Los cambios siguen en memoria.",
-    "recovered": "No se pudo restaurar el workspace guardado. El original se conservó.",
-    "favorites": "Favoritos",
-    "recents": "Proyectos recientes",
-    "favoritesEmpty": "Todavía no hay favoritos. Agrega uno con la estrella de su pestaña.",
-    "recentsEmpty": "Todavía no hay proyectos recientes.",
-    "favorite": "Agregar {{name}} a favoritos",
-    "unfavorite": "Quitar {{name}} de favoritos",
-    "removeRecent": "Quitar {{name}} de recientes",
-    "favoriteLimit": "Se pueden guardar hasta {{max}} favoritos. Quita uno para agregar otro.",
     "back": "Volver",
     "commitDetails": "Commit seleccionado",
-    "commitLoading": "Leyendo el commit seleccionado…",
     "commitFailed": "No se pudo leer el commit seleccionado",
+    "commitLoading": "Leyendo el commit seleccionado…",
+    "dismiss": "Descartar",
+    "favorite": "Agregar {{name}} a favoritos",
+    "favoriteLimit": "Se pueden guardar hasta {{max}} favoritos. Quita uno para agregar otro.",
+    "favorites": "Favoritos",
+    "favoritesEmpty": "Todavía no hay favoritos. Agrega uno con la estrella de su pestaña.",
+    "locate": "Localizar carpeta…",
+    "pathCopyFailed": "No se pudo copiar {{path}} al portapapeles.",
+    "recents": "Proyectos recientes",
+    "recentsEmpty": "Todavía no hay proyectos recientes.",
+    "recovered": "No se pudo restaurar el workspace guardado. El original se conservó.",
+    "removeRecent": "Quitar {{name}} de recientes",
+    "saveFailed": "No se pudo guardar el workspace. Los cambios siguen en memoria.",
+    "tabLimit": "Se pueden abrir como máximo {{max}} proyectos a la vez. Cierra uno para abrir otro.",
+    "unfavorite": "Quitar {{name}} de favoritos",
+    "unreachable": "No se pudo abrir este proyecto",
     "verifying": "Comprobando el proyecto…"
   }
 }

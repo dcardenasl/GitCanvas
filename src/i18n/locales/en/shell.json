@@ -38,6 +38,12 @@
     "all": "All open projects",
     "close": "Close {{name}}",
     "closeBusy": "{{name}} is still being written to",
+    "context": {
+      "close": "Close",
+      "closeAfter": "Close tabs to the right",
+      "closeOthers": "Close other tabs",
+      "copyPath": "Copy path"
+    },
     "label": "Open projects",
     "menu": {
       "cloneGitHub": "Clone from GitHub…",
@@ -67,24 +73,25 @@
     "verifyFailed": "Could not check the project against its folder"
   },
   "workspace": {
-    "dismiss": "Dismiss",
-    "tabLimit": "At most {{max}} projects can be open at once. Close one to open another.",
-    "unreachable": "This project could not be opened",
-    "locate": "Locate folder…",
-    "saveFailed": "Your workspace could not be saved. Changes remain in memory.",
-    "recovered": "Saved workspace data could not be restored. The original has been preserved.",
-    "favorites": "Favorites",
-    "recents": "Recent projects",
-    "favoritesEmpty": "No favorite projects yet. Add one with the star on its tab.",
-    "recentsEmpty": "No recent projects yet.",
-    "favorite": "Add {{name}} to favorites",
-    "unfavorite": "Remove {{name}} from favorites",
-    "removeRecent": "Remove {{name}} from recents",
-    "favoriteLimit": "At most {{max}} favorites can be saved. Remove one to add another.",
     "back": "Back",
     "commitDetails": "Selected commit",
-    "commitLoading": "Reading the selected commit…",
     "commitFailed": "The selected commit could not be read",
+    "commitLoading": "Reading the selected commit…",
+    "dismiss": "Dismiss",
+    "favorite": "Add {{name}} to favorites",
+    "favoriteLimit": "At most {{max}} favorites can be saved. Remove one to add another.",
+    "favorites": "Favorites",
+    "favoritesEmpty": "No favorite projects yet. Add one with the star on its tab.",
+    "locate": "Locate folder…",
+    "pathCopyFailed": "Could not copy {{path}} to the clipboard.",
+    "recents": "Recent projects",
+    "recentsEmpty": "No recent projects yet.",
+    "recovered": "Saved workspace data could not be restored. The original has been preserved.",
+    "removeRecent": "Remove {{name}} from recents",
+    "saveFailed": "Your workspace could not be saved. Changes remain in memory.",
+    "tabLimit": "At most {{max}} projects can be open at once. Close one to open another.",
+    "unfavorite": "Remove {{name}} from favorites",
+    "unreachable": "This project could not be opened",
     "verifying": "Checking the project…"
   }
 }

@@ -36,10 +36,14 @@ export type CloseOutcome =
   | "busy";
 
 /** Something the interface owes the person after a workspace action. */
-export interface WorkspaceNotice {
-  readonly code: "tabLimit" | "favoriteLimit";
-  readonly max: number;
-}
+export type WorkspaceNotice =
+  /** A bound was reached, so nothing was added. */
+  | {
+      readonly code: "tabLimit" | "favoriteLimit";
+      readonly max: number;
+    }
+  /** The clipboard refused a project's path. */
+  | { readonly code: "pathCopyFailed"; readonly path: string };
 
 /** What reopening a closed tab did. */
 export type ReopenOutcome =
@@ -137,6 +141,8 @@ export interface BoundsSlice {
   readonly notice: WorkspaceNotice | null;
   /** Records the backend's bounds. */
   setLimits: (limits: WorkspaceLimits) => void;
+  /** Tells the person something, replacing whatever was there. */
+  notify: (notice: WorkspaceNotice) => void;
   /** Dismisses the current notice. */
   dismissNotice: () => void;
 }

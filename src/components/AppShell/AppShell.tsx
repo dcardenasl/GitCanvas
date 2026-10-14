@@ -188,7 +188,11 @@ export function AppShell() {
           )}
           {notice !== null && (
             <div role="status" className="toolbar__status">
-              <span>{t(`workspace.${notice.code}`, { max: notice.max })}</span>
+              <span>
+                {notice.code === "pathCopyFailed"
+                  ? t("workspace.pathCopyFailed", { path: notice.path })
+                  : t(`workspace.${notice.code}`, { max: notice.max })}
+              </span>
               <button type="button" className="button" onClick={dismissNotice}>
                 {t("workspace.dismiss")}
               </button>

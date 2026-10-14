@@ -42,7 +42,16 @@ beforeEach(() => {
   resetWorkspace();
   HTMLDialogElement.prototype.showModal = vi.fn();
 });
+/** jsdom has no clipboard; this gives `navigator` one that records the write. */
+function stubClipboard(writeText: (text: string) => Promise<void>) {
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText },
+  });
+}
+
 afterEach(() => {
+  Reflect.deleteProperty(navigator, "clipboard");
   cleanup();
   document.documentElement.dir = "ltr";
   vi.restoreAllMocks();
@@ -364,6 +373,129 @@ describe("TabBar", () => {
           }).disabled,
         ).toBe(true);
       });
+    });
+  });
+
+  describe("the tab menu", () => {
+    function openThree() {
+      openTestProject(ALPHA);
+      openTestProject(BETA);
+      openTestProject({ path: "/work/gamma", name: "gamma" });
+      render(<Harness />);
+    }
+    const names = () =>
+      useWorkspace.getState().tabs.map((entry) => entry.repository.name);
+    const items = () =>
+      screen.getAllByRole("menuitem").map((item) => item.textContent);
+
+    it("opens at the tab that was right-clicked, and from the keyboard's menu key", () => {
+      openThree();
+
+      fireEvent.contextMenu(tab("beta"));
+
+      expect(screen.getByRole("menu")).toBeTruthy();
+      expect(items()).toEqual([
+        "Cerrar",
+        "Cerrar las otras pestañas",
+        "Cerrar las pestañas a la derecha",
+        "Copiar ruta",
+      ]);
+    });
+
+    it("offers only what would do something", () => {
+      openThree();
+
+      fireEvent.contextMenu(tab("gamma"));
+      expect(items()).not.toContain("Cerrar las pestañas a la derecha");
+      cleanup();
+
+      resetWorkspace();
+      openTestProject(ALPHA);
+      render(<Harness />);
+      fireEvent.contextMenu(tab("alpha"));
+      expect(items()).toEqual(["Cerrar", "Copiar ruta"]);
+    });
+
+    it("closes that tab, whichever is active", async () => {
+      openThree();
+      fireEvent.contextMenu(tab("alpha"));
+
+      await userEvent.click(screen.getByRole("menuitem", { name: "Cerrar" }));
+
+      expect(names()).toEqual(["beta", "gamma"]);
+      expect(activeRoot()).toBe("/work/gamma");
+    });
+
+    it("closes the others, leaving the chosen tab active", async () => {
+      openThree();
+      fireEvent.contextMenu(tab("beta"));
+
+      await userEvent.click(
+        screen.getByRole("menuitem", { name: "Cerrar las otras pestañas" }),
+      );
+
+      expect(names()).toEqual(["beta"]);
+      expect(activeRoot()).toBe(BETA.path);
+    });
+
+    it("closes the tabs to the right", async () => {
+      openThree();
+      fireEvent.contextMenu(tab("alpha"));
+
+      await userEvent.click(
+        screen.getByRole("menuitem", {
+          name: "Cerrar las pestañas a la derecha",
+        }),
+      );
+
+      expect(names()).toEqual(["alpha"]);
+    });
+
+    it("copies the project's full path", async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      stubClipboard(writeText);
+      openThree();
+      fireEvent.contextMenu(tab("beta"));
+
+      await userEvent.click(
+        screen.getByRole("menuitem", { name: "Copiar ruta" }),
+      );
+
+      expect(writeText).toHaveBeenCalledWith(BETA.path);
+      expect(useWorkspace.getState().notice).toBeNull();
+    });
+
+    it("says so when the clipboard refuses the path", async () => {
+      const writeText = vi.fn().mockRejectedValue(new Error("denied"));
+      stubClipboard(writeText);
+      openThree();
+      fireEvent.contextMenu(tab("beta"));
+
+      await userEvent.click(
+        screen.getByRole("menuitem", { name: "Copiar ruta" }),
+      );
+
+      await waitFor(() => {
+        expect(useWorkspace.getState().notice).toEqual({
+          code: "pathCopyFailed",
+          path: BETA.path,
+        });
+      });
+    });
+
+    it("leaves a tab that is being written to open when asked to close it", async () => {
+      openThree();
+      act(() => {
+        useWorkspace.getState().updateGitActions(BETA.path, (state) => ({
+          ...state,
+          running: "pull",
+        }));
+      });
+      fireEvent.contextMenu(tab("beta"));
+
+      await userEvent.click(screen.getByRole("menuitem", { name: "Cerrar" }));
+
+      expect(names()).toEqual(["alpha", "beta", "gamma"]);
     });
   });
 

@@ -498,10 +498,17 @@ Origen: auditoría del 2026-10-14 sobre `dev` (706 pruebas, matriz remota todav�
       hay algo que reabrir.
       → `feat(workspace): reopen the most recently closed tab`
 
-- [ ] **HRD-7 — Menú contextual de pestaña.** Cerrar, cerrar las demás, cerrar las de la derecha
+- [x] **HRD-7 — Menú contextual de pestaña.** Cerrar, cerrar las demás, cerrar las de la derecha
       y copiar la ruta; también con la tecla de menú. «Mostrar en el explorador» queda fuera a
       propósito: exigiría lanzar procesos (prohibido por Clippy) o ampliar los permisos del
       webview con un plugin.
+      *Decisiones al implementar:* el menú se abre con `contextmenu`, que también lo que genera la tecla de
+      menú o Mayús+F10 sobre una pestaña enfocada, así que no hay un camino aparte para teclado.
+      Solo ofrece lo que haría algo («cerrar las otras» exige otras pestañas, «a la derecha» exige
+      pestañas después). `closeOtherTabs` activa primero la pestaña elegida y `closeTabsAfter` solo
+      la activa si la activa estaba entre las cerradas; ambas respetan una pestaña que escribe y
+      alimentan la pila de reabrir. El fallo del portapapeles es un aviso (`notify`,
+      `pathCopyFailed`), no un silencio.
       → `feat(tabs): add a tab context menu with close others and copy path`
 
 - [ ] **HRD-8 — Soltar una carpeta en la ventana.** La ruta soltada pasa por `openProjectAt`,

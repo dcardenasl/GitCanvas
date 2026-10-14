@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`TabBar`** — right-click (or the menu key) on a tab to close it, close the other tabs, close
+  the tabs to its right, or copy its path.
 - **`TabBar`** — reopens the most recently closed tab with its selection and search
   (Ctrl+Shift+T, ⇧⌘T on macOS, or the open menu).
 - **`TabBar`** — keeps independent projects in ordered tabs, with pointer and

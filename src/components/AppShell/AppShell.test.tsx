@@ -510,6 +510,20 @@ describe("AppShell toolbar", () => {
     expect(search().value).toBe("feat");
   });
 
+  it("tells the person when a project's path could not be copied", async () => {
+    openTestProject();
+    renderShell();
+    act(() => {
+      useWorkspace
+        .getState()
+        .notify({ code: "pathCopyFailed", path: "/tmp/repo" });
+    });
+
+    expect(
+      await screen.findByText(/No se pudo copiar \/tmp\/repo al portapapeles/),
+    ).toBeInstanceOf(HTMLElement);
+  });
+
   it("offers to pin the branch list while a file is open", async () => {
     patchNavigation({
       selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },
