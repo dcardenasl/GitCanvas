@@ -85,7 +85,10 @@ function validatedOwnedFixture(
 }
 
 /** Reuse only a fixture created by this test run, never an arbitrary env path. */
-function inheritedOwnedFixture(): OwnedFixture | null {
+function inheritedOwnedFixture(
+  repositoryEnv = FIXTURE_ENV,
+  tokenEnv = FIXTURE_TOKEN_ENV,
+): OwnedFixture | null {
   // The main runner inherits the user's environment, so a matching path and
   // marker alone do not prove that this process created the fixture. Only a
   // WDIO child with its private IPC channel may consume the runner's hand-off.
@@ -96,8 +99,8 @@ function inheritedOwnedFixture(): OwnedFixture | null {
     return null;
   }
 
-  const repository = process.env[FIXTURE_ENV];
-  const token = process.env[FIXTURE_TOKEN_ENV];
+  const repository = process.env[repositoryEnv];
+  const token = process.env[tokenEnv];
   return repository === undefined || token === undefined
     ? null
     : validatedOwnedFixture(repository, token);
@@ -117,7 +120,7 @@ function removeOwnedFixture(fixture: OwnedFixture): void {
 
 /** Build a temporary fixture before the app starts, then remove it on failure. */
 function createFixtureRepository(
-  kind: "history" | "local-changes",
+  kind: "history" | "local-changes" | "workspace",
 ): OwnedFixture {
   const repository = fs.mkdtempSync(path.join(os.tmpdir(), "gitcanvas-e2e-"));
   const token = randomUUID();
@@ -133,10 +136,19 @@ function createFixtureRepository(
     git("config", "user.email", "e2e@example.com");
     git("config", "user.name", "End To End");
 
-    if (kind === "local-changes") {
+    if (kind === "local-changes" || kind === "workspace") {
       fs.writeFileSync(path.join(repository, "base.txt"), "base\n");
       git("add", "base.txt");
-      git("commit", "-m", "base commit");
+      git(
+        "commit",
+        "-m",
+        kind === "workspace" ? "workspace alpha commit" : "base commit",
+      );
+      if (kind === "workspace")
+        fs.writeFileSync(
+          path.join(repository, "alpha-local.txt"),
+          "alpha only\n",
+        );
       return { repository: fs.realpathSync(repository), token };
     }
 
@@ -178,14 +190,18 @@ function createFixtureRepository(
  * purpose-built fixture is created and removed afterwards.
  */
 const fixtureKind = process.env.GITCANVAS_E2E_FIXTURE_KIND ?? "history";
-if (fixtureKind !== "history" && fixtureKind !== "local-changes") {
+if (
+  fixtureKind !== "history" &&
+  fixtureKind !== "local-changes" &&
+  fixtureKind !== "workspace"
+) {
   throw new Error(`Unsupported E2E fixture kind: ${fixtureKind}`);
 }
 
 // local-changes writes files and updates the index. Give that spec its own
 // throwaway repository even when the rest of the suite targets a user repo.
 const providedRepository =
-  fixtureKind === "local-changes" ? undefined : process.env.GITCANVAS_E2E_REPO;
+  fixtureKind === "history" ? process.env.GITCANVAS_E2E_REPO : undefined;
 
 /*
  * This file is evaluated twice: once by the launcher, which starts the
@@ -211,6 +227,40 @@ if (ownedFixture !== null) {
 }
 export const e2eRepository = fixture;
 
+// A second owned repository is handed to the worker through the same validated
+// ownership protocol. Both repositories and the data directory are disposable.
+const SECOND_FIXTURE_ENV = "GITCANVAS_E2E_SECOND_FIXTURE";
+const SECOND_TOKEN_ENV = "GITCANVAS_E2E_SECOND_TOKEN";
+const inheritedSecond =
+  fixtureKind === "workspace"
+    ? inheritedOwnedFixture(SECOND_FIXTURE_ENV, SECOND_TOKEN_ENV)
+    : null;
+const secondFixture =
+  fixtureKind === "workspace"
+    ? (inheritedSecond ?? createFixtureRepository("local-changes"))
+    : null;
+if (secondFixture !== null) {
+  if (inheritedSecond === null) {
+    const git = (...args: string[]) =>
+      execFileSync("git", ["-C", secondFixture.repository, ...args], {
+        stdio: "pipe",
+      });
+    fs.writeFileSync(
+      path.join(secondFixture.repository, "beta.txt"),
+      "beta committed\n",
+    );
+    git("add", "beta.txt");
+    git("commit", "-m", "workspace beta commit");
+    fs.writeFileSync(
+      path.join(secondFixture.repository, "beta-local.txt"),
+      "beta only\n",
+    );
+  }
+  process.env[SECOND_FIXTURE_ENV] = secondFixture.repository;
+  process.env[SECOND_TOKEN_ENV] = secondFixture.token;
+}
+export const e2eSecondRepository = secondFixture?.repository ?? null;
+
 /**
  * Where the application keeps its data for this run.
  *
@@ -221,12 +271,34 @@ export const e2eRepository = fixture;
  * fixture. Only the launcher clears it: a worker evaluating this file after the
  * application started must not wipe what the application already wrote.
  */
-const e2eDataDir = path.join(
+export const e2eDataDir = path.join(
   os.tmpdir(),
   `gitcanvas-e2e-data-${path.basename(fixture)}`,
 );
 if (process.env.WDIO_WORKER_ID === undefined) {
   fs.rmSync(e2eDataDir, { recursive: true, force: true });
+  if (secondFixture !== null) {
+    fs.mkdirSync(e2eDataDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(e2eDataDir, "workspace.json"),
+      JSON.stringify({
+        version: 1,
+        workspace: {
+          tabs: [
+            {
+              path: fixture,
+              selection: { kind: "history" },
+              history_anchor: null,
+              collapsed_folders: [],
+            },
+          ],
+          active: fixture,
+          favorites: [],
+          recents: [secondFixture.repository],
+        },
+      }),
+    );
+  }
 }
 
 export const config: WebdriverIO.Config = {
@@ -331,6 +403,7 @@ export const config: WebdriverIO.Config = {
   onComplete() {
     // Only remove what this file created; never a repository someone passed in.
     if (ownedFixture !== null) removeOwnedFixture(ownedFixture);
+    if (secondFixture !== null) removeOwnedFixture(secondFixture);
     fs.rmSync(e2eDataDir, { recursive: true, force: true });
   },
 };

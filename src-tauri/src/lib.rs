@@ -97,7 +97,18 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
 /// expansion duplicates the embedded Info.plist symbol — so both the running
 /// application and the tests come through here.
 fn app_context<R: tauri::Runtime>() -> tauri::Context<R> {
-    tauri::generate_context!()
+    let context = tauri::generate_context!();
+    #[cfg(feature = "e2e")]
+    let context = {
+        let mut context: tauri::Context<R> = context;
+        // The Rust data override does not isolate the system webview's own
+        // localStorage. E2E windows must never read or change user preferences.
+        for window in &mut context.config_mut().app.windows {
+            window.incognito = true;
+        }
+        context
+    };
+    context
 }
 
 /// Replaces the menu bar with one in the given language, on the main thread
@@ -277,6 +288,19 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::specta_builder;
+
+    #[cfg(feature = "e2e")]
+    #[test]
+    fn e2e_windows_never_share_user_webview_storage() {
+        let context = super::app_context::<tauri::test::MockRuntime>();
+        assert!(!context.config().app.windows.is_empty());
+        assert!(context
+            .config()
+            .app
+            .windows
+            .iter()
+            .all(|window| window.incognito));
+    }
 
     /// Keep the shipped window on the smallest permission set the app uses.
     ///

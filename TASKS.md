@@ -312,11 +312,36 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       Pruebas del sexto inactivo, reactivación, aislamiento y cierre completo.
       → `perf(workspace): release closed tabs and bound inactive project caches`
 
-- [ ] **WS-15 — E2E de varias pestañas.** Dos repositorios de fixture y un directorio de datos
+- [x] **WS-15 — E2E de varias pestañas.** Dos repositorios de fixture y un directorio de datos
       temporal (WS-2): abrir ambos, alternar sin mezclar historial ni cambios locales, reabrir
       un repositorio ya abierto sin duplicar, cerrar una pestaña, un favorito que sobrevive al
       cierre. Los cuatro specs existentes siguen pasando con su pestaña única.
+      *Evidencia (macOS):* cinco specs, once pruebas nativas pasando; dos repositorios
+      desechables, restauración inicial, alternancia, reapertura, cierre y favorito persistido
+      por el almacén Rust. Capturas de ambos temas a 940×600 tras esperar el reajuste.
+      *Hallazgo:* el directorio de datos Rust no aislaba localStorage del WebView; los binarios
+      E2E ahora usan modo privado, con guardia Rust. El aviso de limpieza del mock store de
+      WDIO aparece después de cerrar su sesión; no es un error de la aplicación.
       → `test(e2e): cover switching, reopening and closing tabs across two repositories`
+
+- [ ] **WS-11a — Detalle restaurado fuera de la página cargada.** Consultar metadatos del
+      commit por id a través del motor y del flujo autorizado, sin paginar ocultamente.
+      Conservar la selección y mostrar error/reintento cuando el objeto desaparezca.
+      *Hallazgo:* AppShell solo resolvía la selección en las filas cargadas, aunque WS-5
+      indicaba que el detalle se consultaba por id. Añadir prueba sobre un commit fuera del walk.
+      → `fix(workspace): resolve restored commit details independently of history pages`
+
+- [ ] **WS-11b — Reinicio nativo después de un fallo de render.** El botón de recuperación
+      debe reiniciar el proceso, conservando el último workspace durable. Recargar solo la
+      página reinicia secuencias de solicitudes mientras Rust conserva revisiones y watcher.
+      El reinicio requiere acción explícita y su fallo permanece visible.
+      → `fix(workspace): restart the native process after a render failure`
+
+- [ ] **WS-13a — Regreso desde la biblioteca y listas extensas.** Activar una pestaña debe
+      volver a su vista incluso si ya era la activa; Favoritos/Recientes no retienen la
+      pantalla. La pantalla inicial debe permitir recorrer listas extensas sin ocultar
+      controles ni comprimir el contenido. Pruebas de navegación y presentación nativa.
+      → `fix(workspace): return to tab views and keep project lists scrollable`
 
 - [ ] **WS-16 — Documentación.** ADR 0006 (workspace, identidad por raíz, almacén, restauración
       perezosa, menú de macOS y decisiones de este plan), ARCHITECTURE, CONTEXT (observación y
