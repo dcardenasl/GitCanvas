@@ -115,21 +115,31 @@ describe("TabBar", () => {
     ).toBeTruthy();
   });
 
-  it.each([
-    ["unverified", { status: "unverified" } as const, "Pendiente de verificar"],
-    [
-      "unreachable",
-      { status: "unreachable", error: new Error("gone") } as const,
-      "No se pudo abrir",
-    ],
-  ])("marks a %s project", (_name, verification, label) => {
+  it("marks a project whose folder could not be opened", () => {
     openTestProject(ALPHA);
     act(() => {
-      useWorkspace.getState().setVerification(ALPHA.path, verification);
+      useWorkspace.getState().setVerification(ALPHA.path, {
+        status: "unreachable",
+        error: new Error("gone"),
+      });
     });
     render(<Harness />);
 
-    expect(screen.getByRole("img", { name: label })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "No se pudo abrir" })).toBeTruthy();
+  });
+
+  it("does not mark a project that merely has not been checked yet", () => {
+    openTestProject(ALPHA);
+    openTestProject(BETA);
+    act(() => {
+      useWorkspace
+        .getState()
+        .setVerification(ALPHA.path, { status: "unverified" });
+    });
+    render(<Harness />);
+
+    // Every restored tab is in this state until it is shown; it is not news.
+    expect(screen.queryByRole("img")).toBeNull();
   });
 
   it("marks nothing on a project that is fine, or while one is being checked", () => {
@@ -187,7 +197,9 @@ describe("TabBar", () => {
       );
 
       expect(
-        screen.getAllByRole("menuitem").map((item) => item.textContent),
+        screen
+          .getAllByRole("menuitem")
+          .map((item) => item.querySelector("span")?.textContent),
       ).toEqual([
         "Abrir carpeta…",
         "Clonar de GitHub…",
@@ -195,6 +207,62 @@ describe("TabBar", () => {
         "Proyectos recientes",
         "Agregar alpha a favoritos",
       ]);
+    });
+
+    it("groups the menu: opening, then the library, then starring this project", async () => {
+      openTestProject(ALPHA);
+      render(<Harness />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Abrir un proyecto" }),
+      );
+
+      const menu = screen.getByRole("menu");
+      const order = Array.from(menu.children).map((child) =>
+        child.getAttribute("role") === "separator"
+          ? "—"
+          : (child.querySelector("span")?.textContent ?? ""),
+      );
+      expect(order).toEqual([
+        "Abrir carpeta…",
+        "Clonar de GitHub…",
+        "—",
+        "Favoritos",
+        "Proyectos recientes",
+        "—",
+        "Agregar alpha a favoritos",
+      ]);
+    });
+
+    it("shows the shortcut that opens a folder, as the platform writes it", async () => {
+      openTestProject(ALPHA);
+      render(<Harness />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Abrir un proyecto" }),
+      );
+
+      const open = screen.getByRole("menuitem", { name: "Abrir carpeta…" });
+      expect(open.querySelector("kbd")?.textContent).toBe("Ctrl+O");
+      expect(open.getAttribute("aria-keyshortcuts")).toBe("Ctrl+O");
+    });
+
+    it("writes the shortcut with the Command key on macOS", async () => {
+      vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+      );
+      openTestProject(ALPHA);
+      render(<Harness />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Abrir un proyecto" }),
+      );
+
+      expect(
+        screen
+          .getByRole("menuitem", { name: /Abrir carpeta/ })
+          .querySelector("kbd")?.textContent,
+      ).toBe("⌘O");
     });
 
     it("opens the chosen folder as another tab", async () => {

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 
 import type { OpenFolder } from "../AppShell/useOpenFolder";
+import { shortcutLabel } from "../../lib/platform";
 import { ContextMenu, type MenuItem } from "../ContextMenu";
 import { FavoriteToggle } from "../FavoriteToggle/FavoriteToggle";
 import { ErrorMessage } from "../ErrorMessage";
@@ -73,17 +74,9 @@ function swapTarget(
 }
 
 /** The mark a tab carries when its project needs attention, if any. */
-function statusOf(tab: Tab): "writing" | "unverified" | "unreachable" | null {
+function statusOf(tab: Tab): "writing" | "unreachable" | null {
   if (tab.gitActions.running !== null) return "writing";
-  switch (tab.verification.status) {
-    case "unverified":
-      return "unverified";
-    case "unreachable":
-      return "unreachable";
-    case "verifying":
-    case "verified":
-      return null;
-  }
+  return tab.verification.status === "unreachable" ? "unreachable" : null;
 }
 
 /**
@@ -202,7 +195,11 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
 
   const currentTab = tabs.find((tab) => tab.repository.path === activeRoot);
   const newItems: readonly MenuItem[] = [
-    { label: t("tabs.menu.openFolder"), onSelect: folder.choose },
+    {
+      label: t("tabs.menu.openFolder"),
+      onSelect: folder.choose,
+      shortcut: shortcutLabel("O"),
+    },
     {
       label: t("tabs.menu.cloneGitHub"),
       onSelect: () => {
@@ -211,6 +208,7 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
     },
     {
       label: t("workspace.favorites"),
+      startsGroup: true,
       onSelect: () => {
         setLibraryView("favorites");
       },
@@ -225,6 +223,7 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
       ? []
       : [
           {
+            startsGroup: true,
             label: t(
               favorites.includes(currentTab.repository.path)
                 ? "workspace.unfavorite"

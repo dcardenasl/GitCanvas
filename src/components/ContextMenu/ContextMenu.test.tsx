@@ -162,4 +162,42 @@ describe("ContextMenu", () => {
     fireEvent.scroll(window);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("draws a rule where a group starts, never before the first item", () => {
+    renderMenu(vi.fn(), vi.fn(), [
+      { label: "One", onSelect: vi.fn(), startsGroup: true },
+      { label: "Two", onSelect: vi.fn() },
+      { label: "Three", onSelect: vi.fn(), startsGroup: true },
+    ]);
+
+    const rules = screen.getAllByRole("separator");
+    expect(rules).toHaveLength(1);
+    expect(rules[0]?.previousElementSibling?.textContent).toBe("Two");
+    expect(rules[0]?.nextElementSibling?.textContent).toContain("Three");
+  });
+
+  it("shows a shortcut beside its label and names it to assistive technology", () => {
+    renderMenu(vi.fn(), vi.fn(), [
+      { label: "Open", onSelect: vi.fn(), shortcut: "Ctrl+O" },
+      { label: "Plain", onSelect: vi.fn() },
+    ]);
+
+    const open = screen.getByRole("menuitem", { name: /Open/ });
+    expect(open.querySelector("kbd")?.textContent).toBe("Ctrl+O");
+    expect(open.getAttribute("aria-keyshortcuts")).toBe("Ctrl+O");
+    const plain = screen.getByRole("menuitem", { name: "Plain" });
+    expect(plain.querySelector("kbd")).toBeNull();
+    expect(plain.hasAttribute("aria-keyshortcuts")).toBe(false);
+  });
+
+  it("keeps arrow-key navigation to the items, skipping the rules", async () => {
+    renderMenu(vi.fn(), vi.fn(), [
+      { label: "One", onSelect: vi.fn() },
+      { label: "Two", onSelect: vi.fn(), startsGroup: true },
+    ]);
+
+    await userEvent.keyboard("{ArrowDown}");
+
+    expect(document.activeElement?.textContent).toContain("Two");
+  });
 });

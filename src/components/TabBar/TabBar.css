@@ -89,10 +89,6 @@
   animation: tab-bar-spin 0.8s linear infinite;
 }
 
-.tab-bar__status--unverified {
-  border: 1px solid var(--ink-faint);
-}
-
 .tab-bar__status--unreachable {
   background: var(--danger-strong);
 }

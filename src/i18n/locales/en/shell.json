@@ -45,7 +45,6 @@
     },
     "new": "Open a project",
     "unreachable": "Could not be opened",
-    "unverified": "Waiting for verification",
     "writing": "Writing to the repository"
   },
   "theme": {

@@ -1,4 +1,10 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import "./ContextMenu.css";
 
@@ -6,6 +12,13 @@ import "./ContextMenu.css";
 export interface MenuItem {
   readonly label: string;
   readonly onSelect: () => void;
+  /**
+   * The keyboard shortcut that does the same, shown beside the label. Only a
+   * hint: the menu does not listen for it.
+   */
+  readonly shortcut?: string;
+  /** Starts a new group: a rule is drawn above this item. */
+  readonly startsGroup?: boolean;
 }
 
 /** Pointer position, available actions, and close callback for the menu. */
@@ -127,22 +140,34 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
       style={position}
     >
       {items.map((item, index) => (
-        <button
-          key={item.label}
-          type="button"
-          role="menuitem"
-          tabIndex={index === activeIndex ? 0 : -1}
-          className="context-menu__item"
-          onClick={() => {
-            try {
-              item.onSelect();
-            } finally {
-              close(true);
-            }
-          }}
-        >
-          {item.label}
-        </button>
+        <Fragment key={item.label}>
+          {item.startsGroup === true && index > 0 && (
+            <div className="context-menu__separator" role="separator" />
+          )}
+          <button
+            type="button"
+            role="menuitem"
+            tabIndex={index === activeIndex ? 0 : -1}
+            className="context-menu__item"
+            aria-keyshortcuts={item.shortcut}
+            onClick={() => {
+              try {
+                item.onSelect();
+              } finally {
+                close(true);
+              }
+            }}
+          >
+            <span>{item.label}</span>
+            {item.shortcut !== undefined && (
+              // Announced through `aria-keyshortcuts`; read again as part of the
+              // name, it would be said twice.
+              <kbd className="context-menu__shortcut" aria-hidden="true">
+                {item.shortcut}
+              </kbd>
+            )}
+          </button>
+        </Fragment>
       ))}
     </div>
   );

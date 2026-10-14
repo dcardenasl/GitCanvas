@@ -475,9 +475,15 @@ Origen: auditoría del 2026-10-14 sobre `dev` (706 pruebas, matriz remota todav�
       vaciaba los recientes (`slice(0, 0)`); ahora la lista se conserva.
       → `refactor(workspace): split the workspace store into focused slices`
 
-- [ ] **HRD-5 — Ruido visual y menú «+».** La marca «sin comprobar» sale de las pestañas
+- [x] **HRD-5 — Ruido visual y menú «+».** La marca «sin comprobar» sale de las pestañas
       restauradas (el estado sigue en el tooltip y en la verificación); el menú «+» agrupa sus
       acciones y muestra el atajo de Abrir.
+      *Decisiones al implementar:* **la decisión 4 de la serie WS cambia:** una pestaña «sin verificar» ya
+      no lleva marca. Tras restaurar, todas lo están hasta que se muestran y cada activación la
+      vuelve a marcar un instante, así que la marca era ruido y parpadeo, no información; quedan
+      solo «escribiendo» e «inaccesible», lo que pide atención. `MenuItem` gana `shortcut` y
+      `startsGroup` (separador con `role="separator"`), y el atajo se anuncia con
+      `aria-keyshortcuts` en lugar de repetirse en el nombre accesible.
       → `refactor(tabs): quiet the unverified mark and group the open menu`
 
 - [ ] **HRD-6 — Reabrir la pestaña cerrada.** Una pila acotada de pestañas cerradas con su

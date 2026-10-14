@@ -16,6 +16,10 @@
 }
 
 .context-menu__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-6);
   padding: 6px 10px;
   border: 0;
   border-radius: var(--radius-tight);
@@ -32,4 +36,17 @@
 .context-menu__item:focus-visible {
   background: var(--surface-hover);
   outline: none;
+}
+
+.context-menu__shortcut {
+  flex: 0 0 auto;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+}
+
+.context-menu__separator {
+  block-size: 1px;
+  margin-block: var(--space-1);
+  background: var(--divider);
 }
