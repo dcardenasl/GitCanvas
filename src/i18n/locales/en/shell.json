@@ -1,5 +1,6 @@
 {
   "empty": {
+    "clone": "Clone from GitHub",
     "hint": "Open a repository to see its branch and commit history."
   },
   "errorBoundary": {
@@ -32,6 +33,20 @@
     "failed": "GitCanvas could not start its workspace",
     "loading": "Starting GitCanvas…"
   },
+  "tabs": {
+    "all": "All open projects",
+    "close": "Close {{name}}",
+    "closeBusy": "{{name}} is still being written to",
+    "label": "Open projects",
+    "menu": {
+      "cloneGitHub": "Clone from GitHub…",
+      "openFolder": "Open folder…"
+    },
+    "new": "Open a project",
+    "unreachable": "Could not be opened",
+    "unverified": "Not checked since it was restored",
+    "writing": "Writing to the repository"
+  },
   "theme": {
     "aria": "Application theme",
     "dark": "Dark",
@@ -43,7 +58,6 @@
   "toolbar": {
     "branches": "Branches",
     "branchesHint": "Show the branches while reading a file",
-    "github": "GitHub",
     "noRepository": "No repository open",
     "openSyncFailed": "Could not tell the backend which repositories are open",
     "refresh": "Refresh",

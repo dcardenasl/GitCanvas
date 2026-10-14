@@ -58,6 +58,25 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("GitHubPicker", () => {
+  it("leaves the GitHub view without cloning, from either state", async () => {
+    hasGithubToken.mockResolvedValue(false);
+    const onClose = renderPicker();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Volver" }),
+    );
+    expect(onClose).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    hasGithubToken.mockResolvedValue(true);
+    listGithubRepositories.mockResolvedValue(repositoryList([REPO]));
+    const onCloseSignedIn = renderPicker();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Volver" }),
+    );
+    expect(onCloseSignedIn).toHaveBeenCalledTimes(1);
+    expect(cloneGithubRepository).not.toHaveBeenCalled();
+  });
+
   it("asks for a token when none is stored", async () => {
     hasGithubToken.mockResolvedValue(false);
     renderPicker();

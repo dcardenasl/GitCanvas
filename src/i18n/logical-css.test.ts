@@ -10,6 +10,7 @@ const LOGICAL_ONLY = [
   "components/ErrorMessage/ErrorMessage.css",
   "components/LanguageSelector/LanguageSelector.css",
   "components/PreferencesMenu/PreferencesMenu.css",
+  "components/TabBar/TabBar.css",
 ];
 
 const PHYSICAL =

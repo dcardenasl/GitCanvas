@@ -1,4 +1,5 @@
 {
+  "back": "Back",
   "connect": {
     "hint": "Paste a personal access token with the <code>repo</code> scope. It is stored in the system keychain and never leaves the backend.",
     "submit": "Connect",

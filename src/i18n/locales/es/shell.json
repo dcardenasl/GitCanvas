@@ -1,5 +1,6 @@
 {
   "empty": {
+    "clone": "Clonar de GitHub",
     "hint": "Abre un repositorio para ver su historial de ramas y commits."
   },
   "errorBoundary": {
@@ -32,6 +33,20 @@
     "failed": "GitCanvas no pudo iniciar su espacio de trabajo",
     "loading": "Iniciando GitCanvas…"
   },
+  "tabs": {
+    "all": "Todos los proyectos abiertos",
+    "close": "Cerrar {{name}}",
+    "closeBusy": "Todavía se está escribiendo en {{name}}",
+    "label": "Proyectos abiertos",
+    "menu": {
+      "cloneGitHub": "Clonar de GitHub…",
+      "openFolder": "Abrir carpeta…"
+    },
+    "new": "Abrir un proyecto",
+    "unreachable": "No se pudo abrir",
+    "unverified": "Sin comprobar desde que se restauró",
+    "writing": "Escribiendo en el repositorio"
+  },
   "theme": {
     "aria": "Tema de la aplicación",
     "dark": "Oscuro",
@@ -43,7 +58,6 @@
   "toolbar": {
     "branches": "Ramas",
     "branchesHint": "Mostrar las ramas mientras se lee un archivo",
-    "github": "GitHub",
     "noRepository": "Ningún repositorio abierto",
     "openSyncFailed": "No se pudo informar al backend qué repositorios están abiertos",
     "refresh": "Actualizar",

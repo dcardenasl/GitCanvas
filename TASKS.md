@@ -188,7 +188,7 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       con y sin la verificación, y se atribuye al primer arranque de un binario recién generado.
       → `feat(workspace): observe only the active tab and verify it on activation`
 
-- [ ] **WS-8 — Barra de pestañas y menú de apertura.** Componente accesible sobre la toolbar:
+- [x] **WS-8 — Barra de pestañas y menú de apertura.** Componente accesible sobre la toolbar:
       pestañas, cierre, desbordamiento y un botón «+» que abre un **menú** (Abrir carpeta…,
       Clonar de GitHub…, Favoritos, Recientes); toda pestaña es un proyecto, no existe una
       pestaña vacía. Cada pestaña muestra su nombre y solo **estado operativo**: indicador de
@@ -199,6 +199,17 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       español, CSS con propiedades lógicas, correcta a 940 px y en ambos temas.
       *Pruebas:* render y cierre, desbordamiento, nombres repetidos, textos largos, test de
       literales y de propiedades lógicas, toolbar sin los botones movidos.
+      *Decisiones al implementar:* `TabBar` solo aparece con al menos un proyecto; sin proyectos queda
+      la pantalla de inicio, que ahora lleva Abrir carpeta y Clonar de GitHub. La apertura de
+      carpeta se extrae a `useOpenFolder` (protección contra un segundo panel, recordar el
+      directorio, fallo) y la usan la pantalla de inicio y el menú «+», que nunca están a la vez.
+      Las pestañas desbordan con desplazamiento horizontal y un botón «Todos los proyectos
+      abiertos» lista todas, sin medir anchos; los nombres repetidos se distinguen con la carpeta
+      (`labelTabs`) y, si tampoco basta, con la ruta completa. Los glifos de cerrar, agregar y la
+      lista se dibujan con CSS, así que no hay caracteres que traducir. Cada pestaña es un
+      `tablist` con tabulación itinerante; flechas y atajos llegan con WS-9.
+      *Hallazgo durante la ejecución:* la vista de GitHub se cerraba con el botón de la barra, que
+      ya no existe; ahora tiene su propio botón «Volver».
       → `feat(workspace): add an accessible tab bar with an open menu`
 
 - [ ] **WS-9 — Reordenar y teclado.** Reordenar por arrastre y por teclado; patrón WAI-ARIA de

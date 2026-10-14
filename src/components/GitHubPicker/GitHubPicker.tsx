@@ -37,6 +37,20 @@ function progressLabel(
   });
 }
 
+/** Leaves the GitHub view for the projects, without cloning anything. */
+function BackButton({ onClose }: { readonly onClose: () => void }) {
+  const { t } = useTranslation("github");
+  return (
+    <button
+      type="button"
+      className="button github-picker__back"
+      onClick={onClose}
+    >
+      {t("back")}
+    </button>
+  );
+}
+
 /** Signs in to GitHub, lists repositories and clones the chosen one. */
 export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
   const { t } = useTranslation("github");
@@ -95,6 +109,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
   if (signedIn.data !== true) {
     return (
       <div className="github-picker">
+        <BackButton onClose={onClose} />
         <h2 className="github-picker__title">{t("connect.title")}</h2>
         <p className="github-picker__hint">
           <Trans t={t} i18nKey="connect.hint" components={{ code: <code /> }} />
@@ -140,6 +155,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
 
   return (
     <div className="github-picker">
+      <BackButton onClose={onClose} />
       <header className="github-picker__header">
         <h2 className="github-picker__title">{t("list.title")}</h2>
         <button

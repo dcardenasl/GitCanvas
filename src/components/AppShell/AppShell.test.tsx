@@ -377,20 +377,51 @@ describe("AppShell toolbar", () => {
     });
   });
 
-  it("swaps the history for the GitHub picker and back", async () => {
+  it("swaps the history for the GitHub picker from the open menu, and back", async () => {
     renderShell();
-    const toggle = await screen.findByRole("button", { name: "GitHub" });
 
-    await userEvent.click(toggle);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Abrir un proyecto" }),
+    );
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: "Clonar de GitHub…" }),
+    );
     expect(await screen.findByText("Conectar con GitHub")).toBeInstanceOf(
       HTMLElement,
     );
-    expect(toggle.getAttribute("aria-pressed")).toBe("true");
 
-    await userEvent.click(toggle);
+    await userEvent.click(screen.getByRole("button", { name: "Volver" }));
     await waitFor(() => {
       expect(screen.queryByText("Conectar con GitHub")).toBeNull();
     });
+    expect(useWorkspace.getState().githubOpen).toBe(false);
+  });
+
+  it("offers Open and Clone on the start screen when no project is open", async () => {
+    resetWorkspace();
+    renderShell();
+
+    expect(
+      await screen.findByRole("button", { name: "Abrir repositorio" }),
+    ).toBeInstanceOf(HTMLElement);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Clonar de GitHub" }),
+    );
+    expect(await screen.findByText("Conectar con GitHub")).toBeInstanceOf(
+      HTMLElement,
+    );
+  });
+
+  it("keeps the open buttons out of the toolbar and shows no tab bar without a project", async () => {
+    resetWorkspace();
+    const { container } = renderShell();
+    await screen.findByText("Ningún repositorio abierto");
+
+    expect(container.querySelector(".tab-bar")).toBeNull();
+    expect(container.querySelector(".toolbar .repository-picker")).toBeNull();
+    expect(
+      container.querySelector(".toolbar")?.textContent ?? "",
+    ).not.toContain("GitHub");
   });
 
   it("says when the watcher is degraded and retries on request", async () => {

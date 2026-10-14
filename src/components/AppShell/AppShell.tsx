@@ -17,6 +17,7 @@ import { Actions } from "../Toolbar";
 import { INSPECTOR, SIDEBAR, useLayout } from "../../state/layout";
 import { useLiveRepository } from "../../state/liveRepository";
 import { Sidebar } from "../Sidebar";
+import { TabBar } from "../TabBar";
 import { WorkingTreeDetailPanel } from "../WorkingTreeDetailPanel";
 import { useHistory } from "../../state/history";
 import { useCurrentBranch } from "../../state/refs";
@@ -125,110 +126,102 @@ export function AppShell() {
 
   return (
     <div className="app-shell">
-      <header className="toolbar">
-        <BrandLogo
-          className={
-            repository === null ? "toolbar__brand-wordmark" : "toolbar__brand"
-          }
-          variant={repository === null ? "horizontal" : "mark"}
-          decorative
-        />
-        <span className="toolbar__repository" title={repository?.name}>
-          {repository?.name ?? t("toolbar.noRepository")}
-        </span>
-        {repository !== null && (
-          <button
-            type="button"
-            className="button"
-            title={t("toolbar.refreshHint")}
-            onClick={() => {
-              void invalidateLive(queryClient, repository.path);
-            }}
-          >
-            {t("toolbar.refresh")}
-          </button>
-        )}
-        {watcher.status.kind === "degraded" && (
-          <div role="alert" className="toolbar__status">
-            <ErrorMessage error={watcher.status.error} />
-            <button type="button" className="button" onClick={watcher.retry}>
-              {t("common:actions.retry")}
-            </button>
-          </div>
-        )}
-        {notice !== null && (
-          <div role="status" className="toolbar__status">
-            <span>{t("workspace.tabLimit", { max: notice.max })}</span>
-            <button type="button" className="button" onClick={dismissNotice}>
-              {t("workspace.dismiss")}
-            </button>
-          </div>
-        )}
-        {verification.error !== null && (
-          <div role="alert" className="toolbar__status">
-            <ErrorMessage
-              error={verification.error}
-              lead={t("toolbar.verifyFailed")}
-            />
+      <div className="app-shell__chrome">
+        {repository !== null && <TabBar />}
+        <header className="toolbar">
+          <BrandLogo
+            className={
+              repository === null ? "toolbar__brand-wordmark" : "toolbar__brand"
+            }
+            variant={repository === null ? "horizontal" : "mark"}
+            decorative
+          />
+          <span className="toolbar__repository" title={repository?.name}>
+            {repository?.name ?? t("toolbar.noRepository")}
+          </span>
+          {repository !== null && (
             <button
               type="button"
               className="button"
-              onClick={verification.retry}
+              title={t("toolbar.refreshHint")}
+              onClick={() => {
+                void invalidateLive(queryClient, repository.path);
+              }}
             >
-              {t("common:actions.retry")}
+              {t("toolbar.refresh")}
             </button>
-          </div>
-        )}
-        {openSync.error !== null && (
-          <div role="alert" className="toolbar__status">
-            <ErrorMessage
-              error={openSync.error}
-              lead={t("toolbar.openSyncFailed")}
+          )}
+          {watcher.status.kind === "degraded" && (
+            <div role="alert" className="toolbar__status">
+              <ErrorMessage error={watcher.status.error} />
+              <button type="button" className="button" onClick={watcher.retry}>
+                {t("common:actions.retry")}
+              </button>
+            </div>
+          )}
+          {notice !== null && (
+            <div role="status" className="toolbar__status">
+              <span>{t("workspace.tabLimit", { max: notice.max })}</span>
+              <button type="button" className="button" onClick={dismissNotice}>
+                {t("workspace.dismiss")}
+              </button>
+            </div>
+          )}
+          {verification.error !== null && (
+            <div role="alert" className="toolbar__status">
+              <ErrorMessage
+                error={verification.error}
+                lead={t("toolbar.verifyFailed")}
+              />
+              <button
+                type="button"
+                className="button"
+                onClick={verification.retry}
+              >
+                {t("common:actions.retry")}
+              </button>
+            </div>
+          )}
+          {openSync.error !== null && (
+            <div role="alert" className="toolbar__status">
+              <ErrorMessage
+                error={openSync.error}
+                lead={t("toolbar.openSyncFailed")}
+              />
+              <button type="button" className="button" onClick={openSync.retry}>
+                {t("common:actions.retry")}
+              </button>
+            </div>
+          )}
+          {readingFile && (
+            <button
+              type="button"
+              className="button"
+              aria-pressed={sidebarPinned}
+              title={t("toolbar.branchesHint")}
+              onClick={() => {
+                setSidebarPinned(!sidebarPinned);
+              }}
+            >
+              {t("toolbar.branches")}
+            </button>
+          )}
+          {repository !== null && !readingFile && (
+            <CommitSearch
+              key={repository.path}
+              commits={history.commits}
+              query={searchQuery}
+              onQueryChange={setSearchQuery}
+              onGo={revealCommit}
             />
-            <button type="button" className="button" onClick={openSync.retry}>
-              {t("common:actions.retry")}
-            </button>
-          </div>
-        )}
-        {readingFile && (
-          <button
-            type="button"
-            className="button"
-            aria-pressed={sidebarPinned}
-            title={t("toolbar.branchesHint")}
-            onClick={() => {
-              setSidebarPinned(!sidebarPinned);
-            }}
-          >
-            {t("toolbar.branches")}
-          </button>
-        )}
-        {repository !== null && !readingFile && (
-          <CommitSearch
-            key={repository.path}
-            commits={history.commits}
-            query={searchQuery}
-            onQueryChange={setSearchQuery}
-            onGo={revealCommit}
-          />
-        )}
-        <div className="toolbar__spacer" />
-        <PreferencesMenu />
-        {repository !== null && (
-          <Actions actions={gitActions} currentBranch={currentBranch} />
-        )}
-        <button
-          type="button"
-          className="button"
-          aria-pressed={showGitHub}
-          onClick={() => {
-            setShowGitHub(!showGitHub);
-          }}
-        >
-          {t("toolbar.github")}
-        </button>
-        <RepositoryPicker />
-      </header>
+          )}
+          <div className="toolbar__spacer" />
+          <PreferencesMenu />
+          {repository !== null && (
+            <Actions actions={gitActions} currentBranch={currentBranch} />
+          )}
+        </header>
+      </div>
 
       {showGitHub ? (
         <GitHubPicker
@@ -240,6 +233,18 @@ export function AppShell() {
         <div className="app-shell__empty">
           <BrandLogo className="app-shell__empty-logo" variant="stacked" />
           <p className="app-shell__empty-hint">{t("empty.hint")}</p>
+          <div className="app-shell__empty-actions">
+            <RepositoryPicker />
+            <button
+              type="button"
+              className="button"
+              onClick={() => {
+                setShowGitHub(true);
+              }}
+            >
+              {t("empty.clone")}
+            </button>
+          </div>
         </div>
       ) : (
         <div

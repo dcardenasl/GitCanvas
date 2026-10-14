@@ -9,6 +9,10 @@
   height: 100%;
 }
 
+.app-shell__chrome {
+  min-inline-size: 0;
+}
+
 .toolbar {
   display: flex;
 
@@ -112,6 +116,14 @@
   width: min(250px, calc(100vw - 48px));
   height: auto;
   object-fit: contain;
+}
+
+.app-shell__empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-start;
+  justify-content: center;
 }
 
 .app-shell__empty-hint {
