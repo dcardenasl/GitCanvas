@@ -345,3 +345,33 @@ it("activating the current tab leaves project libraries and GitHub without chang
   expect(useWorkspace.getState().githubOpen).toBe(false);
   expect(useWorkspace.getState().tabs[0]?.navigation).toBe(navigation);
 });
+
+it("gates activation and the neighbor chosen on close before any effect runs", () => {
+  openTestProject(alpha);
+  openTestProject(beta);
+  useWorkspace.getState().activate(alpha.path);
+  expect(
+    useWorkspace
+      .getState()
+      .tabs.find((tab) => tab.repository.path === alpha.path)?.verification
+      .status,
+  ).toBe("unverified");
+  useWorkspace.getState().closeTab(alpha.path);
+  expect(useWorkspace.getState().tabs[0]?.verification.status).toBe(
+    "unverified",
+  );
+});
+
+it("reopening the current unreachable root schedules verification without losing its navigation", () => {
+  openTestProject(alpha);
+  useWorkspace.getState().setVerification(alpha.path, {
+    status: "unreachable",
+    error: new Error("unavailable"),
+  });
+  const navigation = useWorkspace.getState().tabs[0]?.navigation;
+  useWorkspace.getState().openProject(alpha);
+  expect(useWorkspace.getState().tabs[0]?.verification.status).toBe(
+    "unverified",
+  );
+  expect(useWorkspace.getState().tabs[0]?.navigation).toBe(navigation);
+});

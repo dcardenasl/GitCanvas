@@ -116,11 +116,7 @@ describe("TabBar", () => {
   });
 
   it.each([
-    [
-      "unverified",
-      { status: "unverified" } as const,
-      "Sin comprobar desde que se restauró",
-    ],
+    ["unverified", { status: "unverified" } as const, "Pendiente de verificar"],
     [
       "unreachable",
       { status: "unreachable", error: new Error("gone") } as const,

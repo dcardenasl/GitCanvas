@@ -45,7 +45,7 @@
     },
     "new": "Open a project",
     "unreachable": "Could not be opened",
-    "unverified": "Not checked since it was restored",
+    "unverified": "Waiting for verification",
     "writing": "Writing to the repository"
   },
   "theme": {
@@ -84,6 +84,7 @@
     "back": "Back",
     "commitDetails": "Selected commit",
     "commitLoading": "Reading the selected commit…",
-    "commitFailed": "The selected commit could not be read"
+    "commitFailed": "The selected commit could not be read",
+    "verifying": "Checking the project…"
   }
 }

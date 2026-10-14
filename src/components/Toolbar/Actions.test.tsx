@@ -402,3 +402,13 @@ describe("Actions", () => {
     expect(checkoutBranch).not.toHaveBeenCalled();
   });
 });
+
+it("rejects an imperative checkout callback while its project is unverified", async () => {
+  const { useWorkspace } = await import("../../state/workspace");
+  useWorkspace
+    .getState()
+    .setVerification("/tmp/repo", { status: "unverified" });
+  renderActions();
+  await userEvent.click(screen.getByRole("button", { name: "switch" }));
+  expect(checkoutBranch).not.toHaveBeenCalled();
+});

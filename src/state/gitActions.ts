@@ -70,7 +70,12 @@ async function run<Outcome>(
   settle: (outcome: Outcome) => Settled,
 ): Promise<void> {
   // Not open, or already busy: either way there is nothing to start.
-  if (gitActionsOf(useWorkspace.getState(), root)?.running !== null) return;
+  const tab = tabOf(useWorkspace.getState(), root);
+  if (
+    tab?.verification.status !== "verified" ||
+    tab.gitActions.running !== null
+  )
+    return;
 
   const update = (transition: GitTransition) => {
     useWorkspace.getState().updateGitActions(root, transition);

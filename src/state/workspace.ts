@@ -8,7 +8,7 @@ import {
   type GitTransition,
 } from "./gitActionState";
 import { restoreTab } from "./workspaceRecords";
-import { VERIFIED, type Verification } from "./verification";
+import { UNVERIFIED, VERIFIED, type Verification } from "./verification";
 import {
   clearOrphanedReveal,
   clearReveal,
@@ -148,6 +148,27 @@ function neighborOf(tabs: readonly Tab[], closing: string): string | null {
   return next?.repository.path ?? null;
 }
 
+/** Gates an activation synchronously, before effects or a stale callback can write. */
+function prepareActivation(
+  tabs: readonly Tab[],
+  root: string | null,
+  previous: string | null,
+  reopened = false,
+): readonly Tab[] {
+  return tabs.map((tab) => {
+    if (tab.repository.path !== root || tab.verification.status === "verifying")
+      return tab;
+    if (
+      root === previous &&
+      !(reopened && tab.verification.status === "unreachable")
+    )
+      return tab;
+    return tab.verification.status === "unverified"
+      ? tab
+      : { ...tab, verification: UNVERIFIED };
+  });
+}
+
 /**
  * The open projects and which one is active.
  *
@@ -216,7 +237,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       (tab) => tab.repository.path === repository.path,
     );
     set({
-      tabs:
+      tabs: prepareActivation(
         existing !== undefined && existing !== source
           ? tabs.filter((tab) => tab !== source)
           : tabs.map((tab) =>
@@ -229,6 +250,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
                   }
                 : tab,
             ),
+        repository.path,
+        get().activeRoot,
+      ),
       activeRoot: repository.path,
     });
   },
@@ -245,6 +269,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     const root = repository.path;
     if (tabs.some((tab) => tab.repository.path === root)) {
       set({
+        tabs: prepareActivation(tabs, root, get().activeRoot, true),
         activeRoot: root,
         notice: null,
         githubOpen: false,
@@ -287,6 +312,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     if (tabs.some((tab) => tab.repository.path === root)) {
       const { recents, limits } = get();
       set({
+        tabs: prepareActivation(tabs, root, get().activeRoot),
         activeRoot: root,
         libraryView: null,
         githubOpen: false,
@@ -303,9 +329,14 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     const tab = tabs.find((candidate) => candidate.repository.path === root);
     if (tab === undefined) return "closed";
     if (tab.gitActions.running !== null) return "busy";
+    const next = activeRoot === root ? neighborOf(tabs, root) : activeRoot;
     set({
-      tabs: tabs.filter((candidate) => candidate !== tab),
-      activeRoot: activeRoot === root ? neighborOf(tabs, root) : activeRoot,
+      tabs: prepareActivation(
+        tabs.filter((candidate) => candidate !== tab),
+        next,
+        activeRoot,
+      ),
+      activeRoot: next,
     });
     return "closed";
   },

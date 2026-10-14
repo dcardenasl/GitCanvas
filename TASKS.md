@@ -369,11 +369,22 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       contenido, ausencia de overlay y captura de errores/avisos del renderer.
       → `fix(workspace): bound overflow menus and preserve internal scrolling`
 
-- [ ] **WS-7a — Barrera de escritura síncrona al activar.** Marcar el destino pendiente
+- [x] **WS-7a — Barrera de escritura síncrona al activar.** Marcar el destino pendiente
       antes de los efectos de React, incluida la vecina al cerrar y una recuperación.
-      El ejecutor de escrituras también comprueba la verificación, para que un callback
+      La comprobación espera una lectura explícita de la huella local, sin confiar en
+      invalidar una consulta que todavía no tiene observadores. El ejecutor de escrituras
+      también comprueba la verificación, para que un callback
       imperativo tardío no pueda omitir la barrera de la interfaz.
+      *Evidencia:* activación, cierre y recuperación bloquean antes de los efectos;
+      el ejecutor rechaza callbacks imperativos sin verificación. La huella local se espera
+      explícitamente antes de habilitar. Pruebas de barrera, recuperación y lectura pendiente.
       → `fix(workspace): gate tab activation before asynchronous verification`
+
+- [ ] **WS-1a — Dependencias de caché y protección pendiente.** Resolver el directorio
+      Git común de worktrees externos y la entrada contenedora de proyectos anidados.
+      Una sincronización pendiente o metadatos irresolubles no permiten limpieza; la
+      reparación de una entrada usada tampoco puede eliminar trabajo local.
+      → `fix(workspace): protect shared clone metadata and block unsafe cache replacement`
 
 - [ ] **WS-16 — Documentación.** ADR 0006 (workspace, identidad por raíz, almacén, restauración
       perezosa, menú de macOS y decisiones de este plan), ARCHITECTURE, CONTEXT (observación y

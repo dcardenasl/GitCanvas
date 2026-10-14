@@ -284,7 +284,7 @@ export function AppShell() {
         />
       ) : !verified ? (
         <p className="state" role="status">
-          {t("startup.loading")}
+          {t("workspace.verifying")}
         </p>
       ) : (
         <div

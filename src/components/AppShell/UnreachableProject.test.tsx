@@ -61,6 +61,10 @@ it("locates through authorization and replaces the broken tab", async () => {
 it("reuses an already open target, preserving its session and removing only the broken tab", async () => {
   openTestProject({ path: "/tmp/other", name: "other" });
   useWorkspace.getState().activate("/tmp/repo");
+  useWorkspace.getState().setVerification("/tmp/repo", {
+    status: "unreachable",
+    error: new Error("missing folder"),
+  });
   const target = useWorkspace.getState().tabs[1];
   mock.open.mockResolvedValue("/tmp/other");
   mock.repository.mockResolvedValue({ path: "/tmp/other", name: "other" });
@@ -71,7 +75,7 @@ it("reuses an already open target, preserving its session and removing only the 
   await waitFor(() => {
     expect(useWorkspace.getState().tabs).toHaveLength(1);
   });
-  expect(useWorkspace.getState().tabs[0]).toBe(target);
+  expect(useWorkspace.getState().tabs[0]?.navigation).toBe(target?.navigation);
   expect(useWorkspace.getState().activeRoot).toBe("/tmp/other");
 });
 

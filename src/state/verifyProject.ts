@@ -1,7 +1,7 @@
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-import { openRepository } from "../lib/ipc";
+import { getWorktreeFingerprint, openRepository } from "../lib/ipc";
 import { invalidateLive, queryKeys } from "./queryKeys";
 import { branchesQuery, tagsQuery } from "./refs";
 import { tabOf, useWorkspace } from "./workspace";
@@ -49,14 +49,16 @@ export async function verifyProject(
 
     if (!current()) return;
     const before = cachedRefs(queryClient, root);
-    const [branches, tags] = await Promise.all([
+    const [branches, tags, fingerprint] = await Promise.all([
       queryClient.query({ ...branchesQuery(root), staleTime: 0 }),
       queryClient.query({ ...tagsQuery(root), staleTime: 0 }),
+      getWorktreeFingerprint(root),
     ]);
     if (!current()) return;
     if (before !== null && before !== JSON.stringify([branches, tags])) {
       await invalidateLive(queryClient, root, "metadata");
     }
+    queryClient.setQueryData(queryKeys.worktreeFingerprint(root), fingerprint);
     await invalidateLive(queryClient, root, "worktree");
     if (current())
       useWorkspace.getState().setVerification(root, { status: "verified" });
@@ -91,9 +93,10 @@ export function useVerifyActiveProject(): ActiveVerification {
       : (tabOf(state, state.activeRoot)?.verification ?? null),
   );
 
+  const needsVerification = verification?.status === "unverified";
   useEffect(() => {
     if (root !== null) void verifyProject(root, queryClient);
-  }, [root, queryClient]);
+  }, [root, queryClient, needsVerification]);
 
   return {
     error: verification?.status === "unreachable" ? verification.error : null,

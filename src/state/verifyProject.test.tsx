@@ -14,6 +14,7 @@ const mockIpc = vi.hoisted(() => ({
   openRepository: vi.fn(),
   getBranches: vi.fn(),
   getTags: vi.fn(),
+  getWorktreeFingerprint: vi.fn(),
 }));
 vi.mock("../lib/ipc", () => mockIpc);
 
@@ -58,6 +59,7 @@ beforeEach(() => {
   );
   mockIpc.getBranches.mockResolvedValue(MAIN);
   mockIpc.getTags.mockResolvedValue([]);
+  mockIpc.getWorktreeFingerprint.mockResolvedValue({ revision: "local" });
 });
 
 describe("verifyProject", () => {
@@ -286,4 +288,27 @@ describe("useVerifyActiveProject", () => {
     expect(result.current.error).toBeNull();
     expect(mockIpc.openRepository).not.toHaveBeenCalled();
   });
+});
+
+it("does not enable writes until the explicit working-tree fingerprint has arrived", async () => {
+  let finish: ((value: { revision: string }) => void) | undefined;
+  mockIpc.getWorktreeFingerprint.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const client = createTestQueryClient();
+  openTestProject(ALPHA);
+  const done = verifyProject(ALPHA.path, client);
+  await waitFor(() => {
+    expect(mockIpc.getWorktreeFingerprint).toHaveBeenCalledWith(ALPHA.path);
+  });
+  expect(status(ALPHA.path)).toBe("verifying");
+  finish?.({ revision: "checked" });
+  await done;
+  expect(status(ALPHA.path)).toBe("verified");
+  expect(
+    client.getQueryData(queryKeys.worktreeFingerprint(ALPHA.path)),
+  ).toEqual({ revision: "checked" });
 });

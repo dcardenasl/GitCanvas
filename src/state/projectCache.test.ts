@@ -31,6 +31,7 @@ it("closing removes every resource of that root without touching another project
   const root = "/repo/a";
   const keys = [
     queryKeys.history(root),
+    queryKeys.commit(root, "id"),
     queryKeys.branches(root),
     queryKeys.tags(root),
     queryKeys.worktree(root),
