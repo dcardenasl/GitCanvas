@@ -28,6 +28,21 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   const opener = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [position, setPosition] = useState({ left: 0, top: 0 });
+
+  useLayoutEffect(() => {
+    const bounds = ref.current?.getBoundingClientRect();
+    if (bounds === undefined) return;
+    const next = {
+      left: Math.max(8, Math.min(x, window.innerWidth - bounds.width - 8)),
+      top: Math.max(8, Math.min(y, window.innerHeight - bounds.height - 8)),
+    };
+    setPosition((previous) =>
+      previous.left === next.left && previous.top === next.top
+        ? previous
+        : next,
+    );
+  }, [x, y, items]);
 
   useLayoutEffect(() => {
     onCloseRef.current = onClose;
@@ -44,12 +59,16 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
     const activeElement = document.activeElement;
     opener.current =
       activeElement instanceof HTMLElement ? activeElement : null;
-    ref.current?.querySelector("button")?.focus();
+    ref.current?.querySelector("button")?.focus({ preventScroll: true });
 
     function onPointerDown(event: PointerEvent) {
       if (!ref.current?.contains(event.target as Node)) close(false);
     }
-    const closeOnAnchorMove = () => {
+    const closeOnAnchorMove = (event: Event) => {
+      // Scrolling the menu itself leaves its anchor in place, including the
+      // scroll caused by focusing an item near the end of a long menu.
+      if (event.target instanceof Node && ref.current?.contains(event.target))
+        return;
       close(false);
     };
 
@@ -105,10 +124,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
       onKeyDown={onKeyDown}
       // Kept inside the window: a menu opened near the right or bottom edge
       // would otherwise open partly off screen.
-      style={{
-        left: Math.min(x, window.innerWidth - 220),
-        top: Math.min(y, window.innerHeight - items.length * 30 - 12),
-      }}
+      style={position}
     >
       {items.map((item, index) => (
         <button

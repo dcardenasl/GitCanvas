@@ -360,6 +360,21 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       sin desbordamiento horizontal ni controles inaccesibles.
       → `fix(workspace): return to tab views and keep project lists scrollable`
 
+- [x] **WS-8a — Desbordamiento con treinta pestañas.** Acotar el menú a la ventana
+      según dimensiones reales y permitir desplazamiento interior sin cerrarlo. Mantener
+      el cierre al desplazarse fuera y el recorrido completo por teclado. Prueba unitaria
+      y nativa con treinta pestañas restauradas.
+      *Evidencia:* menú medido y acotado, scroll interior y teclado hasta la última fila;
+      pruebas con treinta pestañas restauradas a 940×600. Los E2E comprueban título,
+      contenido, ausencia de overlay y captura de errores/avisos del renderer.
+      → `fix(workspace): bound overflow menus and preserve internal scrolling`
+
+- [ ] **WS-7a — Barrera de escritura síncrona al activar.** Marcar el destino pendiente
+      antes de los efectos de React, incluida la vecina al cerrar y una recuperación.
+      El ejecutor de escrituras también comprueba la verificación, para que un callback
+      imperativo tardío no pueda omitir la barrera de la interfaz.
+      → `fix(workspace): gate tab activation before asynchronous verification`
+
 - [ ] **WS-16 — Documentación.** ADR 0006 (workspace, identidad por raíz, almacén, restauración
       perezosa, menú de macOS y decisiones de este plan), ARCHITECTURE, CONTEXT (observación y
       registro de repositorios abiertos), PRODUCT, DESIGN (barra de pestañas), README, CLAUDE.md

@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { fireEvent, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 function renderMenu(
   onClose = vi.fn(),
@@ -126,5 +129,37 @@ describe("ContextMenu", () => {
     expect(Number.parseInt(menu?.style.left ?? "0", 10)).toBeLessThan(
       window.innerWidth,
     );
+  });
+  it("bounds a long menu by its measured height and stays open when its own items scroll", async () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      right: 240,
+      bottom: 752,
+      width: 240,
+      height: 752,
+      toJSON: () => ({}),
+    });
+    const onClose = vi.fn();
+    const items = Array.from({ length: 30 }, (_, i) => ({
+      label: `Project ${String(i)}`,
+      onSelect: vi.fn(),
+    }));
+    render(<ContextMenu x={99999} y={99999} items={items} onClose={onClose} />);
+    const menu = screen.getByRole("menu");
+    expect(Number.parseInt(menu.style.top, 10)).toBe(8);
+    expect(Number.parseInt(menu.style.left, 10) + 240).toBeLessThanOrEqual(
+      window.innerWidth - 8,
+    );
+    await userEvent.keyboard("{End}");
+    expect(document.activeElement).toBe(
+      screen.getByRole("menuitem", { name: "Project 29" }),
+    );
+    fireEvent.scroll(menu);
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.scroll(window);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

@@ -284,14 +284,18 @@ if (process.env.WDIO_WORKER_ID === undefined) {
       JSON.stringify({
         version: 1,
         workspace: {
-          tabs: [
-            {
-              path: fixture,
-              selection: { kind: "history" },
-              history_anchor: null,
-              collapsed_folders: [],
-            },
-          ],
+          tabs: Array.from({ length: 30 }, (_, index) => ({
+            path:
+              index === 0
+                ? fixture
+                : path.join(
+                    fixture,
+                    `remembered-tab-${String(index).padStart(2, "0")}`,
+                  ),
+            selection: { kind: "history" },
+            history_anchor: null,
+            collapsed_folders: [],
+          })),
           active: fixture,
           favorites: Array.from({ length: 199 }, (_, index) =>
             path.join(fixture, `remembered-${String(index).padStart(3, "0")}`),
@@ -302,6 +306,8 @@ if (process.env.WDIO_WORKER_ID === undefined) {
     );
   }
 }
+
+let activeBrowser: WebdriverIO.Browser | null = null;
 
 export const config: WebdriverIO.Config = {
   runner: "local",
@@ -374,8 +380,30 @@ export const config: WebdriverIO.Config = {
     // on a retry. There is one window, so switching to it explicitly is a no-op
     // that also tells the service not to second-guess the choice.
     const driver = browser as WebdriverIO.Browser;
-    const [window] = await driver.getWindowHandles();
-    if (window !== undefined) await driver.switchToWindow(window);
+    const [windowHandle] = await driver.getWindowHandles();
+    if (windowHandle !== undefined) await driver.switchToWindow(windowHandle);
+    activeBrowser = driver;
+    await driver.execute(() => {
+      const errors: string[] = [];
+      Object.assign(window, { __gitcanvasE2EErrors: errors });
+      const record = (message: string) => {
+        if (errors.length < 50) errors.push(message);
+      };
+      window.addEventListener("error", (event) => {
+        record(event.message);
+      });
+      window.addEventListener("unhandledrejection", (event) => {
+        const cause: unknown = event.reason;
+        record(String(cause));
+      });
+      for (const level of ["error", "warn"] as const) {
+        const original = console[level].bind(console);
+        console[level] = (...args: unknown[]) => {
+          record(args.map(String).join(" "));
+          original(...args);
+        };
+      }
+    });
 
     // The application starts in the language of the machine it runs on, and the
     // specs select by that language's text. Choosing it through the interface,
@@ -400,6 +428,31 @@ export const config: WebdriverIO.Config = {
       { timeoutMsg: "expected the interface to switch to Spanish" },
     );
     await preferences.click();
+  },
+
+  async after() {
+    if (activeBrowser === null) return;
+    const health = await activeBrowser.execute(() => {
+      const captured: unknown = Reflect.get(window, "__gitcanvasE2EErrors");
+      if (!Array.isArray(captured))
+        throw new Error("Renderer error capture is missing");
+      return {
+        title: document.title,
+        content: document.querySelector(".app-shell") !== null,
+        overlay: document.querySelector("vite-error-overlay") !== null,
+        errors: captured.map((message: unknown) => String(message)),
+      };
+    });
+    if (
+      !health.title.includes("GitCanvas") ||
+      !health.content ||
+      health.overlay ||
+      health.errors.length > 0
+    ) {
+      throw new Error(
+        `Application health check failed: ${JSON.stringify(health)}`,
+      );
+    }
   },
 
   onComplete() {

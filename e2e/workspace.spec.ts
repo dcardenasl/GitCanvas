@@ -10,6 +10,19 @@ if (e2eSecondRepository === null)
   throw new Error("Workspace spec requires its two owned fixtures");
 const beta = path.basename(e2eSecondRepository);
 
+async function resizeWorkspace() {
+  await browser.setWindowSize(940, 600);
+  // Resize events run before animation-frame callbacks. Wait for the next paint
+  // before opening a menu that deliberately closes if its anchor moves.
+  await browser.executeAsync((done) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        done(null);
+      });
+    });
+  });
+}
+
 async function openList(kind: "Favoritos" | "Proyectos recientes") {
   await $('[aria-label="Abrir un proyecto"]').click();
   await $(`[role="menuitem"]=${kind}`).click();
@@ -30,6 +43,44 @@ async function expectProject(
 }
 
 describe("workspace projects", () => {
+  it("keeps thirty restored tabs reachable through a bounded, scrollable menu", async () => {
+    await waitForHistory();
+    await resizeWorkspace();
+    await $('[aria-label="Todos los proyectos abiertos"]').click();
+    await expect($$('[role="menuitem"]')).toBeElementsArrayOfSize(30);
+    await browser.keys("End");
+    const bounded = await browser.execute(() => {
+      const menu = document.querySelector('[role="menu"]');
+      const bounds = menu?.getBoundingClientRect();
+      return (
+        menu !== null &&
+        bounds !== undefined &&
+        bounds.top >= 0 &&
+        bounds.bottom <= window.innerHeight &&
+        bounds.left >= 0 &&
+        bounds.right <= window.innerWidth &&
+        menu.scrollHeight > menu.clientHeight &&
+        menu.contains(document.activeElement)
+      );
+    });
+    expect(bounded).toBe(true);
+    await expect($('[role="menu"]')).toBeDisplayed();
+    await browser.saveScreenshot(
+      path.join(os.tmpdir(), "gitcanvas-workspace-overflow.png"),
+    );
+    await browser.keys("Escape");
+    // Close only the inactive remembered tabs through the application's controls.
+    await browser.execute((name) => {
+      for (const tab of document.querySelectorAll('[role="tab"]')) {
+        if (!tab.getAttribute("title")?.endsWith(name)) {
+          tab.parentElement
+            ?.querySelector<HTMLButtonElement>(".tab-bar__close")
+            ?.click();
+        }
+      }
+    }, alpha);
+    await expect($$('[role="tab"]')).toBeElementsArrayOfSize(1);
+  });
   it("restores the first tab, opens a second and isolates history and local changes while switching", async () => {
     await expectProject(
       "workspace alpha commit",
@@ -69,7 +120,7 @@ describe("workspace projects", () => {
     );
     await expect($$('[role="tab"]')).toBeElementsArrayOfSize(2);
     await $(`[aria-label="Agregar ${alpha} a favoritos"]`).click();
-    await browser.setWindowSize(940, 600);
+    await resizeWorkspace();
     await browser.waitUntil(
       async () =>
         browser.execute(() => {

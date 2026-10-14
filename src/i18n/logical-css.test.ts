@@ -11,6 +11,7 @@ const LOGICAL_ONLY = [
   "components/LanguageSelector/LanguageSelector.css",
   "components/PreferencesMenu/PreferencesMenu.css",
   "components/TabBar/TabBar.css",
+  "components/ContextMenu/ContextMenu.css",
   "components/WorkspaceGate/WorkspaceGate.css",
   "components/ProjectLibrary/ProjectLibrary.css",
   "components/FavoriteToggle/FavoriteToggle.css",
