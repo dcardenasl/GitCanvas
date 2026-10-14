@@ -143,7 +143,7 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       y carpetas colapsadas se guardan en disco (WS-11); el resto vive mientras dura la sesión.
       → `refactor(workspace): keep search, folders and scroll anchor in each tab session`
 
-- [ ] **WS-6 — Aislamiento de datos y de operaciones.** Quitar `keepPreviousData` de las
+- [x] **WS-6 — Aislamiento de datos y de operaciones.** Quitar `keepPreviousData` de las
       consultas de `worktree.ts` que cruzan proyectos (los archivos de uno nunca aparecen ni
       habilitan acciones en otro); `useGitActions` pasa a estado por proyecto (aviso,
       ocupado, confirmación y bloqueo de checkout), y su resultado se aplica al proyecto que lo
@@ -151,6 +151,15 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       puede cerrarse. Las claves de consulta se mantienen por repositorio.
       *Pruebas:* respuesta tardía tras cambiar de pestaña; dos acciones en proyectos distintos;
       cierre bloqueado mientras escribe; sin datos del proyecto anterior durante la carga.
+      *Decisiones al implementar:* `useGitActions` y sus tipos salen de `components/Toolbar` y pasan a
+      `state/gitActions.ts` (comandos) y `state/gitActionState.ts` (modelo puro); el estado vive en
+      `Tab.gitActions`. Un `run` único aplica las reglas de toda escritura: no arranca si el
+      proyecto ya tiene una acción en curso, siempre limpia la marca de «en curso» y el resultado
+      cae en el proyecto que lo inició. Antes, un resultado que llegaba tras cambiar de proyecto se
+      descartaba y `busy` bloqueaba al otro proyecto; ahora cada uno tiene el suyo. `closeTab`
+      devuelve `"busy"` y no cierra una pestaña que está escribiendo. `keepPreviousData` se
+      reemplaza por un placeholder que solo presta la respuesta anterior del mismo proyecto; la
+      prueba falla si se vuelve a la versión anterior.
       → `fix(workspace): bind queries and git actions to the project that started them`
 
 - [ ] **WS-7 — Observación del proyecto activo y verificación al activar.** Un único watcher y

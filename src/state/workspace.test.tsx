@@ -122,11 +122,30 @@ describe("closing and activating tabs", () => {
     expect(roots()).toEqual([beta.path]);
   });
 
+  it("keeps open a tab whose project is being written to", () => {
+    openTestProject(alpha);
+    openTestProject(beta);
+    useWorkspace
+      .getState()
+      .updateGitActions(alpha.path, (state) => ({ ...state, running: "push" }));
+
+    expect(useWorkspace.getState().closeTab(alpha.path)).toBe("busy");
+    expect(roots()).toEqual([alpha.path, beta.path]);
+
+    useWorkspace
+      .getState()
+      .updateGitActions(alpha.path, (state) => ({ ...state, running: null }));
+    expect(useWorkspace.getState().closeTab(alpha.path)).toBe("closed");
+    expect(roots()).toEqual([beta.path]);
+  });
+
   it("ignores a tab that is not open", () => {
     openTestProject(alpha);
     const before = useWorkspace.getState().tabs;
 
-    useWorkspace.getState().closeTab("/projects/never-opened");
+    expect(useWorkspace.getState().closeTab("/projects/never-opened")).toBe(
+      "closed",
+    );
     useWorkspace.getState().activate("/projects/never-opened");
 
     expect(useWorkspace.getState().tabs).toBe(before);

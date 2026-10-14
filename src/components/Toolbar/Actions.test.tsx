@@ -17,7 +17,11 @@ const { checkoutBranch, pullFastForward, pushCurrentBranch } = mockIpc;
 vi.mock("../../lib/ipc", () => mockIpc);
 
 const { Actions } = await import("./Actions");
-const { useGitActions } = await import("./useGitActions");
+const { useGitActions } = await import("../../state/gitActions");
+const { openTestProject, resetWorkspace } =
+  await import("../../test/workspace");
+
+const OTHER = { path: "/tmp/another-repo", name: "another-repo" };
 
 /** Wires the actions the way the shell does, plus a control that switches branch. */
 function Harness({ path = "/tmp/repo" }: { readonly path?: string }) {
@@ -43,6 +47,8 @@ function renderActions() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetWorkspace();
+  openTestProject();
   HTMLDialogElement.prototype.showModal = vi.fn();
   HTMLDialogElement.prototype.close = vi.fn();
 });
@@ -204,7 +210,7 @@ describe("Actions", () => {
     );
   });
 
-  it("closes notices and clears them when the repository changes", async () => {
+  it("keeps each project's notice with that project", async () => {
     const { rerender } = renderActions();
     pullFastForward.mockResolvedValue({ kind: "UpToDate" });
 
@@ -214,13 +220,14 @@ describe("Actions", () => {
     expect(await screen.findByText("Ya está al día.")).toBeInstanceOf(
       HTMLElement,
     );
-    rerender(<Harness path="/tmp/another-repo" />);
+    openTestProject(OTHER);
+    rerender(<Harness path={OTHER.path} />);
     expect(screen.queryByText("Ya está al día.")).toBeNull();
     rerender(<Harness />);
-    expect(screen.queryByText("Ya está al día.")).toBeNull();
+    expect(screen.getByText("Ya está al día.")).toBeInstanceOf(HTMLElement);
   });
 
-  it("does not restore a late notice from the previous repository", async () => {
+  it("reports a late result to the project that started it, not the one on screen", async () => {
     let finishPull: (outcome: PullOutcome) => void = () => undefined;
     const { rerender } = renderActions();
     pullFastForward.mockReturnValue(
@@ -232,11 +239,51 @@ describe("Actions", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Traer cambios" }),
     );
-    rerender(<Harness path="/tmp/another-repo" />);
-    finishPull({ kind: "UpToDate" });
-    await screen.findByRole("button", { name: "Traer cambios" });
-    rerender(<Harness />);
+    openTestProject(OTHER);
+    rerender(<Harness path={OTHER.path} />);
+    // The other project is not held up by a pull it did not start.
+    expect(
+      screen
+        .getByRole("button", { name: "Traer cambios" })
+        .hasAttribute("disabled"),
+    ).toBe(false);
+    await act(async () => {
+      finishPull({ kind: "UpToDate" });
+      await Promise.resolve();
+    });
     expect(screen.queryByText("Ya está al día.")).toBeNull();
+
+    rerender(<Harness />);
+    expect(screen.getByText("Ya está al día.")).toBeInstanceOf(HTMLElement);
+  });
+
+  it("does not start a second action in a project while one is running", async () => {
+    pullFastForward.mockReturnValue(new Promise(() => undefined));
+    renderActions();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Traer cambios" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "switch" }));
+
+    expect(pullFastForward).toHaveBeenCalledTimes(1);
+    expect(checkoutBranch).not.toHaveBeenCalled();
+  });
+
+  it("clears the running mark when an action fails, so the project is not left stuck", async () => {
+    pullFastForward.mockRejectedValueOnce(new Error("network down"));
+    renderActions();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Traer cambios" }),
+    );
+    expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
+
+    pullFastForward.mockResolvedValue({ kind: "UpToDate" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "Traer cambios" }),
+    );
+    expect(pullFastForward).toHaveBeenCalledTimes(2);
   });
 
   it("refreshes only live queries for the repository changed by pull", async () => {

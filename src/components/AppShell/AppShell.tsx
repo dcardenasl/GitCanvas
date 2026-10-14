@@ -13,7 +13,7 @@ import { FileDiffView } from "../FileDiffView";
 import { GitHubPicker } from "../GitHubPicker";
 import { PreferencesMenu } from "../PreferencesMenu";
 import { Resizer } from "../Resizer";
-import { Actions, useGitActions } from "../Toolbar";
+import { Actions } from "../Toolbar";
 import { INSPECTOR, SIDEBAR, useLayout } from "../../state/layout";
 import { useLiveRepository } from "../../state/liveRepository";
 import { Sidebar } from "../Sidebar";
@@ -30,6 +30,7 @@ import {
   useNavigationActions,
   useWorkspace,
 } from "../../state/workspace";
+import { useGitActions } from "../../state/gitActions";
 import { useOpenRepositoriesSync } from "../../state/openRepositories";
 import { invalidateLive } from "../../state/queryKeys";
 

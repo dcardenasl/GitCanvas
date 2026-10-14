@@ -3,7 +3,8 @@ import { Trans, useTranslation } from "react-i18next";
 import { ErrorMessage } from "../ErrorMessage";
 
 import { ConfirmDialog } from "./ConfirmDialog";
-import type { GitActions, NoticeContent } from "./useGitActions";
+import type { NoticeContent } from "../../state/gitActionState";
+import type { GitActions } from "../../state/gitActions";
 
 import "./Actions.css";
 

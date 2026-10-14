@@ -3,6 +3,11 @@ import { create } from "zustand";
 
 import type { RepositoryInfo, WorkspaceLimits } from "../bindings";
 import {
+  IDLE_GIT_ACTIONS,
+  type GitActionState,
+  type GitTransition,
+} from "./gitActionState";
+import {
   clearOrphanedReveal,
   clearReveal,
   EMPTY_NAVIGATION,
@@ -27,6 +32,8 @@ export interface Tab {
   readonly repository: RepositoryInfo;
   /** Selection, reveal and expansion, kept while the tab is in the background. */
   readonly navigation: Navigation;
+  /** Checkout, pull and push for this project, whichever tab is showing. */
+  readonly gitActions: GitActionState;
 }
 
 /** What opening a project did. */
@@ -37,6 +44,13 @@ export type OpenOutcome =
   | "activated"
   /** The tab limit was reached, so nothing was opened. */
   | "limit";
+
+/** What closing a tab did. */
+export type CloseOutcome =
+  /** The tab is gone, or was never open. */
+  | "closed"
+  /** An action is still writing to the project, so the tab stays. */
+  | "busy";
 
 /** Something the interface owes the person after a workspace action. */
 export interface WorkspaceNotice {
@@ -64,14 +78,42 @@ interface WorkspaceState {
   openProject: (repository: RepositoryInfo) => OpenOutcome;
   /** Makes an open project's tab the active one. */
   activate: (root: string) => void;
-  /** Closes a tab; if it was active, its neighbor takes over. */
-  closeTab: (root: string) => void;
+  /**
+   * Closes a tab; if it was active, its neighbor takes over. A tab whose
+   * project is being written to cannot be closed: the write would go on with
+   * nothing left to report it.
+   */
+  closeTab: (root: string) => CloseOutcome;
   /** Applies a navigation change to the project with this root, if it is open. */
   navigate: (root: string, transition: Transition) => void;
+  /** Applies a change to the git action state of the project with this root. */
+  updateGitActions: (root: string, transition: GitTransition) => void;
   /** Dismisses the current notice. */
   dismissNotice: () => void;
   /** Shows or hides the clone-from-GitHub view. */
   setGitHubOpen: (open: boolean) => void;
+}
+
+/**
+ * Applies `change` to the tab with `root`. Returns the state itself, unchanged,
+ * when the project is not open or the change leaves its tab as it was, so
+ * subscribers are not woken for nothing.
+ */
+function changeTab(
+  state: WorkspaceState,
+  root: string,
+  change: (tab: Tab) => Tab,
+): WorkspaceState | Pick<WorkspaceState, "tabs"> {
+  const index = state.tabs.findIndex((tab) => tab.repository.path === root);
+  const tab = state.tabs[index];
+  if (tab === undefined) return state;
+  const changed = change(tab);
+  if (changed === tab) return state;
+  return {
+    tabs: state.tabs.map((candidate, position) =>
+      position === index ? changed : candidate,
+    ),
+  };
 }
 
 /** The tab to activate when `closing` goes away: the next one, else the previous. */
@@ -115,7 +157,14 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       return "limit";
     }
     set({
-      tabs: [...tabs, { repository, navigation: EMPTY_NAVIGATION }],
+      tabs: [
+        ...tabs,
+        {
+          repository,
+          navigation: EMPTY_NAVIGATION,
+          gitActions: IDLE_GIT_ACTIONS,
+        },
+      ],
       activeRoot: root,
       notice: null,
     });
@@ -134,26 +183,32 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
 
   closeTab: (root) => {
     const { tabs, activeRoot } = get();
-    if (!tabs.some((tab) => tab.repository.path === root)) return;
+    const tab = tabs.find((candidate) => candidate.repository.path === root);
+    if (tab === undefined) return "closed";
+    if (tab.gitActions.running !== null) return "busy";
     set({
-      tabs: tabs.filter((tab) => tab.repository.path !== root),
+      tabs: tabs.filter((candidate) => candidate !== tab),
       activeRoot: activeRoot === root ? neighborOf(tabs, root) : activeRoot,
     });
+    return "closed";
   },
 
   navigate: (root, transition) => {
-    set((state) => {
-      const index = state.tabs.findIndex((tab) => tab.repository.path === root);
-      const tab = state.tabs[index];
-      if (tab === undefined) return state;
-      const navigation = transition(tab.navigation);
-      if (navigation === tab.navigation) return state;
-      return {
-        tabs: state.tabs.map((candidate, position) =>
-          position === index ? { ...candidate, navigation } : candidate,
-        ),
-      };
-    });
+    set((state) =>
+      changeTab(state, root, (tab) => {
+        const navigation = transition(tab.navigation);
+        return navigation === tab.navigation ? tab : { ...tab, navigation };
+      }),
+    );
+  },
+
+  updateGitActions: (root, transition) => {
+    set((state) =>
+      changeTab(state, root, (tab) => {
+        const gitActions = transition(tab.gitActions);
+        return gitActions === tab.gitActions ? tab : { ...tab, gitActions };
+      }),
+    );
   },
 
   dismissNotice: () => {
@@ -259,4 +314,17 @@ export function navigationActionsFor(root: string | null): NavigationActions {
 export function useNavigationActions(): NavigationActions {
   const root = useWorkspace((state) => state.activeRoot);
   return useMemo(() => navigationActionsFor(root), [root]);
+}
+
+/**
+ * The git action state of the project with `root`, or `null` when it is not
+ * open. A plain function of the state so a selector and a one-off read share it.
+ */
+export function gitActionsOf(
+  state: Pick<WorkspaceState, "tabs">,
+  root: string,
+): GitActionState | null {
+  return (
+    state.tabs.find((tab) => tab.repository.path === root)?.gitActions ?? null
+  );
 }
