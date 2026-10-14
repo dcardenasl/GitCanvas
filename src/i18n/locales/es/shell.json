@@ -58,6 +58,7 @@
   "toolbar": {
     "branches": "Ramas",
     "branchesHint": "Mostrar las ramas mientras se lee un archivo",
+    "menuFailed": "No se pudo configurar la barra de menús",
     "noRepository": "Ningún repositorio abierto",
     "openSyncFailed": "No se pudo informar al backend qué repositorios están abiertos",
     "refresh": "Actualizar",

@@ -1,0 +1,20 @@
+{
+  "about": "Acerca de GitCanvas",
+  "closeTab": "Cerrar pestaña",
+  "copy": "Copiar",
+  "cut": "Cortar",
+  "edit": "Edición",
+  "file": "Archivo",
+  "hide": "Ocultar GitCanvas",
+  "hideOthers": "Ocultar otros",
+  "minimize": "Minimizar",
+  "openFolder": "Abrir carpeta…",
+  "paste": "Pegar",
+  "quit": "Salir de GitCanvas",
+  "redo": "Rehacer",
+  "selectAll": "Seleccionar todo",
+  "showAll": "Mostrar todo",
+  "undo": "Deshacer",
+  "window": "Ventana",
+  "zoom": "Zoom"
+}

@@ -11,6 +11,7 @@ import type {
   WorktreeFileContentRequest,
   WorktreeSnapshotRequest,
   WatchRequest,
+  MenuLabels,
 } from "../../bindings";
 
 export type {
@@ -149,3 +150,13 @@ export const unwatchRepository = (generation: number) =>
 
 /** Subscribes to repository changes. Returns the unsubscribe function. */
 export const onRepositoryChanged = events.repositoryChangedEvent.listen;
+
+/**
+ * Sets the macOS menu bar's text. Accepted and ignored on platforms with no
+ * menu bar to set.
+ */
+export const setMenuLabels = (labels: MenuLabels) =>
+  result(commands.setMenuLabels(labels));
+
+/** Subscribes to menu items chosen in the menu bar. Returns the unsubscribe function. */
+export const onMenuAction = events.menuActionEvent.listen;

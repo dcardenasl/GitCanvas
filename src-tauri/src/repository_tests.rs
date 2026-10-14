@@ -20,6 +20,9 @@ pub(super) fn test_webview() -> tauri::WebviewWindow<MockRuntime> {
                     .join(format!("gitcanvas-test-workspace-{}", std::process::id())),
             ),
         ))
+        .manage(crate::commands::menu::MenuApplier(std::sync::Arc::new(
+            |_| Ok(()),
+        )))
         .manage(crate::commands::watch::ActiveWatch::default())
         .manage(crate::commands::watch::ChangeNotifier(std::sync::Arc::new(
             |_| {},

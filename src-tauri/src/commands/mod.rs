@@ -17,6 +17,8 @@ pub mod diff;
 
 pub mod github;
 
+pub mod menu;
+
 pub mod open_repos;
 
 pub mod repo_access;

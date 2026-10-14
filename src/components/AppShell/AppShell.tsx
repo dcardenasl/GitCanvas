@@ -32,6 +32,7 @@ import {
   useWorkspace,
 } from "../../state/workspace";
 import { useGitActions } from "../../state/gitActions";
+import { useNativeMenu } from "../../state/nativeMenu";
 import { useOpenRepositoriesSync } from "../../state/openRepositories";
 import { useVerifyActiveProject } from "../../state/verifyProject";
 import { invalidateLive } from "../../state/queryKeys";
@@ -75,6 +76,7 @@ export function AppShell() {
   const verification = useVerifyActiveProject();
   const folder = useOpenFolder();
   useTabShortcuts(folder.choose);
+  const nativeMenu = useNativeMenu(folder.choose);
 
   useEffect(() => {
     // The window says which repository it is showing, so two of them are
@@ -180,6 +182,21 @@ export function AppShell() {
                 type="button"
                 className="button"
                 onClick={verification.retry}
+              >
+                {t("common:actions.retry")}
+              </button>
+            </div>
+          )}
+          {nativeMenu.error !== null && (
+            <div role="alert" className="toolbar__status">
+              <ErrorMessage
+                error={nativeMenu.error}
+                lead={t("toolbar.menuFailed")}
+              />
+              <button
+                type="button"
+                className="button"
+                onClick={nativeMenu.retry}
               >
                 {t("common:actions.retry")}
               </button>

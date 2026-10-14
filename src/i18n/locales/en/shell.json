@@ -58,6 +58,7 @@
   "toolbar": {
     "branches": "Branches",
     "branchesHint": "Show the branches while reading a file",
+    "menuFailed": "Could not set the menu bar",
     "noRepository": "No repository open",
     "openSyncFailed": "Could not tell the backend which repositories are open",
     "refresh": "Refresh",

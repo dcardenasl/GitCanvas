@@ -18,6 +18,10 @@
 mod commands;
 mod data_dir;
 mod logging;
+// The menu bar is installed on macOS only, but what it contains is built and
+// checked on every platform, so elsewhere that code is exercised by tests alone.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+mod menu;
 mod resources;
 mod warmup;
 
@@ -73,6 +77,7 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::actions::pull_fast_forward,
             commands::actions::push_current_branch,
             commands::watch::watch_repository,
+            commands::menu::set_menu_labels,
             commands::watch::unwatch_repository,
             commands::workspace::get_workspace_limits,
             commands::workspace::load_workspace,
@@ -80,6 +85,7 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
         ])
         .events(collect_events![
             commands::github::CloneProgressEvent,
+            commands::menu::MenuActionEvent,
             commands::watch::RepositoryChangedEvent
         ])
 }
@@ -92,6 +98,33 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
 /// application and the tests come through here.
 fn app_context<R: tauri::Runtime>() -> tauri::Context<R> {
     tauri::generate_context!()
+}
+
+/// Replaces the menu bar with one in the given language, on the main thread
+/// where the system requires menus to be built.
+#[cfg(target_os = "macos")]
+fn install_menu(
+    handle: &tauri::AppHandle,
+    labels: &commands::menu::MenuLabels,
+) -> Result<(), gitcanvas_core::error::AppError> {
+    use gitcanvas_core::error::AppError;
+    let internal = |error: &dyn std::fmt::Display| AppError::Internal(error.to_string());
+
+    let (sender, receiver) = std::sync::mpsc::channel();
+    let (main_handle, labels) = (handle.clone(), labels.clone());
+    handle
+        .run_on_main_thread(move || {
+            let name = main_handle.package_info().name.clone();
+            let installed = menu::to_native(&main_handle, &menu::full_spec(&name, &labels))
+                .and_then(|menu| main_handle.set_menu(menu).map(|_previous| ()));
+            // The caller may have given up waiting; nothing is left to tell.
+            let _ = sender.send(installed);
+        })
+        .map_err(|error| internal(&error))?;
+    receiver
+        .recv_timeout(std::time::Duration::from_secs(5))
+        .map_err(|error| internal(&error))?
+        .map_err(|error| internal(&error))
 }
 
 /// Writes a startup diagnostic before the file logger has been initialized.
@@ -188,6 +221,28 @@ pub fn run() {
                     let _ = event.emit(&handle);
                 },
             )));
+
+            // The menu bar exists only on macOS. Elsewhere the applier accepts
+            // the labels and does nothing, so the interface asks the same way
+            // on every platform.
+            #[cfg(target_os = "macos")]
+            {
+                use tauri_specta::Event as _;
+                let name = app.package_info().name.clone();
+                app.set_menu(menu::to_native(app, &menu::initial_spec(&name))?)?;
+                let applier_handle = app.handle().clone();
+                app.manage(commands::menu::MenuApplier(std::sync::Arc::new(
+                    move |labels| install_menu(&applier_handle, &labels),
+                )));
+                app.on_menu_event(|app, event| {
+                    if let Some(action) = menu::action_for(event.id().as_ref()) {
+                        let _ = commands::menu::MenuActionEvent { action }.emit(app);
+                    }
+                });
+            }
+            #[cfg(not(target_os = "macos"))]
+            app.manage(commands::menu::MenuApplier(std::sync::Arc::new(|_| Ok(()))));
+
             tracing::info!(version = env!("CARGO_PKG_VERSION"), "GitCanvas started");
 
             // Paid here, on the main thread, while nobody is waiting for it.

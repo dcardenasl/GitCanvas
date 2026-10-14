@@ -233,7 +233,7 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       `AppShell` y se pasa a la barra y a la pantalla de inicio: una sola instancia.
       → `feat(workspace): reorder tabs and drive them from the keyboard`
 
-- [ ] **WS-10 — Menú nativo propio en macOS.** El menú por defecto de Tauri liga ⌘W a «Cerrar
+- [x] **WS-10 — Menú nativo propio en macOS.** El menú por defecto de Tauri liga ⌘W a «Cerrar
       ventana» antes de que la página lo vea, así que cerraría toda la ventana. Se construye un
       menú propio solo en macOS (Aplicación, Archivo con **Abrir** ⌘O y **Cerrar pestaña** ⌘W,
       Edición con los elementos predefinidos para que copiar y pegar sigan funcionando, Ventana)
@@ -243,6 +243,13 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       de la página.
       *Pruebas:* comando de etiquetas (todas las claves presentes en ambos idiomas), reconstrucción
       al cambiar de idioma, ⌘W cierra la pestaña y no la ventana; verificación manual en macOS.
+      *Decisiones al implementar:* el contenido del menú es dato puro (`menu.rs`: `full_spec`, `initial_spec`)
+      y solo `to_native` habla con el sistema, porque `muda` exige el hilo principal y los tests
+      corren en otros; el menú inicial no tiene Archivo, así que ⌘W y ⌘O no hacen otra cosa antes de
+      conocer el idioma; no existe ningún elemento que cierre la ventana. Los textos salen del
+      namespace `menu` y se reenvían al cambiar de idioma (`useNativeMenu`).
+      *Pendiente de verificar:* el menú real en macOS (títulos, ⌘O y ⌘W) no se pudo comprobar en
+      esta sesión (`osascript` sin permiso de accesibilidad); verificarlo a mano en WS-17.
       → `feat(workspace): own the macos menu so close tab and open use the standard shortcuts`
 
 - [ ] **WS-11 — Guardar y restaurar la sesión.** Cambios estructurales (abrir, cerrar, reordenar,

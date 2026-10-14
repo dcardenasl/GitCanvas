@@ -90,6 +90,11 @@ export const commands = {
 	 *  same repository simply re-establishes the watch.
 	 */
 	watchRepository: (request: WatchRequest) => typedError<null, AppError>(__TAURI_INVOKE("watch_repository", { request })),
+	/**
+	 *  Sets the menu bar's text. Only macOS has a menu bar to set; elsewhere it is
+	 *  accepted and ignored, so the interface asks the same way everywhere.
+	 */
+	setMenuLabels: (labels: MenuLabels) => typedError<null, AppError>(__TAURI_INVOKE("set_menu_labels", { labels })),
 	/**  Stops watching, if anything was being watched. */
 	unwatchRepository: (generation: number) => typedError<null, AppError>(__TAURI_INVOKE("unwatch_repository", { generation })),
 	/**
@@ -113,6 +118,7 @@ export const commands = {
 /** Events */
 export const events = {
 	cloneProgressEvent: makeEvent<CloneProgressEvent>("clone-progress-event"),
+	menuActionEvent: makeEvent<MenuActionEvent>("menu-action-event"),
 	repositoryChangedEvent: makeEvent<RepositoryChangedEvent>("repository-changed-event"),
 };
 
@@ -429,6 +435,40 @@ export type LoadedWorkspace = {
 	workspace: Workspace,
 	/**  Set when a stored workspace had to be set aside. */
 	recovery: WorkspaceRecovery | null,
+};
+
+/**  What a menu item asks of the interface. */
+export type MenuAction =
+/**  Choose a folder to open as a project. */
+"OpenFolder" |
+/**  Close the active tab. */
+"CloseTab";
+
+/**  Announces a chosen menu item to the interface. */
+export type MenuActionEvent = {
+	action: MenuAction,
+};
+
+/**  Every piece of text the menu bar shows, already in the interface language. */
+export type MenuLabels = {
+	about: string,
+	hide: string,
+	hide_others: string,
+	show_all: string,
+	quit: string,
+	file: string,
+	open_folder: string,
+	close_tab: string,
+	edit: string,
+	undo: string,
+	redo: string,
+	cut: string,
+	copy: string,
+	paste: string,
+	select_all: string,
+	window: string,
+	minimize: string,
+	zoom: string,
 };
 
 /**  The interface's complete set of open repositories at one moment. */
