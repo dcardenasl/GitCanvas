@@ -486,8 +486,16 @@ Origen: auditoría del 2026-10-14 sobre `dev` (706 pruebas, matriz remota todav�
       `aria-keyshortcuts` en lugar de repetirse en el nombre accesible.
       → `refactor(tabs): quiet the unverified mark and group the open menu`
 
-- [ ] **HRD-6 — Reabrir la pestaña cerrada.** Una pila acotada de pestañas cerradas con su
+- [x] **HRD-6 — Reabrir la pestaña cerrada.** Una pila acotada de pestañas cerradas con su
       navegación; ⌘/Ctrl+Mayús+T la saca. El menú nativo de macOS la ofrece también.
+      *Decisiones al implementar:* porción propia (`closedTabsSlice`): pila de diez pestañas cerradas, la más
+      nueva primero y cada proyecto una vez, que `closeTab` alimenta en la misma actualización que
+      el cierre y que **no se guarda en disco** (es memoria de la sesión). Reabrir devuelve la
+      selección, la búsqueda y las carpetas, y la pestaña vuelve «sin verificar», porque la carpeta
+      pudo cambiar; un proyecto que ya se abrió por otro camino se descarta de la pila y, con el
+      tope de pestañas alcanzado, se avisa sin perder la entrada. Atajo Ctrl+Mayús+T (⇧⌘T en el menú
+      nativo de macOS, que ya es dueño de ese acorde) y una entrada del menú «+» que solo existe si
+      hay algo que reabrir.
       → `feat(workspace): reopen the most recently closed tab`
 
 - [ ] **HRD-7 — Menú contextual de pestaña.** Cerrar, cerrar las demás, cerrar las de la derecha

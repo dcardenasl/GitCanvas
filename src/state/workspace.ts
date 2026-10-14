@@ -22,6 +22,7 @@ import {
   type Transition,
 } from "./navigation";
 import { createBoundsSlice } from "./workspaceStore/boundsSlice";
+import { createClosedTabsSlice } from "./workspaceStore/closedTabsSlice";
 import { createLibrarySlice } from "./workspaceStore/librarySlice";
 import { createStorageSlice } from "./workspaceStore/storageSlice";
 import { tabOf } from "./workspaceStore/tabRow";
@@ -33,6 +34,7 @@ export { tabOf } from "./workspaceStore/tabRow";
 export type {
   CloseOutcome,
   OpenOutcome,
+  ReopenOutcome,
   Tab,
   WorkspaceNotice,
 } from "./workspaceStore/types";
@@ -48,6 +50,7 @@ export type {
  */
 export const useWorkspace = create<WorkspaceState>()((...slice) => ({
   ...createTabsSlice(...slice),
+  ...createClosedTabsSlice(...slice),
   ...createLibrarySlice(...slice),
   ...createViewSlice(...slice),
   ...createStorageSlice(...slice),

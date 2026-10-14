@@ -41,7 +41,8 @@
     "label": "Proyectos abiertos",
     "menu": {
       "cloneGitHub": "Clonar de GitHub…",
-      "openFolder": "Abrir carpeta…"
+      "openFolder": "Abrir carpeta…",
+      "reopen": "Reabrir pestaña cerrada"
     },
     "new": "Abrir un proyecto",
     "unreachable": "No se pudo abrir",

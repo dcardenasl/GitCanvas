@@ -455,7 +455,9 @@ export type MenuAction =
 /**  Choose a folder to open as a project. */
 "OpenFolder" |
 /**  Close the active tab. */
-"CloseTab";
+"CloseTab" |
+/**  Reopen the most recently closed tab. */
+"ReopenTab";
 
 /**  Announces a chosen menu item to the interface. */
 export type MenuActionEvent = {
@@ -472,6 +474,7 @@ export type MenuLabels = {
 	file: string,
 	open_folder: string,
 	close_tab: string,
+	reopen_tab: string,
 	edit: string,
 	undo: string,
 	redo: string,

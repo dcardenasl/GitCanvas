@@ -71,6 +71,18 @@ describe("useTabShortcuts", () => {
     expect(activeRoot()).toBe("/work/b");
   });
 
+  it("reopens the tab that was just closed with Ctrl+Shift+T", () => {
+    mount();
+    press(window, { key: "w", ctrlKey: true });
+    expect(useWorkspace.getState().tabs).toHaveLength(2);
+
+    const handled = press(window, { key: "T", ctrlKey: true, shiftKey: true });
+
+    expect(handled).toBe(false);
+    expect(useWorkspace.getState().tabs).toHaveLength(3);
+    expect(activeRoot()).toBe("/work/a");
+  });
+
   it("leaves Open and Close to a text field, but not tab walking", () => {
     const openFolder = mount();
     const field = document.createElement("input");

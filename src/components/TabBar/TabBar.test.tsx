@@ -209,6 +209,34 @@ describe("TabBar", () => {
       ]);
     });
 
+    it("offers Reopen Closed Tab only once a tab has been closed, and reopens it", async () => {
+      openTestProject(ALPHA);
+      openTestProject(BETA);
+      render(<Harness />);
+      await userEvent.click(
+        screen.getByRole("button", { name: "Abrir un proyecto" }),
+      );
+      expect(
+        screen.queryByRole("menuitem", { name: "Reabrir pestaña cerrada" }),
+      ).toBeNull();
+      await userEvent.keyboard("{Escape}");
+
+      act(() => {
+        useWorkspace.getState().closeTab(BETA.path);
+      });
+      await userEvent.click(
+        screen.getByRole("button", { name: "Abrir un proyecto" }),
+      );
+      const reopen = screen.getByRole("menuitem", {
+        name: "Reabrir pestaña cerrada",
+      });
+      expect(reopen.querySelector("kbd")?.textContent).toBe("Ctrl+Shift+T");
+      await userEvent.click(reopen);
+
+      expect(activeRoot()).toBe(BETA.path);
+      expect(screen.getAllByRole("tab")).toHaveLength(2);
+    });
+
     it("groups the menu: opening, then the library, then starring this project", async () => {
       openTestProject(ALPHA);
       render(<Harness />);

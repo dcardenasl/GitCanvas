@@ -3,6 +3,7 @@ import type { StateCreator } from "zustand";
 import { IDLE_GIT_ACTIONS } from "../gitActionState";
 import { EMPTY_NAVIGATION } from "../navigation";
 import { VERIFIED } from "../verification";
+import { closedTabsAfterClosing } from "./closedTabsSlice";
 import { recentsAfterVisit } from "./librarySlice";
 import { changeTab, neighborOf, prepareActivation } from "./tabRow";
 import type { Tab, TabsSlice, WorkspaceState } from "./types";
@@ -91,6 +92,7 @@ export const createTabsSlice: StateCreator<
         activeRoot,
       ),
       activeRoot: next,
+      closedTabs: closedTabsAfterClosing(get().closedTabs, tab),
     });
     return "closed";
   },

@@ -4,7 +4,8 @@ export type TabShortcut =
   | { readonly kind: "previous" }
   | { readonly kind: "position"; readonly position: number }
   | { readonly kind: "open" }
-  | { readonly kind: "close" };
+  | { readonly kind: "close" }
+  | { readonly kind: "reopen" };
 
 /** The parts of a key event a shortcut depends on. */
 export interface Chord {
@@ -45,6 +46,8 @@ export function isTextEntry(target: EventTarget | null): boolean {
  * - Open and Close are `Ctrl+O` and `Ctrl+W` off macOS, and are left to the
  *   field while typing. On macOS they belong to the native menu, which owns
  *   `⌘O` and `⌘W` before the page sees them, so this returns nothing for them.
+ * - Reopen is `Ctrl+Shift+T` off macOS (`⇧⌘T` is the menu's). It means nothing
+ *   to a text field either, so it works there too.
  *
  * Pure, so every chord can be checked without a keyboard.
  */
@@ -62,7 +65,10 @@ export function tabShortcut(
   const primary = mac
     ? chord.metaKey && !chord.ctrlKey
     : chord.ctrlKey && !chord.metaKey;
-  if (!primary || chord.altKey || chord.shiftKey) return null;
+  if (!primary || chord.altKey) return null;
+  if (chord.shiftKey) {
+    return !mac && key === "t" ? { kind: "reopen" } : null;
+  }
 
   if (/^[1-9]$/.test(key)) return { kind: "position", position: Number(key) };
   if (mac || typing) return null;

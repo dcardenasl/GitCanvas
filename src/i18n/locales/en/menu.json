@@ -12,6 +12,7 @@
   "paste": "Paste",
   "quit": "Quit GitCanvas",
   "redo": "Redo",
+  "reopenTab": "Reopen Closed Tab",
   "selectAll": "Select All",
   "showAll": "Show All",
   "undo": "Undo",

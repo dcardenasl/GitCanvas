@@ -114,6 +114,7 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
         file: "f",
         open_folder: "of",
         close_tab: "ct",
+        reopen_tab: "rt",
         edit: "e",
         undo: "u",
         redo: "r",

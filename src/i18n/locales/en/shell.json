@@ -41,7 +41,8 @@
     "label": "Open projects",
     "menu": {
       "cloneGitHub": "Clone from GitHub…",
-      "openFolder": "Open folder…"
+      "openFolder": "Open folder…",
+      "reopen": "Reopen closed tab"
     },
     "new": "Open a project",
     "unreachable": "Could not be opened",

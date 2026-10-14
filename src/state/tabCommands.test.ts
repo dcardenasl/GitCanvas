@@ -5,6 +5,7 @@ import {
   activatePosition,
   activateRelative,
   closeActiveTab,
+  reopenClosedTab,
 } from "./tabCommands";
 import { useWorkspace } from "./workspace";
 
@@ -96,5 +97,23 @@ describe("closeActiveTab", () => {
 
   it("does nothing when no project is open", () => {
     expect(closeActiveTab()).toBeNull();
+  });
+});
+
+describe("reopenClosedTab", () => {
+  it("brings back what closeActiveTab closed", () => {
+    open(2);
+    closeActiveTab();
+
+    expect(reopenClosedTab()).toBe("reopened");
+
+    expect(activeRoot()).toBe("/work/b");
+    expect(useWorkspace.getState().tabs).toHaveLength(2);
+  });
+
+  it("does nothing when nothing was closed", () => {
+    open(2);
+
+    expect(reopenClosedTab()).toBe("none");
   });
 });

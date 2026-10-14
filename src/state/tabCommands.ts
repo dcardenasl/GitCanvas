@@ -1,4 +1,8 @@
-import { useWorkspace, type CloseOutcome } from "./workspace";
+import {
+  useWorkspace,
+  type CloseOutcome,
+  type ReopenOutcome,
+} from "./workspace";
 
 /**
  * What can be asked of the row of tabs, from anywhere: the keyboard, the native
@@ -30,4 +34,9 @@ export function activatePosition(position: number): void {
 export function closeActiveTab(): CloseOutcome | null {
   const { activeRoot, closeTab } = useWorkspace.getState();
   return activeRoot === null ? null : closeTab(activeRoot);
+}
+
+/** Reopens the most recently closed tab, where it was left. */
+export function reopenClosedTab(): ReopenOutcome {
+  return useWorkspace.getState().reopenClosedTab();
 }

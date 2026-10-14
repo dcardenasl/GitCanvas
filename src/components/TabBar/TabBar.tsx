@@ -94,6 +94,8 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
   const activate = useWorkspace((state) => state.activate);
   const closeTab = useWorkspace((state) => state.closeTab);
   const moveTab = useWorkspace((state) => state.moveTab);
+  const closedTabs = useWorkspace((state) => state.closedTabs);
+  const reopenClosedTab = useWorkspace((state) => state.reopenClosedTab);
   const favorites = useWorkspace((state) => state.favorites);
   const setLibraryView = useWorkspace((state) => state.setLibraryView);
   const setGitHubOpen = useWorkspace((state) => state.setGitHubOpen);
@@ -206,6 +208,18 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
         setGitHubOpen(true);
       },
     },
+    // Offered only when there is something to reopen, so it is never a dead end.
+    ...(closedTabs.length === 0
+      ? []
+      : [
+          {
+            label: t("tabs.menu.reopen"),
+            shortcut: shortcutLabel("T", true),
+            onSelect: () => {
+              reopenClosedTab();
+            },
+          },
+        ]),
     {
       label: t("workspace.favorites"),
       startsGroup: true,

@@ -29,6 +29,7 @@ pub struct MenuLabels {
     pub file: String,
     pub open_folder: String,
     pub close_tab: String,
+    pub reopen_tab: String,
     pub edit: String,
     pub undo: String,
     pub redo: String,
@@ -48,6 +49,8 @@ pub enum MenuAction {
     OpenFolder,
     /// Close the active tab.
     CloseTab,
+    /// Reopen the most recently closed tab.
+    ReopenTab,
 }
 
 /// Announces a chosen menu item to the interface.

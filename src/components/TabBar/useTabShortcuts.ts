@@ -5,6 +5,7 @@ import {
   activatePosition,
   activateRelative,
   closeActiveTab,
+  reopenClosedTab,
 } from "../../state/tabCommands";
 import { isTextEntry, tabShortcut } from "./shortcuts";
 
@@ -45,6 +46,9 @@ export function useTabShortcuts(openFolder: () => void): void {
           break;
         case "close":
           closeActiveTab();
+          break;
+        case "reopen":
+          reopenClosedTab();
           break;
       }
     }

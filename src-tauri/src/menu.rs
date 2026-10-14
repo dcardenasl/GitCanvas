@@ -20,6 +20,8 @@ use crate::commands::menu::{MenuAction, MenuLabels};
 pub const OPEN_FOLDER_ID: &str = "open-folder";
 /// The id of the "close tab" item.
 pub const CLOSE_TAB_ID: &str = "close-tab";
+/// The id of the "reopen closed tab" item.
+pub const REOPEN_TAB_ID: &str = "reopen-tab";
 
 /// The system's own items the menu uses, which it labels and handles itself.
 ///
@@ -71,6 +73,7 @@ pub fn action_for(id: &str) -> Option<MenuAction> {
     match id {
         OPEN_FOLDER_ID => Some(MenuAction::OpenFolder),
         CLOSE_TAB_ID => Some(MenuAction::CloseTab),
+        REOPEN_TAB_ID => Some(MenuAction::ReopenTab),
         _ => None,
     }
 }
@@ -106,6 +109,11 @@ pub fn full_spec(app_name: &str, labels: &MenuLabels) -> Vec<Section> {
                     id: CLOSE_TAB_ID,
                     text: labels.close_tab.clone(),
                     accelerator: "CmdOrCtrl+W",
+                },
+                Entry::Item {
+                    id: REOPEN_TAB_ID,
+                    text: labels.reopen_tab.clone(),
+                    accelerator: "CmdOrCtrl+Shift+T",
                 },
             ],
         },
@@ -231,7 +239,8 @@ pub fn to_native<R: Runtime>(
 #[cfg(test)]
 mod tests {
     use super::{
-        action_for, full_spec, initial_spec, Entry, Section, Standard, CLOSE_TAB_ID, OPEN_FOLDER_ID,
+        action_for, full_spec, initial_spec, Entry, Section, Standard, CLOSE_TAB_ID,
+        OPEN_FOLDER_ID, REOPEN_TAB_ID,
     };
     use crate::commands::menu::{MenuAction, MenuLabels};
 
@@ -247,6 +256,7 @@ mod tests {
             file: word("File"),
             open_folder: word("open-folder-text"),
             close_tab: word("close-tab-text"),
+            reopen_tab: word("reopen-tab-text"),
             edit: word("Edit"),
             undo: word("undo"),
             redo: word("redo"),
@@ -288,6 +298,11 @@ mod tests {
                     id: CLOSE_TAB_ID,
                     text: "close-tab-text".to_owned(),
                     accelerator: "CmdOrCtrl+W",
+                },
+                Entry::Item {
+                    id: REOPEN_TAB_ID,
+                    text: "reopen-tab-text".to_owned(),
+                    accelerator: "CmdOrCtrl+Shift+T",
                 },
             ]
         );
@@ -372,6 +387,7 @@ mod tests {
     fn only_the_applications_own_items_map_to_actions() {
         assert_eq!(action_for(OPEN_FOLDER_ID), Some(MenuAction::OpenFolder));
         assert_eq!(action_for(CLOSE_TAB_ID), Some(MenuAction::CloseTab));
+        assert_eq!(action_for(REOPEN_TAB_ID), Some(MenuAction::ReopenTab));
         assert_eq!(action_for("copy"), None);
         assert_eq!(action_for(""), None);
     }

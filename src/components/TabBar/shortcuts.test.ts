@@ -85,6 +85,26 @@ describe("tabShortcut", () => {
     ).toBeNull();
   });
 
+  it("reopens a closed tab with Ctrl+Shift+T off macOS, even while typing", () => {
+    const reopen = chord("T", { ctrlKey: true, shiftKey: true });
+
+    expect(tabShortcut(reopen, false, false)).toEqual({ kind: "reopen" });
+    expect(tabShortcut(reopen, false, true)).toEqual({ kind: "reopen" });
+  });
+
+  it("leaves reopening to the native menu on macOS", () => {
+    expect(
+      tabShortcut(chord("t", { metaKey: true, shiftKey: true }), true, false),
+    ).toBeNull();
+  });
+
+  it("does not treat shifted chords other than reopen as shortcuts", () => {
+    expect(
+      tabShortcut(chord("w", { ctrlKey: true, shiftKey: true }), false, false),
+    ).toBeNull();
+    expect(tabShortcut(chord("t", { ctrlKey: true }), false, false)).toBeNull();
+  });
+
   it("ignores plain keys", () => {
     expect(tabShortcut(chord("w"), false, false)).toBeNull();
     expect(tabShortcut(chord("Tab"), false, false)).toBeNull();

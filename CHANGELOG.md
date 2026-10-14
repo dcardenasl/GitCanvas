@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`TabBar`** — reopens the most recently closed tab with its selection and search
+  (Ctrl+Shift+T, ⇧⌘T on macOS, or the open menu).
 - **`TabBar`** — keeps independent projects in ordered tabs, with pointer and
   keyboard reordering, opening and overflow menus, and native macOS open/close shortcuts.
 - **`OpenRepos`** — protects cached clones used by every open tab, including

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { MenuLabels } from "../bindings";
 import { isMacPlatform } from "../lib/platform";
 import { onMenuAction, setMenuLabels } from "../lib/ipc";
-import { closeActiveTab } from "./tabCommands";
+import { closeActiveTab, reopenClosedTab } from "./tabCommands";
 
 /** What the shell needs to show about the menu bar's state. */
 export interface NativeMenu {
@@ -42,6 +42,7 @@ export function useNativeMenu(openFolder: () => void): NativeMenu {
       file: t("file"),
       open_folder: t("openFolder"),
       close_tab: t("closeTab"),
+      reopen_tab: t("reopenTab"),
       edit: t("edit"),
       undo: t("undo"),
       redo: t("redo"),
@@ -79,8 +80,17 @@ export function useNativeMenu(openFolder: () => void): NativeMenu {
   });
   useEffect(() => {
     const listening = onMenuAction(({ payload }) => {
-      if (payload.action === "OpenFolder") openFolderRef.current();
-      else closeActiveTab();
+      switch (payload.action) {
+        case "OpenFolder":
+          openFolderRef.current();
+          break;
+        case "CloseTab":
+          closeActiveTab();
+          break;
+        case "ReopenTab":
+          reopenClosedTab();
+          break;
+      }
     });
     return () => {
       void listening.then((stop) => {

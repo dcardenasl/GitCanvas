@@ -133,6 +133,22 @@ describe("useNativeMenu", () => {
     ).toEqual(["a"]);
   });
 
+  it("reopens the closed tab when Reopen Closed Tab is chosen", async () => {
+    openTestProject({ path: "/work/a", name: "a" });
+    openTestProject({ path: "/work/b", name: "b" });
+    useWorkspace.getState().closeTab("/work/b");
+    renderHook(() => useNativeMenu(vi.fn()));
+    await waitFor(() => {
+      expect(ipc.onMenuAction).toHaveBeenCalled();
+    });
+
+    emit({ payload: { action: "ReopenTab" } });
+
+    expect(
+      useWorkspace.getState().tabs.map((tab) => tab.repository.name),
+    ).toEqual(["a", "b"]);
+  });
+
   it("uses the latest folder opener without listening again", async () => {
     const first = vi.fn();
     const second = vi.fn();

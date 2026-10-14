@@ -41,6 +41,21 @@ export interface WorkspaceNotice {
   readonly max: number;
 }
 
+/** What reopening a closed tab did. */
+export type ReopenOutcome =
+  /** The tab is back, where it was left, and active. */
+  | "reopened"
+  /** The tab limit was reached, so the closed tab stays remembered. */
+  | "limit"
+  /** There was nothing to reopen. */
+  | "none";
+
+/** A project's tab as it was when closed: enough to put it back. */
+export interface ClosedTab {
+  readonly repository: RepositoryInfo;
+  readonly navigation: Navigation;
+}
+
 /** The row of tabs and everything that happens to a tab. */
 export interface TabsSlice {
   /** Open projects, in tab order. */
@@ -67,6 +82,14 @@ export interface TabsSlice {
   updateGitActions: (root: string, transition: GitTransition) => void;
   /** Records the outcome of checking the project with this root. */
   setVerification: (root: string, verification: Verification) => void;
+}
+
+/** Tabs closed in this session, newest first, so the latest can be reopened. */
+export interface ClosedTabsSlice {
+  /** Bounded; never holds a project that is open again. */
+  readonly closedTabs: readonly ClosedTab[];
+  /** Reopens the most recently closed tab that is not open, where it was left. */
+  reopenClosedTab: () => ReopenOutcome;
 }
 
 /** The projects worth coming back to: starred ones and the latest used. */
@@ -120,6 +143,7 @@ export interface BoundsSlice {
 
 /** The whole workspace: every slice, in one store. */
 export type WorkspaceState = TabsSlice &
+  ClosedTabsSlice &
   LibrarySlice &
   ViewSlice &
   StorageSlice &
