@@ -108,6 +108,9 @@ export function AppShell() {
       const now = state.tabs.map((tab) => tab.repository.path);
       const before = previous.tabs.map((tab) => tab.repository.path);
       if (
+        state.activeRoot !== previous.activeRoot ||
+        state.githubOpen !== previous.githubOpen ||
+        state.libraryView !== previous.libraryView ||
         now.length !== before.length ||
         now.some((root, i) => root !== before[i])
       ) {

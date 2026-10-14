@@ -293,7 +293,9 @@ if (process.env.WDIO_WORKER_ID === undefined) {
             },
           ],
           active: fixture,
-          favorites: [],
+          favorites: Array.from({ length: 199 }, (_, index) =>
+            path.join(fixture, `remembered-${String(index).padStart(3, "0")}`),
+          ),
           recents: [secondFixture.repository],
         },
       }),

@@ -348,12 +348,16 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       de salida al módulo nativo de ciclo de vida, sin alterar el comportamiento ni relajar reglas.
       → `refactor(lifecycle): isolate native shutdown routing from application setup`
 
-- [ ] **WS-13a — Regreso desde la biblioteca y listas extensas.** Activar una pestaña debe
+- [x] **WS-13a — Regreso desde la biblioteca y listas extensas.** Activar una pestaña debe
       volver a su vista incluso si ya era la activa; Favoritos/Recientes no retienen la
       pantalla. La pantalla inicial debe permitir recorrer listas extensas sin ocultar
       controles ni comprimir el contenido. Pruebas de navegación y presentación nativa.
       *Hallazgo:* un argumento de arranque tardío podía volver a robar foco después de
       activar una pestaña existente; ahora también cede ante esa navegación explícita.
+      *Evidencia:* activación de la pestaña actual sale de Favoritos/GitHub sin perder
+      navegación; el argumento de arranque tardío cede ante activación explícita. Pruebas
+      unitarias y E2E a 940×600 recorriendo doscientos favoritos hasta la última fila,
+      sin desbordamiento horizontal ni controles inaccesibles.
       → `fix(workspace): return to tab views and keep project lists scrollable`
 
 - [ ] **WS-16 — Documentación.** ADR 0006 (workspace, identidad por raíz, almacén, restauración

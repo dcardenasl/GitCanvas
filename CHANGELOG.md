@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`ProjectLibrary`** — returns to the selected tab from library views and keeps
+  long project lists scrollable; late startup arguments yield to explicit tab activation.
+
 - **`ErrorBoundary`** — restarts the native process after explicit recovery,
   keeping request generations aligned and waiting for known repository writes.
 

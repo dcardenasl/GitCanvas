@@ -550,3 +550,22 @@ it("restores a selected commit outside loaded history without fetching another p
   expect(getCommit).toHaveBeenCalledTimes(1);
   expect(getCommits).toHaveBeenCalledTimes(1);
 });
+
+it("does not let a late startup argument replace a tab the person activated", async () => {
+  let finish: ((value: { path: string; name: string }) => void) | undefined;
+  getStartupRepository.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  openTestProject({ path: "/tmp/other", name: "other" });
+  renderShell();
+  await userEvent.click(screen.getByRole("tab", { name: "repo" }));
+  await act(async () => {
+    finish?.({ path: "/tmp/cli", name: "cli" });
+    await Promise.resolve();
+  });
+  expect(activeRepository()?.path).toBe("/tmp/repo");
+  expect(useWorkspace.getState().tabs).toHaveLength(2);
+});

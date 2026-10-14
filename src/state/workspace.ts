@@ -247,6 +247,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       set({
         activeRoot: root,
         notice: null,
+        githubOpen: false,
         recents: [root, ...recents.filter((path) => path !== root)].slice(
           0,
           limits.max_recents,
@@ -275,20 +276,20 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
         limits.max_recents,
       ),
       libraryView: null,
+      githubOpen: false,
       notice: null,
     });
     return "opened";
   },
 
   activate: (root) => {
-    const { tabs, activeRoot } = get();
-    if (
-      activeRoot !== root &&
-      tabs.some((tab) => tab.repository.path === root)
-    ) {
+    const { tabs } = get();
+    if (tabs.some((tab) => tab.repository.path === root)) {
       const { recents, limits } = get();
       set({
         activeRoot: root,
+        libraryView: null,
+        githubOpen: false,
         recents: [root, ...recents.filter((path) => path !== root)].slice(
           0,
           limits?.max_recents ?? 0,

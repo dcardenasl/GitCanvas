@@ -38,7 +38,7 @@ describe("workspace projects", () => {
     );
     await expect($$('[role="tab"]')).toBeElementsArrayOfSize(1);
     await openList("Proyectos recientes");
-    await $(`.project-library__open*=${beta}`).click();
+    await $(`.project-library__open[title$="${beta}"]`).click();
     await expectProject(
       "workspace beta commit",
       "beta-local.txt",
@@ -61,7 +61,7 @@ describe("workspace projects", () => {
 
   it("reopening reuses a tab, and a favorite survives closing and opens through the start screen", async () => {
     await openList("Proyectos recientes");
-    await $(`.project-library__open*=${alpha}`).click();
+    await $(`.project-library__open[title$="${alpha}"]`).click();
     await expectProject(
       "workspace alpha commit",
       "alpha-local.txt",
@@ -105,7 +105,30 @@ describe("workspace projects", () => {
     await expect($$('[role="tab"]')).toBeElementsArrayOfSize(1);
     await $(`[aria-label="Cerrar ${beta}"]`).click();
     await expect($$('[role="tab"]')).toBeElementsArrayOfSize(0);
-    await expect($(`.project-library__open*=${alpha}`)).toBeDisplayed();
+    await expect(
+      $(`.project-library__open[title$="${alpha}"]`),
+    ).toBeDisplayed();
+    await expect($$('[aria-label="Favoritos"] li')).toBeElementsArrayOfSize(
+      200,
+    );
+    const last = await $(
+      '[aria-label="Favoritos"] li:last-child .project-library__open',
+    );
+    await last.scrollIntoView();
+    await expect(last).toBeDisplayed();
+    const scrollable = await browser.execute(() => {
+      const pane = document.querySelector(".app-shell__empty");
+      return (
+        pane !== null &&
+        pane.scrollHeight > pane.clientHeight &&
+        document.documentElement.scrollWidth <= window.innerWidth
+      );
+    });
+    expect(scrollable).toBe(true);
+    await browser.saveScreenshot(
+      path.join(os.tmpdir(), "gitcanvas-workspace-library.png"),
+    );
+    await $(`.project-library__open[title$="${alpha}"]`).scrollIntoView();
     await browser.waitUntil(
       () => {
         const stored: unknown = JSON.parse(
@@ -134,7 +157,7 @@ describe("workspace projects", () => {
           "expected the Rust store to persist closed tabs and the surviving favorite",
       },
     );
-    await $(`.project-library__open*=${alpha}`).click();
+    await $(`.project-library__open[title$="${alpha}"]`).click();
     await expectProject(
       "workspace alpha commit",
       "alpha-local.txt",
