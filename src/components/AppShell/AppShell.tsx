@@ -34,6 +34,7 @@ import {
   tabOf,
 } from "../../state/workspace";
 import { useGitActions } from "../../state/gitActions";
+import { useProjectCache } from "../../state/projectCache";
 import { useNativeMenu } from "../../state/nativeMenu";
 import { useOpenRepositoriesSync } from "../../state/openRepositories";
 import { useVerifyActiveProject } from "../../state/verifyProject";
@@ -84,6 +85,7 @@ export function AppShell() {
   );
   const openSync = useOpenRepositoriesSync(openPaths);
   const verification = useVerifyActiveProject();
+  useProjectCache();
   const folder = useOpenFolder();
   useTabShortcuts(folder.choose);
   const nativeMenu = useNativeMenu(folder.choose);

@@ -298,7 +298,7 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       cierre independiente, tope, orden, duplicados y rutas inaccesibles.
       → `feat(workspace): add favorites and a recent projects list`
 
-- [ ] **WS-14 — Liberar recursos al cerrar y acotar los inactivos.** Cerrar una pestaña quita
+- [x] **WS-14 — Liberar recursos al cerrar y acotar los inactivos.** Cerrar una pestaña quita
       su sesión, sus consultas (`removeQueries` por ruta con un helper en `queryKeys.ts`) y su
       entrada en el registro del backend. LRU explícito: se retienen consultas pesadas del
       proyecto activo y de **como máximo cinco** inactivos, además de `gcTime`; la activa nunca
@@ -306,6 +306,10 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       no cambia.
       *Pruebas:* cierre libera todo lo de esa ruta, el sexto inactivo expulsa al más antiguo,
       volver a uno expulsado carga normalmente, el activo nunca se expulsa.
+      *Evidencia:* coordinador explícito por activación; retiene datos pesados de la activa y
+      cinco inactivas, y solo referencias/huella de las demás. Cerrar elimina todos los tipos
+      de consulta de esa raíz; la sincronización existente retira la protección del clon.
+      Pruebas del sexto inactivo, reactivación, aislamiento y cierre completo.
       → `perf(workspace): release closed tabs and bound inactive project caches`
 
 - [ ] **WS-15 — E2E de varias pestañas.** Dos repositorios de fixture y un directorio de datos

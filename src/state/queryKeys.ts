@@ -126,3 +126,30 @@ export function invalidateLive(
     ),
   ).then(() => undefined);
 }
+
+/** Releases every cache entry owned by a closed project, including in-flight queries. */
+export function removeProjectQueries(
+  queryClient: QueryClient,
+  root: string,
+): void {
+  queryClient.removeQueries({
+    predicate: (query) => query.queryKey[1] === root,
+  });
+}
+
+/** Releases bounded-but-heavy data while keeping small reference summaries available. */
+export function removeHeavyProjectQueries(
+  queryClient: QueryClient,
+  root: string,
+): void {
+  const light = new Set<string>([
+    queryKeys.branches(root)[0],
+    queryKeys.tags(root)[0],
+    queryKeys.worktreeFingerprint(root)[0],
+  ]);
+  queryClient.removeQueries({
+    predicate: (query) =>
+      query.queryKey[1] === root &&
+      !(typeof query.queryKey[0] === "string" && light.has(query.queryKey[0])),
+  });
+}

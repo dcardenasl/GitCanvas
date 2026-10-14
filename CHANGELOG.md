@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`ProjectCache`** — releases closed project queries and keeps heavy data for
+  the active project and at most five inactive projects using activation order.
+
 - **`BrandLogo`** — uses the final vertical, horizontal and mark artwork, picking the
   high-contrast wordmark for the active theme; the files are exported at display
   resolution, about 60% smaller than the originals.
