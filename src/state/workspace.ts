@@ -71,11 +71,17 @@ interface WorkspaceState {
   readonly limits: WorkspaceLimits | null;
   readonly favorites: readonly string[];
   readonly recents: readonly string[];
-  readonly storageError: { readonly cause: unknown } | null;
+  readonly storageError: {
+    readonly cause: unknown;
+    readonly kind: "save" | "recovery";
+  } | null;
   /** Restores validated records without opening or authorizing their folders. */
   restore: (workspace: Workspace) => void;
+  dismissStorageError: () => void;
   /** Reports a persistence failure while keeping the in-memory workspace usable. */
-  setStorageError: (cause: unknown) => void;
+  setStorageError: (cause: unknown, kind?: "save" | "recovery") => void;
+  /** Replaces an unreachable tab with a validated root, reusing an existing tab. */
+  relocate: (root: string, repository: RepositoryInfo) => void;
   /** The last thing worth telling the person, until they dismiss it. */
   readonly notice: WorkspaceNotice | null;
   /**
@@ -165,8 +171,42 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     });
   },
 
-  setStorageError: (cause) => {
-    set({ storageError: cause === null ? null : { cause } });
+  setStorageError: (cause, kind = "save") => {
+    if (cause === null && get().storageError?.kind === "recovery") return;
+    set({ storageError: cause === null ? null : { cause, kind } });
+  },
+
+  dismissStorageError: () => {
+    set({ storageError: null });
+  },
+
+  relocate: (root, repository) => {
+    const { tabs } = get();
+    const source = tabs.find((tab) => tab.repository.path === root);
+    if (
+      source?.verification.status !== "unreachable" ||
+      source.gitActions.running !== null
+    )
+      return;
+    const existing = tabs.find(
+      (tab) => tab.repository.path === repository.path,
+    );
+    set({
+      tabs:
+        existing !== undefined && existing !== source
+          ? tabs.filter((tab) => tab !== source)
+          : tabs.map((tab) =>
+              tab === source
+                ? {
+                    repository,
+                    navigation: EMPTY_NAVIGATION,
+                    gitActions: IDLE_GIT_ACTIONS,
+                    verification: VERIFIED,
+                  }
+                : tab,
+            ),
+      activeRoot: repository.path,
+    });
   },
 
   setLimits: (limits) => {

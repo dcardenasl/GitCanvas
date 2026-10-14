@@ -242,3 +242,19 @@
     animation-duration: 2.4s;
   }
 }
+
+.app-shell__recovery {
+  padding: var(--space-7);
+  overflow: auto;
+  min-inline-size: 0;
+}
+
+.app-shell__recovery h1 {
+  font-size: var(--font-size-ui);
+  font-weight: 600;
+}
+
+.app-shell__recovery-path {
+  overflow-wrap: anywhere;
+  color: var(--ink-faint);
+}

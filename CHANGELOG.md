@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`UnreachableProject`** — keeps missing project tabs recoverable through retry,
+  locate and close; storage failures stay visible while work continues in memory.
+
 - **`WorkspaceGate`** — restores project tabs and their saved navigation lazily;
   a serialized writer saves changes and flushes before closing or quitting.
 

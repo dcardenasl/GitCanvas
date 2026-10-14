@@ -38,6 +38,7 @@ import { useOpenRepositoriesSync } from "../../state/openRepositories";
 import { useVerifyActiveProject } from "../../state/verifyProject";
 import { invalidateLive } from "../../state/queryKeys";
 
+import { UnreachableProject } from "./UnreachableProject";
 import { HistoryView } from "./HistoryView";
 import { RepositoryPicker } from "./RepositoryPicker";
 import { useOpenFolder } from "./useOpenFolder";
@@ -179,21 +180,6 @@ export function AppShell() {
               </button>
             </div>
           )}
-          {verification.error !== null && (
-            <div role="alert" className="toolbar__status">
-              <ErrorMessage
-                error={verification.error}
-                lead={t("toolbar.verifyFailed")}
-              />
-              <button
-                type="button"
-                className="button"
-                onClick={verification.retry}
-              >
-                {t("common:actions.retry")}
-              </button>
-            </div>
-          )}
           {nativeMenu.error !== null && (
             <div role="alert" className="toolbar__status">
               <ErrorMessage
@@ -273,6 +259,12 @@ export function AppShell() {
             </button>
           </div>
         </div>
+      ) : verification.error !== null ? (
+        <UnreachableProject
+          root={repository.path}
+          error={verification.error}
+          retry={verification.retry}
+        />
       ) : !verified ? (
         <p className="state" role="status">
           {t("startup.loading")}

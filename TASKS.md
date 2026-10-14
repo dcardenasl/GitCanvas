@@ -269,13 +269,17 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       cambios durante escritura, fallo y reintento, cierre y restauración; suite frontend y Rust.
       → `feat(workspace): save and restore the session, validating tabs on first use`
 
-- [ ] **WS-12 — Pestañas recuperables y fallos de persistencia visibles.** Ruta desaparecida o
+- [x] **WS-12 — Pestañas recuperables y fallos de persistencia visibles.** Ruta desaparecida o
       repositorio inaccesible, detectada al activar: la pestaña se conserva con **Reintentar**,
       **Localizar** (elegir otra carpeta; si esa raíz ya está abierta en otra pestaña, se activa
       esa y se cierra la rota) y **Cerrar**. Un fallo de guardado o un almacén corrupto se
       muestra con `ErrorMessage` y la aplicación sigue funcionando en memoria.
       *Pruebas:* cada una de las tres acciones, Localizar hacia una raíz ya abierta, almacén
       corrupto al arrancar, fallo de escritura.
+      *Evidencia:* recuperación en la vista principal; Localizar usa autorización y conserva la
+      pestaña si falla o se cancela. Un destino abierto se reutiliza sin perder su sesión.
+      Aviso de guardado con reintento y aviso de recuperación con ruta del original conservado;
+      ambos permiten seguir trabajando. Pruebas de las acciones y de corrupción al iniciar.
       → `feat(workspace): keep unreachable tabs recoverable and surface storage failures`
 
 - [ ] **WS-13 — Favoritos y recientes.** Estrella en la pestaña y en el menú; pantalla de inicio

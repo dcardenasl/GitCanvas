@@ -37,7 +37,9 @@ export interface OpenFolder {
  * Shared by everything that offers to open a folder, so the guard against a
  * second panel and the failure handling exist once.
  */
-export function useOpenFolder(): OpenFolder {
+export function useOpenFolder(
+  onSelected: (path: string) => Promise<unknown> = openProjectAt,
+): OpenFolder {
   const [error, setError] = useState<{ readonly cause: unknown } | null>(null);
   const [phase, setPhase] = useState<OpenFolderPhase>("idle");
 
@@ -84,7 +86,7 @@ export function useOpenFolder(): OpenFolder {
 
       setPhase("opening");
       rememberDirectory(selected);
-      await openProjectAt(selected);
+      await onSelected(selected);
     } catch (cause) {
       setError({ cause });
     } finally {

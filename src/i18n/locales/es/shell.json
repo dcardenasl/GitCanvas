@@ -67,6 +67,10 @@
   },
   "workspace": {
     "dismiss": "Descartar",
-    "tabLimit": "Se pueden abrir como máximo {{max}} proyectos a la vez. Cierra uno para abrir otro."
+    "tabLimit": "Se pueden abrir como máximo {{max}} proyectos a la vez. Cierra uno para abrir otro.",
+    "unreachable": "No se pudo abrir este proyecto",
+    "locate": "Localizar carpeta…",
+    "saveFailed": "No se pudo guardar el workspace. Los cambios siguen en memoria.",
+    "recovered": "No se pudo restaurar el workspace guardado. El original se conservó."
   }
 }

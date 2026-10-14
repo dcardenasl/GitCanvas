@@ -10,9 +10,17 @@ const { getWorkspaceLimits, loadWorkspace } = vi.hoisted(() => ({
   loadWorkspace: vi.fn(),
 }));
 vi.mock("../../state/workspaceLifecycle", () => ({
-  useWorkspaceLifecycle: vi.fn(),
+  useWorkspaceLifecycle: () => ({ retry: vi.fn() }),
 }));
-vi.mock("../../lib/ipc", () => ({ getWorkspaceLimits, loadWorkspace }));
+vi.mock("../../lib/ipc", () => ({
+  getWorkspaceLimits,
+  loadWorkspace,
+  IpcError: class extends Error {
+    constructor(error: { message: string }) {
+      super(error.message);
+    }
+  },
+}));
 
 const { WorkspaceGate } = await import("./WorkspaceGate");
 const { useWorkspace } = await import("../../state/workspace");
@@ -103,5 +111,26 @@ describe("WorkspaceGate", () => {
       useWorkspace.getState().tabs.map((tab) => tab.verification.status),
     ).toEqual(["unverified", "unverified"]);
     expect(useWorkspace.getState().favorites).toEqual(["/tmp/alpha"]);
+  });
+  it("shows damaged storage while continuing in memory and preserves the warning after a save", async () => {
+    getWorkspaceLimits.mockResolvedValue(LIMITS);
+    loadWorkspace.mockResolvedValue({
+      workspace: { tabs: [], active: null, favorites: [], recents: [] },
+      recovery: {
+        kind: "Corrupt",
+        detail: "bad json",
+        backup: "/data/workspace.json.corrupt-1",
+      },
+    });
+    renderGate();
+    await screen.findByText("the application");
+    expect(screen.getByRole("alert").textContent).toContain(
+      "original se conservó",
+    );
+    expect(useWorkspace.getState().storageError?.kind).toBe("recovery");
+    useWorkspace.getState().setStorageError(null);
+    expect(useWorkspace.getState().storageError?.kind).toBe("recovery");
+    await userEvent.click(screen.getByRole("button", { name: "Descartar" }));
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
