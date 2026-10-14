@@ -104,15 +104,26 @@ pub async fn clone_github_repository(
     // than after the transfer.
     let entry = clone::cache_entry_name(&full_name)?;
 
+    let cloning_open = open.clone();
+    let cloning_entry = entry.clone();
     let cloned = write("clone_github_repository", move || {
-        let cloned = clone::clone_repository(&full_name, &destination, |progress| {
-            publish(CloneProgressEvent {
-                full_name: full_name.clone(),
-                received_objects: progress.received_objects,
-                total_objects: progress.total_objects,
-                received_bytes: progress.received_bytes.to_string(),
-            });
-        })?;
+        let cloned = clone::clone_repository(
+            &full_name,
+            &destination,
+            |progress| {
+                publish(CloneProgressEvent {
+                    full_name: full_name.clone(),
+                    received_objects: progress.received_objects,
+                    total_objects: progress.total_objects,
+                    received_bytes: progress.received_bytes.to_string(),
+                });
+            },
+            || {
+                cloning_open
+                    .cache_entries(&destination)
+                    .map(|entries| !entries.contains(&cloning_entry))
+            },
+        )?;
         allowed.allow(&ActiveRepo::validate(&cloned.path)?)?;
         Ok(cloned)
     })

@@ -380,10 +380,14 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       explícitamente antes de habilitar. Pruebas de barrera, recuperación y lectura pendiente.
       → `fix(workspace): gate tab activation before asynchronous verification`
 
-- [ ] **WS-1a — Dependencias de caché y protección pendiente.** Resolver el directorio
+- [x] **WS-1a — Dependencias de caché y protección pendiente.** Resolver el directorio
       Git común de worktrees externos y la entrada contenedora de proyectos anidados.
       Una sincronización pendiente o metadatos irresolubles no permiten limpieza; la
       reparación de una entrada usada tampoco puede eliminar trabajo local.
+      *Evidencia:* consulta del Git común con Git2, protección de contenedores anidados y
+      rechazo de metadatos inciertos; marca de revisión recibida antes de esperar el permiso
+      y comprobación de cambios durante la consulta. La reparación consulta protección antes
+      de eliminar. Pruebas de worktree externo, informe pendiente y trabajo local conservado.
       → `fix(workspace): protect shared clone metadata and block unsafe cache replacement`
 
 - [ ] **WS-16 — Documentación.** ADR 0006 (workspace, identidad por raíz, almacén, restauración

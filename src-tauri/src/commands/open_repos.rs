@@ -44,6 +44,8 @@ pub struct OpenRepositoriesRequest {
 struct Registry {
     /// The revision last applied, or `None` before the first request.
     revision: Option<u32>,
+    /// Newest received report, including one still waiting for a runtime permit.
+    desired: Option<u32>,
     /// Canonical roots, which is what makes aliases of one repository equal.
     paths: BTreeSet<PathBuf>,
 }
@@ -61,11 +63,18 @@ impl OpenRepos {
     ///
     /// Returns whether the set changed hands, which is `false` for a stale or
     /// repeated revision.
+    fn requested(&self, revision: u32) -> Result<(), AppError> {
+        let mut registry = self.0.lock().map_err(|_| poisoned())?;
+        registry.desired = Some(registry.desired.map_or(revision, |held| held.max(revision)));
+        Ok(())
+    }
+
     fn replace(&self, revision: u32, paths: BTreeSet<PathBuf>) -> Result<bool, AppError> {
         let mut registry = self.0.lock().map_err(|_| poisoned())?;
         if registry.revision.is_some_and(|applied| revision <= applied) {
             return Ok(false);
         }
+        registry.desired = Some(registry.desired.map_or(revision, |held| held.max(revision)));
         registry.revision = Some(revision);
         registry.paths = paths;
         Ok(true)
@@ -77,14 +86,36 @@ impl OpenRepos {
     /// folders are not the cache's to protect or evict.
     ///
     /// # Errors
-    /// Returns an error if the registry was poisoned by an earlier failure.
+    /// Returns an error for a pending report, unresolved Git dependencies or a
+    /// poisoned registry. Retention must not guess that an uncertain entry is unused.
     pub fn cache_entries(&self, cache_root: &Path) -> Result<BTreeSet<String>, AppError> {
-        let registry = self.0.lock().map_err(|_| poisoned())?;
-        Ok(registry
-            .paths
+        let (revision, paths) = {
+            let registry = self.0.lock().map_err(|_| poisoned())?;
+            if registry.desired != registry.revision {
+                return Err(AppError::Conflict(
+                    "open project protection is still synchronizing; cache retention was skipped"
+                        .into(),
+                ));
+            }
+            (registry.revision, registry.paths.clone())
+        };
+        // Resolve shared metadata outside the registry lock; slow filesystem
+        // work must never block the async command's short request marker.
+        let entries = paths
             .iter()
-            .filter_map(|path| cache::cached_entry_name(cache_root, path))
-            .collect())
+            .try_fold(BTreeSet::new(), |mut entries, path| {
+                if let Some(entry) = cache::cached_entry_name(cache_root, path)? {
+                    entries.insert(entry);
+                }
+                Ok::<_, AppError>(entries)
+            })?;
+        let registry = self.0.lock().map_err(|_| poisoned())?;
+        if registry.revision != revision || registry.desired != registry.revision {
+            return Err(AppError::Conflict(
+                "open project protection changed during cache lookup".into(),
+            ));
+        }
+        Ok(entries)
     }
 }
 
@@ -121,10 +152,16 @@ fn canonical_roots(paths: &[String]) -> Result<BTreeSet<PathBuf>, AppError> {
             "a repository path exceeds {MAX_PATH_BYTES} bytes"
         )));
     }
-    Ok(paths
-        .iter()
-        .filter_map(|path| PathBuf::from(path).canonicalize().ok())
-        .collect())
+    paths.iter().try_fold(BTreeSet::new(), |mut roots, path| {
+        match PathBuf::from(path).canonicalize() {
+            Ok(root) => {
+                roots.insert(root);
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
+        }
+        Ok(roots)
+    })
 }
 
 /// Reports which repositories the interface has open.
@@ -135,6 +172,7 @@ pub async fn sync_open_repositories(
     open: tauri::State<'_, OpenRepos>,
 ) -> Result<(), AppError> {
     let open = open.inner().clone();
+    open.requested(request.revision)?;
     read("sync_open_repositories", move || {
         let roots = canonical_roots(&request.paths)?;
         if !open.replace(request.revision, roots)? {
@@ -253,6 +291,7 @@ mod tests {
     fn only_open_clones_inside_the_cache_are_reported() {
         let cache = tempfile::tempdir().unwrap();
         let outside = tempfile::tempdir().unwrap();
+        git2::Repository::init(outside.path()).unwrap();
         let clone = cache.path().join("owner__repo");
         let nested = cache.path().join("owner__other").join("inner");
         fs::create_dir_all(&clone).unwrap();
@@ -263,10 +302,10 @@ mod tests {
 
         let entries = open.cache_entries(cache.path()).unwrap();
 
-        // The clone is a direct entry; a path nested deeper is not one.
+        // Nested projects keep their containing cache entry too.
         assert_eq!(
             entries.into_iter().collect::<Vec<_>>(),
-            vec!["owner__repo".to_owned()]
+            vec!["owner__other".to_owned(), "owner__repo".to_owned()]
         );
     }
 
@@ -333,5 +372,26 @@ mod tests {
         let entries = open.cache_entries(&a.path().join("never-created")).unwrap();
 
         assert!(entries.is_empty());
+    }
+    #[test]
+    fn retention_waits_for_the_newest_received_report() {
+        let cache = tempfile::tempdir().unwrap();
+        let root = cache.path().join("owner__repo");
+        fs::create_dir_all(&root).unwrap();
+        let open = OpenRepos::default();
+        open.replace(1, roots(&[&root])).unwrap();
+        open.requested(3).unwrap();
+        open.replace(2, roots(&[])).unwrap();
+        assert!(matches!(
+            open.cache_entries(cache.path()),
+            Err(AppError::Conflict(_))
+        ));
+        open.replace(3, roots(&[&root])).unwrap();
+        assert!(open
+            .cache_entries(cache.path())
+            .unwrap()
+            .contains("owner__repo"));
+        open.requested(2).unwrap();
+        assert!(open.cache_entries(cache.path()).is_ok());
     }
 }

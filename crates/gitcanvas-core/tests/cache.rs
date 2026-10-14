@@ -215,19 +215,58 @@ fn only_repositories_inside_the_cache_are_marked() {
 }
 
 #[test]
-fn active_repository_resolves_only_to_a_direct_cache_entry() {
+fn active_repository_resolves_to_its_containing_cache_entry() {
     let root = tempfile::tempdir().unwrap();
     let outside = tempfile::tempdir().unwrap();
     fs::create_dir_all(root.path().join("owner__repo/.git")).unwrap();
     fs::create_dir_all(root.path().join("nested/owner__repo/.git")).unwrap();
 
+    git2::Repository::init(outside.path()).unwrap();
     assert_eq!(
-        cached_entry_name(root.path(), &root.path().join("owner__repo")).as_deref(),
+        cached_entry_name(root.path(), &root.path().join("owner__repo"))
+            .unwrap()
+            .as_deref(),
         Some("owner__repo")
     );
     assert_eq!(
-        cached_entry_name(root.path(), &root.path().join("nested/owner__repo")),
+        cached_entry_name(root.path(), &root.path().join("nested/owner__repo"))
+            .unwrap()
+            .as_deref(),
+        Some("nested")
+    );
+    assert_eq!(
+        cached_entry_name(root.path(), outside.path()).unwrap(),
         None
     );
-    assert_eq!(cached_entry_name(root.path(), outside.path()), None);
+}
+
+#[test]
+fn an_external_worktree_keeps_its_cached_object_database() {
+    let root = tempfile::tempdir().unwrap();
+    let external = tempfile::tempdir().unwrap();
+    let clone = root.path().join("owner__repo");
+    let repo = git2::Repository::init(&clone).unwrap();
+    let signature = git2::Signature::now("Test", "test@example.com").unwrap();
+    let tree_id = repo.treebuilder(None).unwrap().write().unwrap();
+    let tree = repo.find_tree(tree_id).unwrap();
+    repo.commit(Some("HEAD"), &signature, &signature, "initial", &tree, &[])
+        .unwrap();
+    let linked = external.path().join("linked");
+    repo.worktree("linked", &linked, None).unwrap();
+    assert_eq!(
+        cached_entry_name(root.path(), &linked).unwrap().as_deref(),
+        Some("owner__repo")
+    );
+    assert!(touch_if_cached(root.path(), &linked));
+    assert!(clone.join(".git/gitcanvas-last-used").exists());
+}
+
+#[test]
+fn unresolved_open_project_metadata_blocks_retention_instead_of_assuming_it_is_unused() {
+    let root = tempfile::tempdir().unwrap();
+    let external = tempfile::tempdir().unwrap();
+    assert!(matches!(
+        cached_entry_name(root.path(), external.path()),
+        Err(gitcanvas_core::error::AppError::InvalidRepository(_))
+    ));
 }

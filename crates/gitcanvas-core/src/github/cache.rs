@@ -16,7 +16,7 @@ use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::error::AppError;
+use crate::{error::AppError, repository::ActiveRepo};
 
 /// Maximum cached repositories.
 pub const MAX_REPOSITORIES: usize = 10;
@@ -158,35 +158,47 @@ pub(crate) fn touch_locked(entry: &Path) -> bool {
 /// from their own folders are not the cache's to mark.
 #[must_use]
 pub fn touch_if_cached(cache_root: &Path, repository: &Path) -> bool {
-    let Ok(root) = cache_root.canonicalize() else {
-        return false;
-    };
-    let Ok(repository) = repository.canonicalize() else {
-        return false;
-    };
-    let Ok(relative) = repository.strip_prefix(&root) else {
-        return false;
-    };
-    match relative.components().next() {
-        Some(entry) => touch(&root.join(entry)),
-        None => false,
+    match cached_entry_name(cache_root, repository) {
+        Ok(Some(entry)) => touch(&cache_root.join(entry)),
+        // Recording recency is best effort; destructive retention propagates
+        // this lookup's failure instead of guessing that a clone is unused.
+        Ok(None) | Err(_) => false,
     }
 }
 
-/// Returns the direct cache entry containing `repository`, if it is cached.
-#[must_use]
-pub fn cached_entry_name(cache_root: &Path, repository: &Path) -> Option<String> {
-    let root = cache_root.canonicalize().ok()?;
-    let repository = repository.canonicalize().ok()?;
-    let relative = repository.strip_prefix(root).ok()?;
-    let mut components = relative.components();
-    let Component::Normal(name) = components.next()? else {
+fn containing_entry(root: &Path, path: &Path) -> Option<String> {
+    let relative = path.strip_prefix(root).ok()?;
+    let Component::Normal(name) = relative.components().next()? else {
         return None;
     };
-    components
-        .next()
-        .is_none()
-        .then(|| name.to_string_lossy().into_owned())
+    Some(name.to_string_lossy().into_owned())
+}
+
+/// Returns the cache entry containing a project or its shared Git metadata.
+///
+/// Linked worktrees may live outside the cache while depending on a cached
+/// clone's object database. Nested projects also keep their containing entry.
+///
+/// # Errors
+/// Returns an error if an existing project's metadata cannot be resolved;
+/// retention must then leave the cache untouched rather than delete a dependency.
+pub fn cached_entry_name(cache_root: &Path, repository: &Path) -> Result<Option<String>, AppError> {
+    let root = match cache_root.canonicalize() {
+        Ok(root) => root,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.into()),
+    };
+    let repository = match repository.canonicalize() {
+        Ok(path) => path,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.into()),
+    };
+    if let Some(entry) = containing_entry(&root, &repository) {
+        return Ok(Some(entry));
+    }
+    let repo = ActiveRepo::validate(&repository)?.open()?;
+    let common = repo.commondir().canonicalize()?;
+    Ok(containing_entry(&root, &common))
 }
 
 /// Parses a decimal string back to bytes, treating malformed input as zero.
