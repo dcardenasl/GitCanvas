@@ -470,6 +470,28 @@ describe("CommitTable", () => {
     expect(onRevealed).not.toHaveBeenCalled();
   });
 
+  it("marks the author's name apart from the initials, so a narrow table can drop only the name", () => {
+    withViewport(ROW_HEIGHT * 10);
+    const commits = makeCommits(3);
+
+    render(
+      <CommitTable
+        commits={commits}
+        selectedId={null}
+        onSelect={() => undefined}
+        maxLanes={1}
+      />,
+    );
+
+    const author = document.querySelector(".commit-row__author");
+    expect(author?.querySelector(".commit-row__avatar")?.textContent).toBe(
+      "DC",
+    );
+    expect(author?.querySelector(".commit-row__author-name")?.textContent).toBe(
+      "David Cardenas",
+    );
+  });
+
   describe("remembering where the history was", () => {
     function renderTable(
       props: Partial<Parameters<typeof CommitTable>[0]> = {},

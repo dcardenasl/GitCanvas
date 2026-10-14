@@ -8,6 +8,10 @@
   overflow: auto;
   height: 100%;
   contain: strict;
+
+  /* Rows decide what to show by the room the table has, not by the window's
+     width: with both panels open the table is a fraction of the window. */
+  container: commits / inline-size;
 }
 
 .commit-table__content {
@@ -55,11 +59,44 @@
   min-width: 0;
 }
 
+/* Secondary columns give way before the summary does, in this order: the hash,
+   then the author's name (the initials stay), then the date. The track list is
+   restated at each step because a hidden item still leaves its track and gap. */
+@container commits (max-width: 760px) {
+  .commit-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .commit-row__sha {
+    display: none;
+  }
+}
+
+@container commits (max-width: 600px) {
+  .commit-row__author-name {
+    display: none;
+  }
+}
+
+@container commits (max-width: 460px) {
+  .commit-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-3);
+  }
+
+  .commit-row__date {
+    display: none;
+  }
+}
+
 /* ---------- ref badges ---------- */
 
 .ref-pill {
   display: inline-flex;
-  flex-shrink: 0;
+
+  /* Badges shrink (and truncate) before the summary is squeezed out. */
+  flex-shrink: 1;
+  min-width: 0;
   gap: var(--space-1);
   align-items: center;
   max-width: 22ch;
@@ -101,6 +138,8 @@
 }
 
 .commit-row__summary {
+  /* Never less than a readable stretch, however many badges the row carries. */
+  min-width: 12ch;
   overflow: hidden;
   color: var(--ink);
   font-size: var(--font-size-ui);

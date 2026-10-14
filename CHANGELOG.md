@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`CommitTable`** — keeps the commit summary readable at the minimum window size with both
+  panels open, dropping the hash, then the author's name, then the date as the table narrows.
 - **`verifyProject`** — gates activation synchronously and waits for an explicit
   working-tree fingerprint; write callbacks also reject unverified projects.
 - **`OpenRepos`** — protects cached Git metadata shared by external worktrees and

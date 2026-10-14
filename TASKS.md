@@ -435,10 +435,16 @@ Origen: auditoría del 2026-10-14 sobre `dev` (706 pruebas, matriz remota todav�
       accesibilidad que no hay en esta sesión; la lógica está cubierta por pruebas de la compuerta.
       → `fix(lifecycle): destroy the window when the interface never answers a close request`
 
-- [ ] **HRD-2 — Tabla de historial a ancho mínimo.** A 940×600 con el inspector abierto, hash y
+- [x] **HRD-2 — Tabla de historial a ancho mínimo.** A 940×600 con el inspector abierto, hash y
       fecha desplazan el resumen del commit hasta hacerlo desaparecer. La tabla decide por su
       propio ancho (consulta de contenedor), no por el de la ventana: el resumen conserva un
       mínimo y las columnas secundarias ceden antes.
+      *Decisiones al implementar:* la tabla es un contenedor (`container: commits / inline-size`) y
+      sus filas cambian por su ancho, no por el de la ventana. Ceden, en este orden, el hash
+      (760 px), el nombre del autor, con las iniciales (600 px), y la fecha (460 px); la lista de
+      pistas se repite en cada paso porque una pista vacía conserva su espacio. El resumen no baja
+      de 12 caracteres y los distintivos de ramas se encogen antes. Verificado a 940×600 con ambos
+      paneles; `responsive.test.ts` fija el contrato del CSS.
       → `fix(history): keep the commit summary readable when the table is narrow`
 
 - [ ] **HRD-3 — Reemplazo de clones sin carrera.** La decisión de reemplazar una entrada de la

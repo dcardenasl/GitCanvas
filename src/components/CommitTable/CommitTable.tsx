@@ -453,7 +453,9 @@ export function CommitTable({
                   <span className="commit-row__avatar" aria-hidden="true">
                     {authorInitials(commit.author_name)}
                   </span>
-                  {commit.author_name}
+                  <span className="commit-row__author-name">
+                    {commit.author_name}
+                  </span>
                 </span>
                 <span className="commit-row__sha">{shortId(commit.id)}</span>
                 <time className="commit-row__date">
