@@ -11,6 +11,7 @@ import { CommitSearch } from "../CommitSearch";
 import { ErrorMessage } from "../ErrorMessage";
 import { FileDiffView } from "../FileDiffView";
 import { GitHubPicker } from "../GitHubPicker";
+import { ProjectLibrary } from "../ProjectLibrary/ProjectLibrary";
 import { PreferencesMenu } from "../PreferencesMenu";
 import { Resizer } from "../Resizer";
 import { Actions } from "../Toolbar";
@@ -59,6 +60,7 @@ export function AppShell() {
   const selectedCommitId = useNavigation(getSelectedCommitId);
   const history = useHistory(readableRoot);
   const selectedFilePath = useNavigation(getSelectedFilePath);
+  const libraryView = useWorkspace((state) => state.libraryView);
   const showGitHub = useWorkspace((state) => state.githubOpen);
   const setShowGitHub = useWorkspace((state) => state.setGitHubOpen);
   const layout = useLayout();
@@ -174,7 +176,7 @@ export function AppShell() {
           )}
           {notice !== null && (
             <div role="status" className="toolbar__status">
-              <span>{t("workspace.tabLimit", { max: notice.max })}</span>
+              <span>{t(`workspace.${notice.code}`, { max: notice.max })}</span>
               <button type="button" className="button" onClick={dismissNotice}>
                 {t("workspace.dismiss")}
               </button>
@@ -242,6 +244,8 @@ export function AppShell() {
             setShowGitHub(false);
           }}
         />
+      ) : libraryView !== null ? (
+        <ProjectLibrary only={libraryView} />
       ) : repository === null ? (
         <div className="app-shell__empty">
           <BrandLogo className="app-shell__empty-logo" variant="stacked" />
@@ -258,6 +262,7 @@ export function AppShell() {
               {t("empty.clone")}
             </button>
           </div>
+          <ProjectLibrary />
         </div>
       ) : verification.error !== null ? (
         <UnreachableProject

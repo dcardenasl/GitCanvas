@@ -1,4 +1,5 @@
 import type { SavedSelection, TabRecord, Workspace } from "../bindings";
+import { projectName } from "./projectNames";
 import { IDLE_GIT_ACTIONS } from "./gitActionState";
 import { EMPTY_NAVIGATION, type Selection } from "./navigation";
 import { UNVERIFIED } from "./verification";
@@ -49,7 +50,7 @@ export function restoreTab(record: TabRecord): Tab {
   return {
     repository: {
       path: record.path,
-      name: record.path.split(/[\\/]/).filter(Boolean).at(-1) ?? record.path,
+      name: projectName(record.path),
     },
     navigation: {
       ...EMPTY_NAVIGATION,

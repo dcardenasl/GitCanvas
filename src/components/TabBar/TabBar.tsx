@@ -4,6 +4,7 @@ import { useShallow } from "zustand/react/shallow";
 
 import type { OpenFolder } from "../AppShell/useOpenFolder";
 import { ContextMenu, type MenuItem } from "../ContextMenu";
+import { FavoriteToggle } from "../FavoriteToggle/FavoriteToggle";
 import { ErrorMessage } from "../ErrorMessage";
 import { useWorkspace, type Tab } from "../../state/workspace";
 import { labelTabs } from "./tabLabels";
@@ -100,6 +101,8 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
   const activate = useWorkspace((state) => state.activate);
   const closeTab = useWorkspace((state) => state.closeTab);
   const moveTab = useWorkspace((state) => state.moveTab);
+  const favorites = useWorkspace((state) => state.favorites);
+  const setLibraryView = useWorkspace((state) => state.setLibraryView);
   const setGitHubOpen = useWorkspace((state) => state.setGitHubOpen);
 
   const labels = labelTabs(tabs.map((tab) => tab.repository));
@@ -197,6 +200,7 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
     }
   };
 
+  const currentTab = tabs.find((tab) => tab.repository.path === activeRoot);
   const newItems: readonly MenuItem[] = [
     { label: t("tabs.menu.openFolder"), onSelect: folder.choose },
     {
@@ -205,6 +209,35 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
         setGitHubOpen(true);
       },
     },
+    {
+      label: t("workspace.favorites"),
+      onSelect: () => {
+        setLibraryView("favorites");
+      },
+    },
+    {
+      label: t("workspace.recents"),
+      onSelect: () => {
+        setLibraryView("recents");
+      },
+    },
+    ...(currentTab === undefined
+      ? []
+      : [
+          {
+            label: t(
+              favorites.includes(currentTab.repository.path)
+                ? "workspace.unfavorite"
+                : "workspace.favorite",
+              { name: currentTab.repository.name },
+            ),
+            onSelect: () => {
+              useWorkspace
+                .getState()
+                .toggleFavorite(currentTab.repository.path);
+            },
+          },
+        ]),
   ];
   const allItems: readonly MenuItem[] = tabs.map((tab, index) => ({
     label: labels[index]?.text ?? tab.repository.path,
@@ -268,6 +301,7 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
                   />
                 )}
               </button>
+              <FavoriteToggle path={root} name={name} compact />
               <button
                 type="button"
                 className="tab-bar__close"

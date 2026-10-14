@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`ProjectLibrary`** — adds persistent favorites and twenty recent projects,
+  available from the opening menu and start screen, with removable missing entries.
+
 - **`UnreachableProject`** — keeps missing project tabs recoverable through retry,
   locate and close; storage failures stay visible while work continues in memory.
 

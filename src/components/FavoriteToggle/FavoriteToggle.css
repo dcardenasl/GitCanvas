@@ -1,0 +1,40 @@
+.favorite-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 3px;
+  border: 0;
+  border-radius: var(--radius-tight);
+  background: none;
+  color: var(--ink-muted);
+  cursor: default;
+}
+
+.favorite-toggle svg {
+  inline-size: 100%;
+  block-size: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.favorite-toggle[aria-pressed="true"] {
+  color: var(--accent);
+}
+
+.favorite-toggle[aria-pressed="true"] svg {
+  fill: currentColor;
+}
+
+.favorite-toggle:hover {
+  background: var(--surface-hover);
+}
+
+.favorite-toggle:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}

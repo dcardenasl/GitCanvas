@@ -282,7 +282,7 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       ambos permiten seguir trabajando. Pruebas de las acciones y de corrupción al iniciar.
       → `feat(workspace): keep unreachable tabs recoverable and surface storage failures`
 
-- [ ] **WS-13 — Favoritos y recientes.** Estrella en la pestaña y en el menú; pantalla de inicio
+- [x] **WS-13 — Favoritos y recientes.** Estrella en la pestaña y en el menú; pantalla de inicio
       (cero pestañas) con Abrir carpeta, Clonar de GitHub, favoritos y recientes. Favoritos por
       nombre (nombres repetidos desambiguados con la carpeta), recientes del más nuevo al más
       viejo con tope de 20, un favorito no se repite en recientes, sin reordenamiento manual.
@@ -292,6 +292,10 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       explícita): si el clon fue expulsado, la entrada queda inaccesible.
       *Pruebas:* alta, baja, orden, tope de 20, sin duplicados entre listas, persistencia, ruta
       desaparecida.
+      *Evidencia:* estrella accesible en cada pestaña y acción por teclado en el menú;
+      listas desde el menú y la pantalla de inicio, orden por nombre/último uso,
+      desambiguación, límites del backend y errores recuperables. Pruebas de persistencia,
+      cierre independiente, tope, orden, duplicados y rutas inaccesibles.
       → `feat(workspace): add favorites and a recent projects list`
 
 - [ ] **WS-14 — Liberar recursos al cerrar y acotar los inactivos.** Cerrar una pestaña quita

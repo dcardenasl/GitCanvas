@@ -71,6 +71,15 @@
     "unreachable": "No se pudo abrir este proyecto",
     "locate": "Localizar carpeta…",
     "saveFailed": "No se pudo guardar el workspace. Los cambios siguen en memoria.",
-    "recovered": "No se pudo restaurar el workspace guardado. El original se conservó."
+    "recovered": "No se pudo restaurar el workspace guardado. El original se conservó.",
+    "favorites": "Favoritos",
+    "recents": "Proyectos recientes",
+    "favoritesEmpty": "Todavía no hay favoritos. Agrega uno con la estrella de su pestaña.",
+    "recentsEmpty": "Todavía no hay proyectos recientes.",
+    "favorite": "Agregar {{name}} a favoritos",
+    "unfavorite": "Quitar {{name}} de favoritos",
+    "removeRecent": "Quitar {{name}} de recientes",
+    "favoriteLimit": "Se pueden guardar hasta {{max}} favoritos. Quita uno para agregar otro.",
+    "back": "Volver"
   }
 }

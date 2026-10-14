@@ -71,6 +71,15 @@
     "unreachable": "This project could not be opened",
     "locate": "Locate folder…",
     "saveFailed": "Your workspace could not be saved. Changes remain in memory.",
-    "recovered": "Saved workspace data could not be restored. The original has been preserved."
+    "recovered": "Saved workspace data could not be restored. The original has been preserved.",
+    "favorites": "Favorites",
+    "recents": "Recent projects",
+    "favoritesEmpty": "No favorite projects yet. Add one with the star on its tab.",
+    "recentsEmpty": "No recent projects yet.",
+    "favorite": "Add {{name}} to favorites",
+    "unfavorite": "Remove {{name}} from favorites",
+    "removeRecent": "Remove {{name}} from recents",
+    "favoriteLimit": "At most {{max}} favorites can be saved. Remove one to add another.",
+    "back": "Back"
   }
 }

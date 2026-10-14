@@ -192,7 +192,13 @@ describe("TabBar", () => {
 
       expect(
         screen.getAllByRole("menuitem").map((item) => item.textContent),
-      ).toEqual(["Abrir carpeta…", "Clonar de GitHub…"]);
+      ).toEqual([
+        "Abrir carpeta…",
+        "Clonar de GitHub…",
+        "Favoritos",
+        "Proyectos recientes",
+        "Agregar alpha a favoritos",
+      ]);
     });
 
     it("opens the chosen folder as another tab", async () => {

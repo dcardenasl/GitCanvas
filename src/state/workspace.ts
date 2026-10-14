@@ -58,7 +58,7 @@ export type CloseOutcome =
 
 /** Something the interface owes the person after a workspace action. */
 export interface WorkspaceNotice {
-  readonly code: "tabLimit";
+  readonly code: "tabLimit" | "favoriteLimit";
   readonly max: number;
 }
 
@@ -69,6 +69,10 @@ interface WorkspaceState {
   readonly activeRoot: string | null;
   /** The bounds the backend enforces; `null` until they are read at startup. */
   readonly limits: WorkspaceLimits | null;
+  readonly libraryView: "favorites" | "recents" | null;
+  setLibraryView: (view: "favorites" | "recents" | null) => void;
+  toggleFavorite: (root: string) => void;
+  removeRecent: (root: string) => void;
   readonly favorites: readonly string[];
   readonly recents: readonly string[];
   readonly storageError: {
@@ -160,6 +164,26 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   githubOpen: false,
   favorites: [],
   recents: [],
+  libraryView: null,
+  setLibraryView: (libraryView) => {
+    set({ libraryView, githubOpen: false });
+  },
+  toggleFavorite: (root) => {
+    const { favorites, limits } = get();
+    if (favorites.includes(root)) {
+      set({ favorites: favorites.filter((path) => path !== root) });
+      return;
+    }
+    if (limits === null) throw new Error("Workspace limits are not loaded");
+    if (favorites.length >= limits.max_favorites) {
+      set({ notice: { code: "favoriteLimit", max: limits.max_favorites } });
+      return;
+    }
+    set({ favorites: [...favorites, root] });
+  },
+  removeRecent: (root) => {
+    set({ recents: get().recents.filter((path) => path !== root) });
+  },
   storageError: null,
 
   restore: (workspace) => {
@@ -214,13 +238,21 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   },
 
   openProject: (repository) => {
-    const { tabs, limits } = get();
+    const { tabs, limits, recents } = get();
     if (limits === null) {
       throw new Error("Workspace limits are not loaded");
     }
     const root = repository.path;
     if (tabs.some((tab) => tab.repository.path === root)) {
-      set({ activeRoot: root, notice: null });
+      set({
+        activeRoot: root,
+        notice: null,
+        recents: [root, ...recents.filter((path) => path !== root)].slice(
+          0,
+          limits.max_recents,
+        ),
+        libraryView: null,
+      });
       return "activated";
     }
     if (tabs.length >= limits.max_tabs) {
@@ -238,6 +270,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
         },
       ],
       activeRoot: root,
+      recents: [root, ...recents.filter((path) => path !== root)].slice(
+        0,
+        limits.max_recents,
+      ),
+      libraryView: null,
       notice: null,
     });
     return "opened";
@@ -249,7 +286,14 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       activeRoot !== root &&
       tabs.some((tab) => tab.repository.path === root)
     ) {
-      set({ activeRoot: root });
+      const { recents, limits } = get();
+      set({
+        activeRoot: root,
+        recents: [root, ...recents.filter((path) => path !== root)].slice(
+          0,
+          limits?.max_recents ?? 0,
+        ),
+      });
     }
   },
 
@@ -302,7 +346,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   },
 
   setGitHubOpen: (githubOpen) => {
-    set({ githubOpen });
+    set({ githubOpen, ...(githubOpen ? { libraryView: null } : {}) });
   },
 }));
 
