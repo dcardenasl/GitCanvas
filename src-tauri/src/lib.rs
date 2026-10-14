@@ -58,6 +58,7 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::repository::open_repository,
             commands::open_repos::sync_open_repositories,
             commands::repository::get_startup_repository,
+            commands::lifecycle::restart_application,
             commands::repository::get_commits,
             commands::repository::get_commit,
             commands::repository::get_branches,
@@ -215,6 +216,10 @@ pub fn run() {
                     gitcanvas_core::workspace::store::WorkspaceStore::new(data_dir),
                 ));
 
+                let restart_handle = app.handle().clone();
+                app.manage(commands::lifecycle::RestartApplication(
+                    std::sync::Arc::new(move || restart_handle.restart()),
+                ));
                 let handle = app.handle().clone();
                 app.manage(commands::watch::ActiveWatch::default());
 

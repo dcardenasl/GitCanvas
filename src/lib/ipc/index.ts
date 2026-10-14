@@ -170,3 +170,6 @@ export const loadWorkspace = () => result(commands.loadWorkspace());
 /** Replaces the durable workspace with a revision-ordered snapshot. */
 export const saveWorkspace = (request: SaveWorkspaceRequest) =>
   result(commands.saveWorkspace(request));
+
+/** Restarts the native application after an explicit recovery request. */
+export const restartApplication = () => result(commands.restartApplication());

@@ -334,10 +334,13 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       del motor sobre un objeto fuera del walk y del inspector sin pedir otra página.
       → `fix(workspace): resolve restored commit details independently of history pages`
 
-- [ ] **WS-11b — Reinicio nativo después de un fallo de render.** El botón de recuperación
+- [x] **WS-11b — Reinicio nativo después de un fallo de render.** El botón de recuperación
       debe reiniciar el proceso, conservando el último workspace durable. Recargar solo la
       página reinicia secuencias de solicitudes mientras Rust conserva revisiones y watcher.
       El reinicio requiere acción explícita y su fallo permanece visible.
+      *Evidencia:* comando tipado de reinicio, adaptador nativo e IPC probado con ejecución
+      inocua; el fallback espera si hay una escritura Git y conserva el error si el reinicio
+      es rechazado. No recarga el renderer conservando secuencias backend antiguas.
       → `fix(workspace): restart the native process after a render failure`
 
 - [ ] **WS-13a — Regreso desde la biblioteca y listas extensas.** Activar una pestaña debe

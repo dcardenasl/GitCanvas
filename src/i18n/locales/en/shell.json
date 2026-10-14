@@ -6,7 +6,8 @@
   "errorBoundary": {
     "message": "The application could not display this view. Restart GitCanvas to continue.",
     "restart": "Restart GitCanvas",
-    "title": "GitCanvas ran into a problem"
+    "title": "GitCanvas ran into a problem",
+    "waitingWrites": "Wait for the repository operation to finish before restarting."
   },
   "history": {
     "label": "History"

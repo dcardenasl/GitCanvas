@@ -23,6 +23,9 @@ pub(super) fn test_webview() -> tauri::WebviewWindow<MockRuntime> {
         .manage(crate::commands::menu::MenuApplier(std::sync::Arc::new(
             |_| Ok(()),
         )))
+        .manage(crate::commands::lifecycle::RestartApplication(
+            std::sync::Arc::new(|| Ok(())),
+        ))
         .manage(crate::commands::watch::ActiveWatch::default())
         .manage(crate::commands::watch::ChangeNotifier(std::sync::Arc::new(
             |_| {},

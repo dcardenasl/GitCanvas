@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`ErrorBoundary`** — restarts the native process after explicit recovery,
+  keeping request generations aligned and waiting for known repository writes.
+
 - **`AppShell`** — reads restored commit metadata by id when it is outside loaded
   history, preserving the inspector and reporting unavailable objects without hidden paging.
 
