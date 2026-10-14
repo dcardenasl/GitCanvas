@@ -40,6 +40,22 @@ to their text; new components use logical CSS properties so the layout can mirro
 right-to-left languages. Window-level preferences (theme, language) live behind one
 toolbar button so the toolbar stays on one row at the 940px minimum.
 
+## Project navigation
+
+A compact tab row sits above the toolbar. The active tab uses the ordinary surface,
+favorites use the orchid star, and close, open and overflow controls retain the same
+focus and hover treatment. Long names truncate inside the tab, with the full path in
+the tooltip; duplicate names include their containing folder. Pointer dragging and
+keyboard reordering share the workspace actions. Tabs show only writing, unverified
+or inaccessible status; inactive Git metadata is never presented as current.
+
+The opening menu and empty screen expose folder opening, GitHub, favorites and recent
+projects. Project lists use plain rows with wrapping paths and accessible favorite
+controls, rather than cards or a modal. Recovery replaces the inaccessible repository
+view with Retry, Locate and Close. Storage errors occupy a wrapping banner above the
+workspace and retain their original diagnostic. All new styles use logical properties
+and are checked in both themes at the 940×600 window minimum.
+
 ## File previews
 
 Long lines wrap by default, and the toggle shows its pressed state with the accent. Code is

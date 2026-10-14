@@ -4,7 +4,7 @@
 
 ## Platform
 
-Desktop application (Tauri 2) on macOS, Linux, and Windows.
+web
 
 React runs inside a Tauri desktop window on macOS, Linux and Windows.
 
@@ -19,7 +19,8 @@ Read the shape of repository history at a glance, then inspect the changes in a 
 ## Capabilities and Constraints
 
 The governing scope is TASKS.md: local history, a resumable graph, first-parent diffs,
-working-tree snapshots and diffs, GitHub cloning, guarded checkout, fast-forward pull,
+working-tree snapshots and diffs, ordered project tabs with independent navigation,
+lazy session restoration, favorites, recent projects, GitHub cloning, guarded checkout, fast-forward pull,
 and authenticated push. Git data comes from local repositories and full clones; shallow
 clones are not used. Credentials stay in Rust and the OS keychain. The product is
 read-mostly, not strictly read-only: explicit checkout, pull and push mutate Git state;
@@ -40,6 +41,8 @@ repositories identified in CLAUDE.md. Display repository content only from real 
 ## Product Principles
 
 - The graph is the central task surface.
+- Projects keep independent navigation; only the active project is observed. Missing
+  folders stay recoverable and storage failures remain visible without losing in-memory work.
 - Loading another page preserves previous lane assignments.
 - The interface language is window-level, persisted locally, and follows the operating
   system (Spanish on a Spanish system, English otherwise) unless the user picks one.

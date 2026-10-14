@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`TabBar`** — keeps independent projects in ordered tabs, with pointer and
+  keyboard reordering, opening and overflow menus, and native macOS open/close shortcuts.
+- **`OpenRepos`** — protects cached clones used by every open tab, including
+  inactive and restored projects, so retention cannot evict a project still in use.
+
 - **`ProjectLibrary`** — adds persistent favorites and twenty recent projects,
   available from the opening menu and start screen, with removable missing entries.
 
@@ -24,6 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stay readable as plain text.
 
 ### Fixed
+
+- **`verifyProject`** — gates activation synchronously and waits for an explicit
+  working-tree fingerprint; write callbacks also reject unverified projects.
+- **`OpenRepos`** — protects cached Git metadata shared by external worktrees and
+  blocks uncertain retention or replacement of an entry still used by an open project.
+
+- **`ContextMenu`** — keeps long project menus inside the window and lets their
+  contents scroll without dismissing the menu, including keyboard navigation.
 
 - **`ProjectLibrary`** — returns to the selected tab from library views and keeps
   long project lists scrollable; late startup arguments yield to explicit tab activation.

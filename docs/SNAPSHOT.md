@@ -1,6 +1,6 @@
 # GitCanvas — snapshot
 
-> Actualizado: 2026-10-12 · Ficha completa: [ASSET.md](ASSET.md)
+> Actualizado: 2026-10-14 · Ficha completa: [ASSET.md](ASSET.md)
 
 ## Retomar
 
@@ -9,7 +9,7 @@
 | Etapa | v0.2.0 publicado: interfaz en inglés y español |
 | H2 e I18N | Cerradas: H2 46/46 (38 con commit dedicado; H2-34–41 en `437ff07`) e I18N 6/6 |
 | Release | v0.2.0 publicado el 2026-10-12 (PR [#9](https://github.com/dcardenasl/GitCanvas/pull/9), tag sobre `main`, instaladores de Linux, macOS y Windows) |
-| Siguiente tarea | Planificar las secciones 2 y 4 del plan de tres funcionalidades |
+| Siguiente tarea | Verificación externa de WS-17; publicación fuera del alcance autorizado |
 | Fuente de trabajo | [`TASKS.md`](../TASKS.md), criterios detallados en el plan H2 |
 
 El MVP incluye historial y graph, detalle/diffs, cambios locales, GitHub clone y
@@ -19,9 +19,12 @@ modifican estado Git de forma explícita. Pull no crea merges y push nunca fuerz
 
 ## Estado del trabajo en curso
 
-No hay tareas abiertas. `dev` y `main` están sincronizados en el merge de la PR #9. Las
-secciones 2 (commits desde la interfaz) y 4 (pestañas, favoritos y persistencia) del plan de
-tres funcionalidades no tienen tareas todavía; hay que planificarlas antes de implementarlas.
+La implementación del workspace está en `dev`, con pestañas, restauración perezosa,
+favoritos, recientes, recuperación de rutas y persistencia atómica. Los commits son
+locales por instrucción de David; no se hicieron push, PR ni release. Los controles
+locales y E2E se ejecutan en macOS; la matriz Linux/Windows y los atajos del menú nativo
+siguen pendientes en WS-17. La creación de commits desde la interfaz sigue reservada
+para v0.4. Consultar TASKS.md para evidencia y resultados actuales.
 
 ## Documentos
 

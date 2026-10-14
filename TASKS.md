@@ -6,20 +6,20 @@
 > [tres funcionalidades](docs/plan/2026-10-08-plan-tres-funcionalidades.md) y el
 > [plan general](docs/plans/2026-09-08-plan-de-implementacion.md).
 
-**Estado al 2026-10-13:** v0.2.0 está publicado (tag sobre `main`, instaladores de Linux, macOS
-y Windows), con la interfaz en inglés y español. La fase H2 (46 de 46) y la de
-internacionalización (6 de 6) están cerradas y archivadas. La serie de auditoría posterior a v0.2.0 (8 de 8) está cerrada y archivada; la
-sección 4 del plan de tres funcionalidades (pestañas, favoritos y persistencia) está planificada
-como la serie WS y la sección 2 (commits desde la interfaz) todavía no tiene tareas.
+**Estado al 2026-10-14:** v0.2.0 sigue siendo la versión publicada. H2, I18N y la auditoría
+posterior están cerradas y archivadas. El workspace (WS-1 a WS-16 y las correcciones
+WS-1a, WS-7a, WS-8a, WS-11a/b/c y WS-13a) está implementado en `dev`. Preparación y creación de commits desde
+la interfaz siguen fuera de esta serie y reservadas para v0.4.
 
-**Estado del checkout:** `dev` está por delante de `main` (último release v0.2.0, PR #9) con el
-resaltado de sintaxis, los logos por tema, la legibilidad del diff y la serie de auditoría, y
-todavía no se publicó en `origin/dev`. Antes de editar, inspeccionar `git status` y el historial.
+**Estado del checkout:** `dev` está por delante de `main` (release v0.2.0, PR #9).
+Por instrucción de David, esta entrega termina en **implementación y commits locales**:
+sin push, PR ni publicación. Inspeccionar siempre `git status` y el historial al retomar.
 
 ## Siguiente paso
 
-Empezar la serie WS por **WS-1** y **WS-2** (backend, independientes entre sí); después WS-3, que es la refactorización que desbloquea el resto.
-Los commits desde la interfaz (sección 2 del plan) quedan para v0.4.
+WS-17 conserva la verificación externa pendiente: matriz Linux/Windows y comprobación
+manual del menú de macOS. La publicación de v0.3.0 está fuera del alcance autorizado de
+esta sesión. La evidencia local está bajo WS-17; no presentar esos sistemas como verificados.
 
 ## Cola de trabajo
 
@@ -390,16 +390,30 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       de eliminar. Pruebas de worktree externo, informe pendiente y trabajo local conservado.
       → `fix(workspace): protect shared clone metadata and block unsafe cache replacement`
 
-- [ ] **WS-16 — Documentación.** ADR 0006 (workspace, identidad por raíz, almacén, restauración
+- [x] **WS-16 — Documentación.** ADR 0006 (workspace, identidad por raíz, almacén, restauración
       perezosa, menú de macOS y decisiones de este plan), ARCHITECTURE, CONTEXT (observación y
       registro de repositorios abiertos), PRODUCT, DESIGN (barra de pestañas), README, CLAUDE.md
       (el estado ya no es una sesión única) y CHANGELOG.
+      *Evidencia:* ADR 0006 y documentación de arquitectura, producto, diseño, entrada de
+      sesiones, README, snapshot y ficha sincronizados; CHANGELOG en Unreleased sin bump.
+      Se distingue la implementación local de los instaladores v0.2.0 publicados.
       → `docs(workspace): record the tabs, favorites and persistence decisions in adr 0006`
 
 - [ ] **WS-17 — Verificar en Linux y Windows y publicar v0.3.0.** Corrida de `quality` sobre
       `dev` (matriz de tres sistemas, cobertura, Clippy, bindings sin deriva, E2E nativos) y
       validación manual del flujo de pestañas en cada sistema; en macOS, también ⌘O y ⌘W.
       Después, `/release` (versión confirmada con David).
+      *Alcance autorizado (2026-10-14):* solo implementación y commits locales; push,
+      PR, release y matriz remota quedan fuera. Esta tarea sigue abierta deliberadamente.
+      *Evidencia local:* macOS; 706 pruebas frontend (95,17% statements, 96,61% líneas;
+      todos los umbrales por módulo pasan), 204 pruebas Rust con todas las features;
+      cinco specs/doce pruebas E2E, incluidos temas y 200 favoritos a 940×600. Tipos de
+      frontend/E2E/config, lint, formato, Clippy estricto y bindings sin deriva.
+      Compilación de producción completada en macOS, sin generar instaladores.
+      `npm audit --omit=dev --audit-level=high` informa cero vulnerabilidades;
+      `cargo deny` y `cargo audit` terminan correctamente, conservando ocho avisos
+      transitivos permitidos por la política existente (incluido glib, dependiente de Tauri
+      en Linux). No se relajan lints ni políticas para esta entrega.
       → `docs: close the workspace series and record the v0.3.0 verification`
 
 #### Decisiones cerradas (2026-10-14)

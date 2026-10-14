@@ -1,6 +1,6 @@
 # GitCanvas — ficha del asset
 
-> Estado actualizado: 2026-10-12. La fuente de ejecución es [`TASKS.md`](../TASKS.md);
+> Estado actualizado: 2026-10-14. La fuente de ejecución es [`TASKS.md`](../TASKS.md);
 > la fase de endurecimiento se define en [`plan/2026-10-04-plan-de-endurecimiento.md`](plan/2026-10-04-plan-de-endurecimiento.md).
 
 ## Identidad
@@ -10,7 +10,7 @@
 | Slug | `gitcanvas` |
 | Tipo | Aplicación de escritorio para inspección de Git |
 | Repositorio | [`dcardenasl/gitcanvas`](https://github.com/dcardenasl/gitcanvas) |
-| Licencia | Todos los derechos reservados |
+| Licencia | MIT (véase LICENSE) |
 | Versión publicada | [v0.2.0](https://github.com/dcardenasl/gitcanvas/releases/tag/v0.2.0) (2026-10-12) |
 | Estado | v0.2.0 publicado, con la interfaz en inglés y español |
 | Stack | Tauri 2, Rust/libgit2, React, TypeScript, Vite |
@@ -35,12 +35,14 @@ read-only; véase [`CONTEXT.md`](../CONTEXT.md) y el [ADR 0001](adr/0001-working
 | Checkout, pull fast-forward y push | Implementado con guardias |
 | Endurecimiento H2 | Cerrado: 46 de 46; 38 cierres con commit dedicado y H2-34–41 integradas en `437ff07` |
 | Interfaz en inglés y español | Publicada en v0.2.0; CI verde en Linux, macOS y Windows |
+| Workspace: pestañas, favoritos y restauración | Implementado en dev; verificación local macOS, matriz externa pendiente en WS-17 |
 | Publicación | v0.2.0 publicada (PR [#9](https://github.com/dcardenasl/GitCanvas/pull/9), merge `1ca6b73`, tag sobre `main`); el workflow `release` creó el Release con instaladores de Linux, macOS y Windows. v0.1.0 salió el 2026-10-09 |
 
 ## Próximo paso
 
-Continuar en [`TASKS.md`](../TASKS.md): planificar las secciones 2 y 4 del plan de tres
-funciones antes de implementarlas. Cada release usa exclusivamente el procedimiento de
+Continuar en [`TASKS.md`](../TASKS.md): completar la verificación externa de WS-17 cuando
+se autorice publicar. El workspace está implementado en commits locales de dev; la
+creación de commits desde la interfaz sigue reservada para v0.4. Cada release usa exclusivamente el procedimiento de
 `CLAUDE.md` y requiere aprobación de David para mergear el PR.
 
 ## Registro

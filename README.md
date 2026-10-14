@@ -32,6 +32,15 @@ GitCanvas is the opposite trade: small, fast, free, and focused on reading histo
 
 ## Features
 
+The workspace features below are implemented on `dev`; the published installers still
+correspond to v0.2.0 until the next release.
+
+- **Project tabs and session restoration.** Keep independent selections, search and
+  navigation across up to thirty projects. Reorder by pointer or keyboard, favorite a
+  project and reopen it from the start screen or opening menu. Saved tabs validate on
+  first use; missing folders remain recoverable. Only the active project is observed,
+  and heavy caches are retained for at most five inactive projects.
+
 - **Branch graph with stable lanes.** Branches and merges are drawn as lanes in SVG, and
   lanes never reorder as you load more history. Branch and tag badges sit on the commits
   they point at.
