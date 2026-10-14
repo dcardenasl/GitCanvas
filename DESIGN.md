@@ -47,7 +47,12 @@ favorites use the orchid star, and close, open and overflow controls retain the 
 focus and hover treatment. Long names truncate inside the tab, with the full path in
 the tooltip; duplicate names include their containing folder. Pointer dragging and
 keyboard reordering share the workspace actions. Tabs show only writing, unverified
-or inaccessible status; inactive Git metadata is never presented as current.
+or inaccessible status, and the unverified mark stays quiet; inactive Git metadata is never
+presented as current. A context menu on a tab lists close, close others, close to the right
+and copy path; entries show their shortcut in a quiet `kbd` and group with separators. The
+open menu groups folder and GitHub actions apart from favorites, recents and reopening the
+last closed tab. While a folder is dragged over the window, a centered notice invites to
+drop it.
 
 The opening menu and empty screen expose folder opening, GitHub, favorites and recent
 projects. Project lists use plain rows with wrapping paths and accessible favorite

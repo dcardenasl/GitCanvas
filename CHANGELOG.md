@@ -9,63 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`AppShell`** — drop a folder onto the window to open it as a project in a new tab.
-- **`TabBar`** — right-click (or the menu key) on a tab to close it, close the other tabs, close
-  the tabs to its right, or copy its path.
-- **`TabBar`** — reopens the most recently closed tab with its selection and search
+- **Project tabs** — keep several projects open at once in ordered tabs. Drag or use the keyboard
+  to reorder them, and use the open and overflow menus to switch. Your tabs and where you were in
+  each one come back when you reopen the app.
+- **Tab context menu** — right-click a tab (or press the menu key) to close it, close the other
+  tabs, close the tabs to its right, or copy its path.
+- **Reopen closed tab** — brings back the most recently closed tab with its selection and search
   (Ctrl+Shift+T, ⇧⌘T on macOS, or the open menu).
-- **`TabBar`** — keeps independent projects in ordered tabs, with pointer and
-  keyboard reordering, opening and overflow menus, and native macOS open/close shortcuts.
-- **`OpenRepos`** — protects cached clones used by every open tab, including
-  inactive and restored projects, so retention cannot evict a project still in use.
-
-- **`ProjectLibrary`** — adds persistent favorites and twenty recent projects,
-  available from the opening menu and start screen, with removable missing entries.
-
-- **`UnreachableProject`** — keeps missing project tabs recoverable through retry,
-  locate and close; storage failures stay visible while work continues in memory.
-
-- **`WorkspaceGate`** — restores project tabs and their saved navigation lazily;
-  a serialized writer saves changes and flushes before closing or quitting.
-
-- **`LineTable`** — colors supported source languages (CSS, JavaScript, JSON, JSX,
-  Markdown, HTML, PHP, Rust, TypeScript, TSX) in diffs and whole-file views. It runs in a
-  background worker, so a large file never freezes scrolling; unknown or oversized files
-  stay readable as plain text.
+- **Drop a folder** — drag a folder onto the window to open it as a project in a new tab.
+- **Favorites and recent projects** — pin projects and pick from the last twenty from the open menu
+  and the start screen. Entries whose folder is gone can be removed.
+- **Missing projects** — a tab whose folder disappeared stays open so you can retry, locate the new
+  folder, or close it. If saving your workspace fails, the app tells you and keeps working.
+- **macOS menu** — open and close a project with the native shortcuts, and reopen a closed tab.
+- **Syntax highlighting** — diffs and whole-file views color CSS, JavaScript, JSON, JSX, Markdown,
+  HTML, PHP, Rust, TypeScript and TSX. Large or unknown files stay readable as plain text and
+  never freeze scrolling.
 
 ### Fixed
 
-- **`CommitTable`** — keeps the commit summary readable at the minimum window size with both
-  panels open, dropping the hash, then the author's name, then the date as the table narrows.
-- **`verifyProject`** — gates activation synchronously and waits for an explicit
-  working-tree fingerprint; write callbacks also reject unverified projects.
-- **`OpenRepos`** — protects cached Git metadata shared by external worktrees and
-  blocks uncertain retention or replacement of an entry still used by an open project.
-
-- **`ContextMenu`** — keeps long project menus inside the window and lets their
-  contents scroll without dismissing the menu, including keyboard navigation.
-
-- **`ProjectLibrary`** — returns to the selected tab from library views and keeps
-  long project lists scrollable; late startup arguments yield to explicit tab activation.
-
-- **`ErrorBoundary`** — restarts the native process after explicit recovery,
-  keeping request generations aligned and waiting for known repository writes.
-
-- **`AppShell`** — reads restored commit metadata by id when it is outside loaded
-  history, preserving the inspector and reporting unavailable objects without hidden paging.
+- **Quitting** — the app now closes even if its window stops responding, instead of hanging.
+- **History table** — the commit summary stays readable at the minimum window size with both
+  panels open; the hash, then the author's name, then the date drop out as the table narrows.
+- **Cloned repositories** — a clone that an open tab is using is never removed to make room for
+  another, including repositories shared through external worktrees and tabs you have not
+  visited yet.
+- **Project menus** — long menus stay inside the window and scroll without closing, including
+  with the keyboard.
+- **Library views** — going back returns to the tab you were on, and long project lists scroll.
+- **Restored tabs** — the inspector keeps a restored commit even when it is outside the loaded
+  history, and reports when the commit no longer exists.
+- **Error recovery** — restarting after an error waits for any repository change in progress
+  before relaunching.
 
 ### Changed
 
-- **`ProjectCache`** — releases closed project queries and keeps heavy data for
-  the active project and at most five inactive projects using activation order.
-
-- **`BrandLogo`** — uses the final vertical, horizontal and mark artwork, picking the
-  high-contrast wordmark for the active theme; the files are exported at display
-  resolution, about 60% smaller than the originals.
-- **`FileDiffView`** — wraps long lines by default, and the wrap toggle shows when it is
-  on.
-- **`DiffViewer`** — added and deleted rows keep their green and red background, while
-  the code uses the ordinary text color so it stays readable in both themes.
+- **Memory use** — closed tabs release their data, and only the active tab plus the five most
+  recently used inactive ones keep theirs in memory.
+- **Logo** — uses the final artwork and picks the high-contrast wordmark for the active theme;
+  the files are about 60% smaller.
+- **Diff wrapping** — long lines wrap by default, and the wrap toggle shows when it is on.
+- **Diff colors** — added and deleted rows keep their green and red background while the code uses
+  the normal text color, so it stays readable in both themes.
 
 ## [0.2.0] — 2026-10-12
 

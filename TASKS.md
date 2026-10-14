@@ -465,7 +465,7 @@ Origen: auditoría del 2026-10-14 sobre `dev` (706 pruebas, matriz remota todav�
 - [x] **HRD-4 — Dividir el store del workspace.** `state/workspace.ts` mezcla pestañas,
       favoritos, recientes, errores de almacenamiento, vista de biblioteca y avisos. Se separa
       por responsabilidad, con un único punto de composición y sin cambiar su contrato.
-      *Decisiones al implementar:* `state/workspace.ts` pasa de 498 a ~190 líneas y se compone de cinco
+      *Decisiones al implementar:* `state/workspace.ts` pasa de 498 a 162 líneas y se compone de cinco
       porciones en `state/workspaceStore/` (pestañas, biblioteca, vistas a pantalla completa,
       almacenamiento y límites). Sigue siendo **un** almacén con el mismo contrato: usar un
       proyecto toca pestañas, recientes y vistas a la vez y esas actualizaciones deben aterrizar
@@ -522,10 +522,13 @@ Origen: auditoría del 2026-10-14 sobre `dev` (706 pruebas, matriz remota todav�
       esa función. *Observación:* el E2E `local-changes` falló una vez tras una compilación nueva (también
       en WS-7) y no se reprodujo en cuatro ejecuciones posteriores, ni con los logs capturados.
 
-- [ ] **HRD-9 — CHANGELOG y documentación.** Entradas en términos de lo que nota la persona;
+- [x] **HRD-9 — CHANGELOG y documentación.** Entradas en términos de lo que nota la persona;
       ADR 0006, ARCHITECTURE y DESIGN al día con la salida con plazo, las porciones del store y
       los casos de uso nuevos.
       → `docs(changelog): describe the unreleased changes in terms of what people notice`
+      *Decisiones al implementar:* el CHANGELOG nombra capacidades y arreglos que la persona nota, sin
+      clases internas; ADR 0006, ARCHITECTURE y DESIGN recogen la salida con plazo, las porciones del
+      store, el borrado con `RemoveGuard` y los casos de uso de pestañas.
 
 #### Decisiones cerradas (2026-10-14)
 

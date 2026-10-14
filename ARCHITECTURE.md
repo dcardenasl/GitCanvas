@@ -133,7 +133,10 @@ rows of every page it already laid out.
 
 ## Workspace and persistence
 
-`state/workspace.ts` coordinates ordered tabs identified by canonical worktree root.
+`state/workspace.ts` composes the workspace store from focused slices in
+`state/workspaceStore/` (tabs, library, view, storage, bounds, closed tabs); each slice
+updates the store in a single atomic `set` and cross-slice rules are pure helpers. It
+coordinates ordered tabs identified by canonical worktree root.
 Each owns navigation and Git action state; callbacks address their originating root.
 Only the active view mounts, observes Git and polls local changes. Activation reopens
 and authorizes the root before reads, compares refs, and keeps matching history pages.
@@ -149,8 +152,15 @@ system quit. Saved paths grant no permissions; inactive restored tabs authorize 
 on activation. `OpenRepos` protects every open tab's clone from retention, independently
 of the active watcher. Shared Git metadata also protects a cached clone used by an
 external worktree. Pending protection reports or unresolved dependencies stop retention,
-and an in-use cache entry cannot be repaired by replacement. Favorites alone do not
-protect a clone.
+and an in-use cache entry cannot be repaired by replacement. Retention and replacement hand
+the deletion to the registry through a `RemoveGuard`, so the decision that no tab uses an
+entry and its removal are one step and a tab cannot open it in between. Favorites alone do
+not protect a clone.
+
+Quitting is bounded. The window close request first asks the frontend to flush and
+acknowledge (`acknowledge_shutdown`); a watchdog in `lifecycle.rs` destroys the window
+after a three-second deadline if the renderer never answers, so an unresponsive webview
+cannot keep the app alive.
 
 Theme, language and panel sizes remain synchronous webview preferences. E2E builds use
 private webviews as well as a temporary Rust data directory, isolating both stores.

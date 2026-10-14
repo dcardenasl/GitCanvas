@@ -8,7 +8,10 @@ Aceptado — 2026-10-14
 
 **Identidad y estado.** La raíz canónica del worktree (`RepositoryInfo.path`) identifica
 una pestaña. Alias de la misma raíz activan la pestaña existente; worktrees vinculados
-son proyectos distintos. `state/workspace.ts` coordina el orden, la activa y las sesiones;
+son proyectos distintos. `state/workspace.ts` compone el almacén con porciones de
+`state/workspaceStore/` (pestañas, biblioteca, vista, almacenamiento, límites y cerradas);
+cada porción actualiza el estado con un único `set` atómico y las reglas entre porciones
+son funciones puras. Coordina el orden, la activa y las sesiones;
 `navigation.ts` contiene transiciones puras. Cada sesión conserva selección, búsqueda,
 carpetas, ancla, expansión y estado de acciones. Los callbacks se atan a la raíz que
 los inició. Cambiar de pestaña no redirige respuestas ni avisos a otro proyecto. Una
@@ -50,8 +53,11 @@ en `localStorage`: el idioma se debe resolver síncronamente antes del primer re
 La navegación se guarda con debounce de 300 ms; los cambios estructurales se encolan de
 inmediato. Un único escritor drena también cambios recibidos durante un guardado.
 El cierre y la salida normal del sistema pasan por el vaciado; si falla, la ventana
-permanece abierta para recuperar el guardado. Una terminación forzada del proceso no
-puede ejecutar ese vaciado y conserva el último archivo completo.
+permanece abierta para recuperar el guardado. La salida tiene plazo: el frontend confirma
+la solicitud de cierre (`acknowledge_shutdown`) antes de vaciar y, si no responde en tres
+segundos, un vigilante destruye la ventana para que un renderizador bloqueado no retenga
+la app. Una terminación forzada del proceso no puede ejecutar ese vaciado y conserva el
+último archivo completo.
 
 **Restauración y navegación.** Se carga el almacén antes de montar la interfaz y solo
 se valida inicialmente la pestaña activa. Las demás quedan «sin verificar» hasta usarse,
@@ -70,6 +76,9 @@ retención; un favorito expulsado conserva su ruta recuperable. Se protege tambi
 entrada cuyo Git común usa un worktree externo y el contenedor de proyectos anidados.
 Mientras se sincroniza la protección o no puede resolverse una dependencia, no se hace
 limpieza. Una reparación tampoco reemplaza una entrada usada por un proyecto abierto.
+La retención y el reemplazo entregan el borrado al registro mediante `RemoveGuard`: la
+decisión «nadie la usa» y la eliminación son un solo paso, sin ventana para que una
+pestaña la abra entre ambos.
 
 **Interfaz y menú.** Barra compacta sobre la toolbar; cada pestaña es un proyecto y el
 «+» abre carpeta, GitHub, favoritos o recientes. Arrastre por puntero, teclado con foco
@@ -77,6 +86,14 @@ itinerante, Alt+flechas para reordenar y Supr para cerrar. Ctrl+Tab y ⌘/Ctrl+1
 pestañas; Ctrl+O/W en Windows y Linux respetan los campos de texto. En macOS un menú
 propio recibe ⌘O y ⌘W, con etiquetas del catálogo activo; la salida del sistema se dirige
 al cierre con guardado. Todo usa las mismas acciones del workspace.
+
+**Casos de uso de pestañas.** Un menú contextual (clic derecho o tecla de menú) cierra la
+pestaña, las demás o las de la derecha, y copia la ruta. Ctrl+Mayús+T (⇧⌘T en macOS)
+reabre la última cerrada con su selección y búsqueda; el historial de cerradas es de
+sesión y está acotado. Soltar una carpeta en la ventana usa el evento de arrastre del
+webview y pasa por `openProjectAt`: la ruta soltada no concede acceso por sí misma.
+«Mostrar en el explorador» queda fuera a propósito: exigiría lanzar procesos o ampliar
+los permisos del webview.
 
 **Verificación aislada.** Los E2E usan repositorios con marcador de propiedad y un
 directorio de datos temporal. Las ventanas compiladas con `e2e` usan WebView privado:
