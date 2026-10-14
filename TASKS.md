@@ -447,10 +447,19 @@ Origen: auditoría del 2026-10-14 sobre `dev` (706 pruebas, matriz remota todav�
       paneles; `responsive.test.ts` fija el contrato del CSS.
       → `fix(history): keep the commit summary readable when the table is narrow`
 
-- [ ] **HRD-3 — Reemplazo de clones sin carrera.** La decisión de reemplazar una entrada de la
+- [x] **HRD-3 — Reemplazo de clones sin carrera.** La decisión de reemplazar una entrada de la
       caché lee las pestañas abiertas y la abre después otra pestaña. El registro de abiertos y
       el reemplazo se coordinan con el mismo cierre de entrada, de modo que abrir y reemplazar no
       se cruzan.
+      *Decisiones al implementar:* la decisión y el borrado pasan a ser un solo paso. El núcleo recibe
+      un `RemoveGuard`: se le entrega el borrado, no se le pregunta para actuar después, así que
+      quien sabe qué entradas están en uso puede mantener esa respuesta mientras dura el borrado.
+      `OpenRepos::remove_unless_open` comprueba que la entrada no esté abierta, la reclama contra la
+      misma revisión del conjunto (si un reporte aplicó entre medias, no borra) y ejecuta el
+      borrado **sin retener el registro**, que las marcas de petición necesitan sin esperar; mientras
+      dura, los reportes de pestañas esperan (`Condvar`) y después encuentran la entrada ya
+      ausente. Sirve igual al reemplazo de un clon ajeno y a cada expulsión de la retención, que
+      ya no calcula una lista de protegidas por adelantado.
       → `fix(clone): make the replace decision and tab registration mutually exclusive`
 
 - [ ] **HRD-4 — Dividir el store del workspace.** `state/workspace.ts` mezcla pestañas,

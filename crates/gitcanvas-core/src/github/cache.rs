@@ -250,15 +250,43 @@ pub fn status(cache_root: &Path) -> Result<CacheStatus, AppError> {
     })
 }
 
+/// Decides whether a cache entry may be deleted, and deletes it if so.
+///
+/// It receives the entry's name and the deletion itself, and returns whether
+/// the deletion ran. Handing over the deletion — rather than asking a question
+/// and acting on the answer afterwards — is what lets the caller keep its answer
+/// true for exactly as long as the deletion takes: whoever knows which entries
+/// are in use can hold that knowledge still while the entry goes.
+pub type RemoveGuard<'a> =
+    dyn Fn(&str, &mut dyn FnMut() -> Result<(), AppError>) -> Result<bool, AppError> + 'a;
+
+/// A guard that allows every deletion, for callers that have nothing to protect.
+///
+/// # Errors
+/// Returns whatever the deletion returns.
+pub fn unguarded(
+    _entry: &str,
+    removal: &mut dyn FnMut() -> Result<(), AppError>,
+) -> Result<bool, AppError> {
+    removal()?;
+    Ok(true)
+}
+
 /// Evicts least-recently-used clones until both limits are satisfied.
 ///
 /// `keep` is never evicted, so the repository the user just opened cannot be
-/// deleted out from under them by its own arrival.
+/// deleted out from under them by its own arrival. `guard` is asked before each
+/// deletion and may refuse it, which leaves that entry and moves on to the next
+/// candidate.
 ///
 /// # Errors
 ///
 /// Returns [`AppError`] when the cache cannot be read or an eviction fails.
-pub fn enforce_retention(cache_root: &Path, keep: &[String]) -> Result<Vec<String>, AppError> {
+pub fn enforce_retention(
+    cache_root: &Path,
+    keep: &[String],
+    guard: &RemoveGuard<'_>,
+) -> Result<Vec<String>, AppError> {
     let initial_status = status(cache_root)?;
 
     // Oldest first: those are the eviction candidates.
@@ -291,8 +319,13 @@ pub fn enforce_retention(cache_root: &Path, keep: &[String]) -> Result<Vec<Strin
         if current_entry.last_used != entry.last_used {
             continue;
         }
-        match std::fs::remove_dir_all(PathBuf::from(&current_entry.path)) {
-            Ok(()) => evicted.push(entry.name.clone()),
+        let path = PathBuf::from(&current_entry.path);
+        match guard(&entry.name, &mut || {
+            std::fs::remove_dir_all(&path).map_err(AppError::from)
+        }) {
+            Ok(true) => evicted.push(entry.name.clone()),
+            // In use: it stays, and the budget is met by another entry or not at all.
+            Ok(false) => {}
             Err(error) => failures.push(format!("{}: {error}", entry.name)),
         }
     }

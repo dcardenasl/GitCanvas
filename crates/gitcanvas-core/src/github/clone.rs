@@ -152,16 +152,10 @@ pub fn clone_repository(
     full_name: &str,
     cache_root: &Path,
     on_progress: impl FnMut(CloneProgress),
-    may_replace: impl Fn() -> Result<bool, AppError>,
+    guard: &cache::RemoveGuard<'_>,
 ) -> Result<ClonedRepository, AppError> {
     let name = RepositoryName::parse(full_name)?;
-    clone_into_cache(
-        &name.https_url(),
-        &name,
-        cache_root,
-        on_progress,
-        may_replace,
-    )
+    clone_into_cache(&name.https_url(), &name, cache_root, on_progress, guard)
 }
 
 /// Whether the repository at `path` opens and its `origin` is `url`.
@@ -185,7 +179,7 @@ fn clone_into_cache(
     name: &RepositoryName,
     cache_root: &Path,
     mut on_progress: impl FnMut(CloneProgress),
-    may_replace: impl Fn() -> Result<bool, AppError>,
+    guard: &cache::RemoveGuard<'_>,
 ) -> Result<ClonedRepository, AppError> {
     std::fs::create_dir_all(cache_root)?;
     let cache_root = cache_root.canonicalize()?;
@@ -208,10 +202,12 @@ fn clone_into_cache(
         }
         // A broken or foreign entry may still contain a tab's local work or
         // the common object database of an external worktree.
-        if !may_replace()? {
+        let replaced = guard(&entry, &mut || {
+            std::fs::remove_dir_all(&destination).map_err(AppError::from)
+        })?;
+        if !replaced {
             return Err(AppError::Conflict("an open project uses this cache entry; close or recover it before replacing the clone".into()));
         }
-        std::fs::remove_dir_all(&destination)?;
     }
 
     // The entry lock guarantees no other clone for this repository is active,
@@ -387,7 +383,7 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let name = RepositoryName::parse("owner/repo").unwrap();
 
-        let first = clone_into_cache(&url, &name, root.path(), |_| {}, || Ok(true)).unwrap();
+        let first = clone_into_cache(&url, &name, root.path(), |_| {}, &cache::unguarded).unwrap();
         assert!(Path::new(&first.path).ends_with("owner__repo"));
         assert!(Repository::open(&first.path).is_ok());
         assert!(root.path().read_dir().unwrap().all(|entry| !entry
@@ -406,7 +402,7 @@ mod tests {
         // A marker proves the second call reuses the directory rather than
         // recloning over it.
         std::fs::write(Path::new(&first.path).join("marker"), b"kept").unwrap();
-        let second = clone_into_cache(&url, &name, root.path(), |_| {}, || Ok(true)).unwrap();
+        let second = clone_into_cache(&url, &name, root.path(), |_| {}, &cache::unguarded).unwrap();
         assert_eq!(first.path, second.path);
         assert!(Path::new(&second.path).join("marker").exists());
     }
@@ -420,10 +416,10 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let name = RepositoryName::parse("owner/repo").unwrap();
         let original =
-            clone_into_cache(&other_url, &name, root.path(), |_| {}, || Ok(true)).unwrap();
+            clone_into_cache(&other_url, &name, root.path(), |_| {}, &cache::unguarded).unwrap();
         let marker = Path::new(&original.path).join("local-work");
         std::fs::write(&marker, b"preserved").unwrap();
-        let denied = clone_into_cache(&wanted_url, &name, root.path(), |_| {}, || Ok(false));
+        let denied = clone_into_cache(&wanted_url, &name, root.path(), |_| {}, &|_, _| Ok(false));
         assert!(matches!(denied, Err(AppError::Conflict(_))));
         assert_eq!(std::fs::read(&marker).unwrap(), b"preserved");
         assert!(origin_matches(Path::new(&original.path), &other_url));
@@ -437,9 +433,9 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let name = RepositoryName::parse("owner/repo").unwrap();
 
-        clone_into_cache(&other_url, &name, root.path(), |_| {}, || Ok(true)).unwrap();
+        clone_into_cache(&other_url, &name, root.path(), |_| {}, &cache::unguarded).unwrap();
         let replaced =
-            clone_into_cache(&wanted_url, &name, root.path(), |_| {}, || Ok(true)).unwrap();
+            clone_into_cache(&wanted_url, &name, root.path(), |_| {}, &cache::unguarded).unwrap();
 
         let origin = Repository::open(&replaced.path)
             .unwrap()
@@ -462,7 +458,7 @@ mod tests {
             &name,
             root.path(),
             |_| {},
-            || Ok(true),
+            &cache::unguarded,
         );
 
         assert!(result.is_err());
@@ -497,11 +493,11 @@ mod tests {
             let name_ref = &name;
             let first = scope.spawn(move || {
                 first_start.wait();
-                clone_into_cache(url_ref, name_ref, &first_root, |_| {}, || Ok(true))
+                clone_into_cache(url_ref, name_ref, &first_root, |_| {}, &cache::unguarded)
             });
             let second = scope.spawn(move || {
                 second_start.wait();
-                clone_into_cache(url_ref, name_ref, &second_root, |_| {}, || Ok(true))
+                clone_into_cache(url_ref, name_ref, &second_root, |_| {}, &cache::unguarded)
             });
             let reader = scope.spawn(move || {
                 reader_start.wait();

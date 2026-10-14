@@ -105,7 +105,6 @@ pub async fn clone_github_repository(
     let entry = clone::cache_entry_name(&full_name)?;
 
     let cloning_open = open.clone();
-    let cloning_entry = entry.clone();
     let cloned = write("clone_github_repository", move || {
         let cloned = clone::clone_repository(
             &full_name,
@@ -118,25 +117,24 @@ pub async fn clone_github_repository(
                     received_bytes: progress.received_bytes.to_string(),
                 });
             },
-            || {
-                cloning_open
-                    .cache_entries(&destination)
-                    .map(|entries| !entries.contains(&cloning_entry))
-            },
+            // An entry is replaced only if no open tab uses it, and decided and
+            // deleted as one step, so a tab cannot open it in between.
+            &|entry, removal| cloning_open.remove_unless_open(&destination, entry, removal),
         )?;
         allowed.allow(&ActiveRepo::validate(&cloned.path)?)?;
         Ok(cloned)
     })
     .await?;
 
-    // Keep the new clone and every clone an open tab uses. The open set is read
-    // when retention runs, not when the clone started, so a tab opened while the
-    // transfer was in flight is protected too. A retention failure must not turn
-    // a completed clone into an apparent clone failure.
+    // Keep the new clone, and delete no other that an open tab uses. Each
+    // deletion asks the open set at the moment it happens, so a tab opened while
+    // the transfer was in flight is protected too. A retention failure must not
+    // turn a completed clone into an apparent clone failure.
     let destination = root.0.clone();
     write("enforce_cache_retention", move || {
-        let keep = open.retention_keep_list(&destination, entry)?;
-        cache::enforce_retention(&destination, &keep)
+        cache::enforce_retention(&destination, &[entry], &|name, removal| {
+            open.remove_unless_open(&destination, name, removal)
+        })
     })
     .await
     .unwrap_or_else(|error| {

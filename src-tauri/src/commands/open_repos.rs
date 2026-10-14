@@ -17,7 +17,7 @@
 use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
+    sync::{Arc, Condvar, Mutex, MutexGuard},
 };
 
 use gitcanvas_core::{
@@ -48,11 +48,20 @@ struct Registry {
     desired: Option<u32>,
     /// Canonical roots, which is what makes aliases of one repository equal.
     paths: BTreeSet<PathBuf>,
+    /// Cache entries being deleted right now, each after being found unused.
+    removals: usize,
+}
+
+#[derive(Default)]
+struct Shared {
+    registry: Mutex<Registry>,
+    /// Signals that a deletion finished, so a held-back report may apply.
+    settled: Condvar,
 }
 
 /// Process-local record of which repositories are open as tabs.
 #[derive(Clone, Default)]
-pub struct OpenRepos(Arc<Mutex<Registry>>);
+pub struct OpenRepos(Arc<Shared>);
 
 fn poisoned() -> AppError {
     AppError::Internal("the open repositories registry was poisoned".to_owned())
@@ -63,14 +72,29 @@ impl OpenRepos {
     ///
     /// Returns whether the set changed hands, which is `false` for a stale or
     /// repeated revision.
+    fn lock(&self) -> Result<MutexGuard<'_, Registry>, AppError> {
+        self.0.registry.lock().map_err(|_| poisoned())
+    }
+
     fn requested(&self, revision: u32) -> Result<(), AppError> {
-        let mut registry = self.0.lock().map_err(|_| poisoned())?;
+        let mut registry = self.lock()?;
         registry.desired = Some(registry.desired.map_or(revision, |held| held.max(revision)));
         Ok(())
     }
 
+    /// Applies a report, once no cache entry is being deleted.
+    ///
+    /// A report cannot land while an entry is going: the decision to delete it
+    /// was made against the previous set, and a tab that this report adds for
+    /// that very entry would be left pointing at a folder being removed. Waiting
+    /// is short — one deletion — and makes the decision and the deletion one step
+    /// as far as any report can tell.
     fn replace(&self, revision: u32, paths: BTreeSet<PathBuf>) -> Result<bool, AppError> {
-        let mut registry = self.0.lock().map_err(|_| poisoned())?;
+        let mut registry = self
+            .0
+            .settled
+            .wait_while(self.lock()?, |held| held.removals > 0)
+            .map_err(|_| poisoned())?;
         if registry.revision.is_some_and(|applied| revision <= applied) {
             return Ok(false);
         }
@@ -80,17 +104,14 @@ impl OpenRepos {
         Ok(true)
     }
 
-    /// Names of the cache entries under `cache_root` that an open tab uses.
+    /// The cache entries under `cache_root` that an open tab uses, and the
+    /// revision of the set they were read from.
     ///
     /// Repositories outside the cache contribute nothing: the user's own
     /// folders are not the cache's to protect or evict.
-    ///
-    /// # Errors
-    /// Returns an error for a pending report, unresolved Git dependencies or a
-    /// poisoned registry. Retention must not guess that an uncertain entry is unused.
-    pub fn cache_entries(&self, cache_root: &Path) -> Result<BTreeSet<String>, AppError> {
+    fn open_entries(&self, cache_root: &Path) -> Result<(Option<u32>, BTreeSet<String>), AppError> {
         let (revision, paths) = {
-            let registry = self.0.lock().map_err(|_| poisoned())?;
+            let registry = self.lock()?;
             if registry.desired != registry.revision {
                 return Err(AppError::Conflict(
                     "open project protection is still synchronizing; cache retention was skipped"
@@ -109,30 +130,63 @@ impl OpenRepos {
                 }
                 Ok::<_, AppError>(entries)
             })?;
-        let registry = self.0.lock().map_err(|_| poisoned())?;
+        let registry = self.lock()?;
         if registry.revision != revision || registry.desired != registry.revision {
             return Err(AppError::Conflict(
                 "open project protection changed during cache lookup".into(),
             ));
         }
-        Ok(entries)
+        Ok((revision, entries))
+    }
+
+    /// Deletes a cache entry unless an open tab uses it; returns whether it did.
+    ///
+    /// The entry is found unused and then *claimed*, both against the same
+    /// revision of the open set: if a report applied in between, the claim fails
+    /// and nothing is deleted, since the answer may have changed. Once claimed,
+    /// reports wait (see [`Self::replace`]) until the deletion ends, so no tab
+    /// can be registered for an entry that is on its way out. The deletion itself
+    /// runs without holding the registry, which short request markers still need.
+    ///
+    /// # Errors
+    /// Returns an error when the open set cannot be known with certainty, and
+    /// whatever the deletion returns.
+    pub fn remove_unless_open(
+        &self,
+        cache_root: &Path,
+        entry: &str,
+        removal: &mut dyn FnMut() -> Result<(), AppError>,
+    ) -> Result<bool, AppError> {
+        let (revision, open) = self.open_entries(cache_root)?;
+        if open.contains(entry) {
+            return Ok(false);
+        }
+        {
+            let mut registry = self.lock()?;
+            if registry.revision != revision || registry.desired != registry.revision {
+                return Err(AppError::Conflict(
+                    "open project protection changed before the cache entry was claimed".into(),
+                ));
+            }
+            registry.removals = registry.removals.saturating_add(1);
+        }
+        let claim = Claim(self);
+        removal()?;
+        drop(claim);
+        Ok(true)
     }
 }
 
-impl OpenRepos {
-    /// The cache entries retention must not evict after cloning `new_entry`:
-    /// the new clone itself and every clone an open tab uses.
-    ///
-    /// # Errors
-    /// Returns an error if the registry was poisoned by an earlier failure.
-    pub fn retention_keep_list(
-        &self,
-        cache_root: &Path,
-        new_entry: String,
-    ) -> Result<Vec<String>, AppError> {
-        let mut keep = self.cache_entries(cache_root)?;
-        keep.insert(new_entry);
-        Ok(keep.into_iter().collect())
+/// A cache entry claimed for deletion; dropping it lets held-back reports apply,
+/// however the deletion ended.
+struct Claim<'a>(&'a OpenRepos);
+
+impl Drop for Claim<'_> {
+    fn drop(&mut self) {
+        if let Ok(mut registry) = self.0.lock() {
+            registry.removals = registry.removals.saturating_sub(1);
+        }
+        self.0 .0.settled.notify_all();
     }
 }
 
@@ -196,6 +250,14 @@ mod tests {
         workspace::{MAX_PATH_BYTES, MAX_TABS},
     };
 
+    /// The cache entries in use, as the registry reports them.
+    fn entries(
+        open: &OpenRepos,
+        cache_root: &std::path::Path,
+    ) -> Result<std::collections::BTreeSet<String>, AppError> {
+        open.open_entries(cache_root).map(|(_, entries)| entries)
+    }
+
     fn roots(paths: &[&std::path::Path]) -> std::collections::BTreeSet<std::path::PathBuf> {
         let strings: Vec<String> = paths
             .iter()
@@ -213,7 +275,7 @@ mod tests {
         assert!(open.replace(1, roots(&[a.path()])).unwrap());
         assert!(open.replace(2, roots(&[b.path()])).unwrap());
 
-        let held = open.0.lock().unwrap();
+        let held = open.lock().unwrap();
         assert_eq!(held.paths, roots(&[b.path()]));
     }
 
@@ -227,7 +289,7 @@ mod tests {
         assert!(!open.replace(4, roots(&[a.path()])).unwrap());
         assert!(!open.replace(5, roots(&[a.path()])).unwrap());
 
-        let held = open.0.lock().unwrap();
+        let held = open.lock().unwrap();
         assert_eq!(held.paths, roots(&[b.path()]));
     }
 
@@ -247,7 +309,7 @@ mod tests {
 
         open.replace(2, roots(&[])).unwrap();
 
-        assert!(open.0.lock().unwrap().paths.is_empty());
+        assert!(open.lock().unwrap().paths.is_empty());
     }
 
     #[test]
@@ -300,7 +362,7 @@ mod tests {
         open.replace(1, roots(&[&clone, &nested, outside.path()]))
             .unwrap();
 
-        let entries = open.cache_entries(cache.path()).unwrap();
+        let entries = entries(&open, cache.path()).unwrap();
 
         // Nested projects keep their containing cache entry too.
         assert_eq!(
@@ -332,11 +394,14 @@ mod tests {
         open.replace(1, roots(&[&cache.path().join("owner__open")]))
             .unwrap();
 
-        let keep = open
-            .retention_keep_list(cache.path(), "owner__other0".to_owned())
-            .unwrap();
-        let evicted = enforce_retention(cache.path(), &keep).unwrap();
+        let evicted = enforce_retention(
+            cache.path(),
+            &["owner__other0".to_owned()],
+            &|name, removal| open.remove_unless_open(cache.path(), name, removal),
+        )
+        .unwrap();
 
+        // The oldest is open, so the next oldest goes instead.
         assert_eq!(evicted.len(), 1);
         assert_ne!(evicted.first().map(String::as_str), Some("owner__open"));
         let names: Vec<_> = status(cache.path())
@@ -349,18 +414,110 @@ mod tests {
     }
 
     #[test]
-    fn the_keep_list_always_includes_the_new_clone_once() {
+    fn an_entry_in_use_is_not_deleted_and_the_deletion_never_runs() {
         let cache = tempfile::tempdir().unwrap();
         let clone = cache.path().join("owner__repo");
         fs::create_dir_all(&clone).unwrap();
         let open = OpenRepos::default();
         open.replace(1, roots(&[&clone])).unwrap();
+        let mut ran = false;
 
-        let keep = open
-            .retention_keep_list(cache.path(), "owner__repo".to_owned())
+        let removed = open
+            .remove_unless_open(cache.path(), "owner__repo", &mut || {
+                ran = true;
+                Ok(())
+            })
             .unwrap();
 
-        assert_eq!(keep, vec!["owner__repo".to_owned()]);
+        assert!(!removed);
+        assert!(!ran);
+        assert!(clone.exists());
+    }
+
+    #[test]
+    fn an_entry_nobody_uses_is_deleted() {
+        let cache = tempfile::tempdir().unwrap();
+        let used = cache.path().join("owner__used");
+        let unused = cache.path().join("owner__unused");
+        fs::create_dir_all(&used).unwrap();
+        fs::create_dir_all(&unused).unwrap();
+        let open = OpenRepos::default();
+        open.replace(1, roots(&[&used])).unwrap();
+
+        let removed = open
+            .remove_unless_open(cache.path(), "owner__unused", &mut || {
+                fs::remove_dir_all(&unused).map_err(AppError::from)
+            })
+            .unwrap();
+
+        assert!(removed);
+        assert!(!unused.exists());
+        assert!(used.exists());
+    }
+
+    #[test]
+    fn a_failed_deletion_still_lets_reports_through() {
+        let cache = tempfile::tempdir().unwrap();
+        fs::create_dir_all(cache.path().join("owner__repo")).unwrap();
+        let open = OpenRepos::default();
+        open.replace(1, roots(&[])).unwrap();
+
+        let result = open.remove_unless_open(cache.path(), "owner__repo", &mut || {
+            Err(AppError::Io("disk error".into()))
+        });
+
+        assert!(matches!(result, Err(AppError::Io(_))));
+        // Not left claimed: a report applies at once instead of waiting forever.
+        assert!(open.replace(2, roots(&[])).unwrap());
+    }
+
+    #[test]
+    fn a_report_waits_for_a_deletion_in_progress_and_then_finds_the_entry_gone() {
+        use std::sync::mpsc;
+        use std::time::Duration;
+
+        let cache = tempfile::tempdir().unwrap();
+        let entry = cache.path().join("owner__repo");
+        fs::create_dir_all(&entry).unwrap();
+        let open = OpenRepos::default();
+        open.replace(1, roots(&[])).unwrap();
+        let (started, started_rx) = mpsc::channel();
+        let (release, release_rx) = mpsc::channel::<()>();
+        let (applied, applied_rx) = mpsc::channel();
+
+        std::thread::scope(|scope| {
+            let deleting = open.clone();
+            let root = cache.path().to_path_buf();
+            let target = entry.clone();
+            scope.spawn(move || {
+                deleting
+                    .remove_unless_open(&root, "owner__repo", &mut || {
+                        started.send(()).unwrap();
+                        // The deletion is "in progress" until the test says so.
+                        release_rx.recv().unwrap();
+                        fs::remove_dir_all(&target).map_err(AppError::from)
+                    })
+                    .unwrap()
+            });
+            started_rx.recv().unwrap();
+
+            // A tab for that very entry is reported while it is being deleted.
+            let reporting = open.clone();
+            let reported = entry.clone();
+            scope.spawn(move || {
+                let resolved = canonical_roots(&[reported.to_str().unwrap().to_owned()]);
+                let applied_set = reporting.replace(2, resolved.unwrap()).unwrap();
+                applied.send(applied_set).unwrap();
+            });
+
+            // It has not applied while the deletion runs…
+            assert!(applied_rx.recv_timeout(Duration::from_millis(150)).is_err());
+            release.send(()).unwrap();
+            // …and applies once the deletion is over.
+            assert!(applied_rx.recv_timeout(Duration::from_secs(5)).unwrap());
+        });
+
+        assert!(!entry.exists());
     }
 
     #[test]
@@ -369,7 +526,7 @@ mod tests {
         let open = OpenRepos::default();
         open.replace(1, roots(&[a.path()])).unwrap();
 
-        let entries = open.cache_entries(&a.path().join("never-created")).unwrap();
+        let entries = entries(&open, &a.path().join("never-created")).unwrap();
 
         assert!(entries.is_empty());
     }
@@ -383,15 +540,14 @@ mod tests {
         open.requested(3).unwrap();
         open.replace(2, roots(&[])).unwrap();
         assert!(matches!(
-            open.cache_entries(cache.path()),
+            entries(&open, cache.path()),
             Err(AppError::Conflict(_))
         ));
         open.replace(3, roots(&[&root])).unwrap();
-        assert!(open
-            .cache_entries(cache.path())
+        assert!(entries(&open, cache.path())
             .unwrap()
             .contains("owner__repo"));
         open.requested(2).unwrap();
-        assert!(open.cache_entries(cache.path()).is_ok());
+        assert!(entries(&open, cache.path()).is_ok());
     }
 }
