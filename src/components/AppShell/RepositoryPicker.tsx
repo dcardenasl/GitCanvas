@@ -1,12 +1,12 @@
 import { useTranslation } from "react-i18next";
 
 import { ErrorMessage } from "../ErrorMessage";
-import { useOpenFolder } from "./useOpenFolder";
+import type { OpenFolder } from "./useOpenFolder";
 
 /** Opens a local repository through the native folder picker. */
-export function RepositoryPicker() {
+export function RepositoryPicker({ folder }: { readonly folder: OpenFolder }) {
   const { t } = useTranslation("shell");
-  const { phase, error, choose } = useOpenFolder();
+  const { phase, error, choose } = folder;
 
   const label =
     phase === "choosing"

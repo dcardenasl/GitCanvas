@@ -17,7 +17,7 @@ import { Actions } from "../Toolbar";
 import { INSPECTOR, SIDEBAR, useLayout } from "../../state/layout";
 import { useLiveRepository } from "../../state/liveRepository";
 import { Sidebar } from "../Sidebar";
-import { TabBar } from "../TabBar";
+import { TabBar, useTabShortcuts } from "../TabBar";
 import { WorkingTreeDetailPanel } from "../WorkingTreeDetailPanel";
 import { useHistory } from "../../state/history";
 import { useCurrentBranch } from "../../state/refs";
@@ -38,6 +38,7 @@ import { invalidateLive } from "../../state/queryKeys";
 
 import { HistoryView } from "./HistoryView";
 import { RepositoryPicker } from "./RepositoryPicker";
+import { useOpenFolder } from "./useOpenFolder";
 
 import "./AppShell.css";
 
@@ -72,6 +73,8 @@ export function AppShell() {
   );
   const openSync = useOpenRepositoriesSync(openPaths);
   const verification = useVerifyActiveProject();
+  const folder = useOpenFolder();
+  useTabShortcuts(folder.choose);
 
   useEffect(() => {
     // The window says which repository it is showing, so two of them are
@@ -127,7 +130,7 @@ export function AppShell() {
   return (
     <div className="app-shell">
       <div className="app-shell__chrome">
-        {repository !== null && <TabBar />}
+        {repository !== null && <TabBar folder={folder} />}
         <header className="toolbar">
           <BrandLogo
             className={
@@ -234,7 +237,7 @@ export function AppShell() {
           <BrandLogo className="app-shell__empty-logo" variant="stacked" />
           <p className="app-shell__empty-hint">{t("empty.hint")}</p>
           <div className="app-shell__empty-actions">
-            <RepositoryPicker />
+            <RepositoryPicker folder={folder} />
             <button
               type="button"
               className="button"

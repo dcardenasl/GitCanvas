@@ -153,6 +153,52 @@ describe("closing and activating tabs", () => {
   });
 });
 
+describe("moving tabs", () => {
+  beforeEach(() => {
+    openTestProject(alpha);
+    openTestProject(beta);
+    openTestProject(gamma);
+    useWorkspace.getState().activate(beta.path);
+  });
+
+  it("puts a tab at a position and keeps the active tab active", () => {
+    useWorkspace.getState().moveTab(alpha.path, 2);
+
+    expect(roots()).toEqual([beta.path, gamma.path, alpha.path]);
+    expect(activeRoot()).toBe(beta.path);
+
+    useWorkspace.getState().moveTab(alpha.path, 0);
+    expect(roots()).toEqual([alpha.path, beta.path, gamma.path]);
+  });
+
+  it("clamps a position outside the row to its ends", () => {
+    useWorkspace.getState().moveTab(beta.path, 99);
+    expect(roots()).toEqual([alpha.path, gamma.path, beta.path]);
+
+    useWorkspace.getState().moveTab(beta.path, -4);
+    expect(roots()).toEqual([beta.path, alpha.path, gamma.path]);
+  });
+
+  it("leaves the row as it was for a tab already there, or not open", () => {
+    const before = useWorkspace.getState().tabs;
+
+    useWorkspace.getState().moveTab(beta.path, 1);
+    useWorkspace.getState().moveTab("/projects/never-opened", 0);
+
+    expect(useWorkspace.getState().tabs).toBe(before);
+  });
+
+  it("keeps each tab's own state when it changes place", () => {
+    navigationActionsFor(gamma.path).selectCommit(COMMIT);
+
+    useWorkspace.getState().moveTab(gamma.path, 0);
+
+    const moved = useWorkspace.getState().tabs[0];
+    expect(moved?.repository.path).toBe(gamma.path);
+    expect(moved?.navigation.selection).toMatchObject({ commitId: COMMIT });
+  });
+});
+
 describe("per-tab navigation", () => {
   it("keeps each tab's selection while another is shown", () => {
     openTestProject(alpha);

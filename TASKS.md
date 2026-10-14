@@ -212,13 +212,25 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       ya no existe; ahora tiene su propio botón «Volver».
       → `feat(workspace): add an accessible tab bar with an open menu`
 
-- [ ] **WS-9 — Reordenar y teclado.** Reordenar por arrastre y por teclado; patrón WAI-ARIA de
+- [x] **WS-9 — Reordenar y teclado.** Reordenar por arrastre y por teclado; patrón WAI-ARIA de
       pestañas (`tablist`, foco itinerante, foco visible). Atajos manejados en la página:
       recorrer (Ctrl+Tab y Ctrl+Mayús+Tab), saltar a la pestaña N (⌘/Ctrl+1–8, 9 a la última) y,
       en Windows y Linux, abrir (Ctrl+O) y cerrar (Ctrl+W). No se interceptan al escribir en
       campos de texto. Todos llaman a las mismas acciones del workspace que usa WS-10.
       *Pruebas:* recorrido completo solo con teclado, atajos con foco en un campo, reorden y
       persistencia del orden en la sesión.
+      *Decisiones al implementar:* el arrastre usa eventos de puntero, no HTML5 drag and drop: Tauri
+      deja `dragDropEnabled` activo por defecto y en WebView2 eso impide los eventos de arrastre
+      HTML5. Una pestaña se intercambia cuando el puntero pasa de la mitad de su vecina (con
+      histéresis; entrar en ella provocaba oscilaciones con anchos distintos) y se lee de la
+      posición en pantalla, así que sirve también de derecha a izquierda. Teclado: flechas y
+      Inicio/Fin mueven el foco sin activar (activar comprueba la carpeta, así que pide Enter),
+      Alt+flechas reordena, Supr cierra la pestaña enfocada, y los botones de cerrar salen del
+      orden de tabulación. Atajos en `shortcuts.ts` (función pura): Ctrl+Tab y ⌘/Ctrl+1–9 también
+      funcionan al escribir, porque no significan nada para un campo; Ctrl+O y Ctrl+W no, y en
+      macOS les corresponde el menú nativo de WS-10. Las acciones comunes viven en
+      `state/tabCommands.ts` para que el menú de macOS las reutilice. `useOpenFolder` sube a
+      `AppShell` y se pasa a la barra y a la pantalla de inicio: una sola instancia.
       → `feat(workspace): reorder tabs and drive them from the keyboard`
 
 - [ ] **WS-10 — Menú nativo propio en macOS.** El menú por defecto de Tauri liga ⌘W a «Cerrar

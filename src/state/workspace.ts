@@ -87,6 +87,8 @@ interface WorkspaceState {
    * nothing left to report it.
    */
   closeTab: (root: string) => CloseOutcome;
+  /** Moves a tab to a position in the row; the active tab does not change. */
+  moveTab: (root: string, index: number) => void;
   /** Applies a navigation change to the project with this root, if it is open. */
   navigate: (root: string, transition: Transition) => void;
   /** Applies a change to the git action state of the project with this root. */
@@ -197,6 +199,16 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       activeRoot: activeRoot === root ? neighborOf(tabs, root) : activeRoot,
     });
     return "closed";
+  },
+
+  moveTab: (root, index) => {
+    const { tabs } = get();
+    const from = tabs.findIndex((tab) => tab.repository.path === root);
+    const to = Math.max(0, Math.min(index, tabs.length - 1));
+    const moving = tabs[from];
+    if (moving === undefined || from === to) return;
+    const rest = tabs.filter((_, position) => position !== from);
+    set({ tabs: [...rest.slice(0, to), moving, ...rest.slice(to)] });
   },
 
   navigate: (root, transition) => {

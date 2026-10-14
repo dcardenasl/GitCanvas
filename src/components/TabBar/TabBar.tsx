@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 
-import { useOpenFolder } from "../AppShell/useOpenFolder";
+import type { OpenFolder } from "../AppShell/useOpenFolder";
 import { ContextMenu, type MenuItem } from "../ContextMenu";
 import { ErrorMessage } from "../ErrorMessage";
 import { useWorkspace, type Tab } from "../../state/workspace";
@@ -21,6 +21,54 @@ interface OpenMenu {
 function openUnder(kind: OpenMenu["kind"], control: HTMLElement): OpenMenu {
   const { left, bottom } = control.getBoundingClientRect();
   return { kind, x: left, y: bottom };
+}
+
+/** How far a pointer must travel before a press on a tab becomes a drag. */
+const DRAG_THRESHOLD = 5;
+
+/** A press on a tab that may turn into a drag. */
+interface Press {
+  readonly root: string;
+  readonly pointerId: number;
+  readonly startX: number;
+  dragging: boolean;
+}
+
+/** The horizontal middle of an element on screen. */
+function centerOf(element: Element): number {
+  const { left, width } = element.getBoundingClientRect();
+  return left + width / 2;
+}
+
+/**
+ * The tab a dragged tab should swap places with, if the pointer has gone past
+ * the middle of a neighbor.
+ *
+ * Crossing the neighbor's middle, not entering it, is what makes a swap stable:
+ * once swapped, the pointer is on the near side of that middle, so tabs of
+ * different widths cannot trade places back and forth under a still pointer.
+ * It reads the screen position, so it holds for a right-to-left row too.
+ */
+function swapTarget(
+  elements: readonly Element[],
+  from: number,
+  pointerX: number,
+): number | null {
+  const dragged = elements[from];
+  if (dragged === undefined) return null;
+  const own = centerOf(dragged);
+  for (const neighbor of [from - 1, from + 1]) {
+    const element = elements[neighbor];
+    if (element === undefined) continue;
+    const middle = centerOf(element);
+    if (
+      (middle > own && pointerX > middle) ||
+      (middle < own && pointerX < middle)
+    ) {
+      return neighbor;
+    }
+  }
+  return null;
 }
 
 /** The mark a tab carries when its project needs attention, if any. */
@@ -45,17 +93,109 @@ function statusOf(tab: Tab): "writing" | "unverified" | "unreachable" | null {
  * could be out of date in a tab nobody is looking at — its branch, whether it
  * has changes — is not shown.
  */
-export function TabBar() {
+export function TabBar({ folder }: { readonly folder: OpenFolder }) {
   const { t } = useTranslation("shell");
   const tabs = useWorkspace(useShallow((state) => state.tabs));
   const activeRoot = useWorkspace((state) => state.activeRoot);
   const activate = useWorkspace((state) => state.activate);
   const closeTab = useWorkspace((state) => state.closeTab);
+  const moveTab = useWorkspace((state) => state.moveTab);
   const setGitHubOpen = useWorkspace((state) => state.setGitHubOpen);
-  const folder = useOpenFolder();
 
   const labels = labelTabs(tabs.map((tab) => tab.repository));
   const [menu, setMenu] = useState<OpenMenu | null>(null);
+  const tablist = useRef<HTMLDivElement>(null);
+  const press = useRef<Press | null>(null);
+  // A drag ends with a click on the dragged tab, which must not also select it.
+  const dragEndedOnTab = useRef(false);
+
+  const tabElements = (): HTMLElement[] =>
+    Array.from(
+      tablist.current?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [],
+    );
+
+  const focusActiveTab = () => {
+    requestAnimationFrame(() => {
+      tablist.current
+        ?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+        ?.focus();
+    });
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const elements = tabElements();
+    const current = elements.findIndex((element) =>
+      element.contains(event.target as Node),
+    );
+    const tab = tabs[current];
+    if (tab === undefined) return;
+    // Left and Right follow the reading direction of the language.
+    const rtl = document.documentElement.dir === "rtl";
+    const toward = (direction: 1 | -1) => (rtl ? -direction : direction);
+
+    switch (event.key) {
+      case "ArrowRight":
+      case "ArrowLeft": {
+        const step = toward(event.key === "ArrowRight" ? 1 : -1);
+        event.preventDefault();
+        if (event.altKey) {
+          moveTab(tab.repository.path, current + step);
+        } else {
+          elements[
+            (current + step + elements.length) % elements.length
+          ]?.focus();
+        }
+        break;
+      }
+      case "Home":
+        event.preventDefault();
+        elements[0]?.focus();
+        break;
+      case "End":
+        event.preventDefault();
+        elements.at(-1)?.focus();
+        break;
+      case "Delete":
+        event.preventDefault();
+        if (closeTab(tab.repository.path) === "closed") focusActiveTab();
+        break;
+    }
+  };
+
+  const onPointerDown = (root: string, event: PointerEvent<HTMLElement>) => {
+    dragEndedOnTab.current = false;
+    if (event.button !== 0) return;
+    press.current = {
+      root,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      dragging: false,
+    };
+  };
+
+  const onPointerMove = (event: PointerEvent<HTMLElement>) => {
+    const current = press.current;
+    if (current?.pointerId !== event.pointerId) return;
+    if (!current.dragging) {
+      if (Math.abs(event.clientX - current.startX) < DRAG_THRESHOLD) return;
+      current.dragging = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    const elements = tabElements();
+    const from = tabs.findIndex((tab) => tab.repository.path === current.root);
+    const to = swapTarget(elements, from, event.clientX);
+    if (to !== null) moveTab(current.root, to);
+  };
+
+  const endPress = (event: PointerEvent<HTMLElement>) => {
+    const current = press.current;
+    if (current?.pointerId !== event.pointerId) return;
+    press.current = null;
+    if (current.dragging) {
+      dragEndedOnTab.current = true;
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
 
   const newItems: readonly MenuItem[] = [
     { label: t("tabs.menu.openFolder"), onSelect: folder.choose },
@@ -76,9 +216,11 @@ export function TabBar() {
   return (
     <div className="tab-bar">
       <div
+        ref={tablist}
         className="tab-bar__tabs"
         role="tablist"
         aria-label={t("tabs.label")}
+        onKeyDown={onKeyDown}
       >
         {tabs.map((tab, index) => {
           const root = tab.repository.path;
@@ -102,7 +244,17 @@ export function TabBar() {
                 aria-busy={busy}
                 tabIndex={active ? 0 : -1}
                 title={label?.title ?? root}
+                onPointerDown={(event) => {
+                  onPointerDown(root, event);
+                }}
+                onPointerMove={onPointerMove}
+                onPointerUp={endPress}
+                onPointerCancel={endPress}
                 onClick={() => {
+                  if (dragEndedOnTab.current) {
+                    dragEndedOnTab.current = false;
+                    return;
+                  }
                   activate(root);
                 }}
               >
@@ -119,6 +271,9 @@ export function TabBar() {
               <button
                 type="button"
                 className="tab-bar__close"
+                // Closing from the keyboard is Delete on the tab, so the row
+                // stays one stop in the tab order instead of two per tab.
+                tabIndex={-1}
                 aria-label={t("tabs.close", { name })}
                 title={busy ? t("tabs.closeBusy", { name }) : undefined}
                 disabled={busy}
