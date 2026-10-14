@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Home tab** — the first tab is always Home: the start screen with open, clone, favorites
+  and recent projects. Go back to it at any time without closing the project you were in.
 - **Project tabs** — keep several projects open at once in ordered tabs. Drag or use the keyboard
   to reorder them, and use the open and overflow menus to switch. Your tabs and where you were in
   each one come back when you reopen the app.
@@ -30,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Start screen** — the logo is smaller and the toolbar no longer repeats it; favorites and
+  recent projects share one centered column with a path on each row and a compact remove button.
+  The oversized Back button is gone, replaced by the Home tab.
 - **Quitting** — the app now closes even if its window stops responding, instead of hanging.
 - **History table** — the commit summary stays readable at the minimum window size with both
   panels open; the hash, then the author's name, then the date drop out as the table narrows.

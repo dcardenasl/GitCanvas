@@ -50,14 +50,6 @@
   object-fit: contain;
 }
 
-.toolbar__brand-wordmark {
-  display: block;
-  width: 104px;
-  height: 24px;
-  flex: 0 0 104px;
-  object-fit: contain;
-}
-
 .toolbar .button {
   white-space: nowrap;
 }
@@ -111,18 +103,19 @@
   justify-content: flex-start;
   min-block-size: 0;
   overflow: auto;
-  padding-block: var(--space-7);
+  padding-block: var(--space-10) var(--space-7);
 }
 
 .app-shell__empty > .project-library {
   flex: 0 0 auto;
   overflow: visible;
+  margin-block-start: var(--space-9);
 }
 
 .app-shell__empty-logo {
   display: block;
-  width: min(250px, calc(100vw - 48px));
-  height: auto;
+  inline-size: min(180px, calc(100vw - 48px));
+  block-size: auto;
   object-fit: contain;
 }
 
@@ -132,12 +125,17 @@
   gap: var(--space-3);
   align-items: flex-start;
   justify-content: center;
+  margin-block-start: var(--space-3);
 }
 
 .app-shell__empty-hint {
   margin: 0;
-  color: var(--ink-faint);
+  max-inline-size: 36ch;
+  color: var(--ink-muted);
   font-size: var(--font-size-ui);
+  line-height: 1.5;
+  text-align: center;
+  text-wrap: balance;
 }
 
 .history-view__state {

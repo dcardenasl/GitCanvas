@@ -333,13 +333,13 @@ describe("hooks", () => {
   });
 });
 
-it("activating the current tab leaves project libraries and GitHub without changing its navigation", () => {
+it("activating the current tab leaves home and GitHub without changing its navigation", () => {
   resetWorkspace();
   openTestProject();
   const navigation = useWorkspace.getState().tabs[0]?.navigation;
-  useWorkspace.getState().setLibraryView("favorites");
+  useWorkspace.getState().setHomeOpen(true);
   useWorkspace.getState().activate("/tmp/repo");
-  expect(useWorkspace.getState().libraryView).toBeNull();
+  expect(useWorkspace.getState().homeOpen).toBe(false);
   useWorkspace.getState().setGitHubOpen(true);
   useWorkspace.getState().activate("/tmp/repo");
   expect(useWorkspace.getState().githubOpen).toBe(false);

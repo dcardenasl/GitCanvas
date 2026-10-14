@@ -108,14 +108,19 @@ export interface LibrarySlice {
 
 /** Which full-window view replaces the open project, if any. */
 export interface ViewSlice {
-  /** The favorites or recents list, shown in place of the project. */
-  readonly libraryView: "favorites" | "recents" | null;
+  /**
+   * Whether the home screen (open, clone, favorites, recents) is showing in
+   * place of the project. It is the first tab of the row, never a project:
+   * showing it changes no project's state and it is not saved.
+   */
+  readonly homeOpen: boolean;
   /**
    * Whether the clone-from-GitHub view is showing. It belongs to the
    * application, not to a tab: opening it changes no project's state.
    */
   readonly githubOpen: boolean;
-  setLibraryView: (view: "favorites" | "recents" | null) => void;
+  /** Shows or leaves the home screen. */
+  setHomeOpen: (open: boolean) => void;
   /** Shows or hides the clone-from-GitHub view. */
   setGitHubOpen: (open: boolean) => void;
 }

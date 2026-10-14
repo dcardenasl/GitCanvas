@@ -23,9 +23,9 @@ async function resizeWorkspace() {
   });
 }
 
-async function openList(kind: "Favoritos" | "Proyectos recientes") {
-  await $('[aria-label="Abrir un proyecto"]').click();
-  await $(`[role="menuitem"]=${kind}`).click();
+/** Shows the start screen, with the favorites and recents, from the Home tab. */
+async function openHome() {
+  await $('[role="tab"][data-home]').click();
 }
 
 async function expectProject(
@@ -71,7 +71,9 @@ describe("workspace projects", () => {
     await browser.keys("Escape");
     // Close only the inactive remembered tabs through the application's controls.
     await browser.execute((name) => {
-      for (const tab of document.querySelectorAll('[role="tab"]')) {
+      for (const tab of document.querySelectorAll(
+        '[role="tab"]:not([data-home])',
+      )) {
         if (!tab.getAttribute("title")?.endsWith(name)) {
           tab.parentElement
             ?.querySelector<HTMLButtonElement>(".tab-bar__close")
@@ -79,7 +81,9 @@ describe("workspace projects", () => {
         }
       }
     }, alpha);
-    await expect($$('[role="tab"]')).toBeElementsArrayOfSize(1);
+    await expect($$('[role="tab"]:not([data-home])')).toBeElementsArrayOfSize(
+      1,
+    );
   });
   it("restores the first tab, opens a second and isolates history and local changes while switching", async () => {
     await expectProject(
@@ -87,15 +91,19 @@ describe("workspace projects", () => {
       "alpha-local.txt",
       "beta-local.txt",
     );
-    await expect($$('[role="tab"]')).toBeElementsArrayOfSize(1);
-    await openList("Proyectos recientes");
+    await expect($$('[role="tab"]:not([data-home])')).toBeElementsArrayOfSize(
+      1,
+    );
+    await openHome();
     await $(`.project-library__open[title$="${beta}"]`).click();
     await expectProject(
       "workspace beta commit",
       "beta-local.txt",
       "alpha-local.txt",
     );
-    await expect($$('[role="tab"]')).toBeElementsArrayOfSize(2);
+    await expect($$('[role="tab"]:not([data-home])')).toBeElementsArrayOfSize(
+      2,
+    );
     await $(`[role="tab"][title$="${alpha}"]`).click();
     await expectProject(
       "workspace alpha commit",
@@ -111,14 +119,16 @@ describe("workspace projects", () => {
   });
 
   it("reopening reuses a tab, and a favorite survives closing and opens through the start screen", async () => {
-    await openList("Proyectos recientes");
+    await openHome();
     await $(`.project-library__open[title$="${alpha}"]`).click();
     await expectProject(
       "workspace alpha commit",
       "alpha-local.txt",
       "beta-local.txt",
     );
-    await expect($$('[role="tab"]')).toBeElementsArrayOfSize(2);
+    await expect($$('[role="tab"]:not([data-home])')).toBeElementsArrayOfSize(
+      2,
+    );
     await $(`[aria-label="Agregar ${alpha} a favoritos"]`).click();
     await resizeWorkspace();
     await browser.waitUntil(
@@ -153,9 +163,13 @@ describe("workspace projects", () => {
       path.join(os.tmpdir(), "gitcanvas-workspace-tabs-light.png"),
     );
     await $(`[aria-label="Cerrar ${alpha}"]`).click();
-    await expect($$('[role="tab"]')).toBeElementsArrayOfSize(1);
+    await expect($$('[role="tab"]:not([data-home])')).toBeElementsArrayOfSize(
+      1,
+    );
     await $(`[aria-label="Cerrar ${beta}"]`).click();
-    await expect($$('[role="tab"]')).toBeElementsArrayOfSize(0);
+    await expect($$('[role="tab"]:not([data-home])')).toBeElementsArrayOfSize(
+      0,
+    );
     await expect(
       $(`.project-library__open[title$="${alpha}"]`),
     ).toBeDisplayed();
@@ -214,7 +228,9 @@ describe("workspace projects", () => {
       "alpha-local.txt",
       "beta-local.txt",
     );
-    await expect($$('[role="tab"]')).toBeElementsArrayOfSize(1);
+    await expect($$('[role="tab"]:not([data-home])')).toBeElementsArrayOfSize(
+      1,
+    );
     await $(".preferences-menu__toggle").click();
     await browser.execute(() => {
       const select = document.querySelector<HTMLSelectElement>(

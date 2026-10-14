@@ -10,13 +10,21 @@ import {
  * "next tab" or "tab 9" means.
  */
 
-/** Activates the tab `step` places from the active one, wrapping at the ends. */
+/**
+ * Activates the tab `step` places from the active one, wrapping at the ends.
+ * Home is the first stop of the row, before the first project.
+ */
 export function activateRelative(step: 1 | -1): void {
-  const { tabs, activeRoot, activate } = useWorkspace.getState();
-  if (tabs.length < 2) return;
-  const current = tabs.findIndex((tab) => tab.repository.path === activeRoot);
-  const next = tabs[(Math.max(current, 0) + step + tabs.length) % tabs.length];
-  if (next !== undefined) activate(next.repository.path);
+  const { tabs, activeRoot, homeOpen, activate, setHomeOpen } =
+    useWorkspace.getState();
+  if (tabs.length === 0) return;
+  const stops = tabs.length + 1;
+  const index = tabs.findIndex((tab) => tab.repository.path === activeRoot);
+  const current = homeOpen ? 0 : index + 1;
+  const next = (current + step + stops) % stops;
+  const target = tabs[next - 1];
+  if (target === undefined) setHomeOpen(true);
+  else activate(target.repository.path);
 }
 
 /**
@@ -30,10 +38,13 @@ export function activatePosition(position: number): void {
   if (target !== undefined) activate(target.repository.path);
 }
 
-/** Closes the active tab, unless its project is being written to. */
+/**
+ * Closes the active tab, unless its project is being written to. Home is not a
+ * project and cannot be closed, so with Home showing nothing happens.
+ */
 export function closeActiveTab(): CloseOutcome | null {
-  const { activeRoot, closeTab } = useWorkspace.getState();
-  return activeRoot === null ? null : closeTab(activeRoot);
+  const { activeRoot, homeOpen, closeTab } = useWorkspace.getState();
+  return activeRoot === null || homeOpen ? null : closeTab(activeRoot);
 }
 
 /** Reopens the most recently closed tab, where it was left. */

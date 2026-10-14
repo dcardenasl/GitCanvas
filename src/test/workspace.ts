@@ -28,7 +28,7 @@ export function resetWorkspace(): void {
     notice: null,
     githubOpen: false,
     closedTabs: [],
-    libraryView: null,
+    homeOpen: false,
     favorites: [],
     recents: [],
     storageError: null,

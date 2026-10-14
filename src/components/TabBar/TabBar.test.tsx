@@ -57,6 +57,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/** The project tabs, without Home, which is always the first of the row. */
+function projectTabs(): HTMLElement[] {
+  return screen
+    .getAllByRole("tab")
+    .filter((element) => element.dataset.home === undefined);
+}
+
+function homeTab(): HTMLElement {
+  return screen.getByRole("tab", { name: "Inicio" });
+}
+
 function tab(name: string): HTMLElement {
   return screen.getByRole("tab", { name: new RegExp(`^${name}`) });
 }
@@ -67,7 +78,7 @@ describe("TabBar", () => {
     openTestProject(BETA);
     render(<Harness />);
 
-    expect(screen.getAllByRole("tab").map((el) => el.textContent)).toEqual([
+    expect(projectTabs().map((el) => el.textContent)).toEqual([
       "alpha",
       "beta",
     ]);
@@ -99,7 +110,7 @@ describe("TabBar", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Cerrar beta" }));
 
-    expect(screen.getAllByRole("tab")).toHaveLength(1);
+    expect(projectTabs()).toHaveLength(1);
     expect(activeRoot()).toBe(ALPHA.path);
   });
 
@@ -168,11 +179,11 @@ describe("TabBar", () => {
     openTestProject({ path: "/clients/acme/app", name: "app" });
     render(<Harness />);
 
-    expect(screen.getAllByRole("tab").map((el) => el.textContent)).toEqual([
+    expect(projectTabs().map((el) => el.textContent)).toEqual([
       "app — work",
       "app — acme",
     ]);
-    expect(screen.getAllByRole("tab").map((el) => el.title)).toEqual([
+    expect(projectTabs().map((el) => el.title)).toEqual([
       "/work/app",
       "/clients/acme/app",
     ]);
@@ -212,8 +223,6 @@ describe("TabBar", () => {
       ).toEqual([
         "Abrir carpeta…",
         "Clonar de GitHub…",
-        "Favoritos",
-        "Proyectos recientes",
         "Agregar alpha a favoritos",
       ]);
     });
@@ -243,10 +252,10 @@ describe("TabBar", () => {
       await userEvent.click(reopen);
 
       expect(activeRoot()).toBe(BETA.path);
-      expect(screen.getAllByRole("tab")).toHaveLength(2);
+      expect(projectTabs()).toHaveLength(2);
     });
 
-    it("groups the menu: opening, then the library, then starring this project", async () => {
+    it("groups the menu: opening, then starring this project", async () => {
       openTestProject(ALPHA);
       render(<Harness />);
 
@@ -263,9 +272,6 @@ describe("TabBar", () => {
       expect(order).toEqual([
         "Abrir carpeta…",
         "Clonar de GitHub…",
-        "—",
-        "Favoritos",
-        "Proyectos recientes",
         "—",
         "Agregar alpha a favoritos",
       ]);
@@ -318,7 +324,7 @@ describe("TabBar", () => {
       await waitFor(() => {
         expect(activeRoot()).toBe(BETA.path);
       });
-      expect(screen.getAllByRole("tab")).toHaveLength(2);
+      expect(projectTabs()).toHaveLength(2);
     });
 
     it("shows the GitHub view from the menu", async () => {
@@ -512,7 +518,7 @@ describe("TabBar", () => {
       openThree();
 
       await userEvent.keyboard("{ArrowRight}");
-      expect(document.activeElement).toBe(tab("alpha"));
+      expect(document.activeElement).toBe(homeTab());
       await userEvent.keyboard("{ArrowLeft}");
       expect(document.activeElement).toBe(tab("gamma"));
       await userEvent.keyboard("{ArrowLeft}");
@@ -526,16 +532,27 @@ describe("TabBar", () => {
       openThree();
 
       await userEvent.keyboard("{Home}");
-      expect(document.activeElement).toBe(tab("alpha"));
+      expect(document.activeElement).toBe(homeTab());
       await userEvent.keyboard("{End}");
       expect(document.activeElement).toBe(tab("gamma"));
     });
 
     it("activates the focused tab with Enter", async () => {
       openThree();
-      await userEvent.keyboard("{Home}{Enter}");
+      await userEvent.keyboard("{Home}{ArrowRight}{Enter}");
 
       expect(activeRoot()).toBe(ALPHA.path);
+    });
+
+    it("leaves Home in place: it cannot be moved or closed from the keyboard", async () => {
+      openThree();
+      homeTab().focus();
+
+      await userEvent.keyboard("{Alt>}{ArrowRight}{/Alt}{Delete}");
+
+      expect(
+        useWorkspace.getState().tabs.map((entry) => entry.repository.name),
+      ).toEqual(["alpha", "beta", "gamma"]);
     });
 
     it("reverses the arrows for a right-to-left language", async () => {
@@ -561,7 +578,7 @@ describe("TabBar", () => {
 
     it("closes the focused tab with Delete and lands on the active one", async () => {
       openThree();
-      await userEvent.keyboard("{Home}{Delete}");
+      await userEvent.keyboard("{Home}{ArrowRight}{Delete}");
 
       expect(screen.queryByRole("tab", { name: /^alpha/ })).toBeNull();
       await waitFor(() => {
@@ -580,7 +597,7 @@ describe("TabBar", () => {
 
       await userEvent.keyboard("{Delete}");
 
-      expect(screen.getAllByRole("tab")).toHaveLength(3);
+      expect(projectTabs()).toHaveLength(3);
     });
 
     it("keeps the close buttons out of the tab order, one stop per row", () => {
@@ -600,7 +617,9 @@ describe("TabBar", () => {
         "getBoundingClientRect",
       ).mockImplementation(function (this: HTMLElement) {
         const row = Array.from(
-          document.querySelectorAll<HTMLElement>('[role="tab"]'),
+          document.querySelectorAll<HTMLElement>(
+            '[role="tab"]:not([data-home])',
+          ),
         );
         const index = row.indexOf(this);
         const left = index < 0 ? 0 : index * 100;
@@ -726,5 +745,43 @@ describe("TabBar", () => {
       fireEvent.pointerMove(alpha, { pointerId: 2, clientX: 160 });
       expect(names()).toEqual(["alpha", "beta", "gamma"]);
     });
+  });
+});
+
+describe("TabBar home", () => {
+  it("is always the first tab, selected when nothing else is open", () => {
+    render(<Harness />);
+
+    expect(screen.getAllByRole("tab")).toHaveLength(1);
+    expect(homeTab().getAttribute("aria-selected")).toBe("true");
+    expect(homeTab().tabIndex).toBe(0);
+  });
+
+  it("is selected on request and gives way to a project tab", async () => {
+    openTestProject(ALPHA);
+    render(<Harness />);
+    expect(homeTab().getAttribute("aria-selected")).toBe("false");
+    expect(tab("alpha").getAttribute("aria-selected")).toBe("true");
+
+    await userEvent.click(homeTab());
+    expect(useWorkspace.getState().homeOpen).toBe(true);
+    expect(homeTab().getAttribute("aria-selected")).toBe("true");
+    expect(tab("alpha").getAttribute("aria-selected")).toBe("false");
+    // The project behind it stays open and stays the one to come back to.
+    expect(activeRoot()).toBe(ALPHA.path);
+
+    await userEvent.click(tab("alpha"));
+    expect(useWorkspace.getState().homeOpen).toBe(false);
+    expect(homeTab().getAttribute("aria-selected")).toBe("false");
+  });
+
+  it("has no close button, star or context menu", () => {
+    openTestProject(ALPHA);
+    render(<Harness />);
+
+    fireEvent.contextMenu(homeTab());
+
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Cerrar Inicio/ })).toBeNull();
   });
 });

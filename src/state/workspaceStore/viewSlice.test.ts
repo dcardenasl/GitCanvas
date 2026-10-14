@@ -6,26 +6,30 @@ import { useWorkspace } from "../workspace";
 beforeEach(resetWorkspace);
 
 const views = () => {
-  const { libraryView, githubOpen } = useWorkspace.getState();
-  return { libraryView, githubOpen };
+  const { homeOpen, githubOpen } = useWorkspace.getState();
+  return { homeOpen, githubOpen };
 };
 
 describe("full-window views", () => {
-  it("never show the library and GitHub together", () => {
-    useWorkspace.getState().setLibraryView("favorites");
+  it("opening GitHub from home keeps home, and going home closes GitHub", () => {
+    useWorkspace.getState().setHomeOpen(true);
     useWorkspace.getState().setGitHubOpen(true);
-    expect(views()).toEqual({ libraryView: null, githubOpen: true });
+    expect(views()).toEqual({ homeOpen: true, githubOpen: true });
 
-    useWorkspace.getState().setLibraryView("recents");
-    expect(views()).toEqual({ libraryView: "recents", githubOpen: false });
+    useWorkspace.getState().setGitHubOpen(false);
+    expect(views()).toEqual({ homeOpen: true, githubOpen: false });
+
+    useWorkspace.getState().setGitHubOpen(true);
+    useWorkspace.getState().setHomeOpen(true);
+    expect(views()).toEqual({ homeOpen: true, githubOpen: false });
   });
 
-  it("closing GitHub does not touch the library view", () => {
-    useWorkspace.getState().setLibraryView("recents");
+  it("closing GitHub does not touch the home view", () => {
+    useWorkspace.getState().setHomeOpen(true);
 
     useWorkspace.getState().setGitHubOpen(false);
 
-    expect(views()).toEqual({ libraryView: "recents", githubOpen: false });
+    expect(views()).toEqual({ homeOpen: true, githubOpen: false });
   });
 
   it("are left by activating a project, in the same update", () => {
@@ -35,7 +39,7 @@ describe("full-window views", () => {
 
     useWorkspace.getState().activate("/work/a");
 
-    expect(views()).toEqual({ libraryView: null, githubOpen: false });
+    expect(views()).toEqual({ homeOpen: false, githubOpen: false });
     expect(useWorkspace.getState().recents[0]).toBe("/work/a");
   });
 

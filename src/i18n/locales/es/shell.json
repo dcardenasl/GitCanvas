@@ -47,6 +47,7 @@
       "closeOthers": "Cerrar las otras pestañas",
       "copyPath": "Copiar ruta"
     },
+    "home": "Inicio",
     "label": "Proyectos abiertos",
     "menu": {
       "cloneGitHub": "Clonar de GitHub…",
@@ -69,14 +70,12 @@
     "branches": "Ramas",
     "branchesHint": "Mostrar las ramas mientras se lee un archivo",
     "menuFailed": "No se pudo configurar la barra de menús",
-    "noRepository": "Ningún repositorio abierto",
     "openSyncFailed": "No se pudo informar al backend qué repositorios están abiertos",
     "refresh": "Actualizar",
     "refreshHint": "Volver a leer el repositorio desde el disco",
     "verifyFailed": "No se pudo comprobar el proyecto contra su carpeta"
   },
   "workspace": {
-    "back": "Volver",
     "commitDetails": "Commit seleccionado",
     "commitFailed": "No se pudo leer el commit seleccionado",
     "commitLoading": "Leyendo el commit seleccionado…",

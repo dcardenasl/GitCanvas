@@ -23,21 +23,29 @@ function open(count: number): void {
 beforeEach(resetWorkspace);
 
 describe("activateRelative", () => {
-  it("moves to the next and previous tab, wrapping at either end", () => {
+  it("moves to the next and previous tab, wrapping through Home at either end", () => {
     open(3);
     useWorkspace.getState().activate("/work/a");
 
     activateRelative(-1);
+    expect(useWorkspace.getState().homeOpen).toBe(true);
+    activateRelative(-1);
     expect(activeRoot()).toBe("/work/c");
+    expect(useWorkspace.getState().homeOpen).toBe(false);
+    activateRelative(1);
+    expect(useWorkspace.getState().homeOpen).toBe(true);
     activateRelative(1);
     expect(activeRoot()).toBe("/work/a");
     activateRelative(1);
     expect(activeRoot()).toBe("/work/b");
   });
 
-  it("does nothing with fewer than two tabs", () => {
+  it("alternates between Home and the only tab, and does nothing without tabs", () => {
     open(1);
     activateRelative(1);
+    expect(useWorkspace.getState().homeOpen).toBe(true);
+    activateRelative(1);
+    expect(useWorkspace.getState().homeOpen).toBe(false);
     expect(activeRoot()).toBe("/work/a");
 
     resetWorkspace();
@@ -84,6 +92,15 @@ describe("closeActiveTab", () => {
     expect(closeActiveTab()).toBe("closed");
 
     expect(activeRoot()).toBe("/work/a");
+  });
+
+  it("does not close the project behind Home, which is not what the person sees", () => {
+    open(2);
+    useWorkspace.getState().setHomeOpen(true);
+
+    expect(closeActiveTab()).toBeNull();
+
+    expect(useWorkspace.getState().tabs).toHaveLength(2);
   });
 
   it("leaves a tab that is being written to open", () => {

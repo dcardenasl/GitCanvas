@@ -10,11 +10,7 @@ import { ErrorMessage } from "../ErrorMessage";
 import "./ProjectLibrary.css";
 
 /** Favorites and recents are independent of tabs and open through authorization. */
-export function ProjectLibrary({
-  only = null,
-}: {
-  readonly only?: "favorites" | "recents" | null;
-}) {
+export function ProjectLibrary() {
   const { t } = useTranslation("shell");
   const favorites = useWorkspace((state) => state.favorites);
   const recents = useWorkspace((state) => state.recents);
@@ -44,6 +40,9 @@ export function ProjectLibrary({
     }
   }
 
+  const removeLabel = (path: string) =>
+    t("workspace.removeRecent", { name: projectName(path) });
+
   const groups = [
     {
       kind: "favorites" as const,
@@ -59,78 +58,71 @@ export function ProjectLibrary({
   ];
   return (
     <div className="project-library">
-      {only !== null && (
-        <button
-          type="button"
-          className="button"
-          onClick={() => {
-            useWorkspace.getState().setLibraryView(null);
-          }}
-        >
-          {t("workspace.back")}
-        </button>
-      )}
-      {groups
-        .filter((group) => only === null || only === group.kind)
-        .map(({ kind, paths }) => {
-          const labels = labelTabs(
-            paths.map((path) => ({ path, name: projectName(path) })),
-          );
-          return (
-            <section key={kind} aria-label={t(`workspace.${kind}`)}>
-              <h2>{t(`workspace.${kind}`)}</h2>
-              {paths.length === 0 ? (
-                <p className="state">{t(`workspace.${kind}Empty`)}</p>
-              ) : (
-                <ul>
-                  {paths.map((path, index) => (
-                    <li key={path}>
-                      <div className="project-library__row">
+      {groups.map(({ kind, paths }) => {
+        const labels = labelTabs(
+          paths.map((path) => ({ path, name: projectName(path) })),
+        );
+        return (
+          <section key={kind} aria-label={t(`workspace.${kind}`)}>
+            <h2>{t(`workspace.${kind}`)}</h2>
+            {paths.length === 0 ? (
+              <p className="state">{t(`workspace.${kind}Empty`)}</p>
+            ) : (
+              <ul>
+                {paths.map((path, index) => (
+                  <li key={path}>
+                    <div className="project-library__row">
+                      <button
+                        type="button"
+                        className="project-library__open"
+                        title={path}
+                        disabled={opening !== null}
+                        onClick={() => {
+                          void open(path);
+                        }}
+                      >
+                        <span>{labels[index]?.text ?? path}</span>
+                        <small>
+                          {opening === path
+                            ? t("picker.opening")
+                            : failures[path] === undefined
+                              ? path
+                              : t("tabs.unreachable")}
+                        </small>
+                      </button>
+                      {kind === "recents" && (
                         <button
                           type="button"
-                          className="project-library__open"
-                          title={path}
-                          disabled={opening !== null}
+                          className="project-library__remove"
+                          title={removeLabel(path)}
+                          aria-label={removeLabel(path)}
                           onClick={() => {
-                            void open(path);
+                            removeRecent(path);
                           }}
                         >
-                          <span>{labels[index]?.text ?? path}</span>
-                          <small>
-                            {opening === path
-                              ? t("picker.opening")
-                              : failures[path] === undefined
-                                ? path
-                                : t("tabs.unreachable")}
-                          </small>
-                        </button>
-                        <FavoriteToggle path={path} name={projectName(path)} />
-                        {kind === "recents" && (
-                          <button
-                            type="button"
-                            className="button"
-                            onClick={() => {
-                              removeRecent(path);
-                            }}
+                          <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
                           >
-                            {t("workspace.removeRecent", {
-                              name: projectName(path),
-                            })}
-                          </button>
-                        )}
-                      </div>
-                      {failures[path] !== undefined && (
-                        <div role="alert">
-                          <ErrorMessage error={failures[path].cause} />
-                        </div>
+                            <path d="m6 6 12 12M18 6 6 18" />
+                          </svg>
+                        </button>
                       )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          );
-        })}
+                      <FavoriteToggle path={path} name={projectName(path)} />
+                    </div>
+                    {failures[path] !== undefined && (
+                      <div role="alert">
+                        <ErrorMessage error={failures[path].cause} />
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }

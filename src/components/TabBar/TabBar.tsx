@@ -105,7 +105,8 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
   const notify = useWorkspace((state) => state.notify);
   const reopenClosedTab = useWorkspace((state) => state.reopenClosedTab);
   const favorites = useWorkspace((state) => state.favorites);
-  const setLibraryView = useWorkspace((state) => state.setLibraryView);
+  const homeOpen = useWorkspace((state) => state.homeOpen);
+  const setHomeOpen = useWorkspace((state) => state.setHomeOpen);
   const setGitHubOpen = useWorkspace((state) => state.setGitHubOpen);
 
   const labels = labelTabs(tabs.map((tab) => tab.repository));
@@ -115,10 +116,19 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
   // A drag ends with a click on the dragged tab, which must not also select it.
   const dragEndedOnTab = useRef(false);
 
-  const tabElements = (): HTMLElement[] =>
+  // Home is selected whenever it is asked for, and when there is no project to
+  // be selected instead.
+  const atHome = homeOpen || tabs.length === 0;
+
+  /** Every tab in the row, Home first: what the arrow keys walk. */
+  const rowElements = (): HTMLElement[] =>
     Array.from(
       tablist.current?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [],
     );
+
+  /** The project tabs only, in the order of `tabs`: what a drag reorders. */
+  const tabElements = (): HTMLElement[] =>
+    rowElements().filter((element) => element.dataset.home === undefined);
 
   const focusActiveTab = () => {
     requestAnimationFrame(() => {
@@ -129,12 +139,13 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const elements = tabElements();
+    const elements = rowElements();
     const current = elements.findIndex((element) =>
       element.contains(event.target as Node),
     );
-    const tab = tabs[current];
-    if (tab === undefined) return;
+    if (current < 0) return;
+    // Home is the first of the row; the project tabs follow it, in order.
+    const tab = tabs[current - 1];
     // Left and Right follow the reading direction of the language.
     const rtl = document.documentElement.dir === "rtl";
     const toward = (direction: 1 | -1) => (rtl ? -direction : direction);
@@ -145,7 +156,10 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
         const step = toward(event.key === "ArrowRight" ? 1 : -1);
         event.preventDefault();
         if (event.altKey) {
-          moveTab(tab.repository.path, current + step);
+          // Home stays first, and nothing can be moved before it.
+          if (tab !== undefined) {
+            moveTab(tab.repository.path, current - 1 + step);
+          }
         } else {
           elements[
             (current + step + elements.length) % elements.length
@@ -163,7 +177,8 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
         break;
       case "Delete":
         event.preventDefault();
-        if (closeTab(tab.repository.path) === "closed") focusActiveTab();
+        if (tab !== undefined && closeTab(tab.repository.path) === "closed")
+          focusActiveTab();
         break;
     }
   };
@@ -203,7 +218,9 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
     }
   };
 
-  const currentTab = tabs.find((tab) => tab.repository.path === activeRoot);
+  const currentTab = atHome
+    ? undefined
+    : tabs.find((tab) => tab.repository.path === activeRoot);
   const newItems: readonly MenuItem[] = [
     {
       label: t("tabs.menu.openFolder"),
@@ -228,19 +245,6 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
             },
           },
         ]),
-    {
-      label: t("workspace.favorites"),
-      startsGroup: true,
-      onSelect: () => {
-        setLibraryView("favorites");
-      },
-    },
-    {
-      label: t("workspace.recents"),
-      onSelect: () => {
-        setLibraryView("recents");
-      },
-    },
     ...(currentTab === undefined
       ? []
       : [
@@ -319,9 +323,38 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
         aria-label={t("tabs.label")}
         onKeyDown={onKeyDown}
       >
+        <div
+          className={
+            atHome
+              ? "tab-bar__tab tab-bar__tab--home tab-bar__tab--active"
+              : "tab-bar__tab tab-bar__tab--home"
+          }
+        >
+          <button
+            type="button"
+            role="tab"
+            data-home=""
+            className="tab-bar__select"
+            aria-selected={atHome}
+            tabIndex={atHome ? 0 : -1}
+            onClick={() => {
+              setHomeOpen(true);
+            }}
+          >
+            <svg
+              className="tab-bar__home-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="m3.5 11 8.5-7 8.5 7M6 9.5V20h4v-5h4v5h4V9.5" />
+            </svg>
+            <span className="tab-bar__name">{t("tabs.home")}</span>
+          </button>
+        </div>
         {tabs.map((tab, index) => {
           const root = tab.repository.path;
-          const active = root === activeRoot;
+          const active = !atHome && root === activeRoot;
           const label = labels[index];
           const status = statusOf(tab);
           const busy = tab.gitActions.running !== null;

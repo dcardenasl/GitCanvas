@@ -81,7 +81,7 @@ it("reports the favorite limit without dropping an existing favorite", () => {
 it("surfaces an inaccessible recent and lets the person remove it", async () => {
   useWorkspace.setState({ recents: ["/tmp/missing"] });
   openRepository.mockRejectedValue(new Error("missing repository"));
-  renderWithQueryClient(<ProjectLibrary only="recents" />);
+  renderWithQueryClient(<ProjectLibrary />);
   await userEvent.click(screen.getByRole("button", { name: /^missing/ }));
   expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
   expect(

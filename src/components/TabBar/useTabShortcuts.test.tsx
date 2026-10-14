@@ -46,6 +46,9 @@ describe("useTabShortcuts", () => {
     expect(activeRoot()).toBe("/work/b");
     press(window, { key: "Tab", ctrlKey: true, shiftKey: true });
     press(window, { key: "Tab", ctrlKey: true, shiftKey: true });
+    // Home is a stop of the row, before the first project.
+    expect(useWorkspace.getState().homeOpen).toBe(true);
+    press(window, { key: "Tab", ctrlKey: true, shiftKey: true });
     expect(activeRoot()).toBe("/work/c");
   });
 

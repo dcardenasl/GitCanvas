@@ -280,9 +280,30 @@ describe("AppShell toolbar", () => {
     expect(
       await screen.findByText(/Abre un repositorio para ver su historial/),
     ).toBeInstanceOf(HTMLElement);
-    expect(screen.getByText("Ningún repositorio abierto")).toBeInstanceOf(
-      HTMLElement,
-    );
+    expect(
+      screen.getByText(
+        "Abre un repositorio para ver su historial de ramas y commits.",
+      ),
+    ).toBeInstanceOf(HTMLElement);
+  });
+
+  it("shows the start screen from the Home tab without closing the project, and returns to it", async () => {
+    renderShell();
+    await screen.findByRole("button", { name: "Actualizar" });
+
+    await userEvent.click(screen.getByRole("tab", { name: "Inicio" }));
+
+    expect(
+      await screen.findByText(/Abre un repositorio para ver su historial/),
+    ).toBeInstanceOf(HTMLElement);
+    // Nothing that belongs to the project shows while Home does.
+    expect(screen.queryByRole("button", { name: "Actualizar" })).toBeNull();
+    expect(useWorkspace.getState().tabs).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole("tab", { name: /^repo/ }));
+    expect(
+      await screen.findByRole("button", { name: "Actualizar" }),
+    ).toBeInstanceOf(HTMLElement);
   });
 
   it("opens the repository named on the command line", async () => {
@@ -375,7 +396,9 @@ describe("AppShell toolbar", () => {
     renderShell();
 
     expect(
-      await screen.findByText("Ningún repositorio abierto"),
+      await screen.findByText(
+        "Abre un repositorio para ver su historial de ramas y commits.",
+      ),
     ).toBeInstanceOf(HTMLElement);
   });
 
@@ -436,12 +459,16 @@ describe("AppShell toolbar", () => {
     );
   });
 
-  it("keeps the open buttons out of the toolbar and shows no tab bar without a project", async () => {
+  it("keeps the open buttons out of the toolbar and shows only Home in the tab bar without a project", async () => {
     resetWorkspace();
     const { container } = renderShell();
-    await screen.findByText("Ningún repositorio abierto");
+    await screen.findByText(
+      "Abre un repositorio para ver su historial de ramas y commits.",
+    );
 
-    expect(container.querySelector(".tab-bar")).toBeNull();
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Inicio",
+    ]);
     expect(container.querySelector(".toolbar .repository-picker")).toBeNull();
     expect(
       container.querySelector(".toolbar")?.textContent ?? "",
@@ -589,7 +616,9 @@ describe("AppShell toolbar", () => {
     it("works from the start screen too", async () => {
       resetWorkspace();
       renderShell();
-      await screen.findByText("Ningún repositorio abierto");
+      await screen.findByText(
+        "Abre un repositorio para ver su historial de ramas y commits.",
+      );
 
       act(() => {
         dragDrop({ payload: { type: "drop", paths: ["/tmp/one"] } });

@@ -36,6 +36,23 @@
   color: var(--ink-muted);
 }
 
+/* Home is the fixed first tab: only as wide as its icon and name. */
+.tab-bar__tab--home {
+  flex: 0 0 auto;
+  padding-inline-end: 6px;
+}
+
+.tab-bar__home-icon {
+  flex: 0 0 auto;
+  inline-size: 14px;
+  block-size: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .tab-bar__tab:hover {
   background: var(--surface-hover);
 }

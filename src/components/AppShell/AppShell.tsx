@@ -58,12 +58,15 @@ export function AppShell() {
       state.activeRoot !== null &&
       tabOf(state, state.activeRoot)?.verification.status === "verified",
   );
+  const homeOpen = useWorkspace((state) => state.homeOpen);
+  // The home screen takes the window without closing the project behind it,
+  // so what belongs to a project shows only while that project does.
+  const project = homeOpen ? null : repository;
   const readableRoot = verified ? (repository?.path ?? null) : null;
   const selection = useNavigation((navigation) => navigation.selection);
   const selectedCommitId = useNavigation(getSelectedCommitId);
   const history = useHistory(readableRoot);
   const selectedFilePath = useNavigation(getSelectedFilePath);
-  const libraryView = useWorkspace((state) => state.libraryView);
   const showGitHub = useWorkspace((state) => state.githubOpen);
   const setShowGitHub = useWorkspace((state) => state.setGitHubOpen);
   const layout = useLayout();
@@ -97,8 +100,8 @@ export function AppShell() {
     // The window says which repository it is showing, so two of them are
     // tellable apart in the dock and in the window switcher.
     document.title =
-      repository === null ? "GitCanvas" : t("title", { name: repository.name });
-  }, [repository, t]);
+      project === null ? "GitCanvas" : t("title", { name: project.name });
+  }, [project, t]);
 
   useEffect(() => {
     // `gitcanvas /path/to/repo` opens straight into that repository. Failure is
@@ -112,7 +115,7 @@ export function AppShell() {
       if (
         state.activeRoot !== previous.activeRoot ||
         state.githubOpen !== previous.githubOpen ||
-        state.libraryView !== previous.libraryView ||
+        state.homeOpen !== previous.homeOpen ||
         now.length !== before.length ||
         now.some((root, i) => root !== before[i])
       ) {
@@ -161,25 +164,21 @@ export function AppShell() {
         </div>
       )}
       <div className="app-shell__chrome">
-        {repository !== null && <TabBar folder={folder} />}
+        <TabBar folder={folder} />
         <header className="toolbar">
-          <BrandLogo
-            className={
-              repository === null ? "toolbar__brand-wordmark" : "toolbar__brand"
-            }
-            variant={repository === null ? "horizontal" : "mark"}
-            decorative
-          />
-          <span className="toolbar__repository" title={repository?.name}>
-            {repository?.name ?? t("toolbar.noRepository")}
-          </span>
-          {repository !== null && (
+          <BrandLogo className="toolbar__brand" variant="mark" decorative />
+          {project !== null && (
+            <span className="toolbar__repository" title={project.name}>
+              {project.name}
+            </span>
+          )}
+          {project !== null && (
             <button
               type="button"
               className="button"
               title={t("toolbar.refreshHint")}
               onClick={() => {
-                void invalidateLive(queryClient, repository.path);
+                void invalidateLive(queryClient, project.path);
               }}
             >
               {t("toolbar.refresh")}
@@ -231,7 +230,7 @@ export function AppShell() {
               </button>
             </div>
           )}
-          {readingFile && (
+          {project !== null && readingFile && (
             <button
               type="button"
               className="button"
@@ -244,9 +243,9 @@ export function AppShell() {
               {t("toolbar.branches")}
             </button>
           )}
-          {repository !== null && !readingFile && (
+          {project !== null && !readingFile && (
             <CommitSearch
-              key={repository.path}
+              key={project.path}
               commits={history.commits}
               query={searchQuery}
               onQueryChange={setSearchQuery}
@@ -255,7 +254,7 @@ export function AppShell() {
           )}
           <div className="toolbar__spacer" />
           <PreferencesMenu />
-          {repository !== null && (
+          {project !== null && (
             <Actions actions={gitActions} currentBranch={currentBranch} />
           )}
         </header>
@@ -267,9 +266,7 @@ export function AppShell() {
             setShowGitHub(false);
           }}
         />
-      ) : libraryView !== null ? (
-        <ProjectLibrary only={libraryView} />
-      ) : repository === null ? (
+      ) : project === null ? (
         <div className="app-shell__empty">
           <BrandLogo className="app-shell__empty-logo" variant="stacked" />
           <p className="app-shell__empty-hint">{t("empty.hint")}</p>
@@ -289,7 +286,7 @@ export function AppShell() {
         </div>
       ) : verification.error !== null ? (
         <UnreachableProject
-          root={repository.path}
+          root={project.path}
           error={verification.error}
           retry={verification.retry}
         />
@@ -302,7 +299,7 @@ export function AppShell() {
           // Replaced, not updated, when another project is shown, so nothing a
           // view keeps for itself (scroll offset, focus, a half-typed field)
           // carries over from the project that was on screen before.
-          key={repository.path}
+          key={project.path}
           className="app-shell__body"
           style={
             {
@@ -339,7 +336,7 @@ export function AppShell() {
           <main className="app-shell__history" aria-label={t("history.label")}>
             {selected !== null && selectedFilePath !== null ? (
               <FileDiffView
-                repositoryPath={repository.path}
+                repositoryPath={project.path}
                 commit={selected}
                 path={selectedFilePath}
                 snapshot={
@@ -349,7 +346,7 @@ export function AppShell() {
               />
             ) : worktreeFile !== null && worktreeFile.filePath !== null ? (
               <FileDiffView
-                repositoryPath={repository.path}
+                repositoryPath={project.path}
                 path={worktreeFile.filePath}
                 worktree={{ side: worktreeFile.side }}
               />
@@ -394,10 +391,10 @@ export function AppShell() {
               )}
             </aside>
           ) : selected === null ? (
-            <WorkingTreeDetailPanel repositoryPath={repository.path} />
+            <WorkingTreeDetailPanel repositoryPath={project.path} />
           ) : (
             <CommitDetailPanel
-              repositoryPath={repository.path}
+              repositoryPath={project.path}
               commit={selected}
             />
           )}

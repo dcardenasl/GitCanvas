@@ -47,6 +47,7 @@
       "closeOthers": "Close other tabs",
       "copyPath": "Copy path"
     },
+    "home": "Home",
     "label": "Open projects",
     "menu": {
       "cloneGitHub": "Clone from GitHub…",
@@ -69,14 +70,12 @@
     "branches": "Branches",
     "branchesHint": "Show the branches while reading a file",
     "menuFailed": "Could not set the menu bar",
-    "noRepository": "No repository open",
     "openSyncFailed": "Could not tell the backend which repositories are open",
     "refresh": "Refresh",
     "refreshHint": "Re-read the repository from disk",
     "verifyFailed": "Could not check the project against its folder"
   },
   "workspace": {
-    "back": "Back",
     "commitDetails": "Selected commit",
     "commitFailed": "The selected commit could not be read",
     "commitLoading": "Reading the selected commit…",

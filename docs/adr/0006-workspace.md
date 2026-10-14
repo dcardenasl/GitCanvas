@@ -87,6 +87,12 @@ pestañas; Ctrl+O/W en Windows y Linux respetan los campos de texto. En macOS un
 propio recibe ⌘O y ⌘W, con etiquetas del catálogo activo; la salida del sistema se dirige
 al cierre con guardado. Todo usa las mismas acciones del workspace.
 
+**Inicio.** La primera pestaña es siempre Inicio: la pantalla de apertura con favoritos y
+recientes. No es un proyecto, no se guarda, no se cierra ni se reordena; mostrarla no cambia
+la pestaña activa, a la que se vuelve al elegirla. Con ella visible, Ctrl+W no cierra nada y
+lo propio de un proyecto (nombre, actualizar, buscar, acciones) no se muestra. Reemplaza las
+vistas de favoritos y recientes con botón «Volver».
+
 **Casos de uso de pestañas.** Un menú contextual (clic derecho o tecla de menú) cierra la
 pestaña, las demás o las de la derecha, y copia la ruta. Ctrl+Mayús+T (⇧⌘T en macOS)
 reabre la última cerrada con su selección y búsqueda; el historial de cerradas es de

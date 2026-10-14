@@ -42,7 +42,9 @@ toolbar button so the toolbar stays on one row at the 940px minimum.
 
 ## Project navigation
 
-A compact tab row sits above the toolbar. The active tab uses the ordinary surface,
+A compact tab row sits above the toolbar. Its first tab is Home, always present and never
+closable, draggable or starred; it shows the start screen without closing the project behind
+it, and Ctrl+Tab walks through it. The rest of the row is the open projects. The active tab uses the ordinary surface,
 favorites use the orchid star, and close, open and overflow controls retain the same
 focus and hover treatment. Long names truncate inside the tab, with the full path in
 the tooltip; duplicate names include their containing folder. Pointer dragging and
@@ -54,9 +56,12 @@ open menu groups folder and GitHub actions apart from favorites, recents and reo
 last closed tab. While a folder is dragged over the window, a centered notice invites to
 drop it.
 
-The opening menu and empty screen expose folder opening, GitHub, favorites and recent
-projects. Project lists use plain rows with wrapping paths and accessible favorite
-controls, rather than cards or a modal. Recovery replaces the inaccessible repository
+Home exposes folder opening, GitHub, favorites and recent projects; the opening menu keeps
+only the actions. On the empty screen a 180px logo, one line of guidance and the two actions sit
+above a single centered column (at most 40rem) shared by both lists; the toolbar keeps only
+the mark so the name is not repeated. Each list is one bordered group of plain rows, a name
+over a one-line monospace path (truncated, full path in the tooltip), with an icon-only remove
+button on recents and the favorite star always in the last slot. No cards or modal. Recovery replaces the inaccessible repository
 view with Retry, Locate and Close. Storage errors occupy a wrapping banner above the
 workspace and retain their original diagnostic. All new styles use logical properties
 and are checked in both themes at the 940×600 window minimum.
