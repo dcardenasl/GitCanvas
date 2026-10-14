@@ -6,10 +6,12 @@ import { ErrorMessage } from "../ErrorMessage";
 import { GraphCanvas } from "../GraphCanvas";
 import type { HistoryData } from "../../state/history";
 import { useRefsByCommit } from "../../state/refs";
+import { selectedCommitId as getSelectedCommitId } from "../../state/navigation";
 import {
-  selectedCommitId as getSelectedCommitId,
-  useSession,
-} from "../../state/session";
+  useActiveRepository,
+  useNavigation,
+  useNavigationActions,
+} from "../../state/workspace";
 import { useWorktreeSnapshot } from "../../state/worktree";
 import { DiffStat } from "../DiffStat/DiffStat";
 
@@ -22,14 +24,15 @@ import { DiffStat } from "../DiffStat/DiffStat";
  */
 export function HistoryView({ history }: { readonly history: HistoryData }) {
   const { t } = useTranslation(["history", "common"]);
-  const repository = useSession((state) => state.repository);
-  const selection = useSession((state) => state.selection);
-  const selectedCommitId = useSession(getSelectedCommitId);
-  const selectCommit = useSession((state) => state.selectCommit);
-  const selectFile = useSession((state) => state.selectFile);
-  const revealCommitId = useSession((state) => state.revealCommitId);
-  const clearReveal = useSession((state) => state.clearReveal);
-  const clearOrphanedReveal = useSession((state) => state.clearOrphanedReveal);
+  const repository = useActiveRepository();
+  const selection = useNavigation((navigation) => navigation.selection);
+  const selectedCommitId = useNavigation(getSelectedCommitId);
+
+  const { selectCommit, selectFile, clearReveal, clearOrphanedReveal } =
+    useNavigationActions();
+  const revealCommitId = useNavigation(
+    (navigation) => navigation.revealCommitId,
+  );
 
   const refsByCommit = useRefsByCommit(repository?.path ?? null);
   const local = useWorktreeSnapshot(repository?.path ?? null);

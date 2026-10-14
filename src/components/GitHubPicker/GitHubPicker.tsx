@@ -13,7 +13,7 @@ import {
   openRepository,
   storeGithubToken,
 } from "../../lib/ipc";
-import { useSession } from "../../state/session";
+import { useWorkspace } from "../../state/workspace";
 import { queryKeys } from "../../state/queryKeys";
 import { ErrorMessage } from "../ErrorMessage";
 
@@ -42,7 +42,7 @@ function progressLabel(
 export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
   const { t } = useTranslation("github");
   const queryClient = useQueryClient();
-  const setRepository = useSession((state) => state.openRepository);
+  const openProject = useWorkspace((state) => state.openProject);
 
   const [token, setToken] = useState("");
   const [progress, setProgress] = useState<CloneProgressEvent | null>(null);
@@ -89,7 +89,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
     mutationFn: ({ name }: { name: string }) => cloneGithubRepository(name),
     onSuccess: async (cloned) => {
       setProgress(null);
-      setRepository(await openRepository(cloned.path));
+      openProject(await openRepository(cloned.path));
       onClose();
     },
   });

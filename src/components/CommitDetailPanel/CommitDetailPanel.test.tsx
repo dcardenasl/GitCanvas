@@ -12,7 +12,8 @@ const { getCommitDiff, getCommitTreePage } = mockIpc;
 vi.mock("../../lib/ipc", () => mockIpc);
 
 const { CommitDetailPanel } = await import("./CommitDetailPanel");
-const { useSession } = await import("../../state/session");
+const { resetWorkspace, patchNavigation, activeNavigation } =
+  await import("../../test/workspace");
 const { useFileListPreferences } =
   await import("../../state/fileListPreferences");
 
@@ -63,7 +64,8 @@ beforeEach(() => {
   getCommitTreePage.mockReset();
   localStorage.removeItem("gitcanvas.file-list-view");
   useFileListPreferences.setState({ view: "path" });
-  useSession.setState({
+  resetWorkspace();
+  patchNavigation({
     selection: { kind: "commit", commitId: COMMIT.id, filePath: null },
     expandedFilePath: null,
   });
@@ -124,7 +126,7 @@ describe("CommitDetailPanel", () => {
     });
     await userEvent.click(within(list).getByRole("button"));
 
-    expect(useSession.getState().selection).toEqual({
+    expect(activeNavigation().selection).toEqual({
       kind: "commit",
       commitId: COMMIT.id,
       filePath: "src/app.ts",
@@ -197,7 +199,7 @@ describe("CommitDetailPanel", () => {
 
     await userEvent.click(directory);
     await userEvent.click(within(list).getByText("index.ts"));
-    expect(useSession.getState().selection).toEqual({
+    expect(activeNavigation().selection).toEqual({
       kind: "commit",
       commitId: COMMIT.id,
       filePath: "src/components/CommitTable/index.ts",
@@ -243,7 +245,7 @@ describe("CommitDetailPanel", () => {
       within(unchanged).getByLabelText("Sin cambios en este commit"),
     ).toBeInstanceOf(HTMLElement);
     await userEvent.click(unchanged);
-    expect(useSession.getState().selection).toEqual({
+    expect(activeNavigation().selection).toEqual({
       kind: "commit",
       commitId: COMMIT.id,
       filePath: "src/stable.ts",

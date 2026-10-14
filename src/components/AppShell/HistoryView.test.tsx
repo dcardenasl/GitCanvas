@@ -15,7 +15,9 @@ vi.mock("../../lib/ipc", () => ({
 }));
 
 const { HistoryView } = await import("./HistoryView");
-const { useSession } = await import("../../state/session");
+const { resetWorkspace, openTestProject, patchNavigation } =
+  await import("../../test/workspace");
+const { useActiveRepository } = await import("../../state/workspace");
 const { useHistory } = await import("../../state/history");
 
 /** A merge history shaped like the reference mockup: dev merged into main. */
@@ -45,7 +47,7 @@ function mergePage(): HistoryPage {
 
 /** Loads the history the way the shell does, then hands it to the view. */
 function Harness() {
-  const repository = useSession((state) => state.repository);
+  const repository = useActiveRepository();
   const history = useHistory(repository?.path ?? null);
   return <HistoryView history={history} />;
 }
@@ -78,10 +80,9 @@ beforeEach(() => {
       deletions: 0,
     },
   });
-  useSession.setState({
-    repository: { path: "/tmp/repo", name: "repo" },
-    selection: { kind: "history" },
-  });
+  resetWorkspace();
+  openTestProject({ path: "/tmp/repo", name: "repo" });
+  patchNavigation({ selection: { kind: "history" } });
 });
 
 afterEach(cleanup);

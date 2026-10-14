@@ -28,6 +28,10 @@
     "inspector": "Ancho del panel de detalle",
     "sidebar": "Ancho de la barra lateral"
   },
+  "startup": {
+    "failed": "GitCanvas no pudo iniciar su espacio de trabajo",
+    "loading": "Iniciando GitCanvas…"
+  },
   "theme": {
     "aria": "Tema de la aplicación",
     "dark": "Oscuro",
@@ -44,5 +48,9 @@
     "openSyncFailed": "No se pudo informar al backend qué repositorios están abiertos",
     "refresh": "Actualizar",
     "refreshHint": "Volver a leer el repositorio desde el disco"
+  },
+  "workspace": {
+    "dismiss": "Descartar",
+    "tabLimit": "Se pueden abrir como máximo {{max}} proyectos a la vez. Cierra uno para abrir otro."
   }
 }

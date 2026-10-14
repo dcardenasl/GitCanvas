@@ -12,7 +12,8 @@ const { getBranches, getTags } = mockIpc;
 vi.mock("../../lib/ipc", () => mockIpc);
 
 const { Sidebar } = await import("./Sidebar");
-const { useSession } = await import("../../state/session");
+const { resetWorkspace, openTestProject, patchNavigation, activeNavigation } =
+  await import("../../test/workspace");
 
 const MAIN_TIP = "1".repeat(40);
 const DEV_TIP = "2".repeat(40);
@@ -53,11 +54,9 @@ beforeEach(() => {
     }),
   ]);
   getTags.mockResolvedValue([]);
-  useSession.setState({
-    repository: { path: "/tmp/repo", name: "repo" },
-    selection: { kind: "history" },
-    revealCommitId: null,
-  });
+  resetWorkspace();
+  openTestProject({ path: "/tmp/repo", name: "repo" });
+  patchNavigation({ selection: { kind: "history" }, revealCommitId: null });
 });
 afterEach(cleanup);
 
@@ -67,7 +66,7 @@ describe("Sidebar", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: /^main/ }));
 
-    const state = useSession.getState();
+    const state = activeNavigation();
     expect(state.selection).toEqual({
       kind: "commit",
       commitId: MAIN_TIP,
@@ -94,7 +93,7 @@ describe("Sidebar", () => {
   });
 
   it("marks the ref whose commit is selected", async () => {
-    useSession.setState({
+    patchNavigation({
       selection: { kind: "commit", commitId: DEV_TIP, filePath: null },
     });
     renderSidebar();
@@ -137,7 +136,7 @@ describe("Sidebar", () => {
       await screen.findByRole("button", { name: /v0\.1\.0/ }),
     );
 
-    expect(useSession.getState().revealCommitId).toBe(MAIN_TIP);
+    expect(activeNavigation().revealCommitId).toBe(MAIN_TIP);
   });
 
   it("omits a group that has nothing in it", async () => {

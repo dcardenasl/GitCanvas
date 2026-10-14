@@ -1,0 +1,220 @@
+import { useMemo } from "react";
+import { create } from "zustand";
+
+import type { RepositoryInfo, WorkspaceLimits } from "../bindings";
+import {
+  clearOrphanedReveal,
+  clearReveal,
+  EMPTY_NAVIGATION,
+  expandFile,
+  revealCommit,
+  selectCommit,
+  selectFile,
+  type FileSource,
+  type Navigation,
+  type Transition,
+} from "./navigation";
+
+/** One open project: its identity and where its view was left. */
+export interface Tab {
+  /** The project; its canonical working-tree root identifies the tab. */
+  readonly repository: RepositoryInfo;
+  /** Selection, reveal and expansion, kept while the tab is in the background. */
+  readonly navigation: Navigation;
+}
+
+/** What opening a project did. */
+export type OpenOutcome =
+  /** A new tab was added and activated. */
+  | "opened"
+  /** The project was already open, so its tab was activated. */
+  | "activated"
+  /** The tab limit was reached, so nothing was opened. */
+  | "limit";
+
+/** Something the interface owes the person after a workspace action. */
+export interface WorkspaceNotice {
+  readonly code: "tabLimit";
+  readonly max: number;
+}
+
+interface WorkspaceState {
+  /** Open projects, in tab order. */
+  readonly tabs: readonly Tab[];
+  /** Canonical root of the active tab, or `null` when none is open. */
+  readonly activeRoot: string | null;
+  /** The bounds the backend enforces; `null` until they are read at startup. */
+  readonly limits: WorkspaceLimits | null;
+  /** The last thing worth telling the person, until they dismiss it. */
+  readonly notice: WorkspaceNotice | null;
+  /** Records the backend's bounds. */
+  setLimits: (limits: WorkspaceLimits) => void;
+  /** Opens a project in a new tab, or activates its tab when already open. */
+  openProject: (repository: RepositoryInfo) => OpenOutcome;
+  /** Makes an open project's tab the active one. */
+  activate: (root: string) => void;
+  /** Closes a tab; if it was active, its neighbor takes over. */
+  closeTab: (root: string) => void;
+  /** Applies a navigation change to the project with this root, if it is open. */
+  navigate: (root: string, transition: Transition) => void;
+  /** Dismisses the current notice. */
+  dismissNotice: () => void;
+}
+
+/** The tab to activate when `closing` goes away: the next one, else the previous. */
+function neighborOf(tabs: readonly Tab[], closing: string): string | null {
+  const index = tabs.findIndex((tab) => tab.repository.path === closing);
+  const next = tabs[index + 1] ?? tabs[index - 1];
+  return next?.repository.path ?? null;
+}
+
+/**
+ * The open projects and which one is active.
+ *
+ * Each tab owns its own navigation, so changing tabs neither resets nor shares
+ * what is selected. Every change names the project it applies to; the hooks
+ * below bind a view's changes to the project it rendered, so a late callback
+ * from a tab that has since gone to the background cannot alter another one.
+ */
+export const useWorkspace = create<WorkspaceState>((set, get) => ({
+  tabs: [],
+  activeRoot: null,
+  limits: null,
+  notice: null,
+
+  setLimits: (limits) => {
+    set({ limits });
+  },
+
+  openProject: (repository) => {
+    const { tabs, limits } = get();
+    if (limits === null) {
+      throw new Error("Workspace limits are not loaded");
+    }
+    const root = repository.path;
+    if (tabs.some((tab) => tab.repository.path === root)) {
+      set({ activeRoot: root, notice: null });
+      return "activated";
+    }
+    if (tabs.length >= limits.max_tabs) {
+      set({ notice: { code: "tabLimit", max: limits.max_tabs } });
+      return "limit";
+    }
+    set({
+      tabs: [...tabs, { repository, navigation: EMPTY_NAVIGATION }],
+      activeRoot: root,
+      notice: null,
+    });
+    return "opened";
+  },
+
+  activate: (root) => {
+    const { tabs, activeRoot } = get();
+    if (
+      activeRoot !== root &&
+      tabs.some((tab) => tab.repository.path === root)
+    ) {
+      set({ activeRoot: root });
+    }
+  },
+
+  closeTab: (root) => {
+    const { tabs, activeRoot } = get();
+    if (!tabs.some((tab) => tab.repository.path === root)) return;
+    set({
+      tabs: tabs.filter((tab) => tab.repository.path !== root),
+      activeRoot: activeRoot === root ? neighborOf(tabs, root) : activeRoot,
+    });
+  },
+
+  navigate: (root, transition) => {
+    set((state) => {
+      const index = state.tabs.findIndex((tab) => tab.repository.path === root);
+      const tab = state.tabs[index];
+      if (tab === undefined) return state;
+      const navigation = transition(tab.navigation);
+      if (navigation === tab.navigation) return state;
+      return {
+        tabs: state.tabs.map((candidate, position) =>
+          position === index ? { ...candidate, navigation } : candidate,
+        ),
+      };
+    });
+  },
+
+  dismissNotice: () => {
+    set({ notice: null });
+  },
+}));
+
+/** The active tab, or `null` when no project is open. */
+function activeTab(state: WorkspaceState): Tab | null {
+  return (
+    state.tabs.find((tab) => tab.repository.path === state.activeRoot) ?? null
+  );
+}
+
+/** The project shown now, or `null` when none is open. */
+export function useActiveRepository(): RepositoryInfo | null {
+  return useWorkspace((state) => activeTab(state)?.repository ?? null);
+}
+
+/** Reads from the active project's navigation; an empty one when none is open. */
+export function useNavigation<T>(select: (navigation: Navigation) => T): T {
+  return useWorkspace((state) =>
+    select(activeTab(state)?.navigation ?? EMPTY_NAVIGATION),
+  );
+}
+
+/** Changes to one project's navigation, bound to that project. */
+export interface NavigationActions {
+  readonly selectCommit: (id: string | null) => void;
+  readonly selectFile: (
+    path: string | null,
+    source?: FileSource,
+    mode?: "diff" | "snapshot",
+  ) => void;
+  readonly expandFile: (path: string) => void;
+  readonly revealCommit: (id: string) => void;
+  readonly clearReveal: () => void;
+  readonly clearOrphanedReveal: () => void;
+}
+
+/**
+ * The navigation changes for the project with `root`.
+ *
+ * Bound to the root, not to "whichever tab is active when it runs": a change
+ * started from one project's view lands on that project even if the person has
+ * moved on by the time it fires.
+ */
+export function navigationActionsFor(root: string | null): NavigationActions {
+  const apply = (transition: Transition) => {
+    if (root !== null) useWorkspace.getState().navigate(root, transition);
+  };
+  return {
+    selectCommit: (id) => {
+      apply(selectCommit(id));
+    },
+    selectFile: (path, source, mode) => {
+      apply(selectFile(path, source, mode));
+    },
+    expandFile: (path) => {
+      apply(expandFile(path));
+    },
+    revealCommit: (id) => {
+      apply(revealCommit(id));
+    },
+    clearReveal: () => {
+      apply(clearReveal);
+    },
+    clearOrphanedReveal: () => {
+      apply(clearOrphanedReveal);
+    },
+  };
+}
+
+/** Navigation changes bound to the project this view is showing. */
+export function useNavigationActions(): NavigationActions {
+  const root = useWorkspace((state) => state.activeRoot);
+  return useMemo(() => navigationActionsFor(root), [root]);
+}

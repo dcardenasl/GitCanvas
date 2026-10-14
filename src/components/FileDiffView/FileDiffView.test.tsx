@@ -34,7 +34,8 @@ const {
 vi.mock("../../lib/ipc", () => mockIpc);
 
 const { FileDiffView } = await import("./FileDiffView");
-const { useSession } = await import("../../state/session");
+const { resetWorkspace, patchNavigation, activeNavigation } =
+  await import("../../test/workspace");
 
 const COMMIT: CommitInfo = {
   id: "a".repeat(40),
@@ -145,7 +146,8 @@ beforeEach(() => {
   getWorktreeSnapshot.mockReset();
   getWorktreeFileDiff.mockReset();
   getWorktreeFileContent.mockReset();
-  useSession.setState({
+  resetWorkspace();
+  patchNavigation({
     selection: { kind: "commit", commitId: COMMIT.id, filePath: "src/app.ts" },
     expandedFilePath: null,
   });
@@ -187,7 +189,7 @@ describe("FileDiffView", () => {
   it("switches to the diff if the commit tree opens a file before the diff arrives", async () => {
     getCommitDiff.mockResolvedValue(diff([file({ path: "src/stable.ts" })]));
     getFileContent.mockResolvedValue(content({ path: "src/stable.ts" }));
-    useSession.setState({
+    patchNavigation({
       selection: {
         kind: "commit",
         commitId: COMMIT.id,
@@ -198,7 +200,7 @@ describe("FileDiffView", () => {
     renderView("src/stable.ts", undefined, true);
 
     expect(await findLine("const b = 3;")).toBeInstanceOf(HTMLElement);
-    expect(useSession.getState().selection).toEqual({
+    expect(activeNavigation().selection).toEqual({
       kind: "commit",
       commitId: COMMIT.id,
       filePath: "src/stable.ts",
@@ -213,7 +215,7 @@ describe("FileDiffView", () => {
       await screen.findByRole("button", { name: "← Volver al graph" }),
     );
 
-    expect(useSession.getState().selection).toMatchObject({ filePath: null });
+    expect(activeNavigation().selection).toMatchObject({ filePath: null });
   });
 
   it("returns to the graph on Escape", async () => {
@@ -223,7 +225,7 @@ describe("FileDiffView", () => {
 
     await userEvent.keyboard("{Escape}");
 
-    expect(useSession.getState().selection).toMatchObject({ filePath: null });
+    expect(activeNavigation().selection).toMatchObject({ filePath: null });
   });
 
   it("says so when the commit does not touch the file", async () => {
@@ -272,7 +274,7 @@ describe("FileDiffView", () => {
 
     await userEvent.click(button);
 
-    expect(useSession.getState().expandedFilePath).toBe("bundle.js");
+    expect(activeNavigation().expandedFilePath).toBe("bundle.js");
     expect(getCommitDiff.mock.calls.at(-1)?.[1]).toMatchObject({
       file_path: "bundle.js",
       expand_path: "bundle.js",
@@ -367,7 +369,7 @@ describe("FileDiffView", () => {
       revision: "revision",
       file: file({ path: "local.ts" }),
     });
-    useSession.setState({
+    patchNavigation({
       selection: { kind: "worktree", side: "unstaged", filePath: "local.ts" },
     });
 
@@ -387,7 +389,7 @@ describe("FileDiffView", () => {
     const local = () => file({ path: "local.ts" });
 
     function open() {
-      useSession.setState({
+      patchNavigation({
         selection: { kind: "worktree", side: "unstaged", filePath: "local.ts" },
       });
       renderView("local.ts", { side: "unstaged" });
@@ -413,7 +415,7 @@ describe("FileDiffView", () => {
       open();
 
       expect(await findLine("const b = 3;")).toBeInstanceOf(HTMLElement);
-      expect(useSession.getState().selection).toEqual({
+      expect(activeNavigation().selection).toEqual({
         kind: "worktree",
         side: "unstaged",
         filePath: "local.ts",
@@ -443,7 +445,7 @@ describe("FileDiffView", () => {
       open();
 
       expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
-      expect(useSession.getState().selection).toMatchObject({
+      expect(activeNavigation().selection).toMatchObject({
         kind: "worktree",
         filePath: "local.ts",
       });
@@ -460,7 +462,7 @@ describe("FileDiffView", () => {
         revision: "revision",
         file: local(),
       });
-      useSession.setState({
+      patchNavigation({
         selection: { kind: "worktree", side: "unstaged", filePath: "local.ts" },
       });
       const client = createTestQueryClient();
@@ -495,7 +497,7 @@ describe("FileDiffView", () => {
       });
 
       expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
-      expect(useSession.getState().selection).toMatchObject({
+      expect(activeNavigation().selection).toMatchObject({
         kind: "worktree",
         filePath: "local.ts",
       });
@@ -511,7 +513,7 @@ describe("FileDiffView", () => {
       open();
 
       expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
-      expect(useSession.getState().selection).toMatchObject({
+      expect(activeNavigation().selection).toMatchObject({
         kind: "worktree",
         filePath: "local.ts",
       });

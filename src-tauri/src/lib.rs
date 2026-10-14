@@ -74,6 +74,7 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::actions::push_current_branch,
             commands::watch::watch_repository,
             commands::watch::unwatch_repository,
+            commands::workspace::get_workspace_limits,
             commands::workspace::load_workspace,
             commands::workspace::save_workspace,
         ])

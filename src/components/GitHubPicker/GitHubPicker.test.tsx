@@ -28,7 +28,8 @@ const {
 vi.mock("../../lib/ipc", () => mockIpc);
 
 const { GitHubPicker } = await import("./GitHubPicker");
-const { useSession } = await import("../../state/session");
+const { resetWorkspace, openTestProject } =
+  await import("../../test/workspace");
 
 const REPO: GitHubRepository = {
   full_name: "dcardenasl/gitcanvas",
@@ -51,7 +52,7 @@ function renderPicker(onClose = vi.fn()) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useSession.setState({ repository: null });
+  resetWorkspace();
   onCloneProgress.mockImplementation(() => Promise.resolve(() => undefined));
 });
 afterEach(cleanup);
@@ -104,9 +105,7 @@ describe("GitHubPicker", () => {
   });
 
   it("clones the chosen repository and opens it", async () => {
-    useSession.setState({
-      repository: { path: "/cache/current", name: "current" },
-    });
+    openTestProject({ path: "/cache/current", name: "current" });
     hasGithubToken.mockResolvedValue(true);
     listGithubRepositories.mockResolvedValue(repositoryList([REPO]));
     cloneGithubRepository.mockResolvedValue({

@@ -22,7 +22,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use super::{Workspace, WorkspaceLimits};
+use super::Workspace;
 use crate::error::AppError;
 
 /// Name of the workspace file inside the data directory.
@@ -71,8 +71,6 @@ pub struct WorkspaceRecovery {
 pub struct LoadedWorkspace {
     /// The workspace to start from: empty when there was nothing usable.
     pub workspace: Workspace,
-    /// The bounds the workspace is held to.
-    pub limits: WorkspaceLimits,
     /// Set when a stored workspace had to be set aside.
     pub recovery: Option<WorkspaceRecovery>,
 }
@@ -100,7 +98,6 @@ fn unix_seconds() -> u64 {
 fn loaded(workspace: Workspace, recovery: Option<WorkspaceRecovery>) -> LoadedWorkspace {
     LoadedWorkspace {
         workspace,
-        limits: WorkspaceLimits::current(),
         recovery,
     }
 }

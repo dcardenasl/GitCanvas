@@ -28,6 +28,10 @@
     "inspector": "Detail panel width",
     "sidebar": "Sidebar width"
   },
+  "startup": {
+    "failed": "GitCanvas could not start its workspace",
+    "loading": "Starting GitCanvas…"
+  },
   "theme": {
     "aria": "Application theme",
     "dark": "Dark",
@@ -44,5 +48,9 @@
     "openSyncFailed": "Could not tell the backend which repositories are open",
     "refresh": "Refresh",
     "refreshHint": "Re-read the repository from disk"
+  },
+  "workspace": {
+    "dismiss": "Dismiss",
+    "tabLimit": "At most {{max}} projects can be open at once. Close one to open another."
   }
 }

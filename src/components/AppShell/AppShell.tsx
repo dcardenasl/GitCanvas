@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getStartupRepository } from "../../lib/ipc";
@@ -22,8 +22,13 @@ import { useCurrentBranch } from "../../state/refs";
 import {
   selectedCommitId as getSelectedCommitId,
   selectedFilePath as getSelectedFilePath,
-  useSession,
-} from "../../state/session";
+} from "../../state/navigation";
+import {
+  useActiveRepository,
+  useNavigation,
+  useNavigationActions,
+  useWorkspace,
+} from "../../state/workspace";
 import { useOpenRepositoriesSync } from "../../state/openRepositories";
 import { invalidateLive } from "../../state/queryKeys";
 
@@ -35,24 +40,30 @@ import "./AppShell.css";
 /** The application window: toolbar, navigation and history. */
 export function AppShell() {
   const { t } = useTranslation(["shell", "common"]);
-  const repository = useSession((state) => state.repository);
-  const selection = useSession((state) => state.selection);
-  const selectedCommitId = useSession(getSelectedCommitId);
+  const repository = useActiveRepository();
+  const selection = useNavigation((navigation) => navigation.selection);
+  const selectedCommitId = useNavigation(getSelectedCommitId);
   const history = useHistory(repository?.path ?? null);
-  const selectedFilePath = useSession(getSelectedFilePath);
+  const selectedFilePath = useNavigation(getSelectedFilePath);
   const [showGitHub, setShowGitHub] = useState(false);
   const layout = useLayout();
   const queryClient = useQueryClient();
 
   const watcher = useLiveRepository(repository?.path ?? null);
-  const openSync = useOpenRepositoriesSync(
-    repository === null ? [] : [repository.path],
-  );
   const currentBranch = useCurrentBranch(repository?.path ?? null);
   const gitActions = useGitActions(repository?.path ?? null);
   const [sidebarPinned, setSidebarPinned] = useState(false);
-  const revealCommit = useSession((state) => state.revealCommit);
-  const setRepository = useSession((state) => state.openRepository);
+
+  const { revealCommit } = useNavigationActions();
+  const openProject = useWorkspace((state) => state.openProject);
+  const notice = useWorkspace((state) => state.notice);
+  const dismissNotice = useWorkspace((state) => state.dismissNotice);
+  const tabs = useWorkspace((state) => state.tabs);
+  const openPaths = useMemo(
+    () => tabs.map((tab) => tab.repository.path),
+    [tabs],
+  );
+  const openSync = useOpenRepositoriesSync(openPaths);
 
   useEffect(() => {
     // The window says which repository it is showing, so two of them are
@@ -65,22 +76,22 @@ export function AppShell() {
     // `gitcanvas /path/to/repo` opens straight into that repository. Failure is
     // deliberately quiet: the window still opens and the picker is right there,
     // which beats a startup error over an argument the user may have mistyped.
-    if (useSession.getState().repository !== null) return;
+    if (useWorkspace.getState().tabs.length > 0) return;
 
     let cancelled = false;
-    let repositoryChanged = false;
-    const unsubscribe = useSession.subscribe((state, previous) => {
-      if (state.repository !== previous.repository) repositoryChanged = true;
+    let tabsChanged = false;
+    const unsubscribe = useWorkspace.subscribe((state, previous) => {
+      if (state.tabs !== previous.tabs) tabsChanged = true;
     });
     void getStartupRepository()
       .then((startup) => {
         if (
           !cancelled &&
-          !repositoryChanged &&
+          !tabsChanged &&
           startup !== null &&
-          useSession.getState().repository === null
+          useWorkspace.getState().tabs.length === 0
         ) {
-          setRepository(startup);
+          openProject(startup);
         }
       })
       .catch(() => undefined);
@@ -89,7 +100,7 @@ export function AppShell() {
       cancelled = true;
       unsubscribe();
     };
-  }, [setRepository]);
+  }, [openProject]);
   const selectedIndex =
     selectedCommitId === null
       ? undefined
@@ -135,6 +146,14 @@ export function AppShell() {
             <ErrorMessage error={watcher.status.error} />
             <button type="button" className="button" onClick={watcher.retry}>
               {t("common:actions.retry")}
+            </button>
+          </div>
+        )}
+        {notice !== null && (
+          <div role="status" className="toolbar__status">
+            <span>{t("workspace.tabLimit", { max: notice.max })}</span>
+            <button type="button" className="button" onClick={dismissNotice}>
+              {t("workspace.dismiss")}
             </button>
           </div>
         )}

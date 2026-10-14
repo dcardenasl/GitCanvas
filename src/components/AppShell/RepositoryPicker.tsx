@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { openRepository } from "../../lib/ipc";
 import { afterPaint } from "../../lib/paint";
 import { safeStorage } from "../../lib/safeStorage";
-import { useSession } from "../../state/session";
+import { useWorkspace } from "../../state/workspace";
 import { ErrorMessage } from "../ErrorMessage";
 
 /** Where the picker last opened, so it starts there next time. */
@@ -27,7 +27,7 @@ type Phase = "idle" | "choosing" | "opening";
 /** Opens a local repository through the native folder picker. */
 export function RepositoryPicker() {
   const { t } = useTranslation("shell");
-  const setRepository = useSession((state) => state.openRepository);
+  const openProject = useWorkspace((state) => state.openProject);
   // The failure itself, not its text: it is translated where it is shown, so
   // it follows a language change instead of staying in the old one.
   const [error, setError] = useState<{ readonly cause: unknown } | null>(null);
@@ -76,7 +76,7 @@ export function RepositoryPicker() {
 
       setPhase("opening");
       rememberDirectory(selected);
-      setRepository(await openRepository(selected));
+      openProject(await openRepository(selected));
     } catch (cause) {
       setError({ cause });
     } finally {

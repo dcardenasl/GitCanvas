@@ -79,7 +79,7 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       antes de cada commit se revisa `git diff --cached --stat`.
       → `feat(workspace): persist tabs, favorites and recents in a versioned store`
 
-- [ ] **WS-3 — Workspace en el frontend.** `state/workspace.ts` reemplaza la sesión global:
+- [x] **WS-3 — Workspace en el frontend.** `state/workspace.ts` reemplaza la sesión global:
       pestañas ordenadas, pestaña activa y una sesión por **raíz canónica del worktree**
       (`RepositoryInfo.path`). La sesión conserva selección, reveal y archivo expandido; las
       acciones se dirigen a una raíz explícita, así un resultado tardío nunca se aplica a la
@@ -89,6 +89,16 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       Sin sesión de repositorio global.
       *Pruebas:* las de `session.test.ts` reescritas sobre el workspace; sesiones aisladas;
       acción sobre una pestaña no activa; cerrar la activa elige vecina; tope de 30.
+      *Decisiones al implementar:* `state/session.ts` pasa a ser `state/navigation.ts`: el modelo de
+      navegación de un proyecto como datos con transiciones puras. `state/workspace.ts` guarda las
+      pestañas y la activa; la interfaz lee con `useActiveRepository`, `useNavigation` y
+      `useNavigationActions`, y estas últimas quedan **atadas a la raíz que su vista renderizó**, de
+      modo que un callback tardío no toca otra pestaña. El tope (30) llega del backend con el
+      comando nuevo `get_workspace_limits`, que sale de `LoadedWorkspace` porque no depende de lo
+      guardado, y `WorkspaceGate` retiene la interfaz hasta conocerlo. `openProject` ya reutiliza la
+      pestaña de un proyecto abierto y el sincronizador de WS-1 envía todas las rutas abiertas.
+      *Estado intermedio:* hasta WS-8 no hay barra de pestañas, así que abrir un segundo proyecto
+      lo activa pero no se puede volver al primero; `dev` no es publicable hasta entonces.
       → `refactor(workspace): replace the single-repository session with per-tab sessions`
 
 - [ ] **WS-4 — Un solo flujo de apertura.** `openProject(info)` es la única puerta: el selector

@@ -87,7 +87,8 @@ pub struct Workspace {
 }
 
 /// The bounds the workspace is held to, sent to the interface so it never keeps
-/// a second copy of them.
+/// a second copy of them. They do not depend on what is stored, so they are
+/// available even when the stored workspace could not be read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct WorkspaceLimits {
     /// Most tabs open at once.

@@ -129,6 +129,9 @@ export const getWorktreeFileContent = (
 export const getWorktreeFingerprint = (path: string) =>
   result(commands.getWorktreeFingerprint(path));
 
+/** Reads the bounds the workspace is held to; they do not depend on what is stored. */
+export const getWorkspaceLimits = () => result(commands.getWorkspaceLimits());
+
 /**
  * Reports the complete set of open repositories, so the backend never evicts a
  * cached clone a tab is using. A request no newer than the last one applied is

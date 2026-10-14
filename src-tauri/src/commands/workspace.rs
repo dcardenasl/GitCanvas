@@ -10,13 +10,13 @@ use gitcanvas_core::{
     error::AppError,
     workspace::{
         store::{LoadedWorkspace, WorkspaceStore},
-        Workspace,
+        Workspace, WorkspaceLimits,
     },
 };
 use serde::Deserialize;
 use specta::Type;
 
-use super::runtime::write;
+use super::runtime::{read, write};
 
 /// A workspace to persist, numbered so a late arrival cannot undo a newer save.
 #[derive(Debug, Clone, Deserialize, Type)]
@@ -26,6 +26,16 @@ pub struct SaveWorkspaceRequest {
     pub revision: u32,
     /// The complete workspace to store.
     pub workspace: Workspace,
+}
+
+/// The bounds the workspace is held to.
+///
+/// Independent of what is stored, so the interface can enforce them even when
+/// the stored workspace could not be read.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_workspace_limits() -> Result<WorkspaceLimits, AppError> {
+    read("get_workspace_limits", || Ok(WorkspaceLimits::current())).await
 }
 
 /// Reads the saved workspace, or an empty one when none is usable.

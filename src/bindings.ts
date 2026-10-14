@@ -93,6 +93,13 @@ export const commands = {
 	/**  Stops watching, if anything was being watched. */
 	unwatchRepository: (generation: number) => typedError<null, AppError>(__TAURI_INVOKE("unwatch_repository", { generation })),
 	/**
+	 *  The bounds the workspace is held to.
+	 *
+	 *  Independent of what is stored, so the interface can enforce them even when
+	 *  the stored workspace could not be read.
+	 */
+	getWorkspaceLimits: () => typedError<WorkspaceLimits, AppError>(__TAURI_INVOKE("get_workspace_limits")),
+	/**
 	 *  Reads the saved workspace, or an empty one when none is usable.
 	 *
 	 *  A stored workspace that cannot be understood is set aside rather than
@@ -420,8 +427,6 @@ export type HistoryRequest = {
 export type LoadedWorkspace = {
 	/**  The workspace to start from: empty when there was nothing usable. */
 	workspace: Workspace,
-	/**  The bounds the workspace is held to. */
-	limits: WorkspaceLimits,
 	/**  Set when a stored workspace had to be set aside. */
 	recovery: WorkspaceRecovery | null,
 };
@@ -570,7 +575,8 @@ export type Workspace = {
 
 /**
  *  The bounds the workspace is held to, sent to the interface so it never keeps
- *  a second copy of them.
+ *  a second copy of them. They do not depend on what is stored, so they are
+ *  available even when the stored workspace could not be read.
  */
 export type WorkspaceLimits = {
 	/**  Most tabs open at once. */

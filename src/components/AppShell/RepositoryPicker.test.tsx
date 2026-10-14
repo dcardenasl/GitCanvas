@@ -21,7 +21,8 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
 vi.mock("../../lib/ipc", () => mockIpc);
 
 const { RepositoryPicker } = await import("./RepositoryPicker");
-const { useSession } = await import("../../state/session");
+const { resetWorkspace, activeRepository } =
+  await import("../../test/workspace");
 
 /** A promise the test resolves when it chooses to, to observe the wait. */
 function deferred<T>() {
@@ -35,7 +36,7 @@ function deferred<T>() {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
-  useSession.setState({ repository: null });
+  resetWorkspace();
 });
 afterEach(cleanup);
 
@@ -123,7 +124,7 @@ describe("RepositoryPicker", () => {
     const { unmount } = render(<RepositoryPicker />);
     await userEvent.click(screen.getByRole("button"));
     await waitFor(() => {
-      expect(useSession.getState().repository).not.toBeNull();
+      expect(activeRepository()).not.toBeNull();
     });
     unmount();
 

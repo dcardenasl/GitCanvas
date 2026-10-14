@@ -61,6 +61,7 @@ export const queryKeys = {
     commitId: string,
     directoryPath: string | null,
   ) => ["commit-tree", repositoryPath, commitId, directoryPath] as const,
+  workspaceLimits: () => ["workspace", "limits"] as const,
   github: () => ["github"] as const,
   githubToken: () => ["github", "token"] as const,
   githubRepositories: () => ["github", "repositories"] as const,

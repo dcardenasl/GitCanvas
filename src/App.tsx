@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { AppShell } from "./components/AppShell";
+import { WorkspaceGate } from "./components/WorkspaceGate";
 import { queryRetryDelay, shouldRetryQuery } from "./lib/query-retry";
 
 /**
@@ -30,7 +31,9 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppShell />
+      <WorkspaceGate>
+        <AppShell />
+      </WorkspaceGate>
     </QueryClientProvider>
   );
 }

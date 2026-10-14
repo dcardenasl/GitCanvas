@@ -69,7 +69,15 @@ vi.mock("../../lib/ipc", () => ({
 }));
 
 const { AppShell } = await import("./AppShell");
-const { useSession } = await import("../../state/session");
+const { useWorkspace } = await import("../../state/workspace");
+const {
+  resetWorkspace,
+  openTestProject,
+  patchNavigation,
+  activeNavigation,
+  activeRepository,
+  navigationActions,
+} = await import("../../test/workspace");
 
 const COMMIT: CommitInfo = {
   id: "a".repeat(40),
@@ -147,8 +155,9 @@ beforeEach(() => {
     deletions: 0,
     is_merge: false,
   });
-  useSession.setState({
-    repository: { path: "/tmp/repo", name: "repo" },
+  resetWorkspace();
+  openTestProject({ path: "/tmp/repo", name: "repo" });
+  patchNavigation({
     selection: { kind: "history" },
     expandedFilePath: null,
     revealCommitId: null,
@@ -164,7 +173,7 @@ describe("AppShell layout", () => {
   });
 
   it("keeps them matched with a commit selected", async () => {
-    useSession.setState({
+    patchNavigation({
       selection: { kind: "commit", commitId: COMMIT.id, filePath: null },
     });
     renderShell();
@@ -173,7 +182,7 @@ describe("AppShell layout", () => {
   });
 
   it("keeps them matched while a file is open and the sidebar is collapsed", async () => {
-    useSession.setState({
+    patchNavigation({
       selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },
     });
     renderShell();
@@ -189,7 +198,7 @@ describe("AppShell layout", () => {
   });
 
   it("collapses the sidebar to zero width rather than unmounting it", async () => {
-    useSession.setState({
+    patchNavigation({
       selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },
     });
     renderShell();
@@ -241,7 +250,7 @@ describe("AppShell push confirmation", () => {
 
 describe("AppShell toolbar", () => {
   it("shows the empty state until a repository is open", async () => {
-    useSession.setState({ repository: null });
+    resetWorkspace();
     renderShell();
 
     expect(
@@ -253,12 +262,12 @@ describe("AppShell toolbar", () => {
   });
 
   it("opens the repository named on the command line", async () => {
-    useSession.setState({ repository: null });
+    resetWorkspace();
     getStartupRepository.mockResolvedValue({ path: "/tmp/cli", name: "cli" });
     renderShell();
 
     await waitFor(() => {
-      expect(useSession.getState().repository).toEqual({
+      expect(activeRepository()).toEqual({
         path: "/tmp/cli",
         name: "cli",
       });
@@ -269,7 +278,7 @@ describe("AppShell toolbar", () => {
     let finishStartup: (
       repository: { path: string; name: string } | null,
     ) => void = () => undefined;
-    useSession.setState({ repository: null });
+    resetWorkspace();
     getStartupRepository.mockReturnValue(
       new Promise((resolve) => {
         finishStartup = resolve;
@@ -277,16 +286,14 @@ describe("AppShell toolbar", () => {
     );
     renderShell();
 
-    useSession
-      .getState()
-      .openRepository({ path: "/tmp/manual", name: "manual" });
+    openTestProject({ path: "/tmp/manual", name: "manual" });
     await act(async () => {
       finishStartup({ path: "/tmp/cli", name: "cli" });
       await Promise.resolve();
     });
 
     await waitFor(() => {
-      expect(useSession.getState().repository).toEqual({
+      expect(activeRepository()).toEqual({
         path: "/tmp/manual",
         name: "manual",
       });
@@ -294,17 +301,17 @@ describe("AppShell toolbar", () => {
   });
 
   it("clears an orphaned reveal selection after history is exhausted", async () => {
-    useSession.getState().revealCommit("missing-commit");
+    navigationActions().revealCommit("missing-commit");
     renderShell();
 
     await waitFor(() => {
-      expect(useSession.getState().revealCommitId).toBeNull();
+      expect(activeNavigation().revealCommitId).toBeNull();
     });
-    expect(useSession.getState().selection).toEqual({ kind: "history" });
+    expect(activeNavigation().selection).toEqual({ kind: "history" });
   });
 
   it("still opens when the command-line lookup fails", async () => {
-    useSession.setState({ repository: null });
+    resetWorkspace();
     getStartupRepository.mockRejectedValue(new Error("no argv"));
     renderShell();
 
@@ -371,7 +378,7 @@ describe("AppShell toolbar", () => {
   });
 
   it("tells the backend which repository is open", async () => {
-    useSession.setState({ repository: { path: "/tmp/repo", name: "repo" } });
+    openTestProject({ path: "/tmp/repo", name: "repo" });
     renderShell();
 
     await waitFor(() => {
@@ -382,7 +389,7 @@ describe("AppShell toolbar", () => {
   });
 
   it("says when the open repository could not be reported and retries on request", async () => {
-    useSession.setState({ repository: { path: "/tmp/repo", name: "repo" } });
+    openTestProject({ path: "/tmp/repo", name: "repo" });
     syncOpenRepositories.mockRejectedValueOnce(new Error("registry poisoned"));
     renderShell();
 
@@ -396,8 +403,24 @@ describe("AppShell toolbar", () => {
     expect(syncOpenRepositories).toHaveBeenCalledTimes(2);
   });
 
+  it("tells the person the tab limit was reached and lets them dismiss it", async () => {
+    openTestProject();
+    renderShell();
+    act(() => {
+      useWorkspace.setState({ notice: { code: "tabLimit", max: 30 } });
+    });
+
+    expect(await screen.findByText(/como máximo 30 proyectos/)).toBeInstanceOf(
+      HTMLElement,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Descartar" }));
+
+    expect(screen.queryByText(/como máximo 30 proyectos/)).toBeNull();
+    expect(useWorkspace.getState().notice).toBeNull();
+  });
+
   it("offers to pin the branch list while a file is open", async () => {
-    useSession.setState({
+    patchNavigation({
       selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },
     });
     renderShell();

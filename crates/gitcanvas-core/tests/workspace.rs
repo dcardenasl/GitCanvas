@@ -12,8 +12,8 @@ use gitcanvas_core::{
     error::AppError,
     workspace::{
         store::{RecoveryKind, WorkspaceStore, FILE_NAME, MAX_FILE_BYTES},
-        SavedSelection, TabRecord, Workspace, MAX_COLLAPSED_FOLDERS, MAX_FAVORITES, MAX_PATH_BYTES,
-        MAX_RECENTS, MAX_TABS,
+        SavedSelection, TabRecord, Workspace, WorkspaceLimits, MAX_COLLAPSED_FOLDERS,
+        MAX_FAVORITES, MAX_PATH_BYTES, MAX_RECENTS, MAX_TABS,
     },
     worktree::WorktreeSide,
 };
@@ -77,9 +77,15 @@ fn a_missing_file_loads_as_an_empty_workspace_without_recovery() {
 
     assert_eq!(loaded.workspace, Workspace::default());
     assert!(loaded.recovery.is_none());
-    assert_eq!(loaded.limits.max_tabs as usize, MAX_TABS);
-    assert_eq!(loaded.limits.max_favorites as usize, MAX_FAVORITES);
-    assert_eq!(loaded.limits.max_recents as usize, MAX_RECENTS);
+}
+
+#[test]
+fn the_limits_reported_are_the_ones_enforced() {
+    let limits = WorkspaceLimits::current();
+
+    assert_eq!(limits.max_tabs as usize, MAX_TABS);
+    assert_eq!(limits.max_favorites as usize, MAX_FAVORITES);
+    assert_eq!(limits.max_recents as usize, MAX_RECENTS);
 }
 
 #[test]

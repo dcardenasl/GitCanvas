@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ChangedFile } from "../../lib/changedFiles";
-import type { FileSource } from "../../state/session";
+import type { FileSource } from "../../state/navigation";
 import { useFileListPreferences } from "../../state/fileListPreferences";
 import { CommitTreeBrowser } from "./CommitTreeBrowser";
 import { ChangedFileRow } from "../ChangedFileRow/ChangedFileRow";

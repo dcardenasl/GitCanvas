@@ -10,7 +10,7 @@ import type {
 import { errorKind } from "../../lib/errors";
 import { getFileContent, getWorktreeFileContent } from "../../lib/ipc";
 import { useCommitDiff } from "../../state/diff";
-import { useSession } from "../../state/session";
+import { useNavigation, useNavigationActions } from "../../state/workspace";
 import { useWorktreeFileDiff, useWorktreeSnapshot } from "../../state/worktree";
 import { queryKeys } from "../../state/queryKeys";
 import { shortId } from "../CommitTable/format";
@@ -44,9 +44,9 @@ type Mode = "diff" | "file";
 export function FileDiffView(props: FileDiffViewProps) {
   const { t } = useTranslation(["files", "common"]);
   const { repositoryPath, path } = props;
-  const selectFile = useSession((state) => state.selectFile);
-  const expandPath = useSession((state) => state.expandedFilePath);
-  const expandFile = useSession((state) => state.expandFile);
+
+  const { selectFile, expandFile } = useNavigationActions();
+  const expandPath = useNavigation((navigation) => navigation.expandedFilePath);
   const [wrap, setWrap] = useState(true);
   const [choice, setChoice] = useState<{
     key: string;

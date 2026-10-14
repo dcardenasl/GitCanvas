@@ -102,6 +102,12 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
     ["o/r"],
   ],
   [
+    "getWorkspaceLimits",
+    () => ipc.getWorkspaceLimits(),
+    "getWorkspaceLimits",
+    [],
+  ],
+  [
     "syncOpenRepositories",
     () => ipc.syncOpenRepositories({ revision: 1, paths: [PATH] }),
     "syncOpenRepositories",

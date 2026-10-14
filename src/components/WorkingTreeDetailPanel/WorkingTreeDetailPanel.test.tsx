@@ -16,7 +16,8 @@ const { getWorktreeSnapshot } = mockIpc;
 vi.mock("../../lib/ipc", () => mockIpc);
 
 const { WorkingTreeDetailPanel } = await import("./WorkingTreeDetailPanel");
-const { useSession } = await import("../../state/session");
+const { resetWorkspace, patchNavigation, activeNavigation } =
+  await import("../../test/workspace");
 const { useFileListPreferences } =
   await import("../../state/fileListPreferences");
 
@@ -73,9 +74,8 @@ beforeEach(() => {
   getWorktreeSnapshot.mockReset();
   localStorage.removeItem("gitcanvas.file-list-view");
   useFileListPreferences.setState({ view: "path" });
-  useSession.setState({
-    selection: { kind: "history" },
-  });
+  resetWorkspace();
+  patchNavigation({ selection: { kind: "history" } });
 });
 afterEach(cleanup);
 
@@ -106,7 +106,7 @@ describe("WorkingTreeDetailPanel", () => {
     });
     await userEvent.click(within(list).getByRole("button"));
 
-    expect(useSession.getState().selection).toEqual({
+    expect(activeNavigation().selection).toEqual({
       kind: "worktree",
       side: "staged",
       filePath: "src/app.ts",
@@ -137,7 +137,7 @@ describe("WorkingTreeDetailPanel", () => {
     expect(within(tree).getByText("Button.tsx")).toBeInstanceOf(HTMLElement);
 
     await userEvent.click(within(tree).getByText("Button.tsx"));
-    expect(useSession.getState().selection).toEqual({
+    expect(activeNavigation().selection).toEqual({
       kind: "worktree",
       side: "unstaged",
       filePath: "src/components/Button.tsx",
