@@ -19,6 +19,22 @@ const getStartupRepository =
   vi.fn<() => Promise<{ path: string; name: string } | null>>();
 const watchRepository = vi.fn<(request: unknown) => Promise<null>>();
 const syncOpenRepositories = vi.fn<(request: unknown) => Promise<null>>();
+const openRepository =
+  vi.fn<(path: string) => Promise<{ path: string; name: string }>>();
+
+type DragDrop =
+  | { type: "enter" | "over"; paths: string[] }
+  | { type: "drop"; paths: string[] }
+  | { type: "leave" };
+let dragDrop: (event: { payload: DragDrop }) => void = () => undefined;
+vi.mock("@tauri-apps/api/webview", () => ({
+  getCurrentWebview: () => ({
+    onDragDropEvent: (handler: typeof dragDrop) => {
+      dragDrop = handler;
+      return Promise.resolve(() => undefined);
+    },
+  }),
+}));
 
 vi.mock("../../lib/ipc", () => ({
   getCommits: () => getCommits(),
@@ -58,7 +74,7 @@ vi.mock("../../lib/ipc", () => ({
   syncOpenRepositories: (request: unknown) => syncOpenRepositories(request),
   setMenuLabels: () => Promise.resolve(null),
   onMenuAction: () => Promise.resolve(() => undefined),
-  openRepository: (path: string) => Promise.resolve({ path, name: "repo" }),
+  openRepository: (path: string) => openRepository(path),
   listGithubRepositories: () =>
     Promise.resolve({ repositories: [], truncated: false }),
   onCloneProgress: () => Promise.resolve(() => undefined),
@@ -142,6 +158,9 @@ beforeEach(() => {
   getStartupRepository.mockResolvedValue(null);
   watchRepository.mockResolvedValue(null);
   syncOpenRepositories.mockResolvedValue(null);
+  openRepository.mockImplementation((path) =>
+    Promise.resolve({ path, name: "repo" }),
+  );
   getCommitDiff.mockResolvedValue({
     commit_id: COMMIT.id,
     parent_id: null,
@@ -522,6 +541,79 @@ describe("AppShell toolbar", () => {
     expect(
       await screen.findByText(/No se pudo copiar \/tmp\/repo al portapapeles/),
     ).toBeInstanceOf(HTMLElement);
+  });
+
+  describe("dropping folders on the window", () => {
+    it("says where a dragged folder would land, and stops when it leaves", async () => {
+      renderShell();
+      await screen.findByRole("tablist");
+
+      act(() => {
+        dragDrop({ payload: { type: "enter", paths: ["/tmp/other"] } });
+      });
+      expect(
+        await screen.findByText(
+          "Suelta una carpeta para abrirla como proyecto",
+        ),
+      ).toBeInstanceOf(HTMLElement);
+
+      act(() => {
+        dragDrop({ payload: { type: "leave" } });
+      });
+      expect(
+        screen.queryByText("Suelta una carpeta para abrirla como proyecto"),
+      ).toBeNull();
+    });
+
+    it("opens each dropped folder as a project, through the backend", async () => {
+      renderShell();
+      await screen.findByRole("tablist");
+
+      act(() => {
+        dragDrop({
+          payload: { type: "drop", paths: ["/tmp/one", "/tmp/two"] },
+        });
+      });
+
+      await waitFor(() => {
+        expect(
+          useWorkspace.getState().tabs.map((tab) => tab.repository.path),
+        ).toEqual(["/tmp/repo", "/tmp/one", "/tmp/two"]);
+      });
+      expect(activeRepository()?.path).toBe("/tmp/two");
+      expect(
+        screen.queryByText("Suelta una carpeta para abrirla como proyecto"),
+      ).toBeNull();
+    });
+
+    it("works from the start screen too", async () => {
+      resetWorkspace();
+      renderShell();
+      await screen.findByText("Ningún repositorio abierto");
+
+      act(() => {
+        dragDrop({ payload: { type: "drop", paths: ["/tmp/one"] } });
+      });
+
+      await waitFor(() => {
+        expect(activeRepository()?.path).toBe("/tmp/one");
+      });
+    });
+
+    it("reports a dropped path the backend refuses, without opening it", async () => {
+      renderShell();
+      await screen.findByRole("tablist");
+      openRepository.mockRejectedValueOnce(new Error("not a repository"));
+
+      act(() => {
+        dragDrop({ payload: { type: "drop", paths: ["/tmp/plain.txt"] } });
+      });
+
+      expect((await screen.findByRole("alert")).textContent).toContain(
+        "not a repository",
+      );
+      expect(useWorkspace.getState().tabs).toHaveLength(1);
+    });
   });
 
   it("offers to pin the branch list while a file is open", async () => {

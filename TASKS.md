@@ -511,9 +511,16 @@ Origen: auditoría del 2026-10-14 sobre `dev` (706 pruebas, matriz remota todav�
       `pathCopyFailed`), no un silencio.
       → `feat(tabs): add a tab context menu with close others and copy path`
 
-- [ ] **HRD-8 — Soltar una carpeta en la ventana.** La ruta soltada pasa por `openProjectAt`,
+- [x] **HRD-8 — Soltar una carpeta en la ventana.** La ruta soltada pasa por `openProjectAt`,
       que la valida en el backend como cualquier otra; nada soltado concede acceso.
       → `feat(workspace): open a folder dropped on the window`
+      *Decisiones al implementar:* el evento de arrastre del SO llega con `getCurrentWebview().onDragDropEvent`
+      (basta el permiso `core:event:default`); `useDroppedFolders` devuelve si hay un arrastre encima y
+      `AppShell` muestra un aviso mientras tanto. `openDropped` abre las rutas en orden y se detiene al
+      llegar al límite de pestañas; se ignora mientras otra apertura está en curso. La instancia de
+      `UnreachableProject` no escucha soltados. Si el registro del listener falla, la app sigue sin
+      esa función. *Observación:* el E2E `local-changes` falló una vez tras una compilación nueva (también
+      en WS-7) y no se reprodujo en cuatro ejecuciones posteriores, ni con los logs capturados.
 
 - [ ] **HRD-9 — CHANGELOG y documentación.** Entradas en términos de lo que nota la persona;
       ADR 0006, ARCHITECTURE y DESIGN al día con la salida con plazo, las porciones del store y

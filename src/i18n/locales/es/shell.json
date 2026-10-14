@@ -1,4 +1,7 @@
 {
+  "drop": {
+    "hint": "Suelta una carpeta para abrirla como proyecto"
+  },
   "empty": {
     "clone": "Clonar de GitHub",
     "hint": "Abre un repositorio para ver su historial de ramas y commits."

@@ -28,14 +28,27 @@ export interface OpenFolder {
   readonly error: { readonly cause: unknown } | null;
   /** Asks for a folder and opens it as a project. */
   readonly choose: () => void;
+  /**
+   * Opens folders the person dropped on the window as projects, in order,
+   * until the tab limit stops it. Ignored while another open is under way.
+   */
+  readonly openDropped: (paths: readonly string[]) => void;
   readonly dismissError: () => void;
 }
 
 /**
- * Opens a local folder as a project through the native folder picker.
+ * Opens local folders as projects: through the native folder picker, or from
+ * folders dropped on the window.
  *
  * Shared by everything that offers to open a folder, so the guard against a
- * second panel and the failure handling exist once.
+ * second panel, the busy state and the failure handling exist once. A path from
+ * a drop is no more trusted than one from the picker: either way the backend
+ * decides whether it is a repository, and nothing is opened until it says so.
+ *
+ * @param onSelected - What to do with a folder the picker returned; by default
+ * open it as a project. Dropped folders always open as projects, whatever this
+ * is: a view that uses the picker for something else, such as locating a moved
+ * project, does not listen for drops.
  */
 export function useOpenFolder(
   onSelected: (path: string) => Promise<unknown> = openProjectAt,
@@ -44,7 +57,7 @@ export function useOpenFolder(
   const [phase, setPhase] = useState<OpenFolderPhase>("idle");
 
   /*
-   * Guards against a second panel.
+   * Guards against a second panel, or a drop on top of one.
    *
    * macOS takes a noticeable moment to bring up NSOpenPanel the first time,
    * and a second click during that gap stacks a second panel behind the first.
@@ -53,40 +66,12 @@ export function useOpenFolder(
    */
   const inFlight = useRef(false);
 
-  async function run() {
+  async function run(work: () => Promise<void>) {
     if (inFlight.current) return;
     inFlight.current = true;
-
     setError(null);
-    setPhase("choosing");
-
     try {
-      /*
-       * Wait for the spinner to actually reach the screen.
-       *
-       * The dialog plugin builds the panel with `run_on_main_thread`, and on
-       * macOS the WebView paints on that same thread. Setting the busy state
-       * and calling straight into the dialog means the thread is taken before
-       * the browser ever renders it, so the button sits there looking dead for
-       * the whole wait. Yielding for a paint first is what makes the state
-       * visible at all.
-       */
-      await afterPaint();
-
-      // The key is omitted rather than set to undefined: with
-      // `exactOptionalPropertyTypes`, an explicit undefined is a different
-      // thing from an absent option, and the plugin wants the latter.
-      const remembered = lastDirectory();
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        ...(remembered === undefined ? {} : { defaultPath: remembered }),
-      });
-      if (typeof selected !== "string") return;
-
-      setPhase("opening");
-      rememberDirectory(selected);
-      await onSelected(selected);
+      await work();
     } catch (cause) {
       setError({ cause });
     } finally {
@@ -97,11 +82,53 @@ export function useOpenFolder(
     }
   }
 
+  async function chooseFolder() {
+    setPhase("choosing");
+    /*
+     * Wait for the spinner to actually reach the screen.
+     *
+     * The dialog plugin builds the panel with `run_on_main_thread`, and on
+     * macOS the WebView paints on that same thread. Setting the busy state
+     * and calling straight into the dialog means the thread is taken before
+     * the browser ever renders it, so the button sits there looking dead for
+     * the whole wait. Yielding for a paint first is what makes the state
+     * visible at all.
+     */
+    await afterPaint();
+
+    // The key is omitted rather than set to undefined: with
+    // `exactOptionalPropertyTypes`, an explicit undefined is a different
+    // thing from an absent option, and the plugin wants the latter.
+    const remembered = lastDirectory();
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      ...(remembered === undefined ? {} : { defaultPath: remembered }),
+    });
+    if (typeof selected !== "string") return;
+
+    setPhase("opening");
+    rememberDirectory(selected);
+    await onSelected(selected);
+  }
+
+  async function openAll(paths: readonly string[]) {
+    setPhase("opening");
+    for (const path of paths) {
+      // At the limit nothing more can open, and the notice already says so.
+      if ((await openProjectAt(path)) === "limit") return;
+    }
+  }
+
   return {
     phase,
     error,
     choose: () => {
-      void run();
+      void run(chooseFolder);
+    },
+    openDropped: (paths) => {
+      if (paths.length === 0) return;
+      void run(() => openAll(paths));
     },
     dismissError: () => {
       setError(null);

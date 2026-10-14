@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`AppShell`** — drop a folder onto the window to open it as a project in a new tab.
 - **`TabBar`** — right-click (or the menu key) on a tab to close it, close the other tabs, close
   the tabs to its right, or copy its path.
 - **`TabBar`** — reopens the most recently closed tab with its selection and search

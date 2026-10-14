@@ -266,3 +266,21 @@
   overflow-wrap: anywhere;
   color: var(--ink-faint);
 }
+
+/* Says where a dragged folder would land. It lets the pointer through, so the
+   drop itself is still delivered by the system to the window. */
+.app-shell__drop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: var(--space-3);
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--backdrop);
+  color: var(--ink);
+  font-size: var(--font-size-body-wide);
+  pointer-events: none;
+}

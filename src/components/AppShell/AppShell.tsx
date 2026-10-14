@@ -44,6 +44,7 @@ import { invalidateLive } from "../../state/queryKeys";
 import { UnreachableProject } from "./UnreachableProject";
 import { HistoryView } from "./HistoryView";
 import { RepositoryPicker } from "./RepositoryPicker";
+import { useDroppedFolders } from "./useDroppedFolders";
 import { useOpenFolder } from "./useOpenFolder";
 
 import "./AppShell.css";
@@ -88,6 +89,7 @@ export function AppShell() {
   const verification = useVerifyActiveProject();
   useProjectCache();
   const folder = useOpenFolder();
+  const dragging = useDroppedFolders(folder.openDropped);
   useTabShortcuts(folder.choose);
   const nativeMenu = useNativeMenu(folder.choose);
 
@@ -153,6 +155,11 @@ export function AppShell() {
 
   return (
     <div className="app-shell">
+      {dragging && (
+        <div className="app-shell__drop" role="status">
+          {t("drop.hint")}
+        </div>
+      )}
       <div className="app-shell__chrome">
         {repository !== null && <TabBar folder={folder} />}
         <header className="toolbar">
