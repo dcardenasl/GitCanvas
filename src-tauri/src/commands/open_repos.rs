@@ -20,12 +20,15 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use gitcanvas_core::{error::AppError, github::cache};
+use gitcanvas_core::{
+    error::AppError,
+    github::cache,
+    workspace::{MAX_PATH_BYTES, MAX_TABS},
+};
 use serde::Deserialize;
 use specta::Type;
 
 use super::runtime::read;
-use crate::limits::{MAX_OPEN_TABS, MAX_PATH_BYTES};
 
 /// The interface's complete set of open repositories at one moment.
 #[derive(Debug, Clone, Deserialize, Type)]
@@ -108,9 +111,9 @@ impl OpenRepos {
 /// folder vanished has nothing on disk left to protect, and it must not make
 /// the report about the other tabs fail.
 fn canonical_roots(paths: &[String]) -> Result<BTreeSet<PathBuf>, AppError> {
-    if paths.len() > MAX_OPEN_TABS {
+    if paths.len() > MAX_TABS {
         return Err(AppError::InvalidInput(format!(
-            "at most {MAX_OPEN_TABS} repositories can be open at once"
+            "at most {MAX_TABS} repositories can be open at once"
         )));
     }
     if paths.iter().any(|path| path.len() > MAX_PATH_BYTES) {
@@ -150,8 +153,10 @@ mod tests {
     use std::fs;
 
     use super::{canonical_roots, OpenRepos};
-    use crate::limits::{MAX_OPEN_TABS, MAX_PATH_BYTES};
-    use gitcanvas_core::error::AppError;
+    use gitcanvas_core::{
+        error::AppError,
+        workspace::{MAX_PATH_BYTES, MAX_TABS},
+    };
 
     fn roots(paths: &[&std::path::Path]) -> std::collections::BTreeSet<std::path::PathBuf> {
         let strings: Vec<String> = paths
@@ -225,13 +230,13 @@ mod tests {
 
     #[test]
     fn too_many_repositories_are_refused() {
-        let paths = vec!["/".to_owned(); MAX_OPEN_TABS + 1];
+        let paths = vec!["/".to_owned(); MAX_TABS + 1];
 
         assert!(matches!(
             canonical_roots(&paths),
             Err(AppError::InvalidInput(_))
         ));
-        assert!(canonical_roots(&paths[..MAX_OPEN_TABS]).is_ok());
+        assert!(canonical_roots(&paths[..MAX_TABS]).is_ok());
     }
 
     #[test]

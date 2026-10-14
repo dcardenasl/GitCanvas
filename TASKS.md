@@ -50,7 +50,7 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       rutas inexistentes; reemplazo del conjunto; bindings regenerados sin deriva.
       → `feat(workspace): protect every open clone from cache retention`
 
-- [ ] **WS-2 — Almacén persistente del workspace en Rust.** `workspace.json` en el directorio de
+- [x] **WS-2 — Almacén persistente del workspace en Rust.** `workspace.json` en el directorio de
       datos: esquema con `version`, pestañas (ruta, orden, navegación), pestaña activa,
       favoritos y recientes (máximo 20). Un único escritor (cola serializada), escritura a
       archivo temporal en el mismo directorio y reemplazo atómico, límites de tamaño, de
@@ -64,6 +64,19 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       escriba la sesión real del usuario.
       *Pruebas:* ida y vuelta, escritura interrumpida (el original sigue válido), corrupción,
       versión desconocida, límites, escrituras concurrentes, sustitución del directorio.
+      *Decisiones al implementar:* el almacén vive en `gitcanvas-core` (`workspace/`), que ya aloja
+      la caché de clones y las credenciales y sigue sin depender de Tauri; los límites (30
+      pestañas, 20 recientes, 200 favoritos, 4096 bytes por ruta) son constantes de ese módulo y
+      `load_workspace` los devuelve para que la interfaz no guarde otra copia. `save_workspace`
+      lleva una `revision` y el almacén omite la que sea más antigua que la última aplicada, igual
+      que `sync_open_repositories`, porque dos guardados pueden llegar en otro orden. Los datos
+      ilegibles se apartan en `workspace.json.corrupt-<fecha>` (se conservan los 3 más
+      recientes) y se informan con `recovery`.
+      *Hallazgo durante la ejecución:* `cargo deny` empezó a fallar por cuatro avisos nuevos
+      (RUSTSEC-2026-0346 a 0349) en `rustls 0.23.45`, la librería TLS de las llamadas a GitHub; se
+      corrigió aparte con `chore(deps): update rustls to 0.23.46 for four tls advisories`
+      (`428b2ad`). Dos veces se coló en un commit una eliminación ya preparada en el índice:
+      antes de cada commit se revisa `git diff --cached --stat`.
       → `feat(workspace): persist tabs, favorites and recents in a versioned store`
 
 - [ ] **WS-3 — Workspace en el frontend.** `state/workspace.ts` reemplaza la sesión global:

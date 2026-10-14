@@ -16,7 +16,7 @@
 //! depend on Tauri.
 
 mod commands;
-mod limits;
+mod data_dir;
 mod logging;
 mod resources;
 mod warmup;
@@ -74,6 +74,8 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::actions::push_current_branch,
             commands::watch::watch_repository,
             commands::watch::unwatch_repository,
+            commands::workspace::load_workspace,
+            commands::workspace::save_workspace,
         ])
         .events(collect_events![
             commands::github::CloneProgressEvent,
@@ -151,7 +153,10 @@ pub fn run() {
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             use tauri::Manager;
-            let data_dir = app.path().app_data_dir()?;
+            let data_dir = data_dir::resolve(
+                std::env::var_os(data_dir::DATA_DIR_ENV),
+                app.path().app_data_dir()?,
+            )?;
             let guard = logging::initialize(&data_dir.join("logs"))?;
             app.manage(guard);
 
@@ -159,6 +164,9 @@ pub fn run() {
             // commands themselves stay free of `AppHandle`, which is what lets
             // the typed builder collect them without a runtime parameter.
             app.manage(commands::github::CacheRoot(data_dir.join("clones")));
+            app.manage(std::sync::Arc::new(
+                gitcanvas_core::workspace::store::WorkspaceStore::new(data_dir),
+            ));
 
             let handle = app.handle().clone();
             app.manage(commands::watch::ActiveWatch::default());

@@ -211,6 +211,24 @@ if (ownedFixture !== null) {
 }
 export const e2eRepository = fixture;
 
+/**
+ * Where the application keeps its data for this run.
+ *
+ * The application restores its workspace from this directory and writes to it,
+ * so a run against the real one would open the tester's own tabs and overwrite
+ * them. A directory named after the fixture is the same in the launcher and in
+ * every worker without a second hand-off, and unique per run for an owned
+ * fixture. Only the launcher clears it: a worker evaluating this file after the
+ * application started must not wipe what the application already wrote.
+ */
+const e2eDataDir = path.join(
+  os.tmpdir(),
+  `gitcanvas-e2e-data-${path.basename(fixture)}`,
+);
+if (process.env.WDIO_WORKER_ID === undefined) {
+  fs.rmSync(e2eDataDir, { recursive: true, force: true });
+}
+
 export const config: WebdriverIO.Config = {
   runner: "local",
   tsConfigPath: "./tsconfig.e2e.json",
@@ -244,7 +262,10 @@ export const config: WebdriverIO.Config = {
         appArgs: [fixture],
         // The harness puts its own flags ahead of `appArgs`, and an environment
         // variable cannot be reordered.
-        env: { GITCANVAS_REPOSITORY: fixture },
+        env: {
+          GITCANVAS_REPOSITORY: fixture,
+          GITCANVAS_DATA_DIR: e2eDataDir,
+        },
       },
     ],
   ],
@@ -310,5 +331,6 @@ export const config: WebdriverIO.Config = {
   onComplete() {
     // Only remove what this file created; never a repository someone passed in.
     if (ownedFixture !== null) removeOwnedFixture(ownedFixture);
+    fs.rmSync(e2eDataDir, { recursive: true, force: true });
   },
 };

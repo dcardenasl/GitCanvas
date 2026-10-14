@@ -92,6 +92,15 @@ export const commands = {
 	watchRepository: (request: WatchRequest) => typedError<null, AppError>(__TAURI_INVOKE("watch_repository", { request })),
 	/**  Stops watching, if anything was being watched. */
 	unwatchRepository: (generation: number) => typedError<null, AppError>(__TAURI_INVOKE("unwatch_repository", { generation })),
+	/**
+	 *  Reads the saved workspace, or an empty one when none is usable.
+	 *
+	 *  A stored workspace that cannot be understood is set aside rather than
+	 *  deleted, and the result says so.
+	 */
+	loadWorkspace: () => typedError<LoadedWorkspace, AppError>(__TAURI_INVOKE("load_workspace")),
+	/**  Saves the complete workspace, replacing the stored one atomically. */
+	saveWorkspace: (request: SaveWorkspaceRequest) => typedError<null, AppError>(__TAURI_INVOKE("save_workspace", { request })),
 };
 
 /** Events */
@@ -407,6 +416,16 @@ export type HistoryRequest = {
 	roots: string[] | null,
 };
 
+/**  What loading produced. */
+export type LoadedWorkspace = {
+	/**  The workspace to start from: empty when there was nothing usable. */
+	workspace: Workspace,
+	/**  The bounds the workspace is held to. */
+	limits: WorkspaceLimits,
+	/**  Set when a stored workspace had to be set aside. */
+	recovery: WorkspaceRecovery | null,
+};
+
 /**  The interface's complete set of open repositories at one moment. */
 export type OpenRepositoriesRequest = {
 	/**
@@ -450,6 +469,15 @@ remote: string } |
 /**  Name of the branch the remote rejected. */
 branch: string };
 
+/**  Why a stored workspace was set aside. */
+export type RecoveryKind =
+/**  Not valid JSON, not the expected shape, or breaking a workspace rule. */
+"Corrupt" |
+/**  Written by a version of the application this one does not understand. */
+"UnsupportedVersion" |
+/**  Larger than the largest file this build reads. */
+"TooLarge";
+
 export type RepositoryChangedEvent = {
 	path: string,
 	generation: number,
@@ -469,6 +497,48 @@ export type RepositoryInfo = {
 	name: string,
 };
 
+/**  A workspace to persist, numbered so a late arrival cannot undo a newer save. */
+export type SaveWorkspaceRequest = {
+	/**
+	 *  Increases with every save the interface sends. A save no newer than the
+	 *  last one applied is skipped.
+	 */
+	revision: number,
+	/**  The complete workspace to store. */
+	workspace: Workspace,
+};
+
+/**  What a tab was showing when it was saved. */
+export type SavedSelection =
+/**  The commit history itself. */
+{ kind: "history" } |
+/**  A commit and, optionally, one of its files. */
+{ kind: "commit";
+/**  Full id of the selected commit. */
+commit_id: string;
+/**  Repository-relative path of the selected file, if any. */
+file_path: string | null;
+/**  Whether the file is shown whole rather than as a diff. */
+snapshot: boolean } |
+/**  One side of the working tree and, optionally, one of its files. */
+{ kind: "worktree";
+/**  The side shown. */
+side: WorktreeSide;
+/**  Repository-relative path of the selected file, if any. */
+file_path: string | null };
+
+/**  One open project and how its view was left. */
+export type TabRecord = {
+	/**  Canonical working-tree root of the project. */
+	path: string,
+	/**  The selection to return to. */
+	selection: SavedSelection,
+	/**  Full id of the commit the history was scrolled to, if any. */
+	history_anchor: string | null,
+	/**  Repository-relative paths of the folders collapsed in the file lists. */
+	collapsed_folders: string[],
+};
+
 /**  A tag may refer to any Git object, so a commit target is explicitly optional. */
 export type TagInfo = {
 	/**  Tag name for display. */
@@ -484,6 +554,41 @@ export type TagInfo = {
 export type WatchRequest = {
 	path: string,
 	generation: number,
+};
+
+/**  Everything the application remembers between runs about its projects. */
+export type Workspace = {
+	/**  Open projects, in tab order. */
+	tabs: TabRecord[],
+	/**  Path of the active tab; it must be one of `tabs`. */
+	active: string | null,
+	/**  Favorite projects, unordered: the interface orders them for display. */
+	favorites: string[],
+	/**  Recent projects, most recently used first. */
+	recents: string[],
+};
+
+/**
+ *  The bounds the workspace is held to, sent to the interface so it never keeps
+ *  a second copy of them.
+ */
+export type WorkspaceLimits = {
+	/**  Most tabs open at once. */
+	max_tabs: number,
+	/**  Most favorites kept. */
+	max_favorites: number,
+	/**  Most recents kept. */
+	max_recents: number,
+};
+
+/**  A stored workspace that was set aside rather than loaded. */
+export type WorkspaceRecovery = {
+	/**  What was wrong with it. */
+	kind: RecoveryKind,
+	/**  The precise cause, in English, for a bug report. */
+	detail: string,
+	/**  Where the original now lives. */
+	backup: string,
 };
 
 /**

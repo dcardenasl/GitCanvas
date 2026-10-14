@@ -16,6 +16,7 @@ notify.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 specta.workspace = true
+tempfile = "3"
 thiserror.workspace = true
 ureq.workspace = true
 url.workspace = true
@@ -28,7 +29,6 @@ same-file = "1"
 # boundary the workspace exists to enforce.
 
 [dev-dependencies]
-tempfile = "3"
 # Deterministic mtimes, so LRU order is set by the test rather than by how fast
 # the machine happens to create directories.
 filetime = "0.2"
