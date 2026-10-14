@@ -32,9 +32,6 @@ GitCanvas is the opposite trade: small, fast, free, and focused on reading histo
 
 ## Features
 
-The workspace features below are implemented on `dev`; the published installers still
-correspond to v0.2.0 until the next release.
-
 - **Project tabs and session restoration.** Keep independent selections, search and
   navigation across up to thirty projects. Reorder by pointer or keyboard, favorite a
   project and reopen it from the start screen or opening menu. Saved tabs validate on
