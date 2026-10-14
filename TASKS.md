@@ -416,6 +416,57 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       en Linux). No se relajan lints ni políticas para esta entrega.
       → `docs: close the workspace series and record the v0.3.0 verification`
 
+### Endurecimiento previo a v0.3.0
+
+Origen: auditoría del 2026-10-14 sobre `dev` (706 pruebas, matriz remota todavía sin correr).
+
+- [ ] **HRD-1 — Salida con plazo.** Si la interfaz no responde, cerrar la ventana (botón rojo o
+      ⌘Q) no debe dejar la aplicación colgada. La interfaz confirma la petición de cierre con un
+      comando que no pasa por las compuertas (una clonación larga las ocupa) y, si no llega en el
+      plazo, el backend destruye la ventana. Un plazo vencido deja constancia en el registro.
+      → `fix(lifecycle): destroy the window when the interface never answers a close request`
+
+- [ ] **HRD-2 — Tabla de historial a ancho mínimo.** A 940×600 con el inspector abierto, hash y
+      fecha desplazan el resumen del commit hasta hacerlo desaparecer. La tabla decide por su
+      propio ancho (consulta de contenedor), no por el de la ventana: el resumen conserva un
+      mínimo y las columnas secundarias ceden antes.
+      → `fix(history): keep the commit summary readable when the table is narrow`
+
+- [ ] **HRD-3 — Reemplazo de clones sin carrera.** La decisión de reemplazar una entrada de la
+      caché lee las pestañas abiertas y la abre después otra pestaña. El registro de abiertos y
+      el reemplazo se coordinan con el mismo cierre de entrada, de modo que abrir y reemplazar no
+      se cruzan.
+      → `fix(clone): make the replace decision and tab registration mutually exclusive`
+
+- [ ] **HRD-4 — Dividir el store del workspace.** `state/workspace.ts` mezcla pestañas,
+      favoritos, recientes, errores de almacenamiento, vista de biblioteca y avisos. Se separa
+      por responsabilidad, con un único punto de composición y sin cambiar su contrato.
+      → `refactor(workspace): split the workspace store into focused slices`
+
+- [ ] **HRD-5 — Ruido visual y menú «+».** La marca «sin comprobar» sale de las pestañas
+      restauradas (el estado sigue en el tooltip y en la verificación); el menú «+» agrupa sus
+      acciones y muestra el atajo de Abrir.
+      → `refactor(tabs): quiet the unverified mark and group the open menu`
+
+- [ ] **HRD-6 — Reabrir la pestaña cerrada.** Una pila acotada de pestañas cerradas con su
+      navegación; ⌘/Ctrl+Mayús+T la saca. El menú nativo de macOS la ofrece también.
+      → `feat(workspace): reopen the most recently closed tab`
+
+- [ ] **HRD-7 — Menú contextual de pestaña.** Cerrar, cerrar las demás, cerrar las de la derecha
+      y copiar la ruta; también con la tecla de menú. «Mostrar en el explorador» queda fuera a
+      propósito: exigiría lanzar procesos (prohibido por Clippy) o ampliar los permisos del
+      webview con un plugin.
+      → `feat(tabs): add a tab context menu with close others and copy path`
+
+- [ ] **HRD-8 — Soltar una carpeta en la ventana.** La ruta soltada pasa por `openProjectAt`,
+      que la valida en el backend como cualquier otra; nada soltado concede acceso.
+      → `feat(workspace): open a folder dropped on the window`
+
+- [ ] **HRD-9 — CHANGELOG y documentación.** Entradas en términos de lo que nota la persona;
+      ADR 0006, ARCHITECTURE y DESIGN al día con la salida con plazo, las porciones del store y
+      los casos de uso nuevos.
+      → `docs(changelog): describe the unreleased changes in terms of what people notice`
+
 #### Decisiones cerradas (2026-10-14)
 
 1. **El idioma, el tema y los tamaños de panel siguen en `localStorage`.** El ADR 0004 exige
