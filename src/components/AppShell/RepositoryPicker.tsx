@@ -2,10 +2,9 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { openRepository } from "../../lib/ipc";
 import { afterPaint } from "../../lib/paint";
 import { safeStorage } from "../../lib/safeStorage";
-import { useWorkspace } from "../../state/workspace";
+import { openProjectAt } from "../../state/openProject";
 import { ErrorMessage } from "../ErrorMessage";
 
 /** Where the picker last opened, so it starts there next time. */
@@ -27,7 +26,6 @@ type Phase = "idle" | "choosing" | "opening";
 /** Opens a local repository through the native folder picker. */
 export function RepositoryPicker() {
   const { t } = useTranslation("shell");
-  const openProject = useWorkspace((state) => state.openProject);
   // The failure itself, not its text: it is translated where it is shown, so
   // it follows a language change instead of staying in the old one.
   const [error, setError] = useState<{ readonly cause: unknown } | null>(null);
@@ -76,7 +74,7 @@ export function RepositoryPicker() {
 
       setPhase("opening");
       rememberDirectory(selected);
-      openProject(await openRepository(selected));
+      await openProjectAt(selected);
     } catch (cause) {
       setError({ cause });
     } finally {

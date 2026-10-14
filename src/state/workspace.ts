@@ -47,6 +47,11 @@ interface WorkspaceState {
   readonly limits: WorkspaceLimits | null;
   /** The last thing worth telling the person, until they dismiss it. */
   readonly notice: WorkspaceNotice | null;
+  /**
+   * Whether the clone-from-GitHub view is showing. It belongs to the
+   * application, not to a tab: opening it changes no project's state.
+   */
+  readonly githubOpen: boolean;
   /** Records the backend's bounds. */
   setLimits: (limits: WorkspaceLimits) => void;
   /** Opens a project in a new tab, or activates its tab when already open. */
@@ -59,6 +64,8 @@ interface WorkspaceState {
   navigate: (root: string, transition: Transition) => void;
   /** Dismisses the current notice. */
   dismissNotice: () => void;
+  /** Shows or hides the clone-from-GitHub view. */
+  setGitHubOpen: (open: boolean) => void;
 }
 
 /** The tab to activate when `closing` goes away: the next one, else the previous. */
@@ -81,6 +88,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   activeRoot: null,
   limits: null,
   notice: null,
+  githubOpen: false,
 
   setLimits: (limits) => {
     set({ limits });
@@ -144,6 +152,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
 
   dismissNotice: () => {
     set({ notice: null });
+  },
+
+  setGitHubOpen: (githubOpen) => {
+    set({ githubOpen });
   },
 }));
 

@@ -26,6 +26,7 @@ export function resetWorkspace(): void {
     activeRoot: null,
     limits: TEST_LIMITS,
     notice: null,
+    githubOpen: false,
   });
 }
 

@@ -300,6 +300,41 @@ describe("AppShell toolbar", () => {
     });
   });
 
+  it("opens the command-line repository next to the tabs already open", async () => {
+    getStartupRepository.mockResolvedValue({ path: "/tmp/cli", name: "cli" });
+    renderShell();
+
+    await waitFor(() => {
+      expect(activeRepository()).toEqual({ path: "/tmp/cli", name: "cli" });
+    });
+    expect(
+      useWorkspace.getState().tabs.map((tab) => tab.repository.path),
+    ).toEqual(["/tmp/repo", "/tmp/cli"]);
+  });
+
+  it("does not let a tab's own navigation count as the person opening a project", async () => {
+    let finishStartup: (value: { path: string; name: string }) => void = () =>
+      undefined;
+    getStartupRepository.mockReturnValue(
+      new Promise((resolve) => {
+        finishStartup = resolve;
+      }),
+    );
+    renderShell();
+
+    act(() => {
+      navigationActions().selectCommit("a".repeat(40));
+    });
+    await act(async () => {
+      finishStartup({ path: "/tmp/cli", name: "cli" });
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(activeRepository()).toEqual({ path: "/tmp/cli", name: "cli" });
+    });
+  });
+
   it("clears an orphaned reveal selection after history is exhausted", async () => {
     navigationActions().revealCommit("missing-commit");
     renderShell();

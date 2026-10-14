@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/react/shallow";
 
 import { getStartupRepository } from "../../lib/ipc";
 
@@ -45,7 +46,8 @@ export function AppShell() {
   const selectedCommitId = useNavigation(getSelectedCommitId);
   const history = useHistory(repository?.path ?? null);
   const selectedFilePath = useNavigation(getSelectedFilePath);
-  const [showGitHub, setShowGitHub] = useState(false);
+  const showGitHub = useWorkspace((state) => state.githubOpen);
+  const setShowGitHub = useWorkspace((state) => state.setGitHubOpen);
   const layout = useLayout();
   const queryClient = useQueryClient();
 
@@ -58,10 +60,10 @@ export function AppShell() {
   const openProject = useWorkspace((state) => state.openProject);
   const notice = useWorkspace((state) => state.notice);
   const dismissNotice = useWorkspace((state) => state.dismissNotice);
-  const tabs = useWorkspace((state) => state.tabs);
-  const openPaths = useMemo(
-    () => tabs.map((tab) => tab.repository.path),
-    [tabs],
+  // Compared by value: a tab's own navigation changing is not a change of
+  // which projects are open.
+  const openPaths = useWorkspace(
+    useShallow((state) => state.tabs.map((tab) => tab.repository.path)),
   );
   const openSync = useOpenRepositoriesSync(openPaths);
 
@@ -76,21 +78,21 @@ export function AppShell() {
     // `gitcanvas /path/to/repo` opens straight into that repository. Failure is
     // deliberately quiet: the window still opens and the picker is right there,
     // which beats a startup error over an argument the user may have mistyped.
-    if (useWorkspace.getState().tabs.length > 0) return;
-
     let cancelled = false;
-    let tabsChanged = false;
+    let projectsChanged = false;
     const unsubscribe = useWorkspace.subscribe((state, previous) => {
-      if (state.tabs !== previous.tabs) tabsChanged = true;
+      const now = state.tabs.map((tab) => tab.repository.path);
+      const before = previous.tabs.map((tab) => tab.repository.path);
+      if (
+        now.length !== before.length ||
+        now.some((root, i) => root !== before[i])
+      ) {
+        projectsChanged = true;
+      }
     });
     void getStartupRepository()
       .then((startup) => {
-        if (
-          !cancelled &&
-          !tabsChanged &&
-          startup !== null &&
-          useWorkspace.getState().tabs.length === 0
-        ) {
+        if (!cancelled && !projectsChanged && startup !== null) {
           openProject(startup);
         }
       })
@@ -194,7 +196,7 @@ export function AppShell() {
           className="button"
           aria-pressed={showGitHub}
           onClick={() => {
-            setShowGitHub((open) => !open);
+            setShowGitHub(!showGitHub);
           }}
         >
           {t("toolbar.github")}

@@ -101,7 +101,7 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       lo activa pero no se puede volver al primero; `dev` no es publicable hasta entonces.
       → `refactor(workspace): replace the single-repository session with per-tab sessions`
 
-- [ ] **WS-4 — Un solo flujo de apertura.** `openProject(info)` es la única puerta: el selector
+- [x] **WS-4 — Un solo flujo de apertura.** `openProject(info)` es la única puerta: el selector
       nativo, el repositorio de línea de comandos, el clon de GitHub y la restauración. Si la
       raíz ya está abierta, activa su pestaña; dos worktrees del mismo repositorio son pestañas
       distintas; una pestaña nueva va al final. Un repositorio explícito al iniciar se abre y se
@@ -110,6 +110,14 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       de pestañas llama a `sync_open_repositories` (WS-1).
       *Pruebas:* alias y duplicados, worktrees vinculados, apertura desde el clon, inicio con
       argumento y sesión restaurada, sincronización con el backend.
+      *Decisiones al implementar:* `openProject` ya existía desde WS-3 con la reutilización de pestañas
+      y el sincronizador de WS-1 ya enviaba todas las rutas; WS-4 agrega `openProjectAt(path)`
+      (`state/openProject.ts`), la única forma de convertir una carpeta en pestaña, usada por el
+      selector, el clon de GitHub y, al llegar WS-11, la restauración. La pestaña se nombra por la
+      raíz canónica que responde el backend, nunca por el texto recibido. La vista de GitHub pasa
+      al estado del workspace. El repositorio de la línea de comandos se abre siempre junto a las
+      pestañas presentes; solo cede si la persona abrió otro proyecto mientras tanto, y cambiar la
+      navegación de una pestaña no cuenta como eso.
       → `feat(workspace): route every open through one entry that reuses existing tabs`
 
 - [ ] **WS-5 — Estado de vista por proyecto, fuera de los componentes.** Lo que hoy muere al
