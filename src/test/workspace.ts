@@ -27,6 +27,9 @@ export function resetWorkspace(): void {
     limits: TEST_LIMITS,
     notice: null,
     githubOpen: false,
+    favorites: [],
+    recents: [],
+    storageError: null,
   });
 }
 

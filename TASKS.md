@@ -252,7 +252,7 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       esta sesión (`osascript` sin permiso de accesibilidad); verificarlo a mano en WS-17.
       → `feat(workspace): own the macos menu so close tab and open use the standard shortcuts`
 
-- [ ] **WS-11 — Guardar y restaurar la sesión.** Cambios estructurales (abrir, cerrar, reordenar,
+- [x] **WS-11 — Guardar y restaurar la sesión.** Cambios estructurales (abrir, cerrar, reordenar,
       activar) se guardan de inmediato; la navegación con debounce; todo se vacía al cerrar la
       ventana. Se persisten pestañas, orden, activa y navegación; nunca diffs, historiales ni
       operaciones en curso. Al iniciar se carga el almacén y se abre la pestaña activa por el
@@ -263,6 +263,10 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       *Pruebas:* ida y vuelta con el almacén real, restauración con solo la activa validada,
       activación de una restaurada, ráfaga de navegación produce una sola escritura, vaciado al
       cerrar.
+      *Evidencia:* proyección tipada de navegación, escritor serializado con debounce de 300 ms,
+      restauración sin autorización y consultas bloqueadas hasta verificar. Cierre y salida del
+      sistema pasan por el vaciado; si falla, la ventana permanece abierta. Pruebas de ráfagas,
+      cambios durante escritura, fallo y reintento, cierre y restauración; suite frontend y Rust.
       → `feat(workspace): save and restore the session, validating tabs on first use`
 
 - [ ] **WS-12 — Pestañas recuperables y fallos de persistencia visibles.** Ruta desaparecida o

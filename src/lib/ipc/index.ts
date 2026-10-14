@@ -2,6 +2,7 @@
 import { commands, events } from "../../bindings";
 import type {
   AppError,
+  SaveWorkspaceRequest,
   DiffRequest,
   CommitTreeRequest,
   FileContentRequest,
@@ -160,3 +161,9 @@ export const setMenuLabels = (labels: MenuLabels) =>
 
 /** Subscribes to menu items chosen in the menu bar. Returns the unsubscribe function. */
 export const onMenuAction = events.menuActionEvent.listen;
+
+/** Reads the validated durable workspace, preserving damaged data for recovery. */
+export const loadWorkspace = () => result(commands.loadWorkspace());
+/** Replaces the durable workspace with a revision-ordered snapshot. */
+export const saveWorkspace = (request: SaveWorkspaceRequest) =>
+  result(commands.saveWorkspace(request));

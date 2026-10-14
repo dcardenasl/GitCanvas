@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`WorkspaceGate`** — restores project tabs and their saved navigation lazily;
+  a serialized writer saves changes and flushes before closing or quitting.
+
 - **`LineTable`** — colors supported source languages (CSS, JavaScript, JSON, JSX,
   Markdown, HTML, PHP, Rust, TypeScript, TSX) in diffs and whole-file views. It runs in a
   background worker, so a large file never freezes scrolling; unknown or oversized files

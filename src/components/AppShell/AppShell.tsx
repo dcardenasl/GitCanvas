@@ -30,6 +30,7 @@ import {
   useNavigation,
   useNavigationActions,
   useWorkspace,
+  tabOf,
 } from "../../state/workspace";
 import { useGitActions } from "../../state/gitActions";
 import { useNativeMenu } from "../../state/nativeMenu";
@@ -47,17 +48,23 @@ import "./AppShell.css";
 export function AppShell() {
   const { t } = useTranslation(["shell", "common"]);
   const repository = useActiveRepository();
+  const verified = useWorkspace(
+    (state) =>
+      state.activeRoot !== null &&
+      tabOf(state, state.activeRoot)?.verification.status === "verified",
+  );
+  const readableRoot = verified ? (repository?.path ?? null) : null;
   const selection = useNavigation((navigation) => navigation.selection);
   const selectedCommitId = useNavigation(getSelectedCommitId);
-  const history = useHistory(repository?.path ?? null);
+  const history = useHistory(readableRoot);
   const selectedFilePath = useNavigation(getSelectedFilePath);
   const showGitHub = useWorkspace((state) => state.githubOpen);
   const setShowGitHub = useWorkspace((state) => state.setGitHubOpen);
   const layout = useLayout();
   const queryClient = useQueryClient();
 
-  const watcher = useLiveRepository(repository?.path ?? null);
-  const currentBranch = useCurrentBranch(repository?.path ?? null);
+  const watcher = useLiveRepository(readableRoot);
+  const currentBranch = useCurrentBranch(readableRoot);
   const gitActions = useGitActions(repository?.path ?? null);
   const sidebarPinned = useNavigation((navigation) => navigation.sidebarPinned);
   const searchQuery = useNavigation((navigation) => navigation.searchQuery);
@@ -266,6 +273,10 @@ export function AppShell() {
             </button>
           </div>
         </div>
+      ) : !verified ? (
+        <p className="state" role="status">
+          {t("startup.loading")}
+        </p>
       ) : (
         <div
           // Replaced, not updated, when another project is shown, so nothing a

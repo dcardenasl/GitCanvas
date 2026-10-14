@@ -5,8 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithQueryClient } from "../../test/test-utils";
 
-const getWorkspaceLimits = vi.hoisted(() => vi.fn());
-vi.mock("../../lib/ipc", () => ({ getWorkspaceLimits }));
+const { getWorkspaceLimits, loadWorkspace } = vi.hoisted(() => ({
+  getWorkspaceLimits: vi.fn(),
+  loadWorkspace: vi.fn(),
+}));
+vi.mock("../../state/workspaceLifecycle", () => ({
+  useWorkspaceLifecycle: vi.fn(),
+}));
+vi.mock("../../lib/ipc", () => ({ getWorkspaceLimits, loadWorkspace }));
 
 const { WorkspaceGate } = await import("./WorkspaceGate");
 const { useWorkspace } = await import("../../state/workspace");
@@ -15,7 +21,16 @@ const LIMITS = { max_tabs: 30, max_favorites: 200, max_recents: 20 };
 
 beforeEach(() => {
   getWorkspaceLimits.mockReset();
-  useWorkspace.setState({ limits: null });
+  loadWorkspace.mockResolvedValue({
+    workspace: { tabs: [], active: null, favorites: [], recents: [] },
+    recovery: null,
+  });
+  useWorkspace.setState({
+    limits: null,
+    tabs: [],
+    activeRoot: null,
+    storageError: null,
+  });
 });
 afterEach(cleanup);
 
@@ -64,5 +79,29 @@ describe("WorkspaceGate", () => {
     renderGate();
 
     expect(screen.getByText("the application")).toBeInstanceOf(HTMLElement);
+  });
+  it("restores both tabs as unverified before the application can read repositories", async () => {
+    getWorkspaceLimits.mockResolvedValue(LIMITS);
+    loadWorkspace.mockResolvedValue({
+      workspace: {
+        tabs: ["/tmp/alpha", "/tmp/beta"].map((path) => ({
+          path,
+          selection: { kind: "history" },
+          history_anchor: null,
+          collapsed_folders: [],
+        })),
+        active: "/tmp/beta",
+        favorites: ["/tmp/alpha"],
+        recents: [],
+      },
+      recovery: null,
+    });
+    renderGate();
+    await screen.findByText("the application");
+    expect(useWorkspace.getState().activeRoot).toBe("/tmp/beta");
+    expect(
+      useWorkspace.getState().tabs.map((tab) => tab.verification.status),
+    ).toEqual(["unverified", "unverified"]);
+    expect(useWorkspace.getState().favorites).toEqual(["/tmp/alpha"]);
   });
 });

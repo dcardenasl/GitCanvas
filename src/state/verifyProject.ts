@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { openRepository } from "../lib/ipc";
 import { invalidateLive, queryKeys } from "./queryKeys";
 import { branchesQuery, tagsQuery } from "./refs";
-import { VERIFYING } from "./verification";
 import { tabOf, useWorkspace } from "./workspace";
 
 /** What the cached refs say, or `null` when nothing is cached to compare. */
@@ -37,7 +36,10 @@ export async function verifyProject(
   const store = useWorkspace.getState();
   const tab = tabOf(store, root);
   if (tab === null || tab.verification.status === "verifying") return;
-  store.setVerification(root, VERIFYING);
+  const attempt = { status: "verifying" as const };
+  const current = () =>
+    tabOf(useWorkspace.getState(), root)?.verification === attempt;
+  store.setVerification(root, attempt);
 
   try {
     const info = await openRepository(root);
@@ -45,17 +47,21 @@ export async function verifyProject(
       throw new Error(`The project at ${root} now resolves to ${info.path}`);
     }
 
+    if (!current()) return;
     const before = cachedRefs(queryClient, root);
     const [branches, tags] = await Promise.all([
       queryClient.query({ ...branchesQuery(root), staleTime: 0 }),
       queryClient.query({ ...tagsQuery(root), staleTime: 0 }),
     ]);
+    if (!current()) return;
     if (before !== null && before !== JSON.stringify([branches, tags])) {
       await invalidateLive(queryClient, root, "metadata");
     }
     await invalidateLive(queryClient, root, "worktree");
-    useWorkspace.getState().setVerification(root, { status: "verified" });
+    if (current())
+      useWorkspace.getState().setVerification(root, { status: "verified" });
   } catch (error) {
+    if (!current()) return;
     useWorkspace
       .getState()
       .setVerification(root, { status: "unreachable", error });

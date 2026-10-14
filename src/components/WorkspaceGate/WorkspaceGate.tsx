@@ -2,10 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getWorkspaceLimits } from "../../lib/ipc";
+import { getWorkspaceLimits, loadWorkspace, IpcError } from "../../lib/ipc";
+import { useWorkspaceLifecycle } from "../../state/workspaceLifecycle";
 import { queryKeys } from "../../state/queryKeys";
 import { useWorkspace } from "../../state/workspace";
 import { ErrorMessage } from "../ErrorMessage";
+
+function WorkspaceRuntime({ children }: { readonly children: ReactNode }) {
+  useWorkspaceLifecycle();
+  return children;
+}
 
 /**
  * Holds the interface back until the workspace knows its bounds.
@@ -21,15 +27,38 @@ export function WorkspaceGate({ children }: { readonly children: ReactNode }) {
   const setLimits = useWorkspace((state) => state.setLimits);
   const limits = useQuery({
     queryKey: queryKeys.workspaceLimits(),
-    queryFn: getWorkspaceLimits,
+    queryFn: async () => {
+      const [bounds, loaded] = await Promise.all([
+        getWorkspaceLimits(),
+        loadWorkspace().then(
+          (value) => ({ value, error: null }),
+          (error: unknown) => ({ value: null, error }),
+        ),
+      ]);
+      return { bounds, loaded };
+    },
     staleTime: Infinity,
   });
 
   useEffect(() => {
-    if (limits.data !== undefined) setLimits(limits.data);
+    if (limits.data === undefined || useWorkspace.getState().limits !== null)
+      return;
+    const { bounds, loaded } = limits.data;
+    if (loaded.value !== null) {
+      useWorkspace.getState().restore(loaded.value.workspace);
+      if (loaded.value.recovery !== null) {
+        useWorkspace.getState().setStorageError(
+          new IpcError({
+            kind: "InvalidInput",
+            message: `${loaded.value.recovery.detail} (${loaded.value.recovery.backup})`,
+          }),
+        );
+      }
+    } else useWorkspace.getState().setStorageError(loaded.error);
+    setLimits(bounds);
   }, [limits.data, setLimits]);
 
-  if (known) return children;
+  if (known) return <WorkspaceRuntime>{children}</WorkspaceRuntime>;
 
   if (limits.isError) {
     return (

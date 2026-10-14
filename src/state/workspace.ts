@@ -1,12 +1,13 @@
 import { useMemo } from "react";
 import { create } from "zustand";
 
-import type { RepositoryInfo, WorkspaceLimits } from "../bindings";
+import type { RepositoryInfo, Workspace, WorkspaceLimits } from "../bindings";
 import {
   IDLE_GIT_ACTIONS,
   type GitActionState,
   type GitTransition,
 } from "./gitActionState";
+import { restoreTab } from "./workspaceRecords";
 import { VERIFIED, type Verification } from "./verification";
 import {
   clearOrphanedReveal,
@@ -68,6 +69,13 @@ interface WorkspaceState {
   readonly activeRoot: string | null;
   /** The bounds the backend enforces; `null` until they are read at startup. */
   readonly limits: WorkspaceLimits | null;
+  readonly favorites: readonly string[];
+  readonly recents: readonly string[];
+  readonly storageError: { readonly cause: unknown } | null;
+  /** Restores validated records without opening or authorizing their folders. */
+  restore: (workspace: Workspace) => void;
+  /** Reports a persistence failure while keeping the in-memory workspace usable. */
+  setStorageError: (cause: unknown) => void;
   /** The last thing worth telling the person, until they dismiss it. */
   readonly notice: WorkspaceNotice | null;
   /**
@@ -144,6 +152,22 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   limits: null,
   notice: null,
   githubOpen: false,
+  favorites: [],
+  recents: [],
+  storageError: null,
+
+  restore: (workspace) => {
+    set({
+      tabs: workspace.tabs.map(restoreTab),
+      activeRoot: workspace.active ?? workspace.tabs[0]?.path ?? null,
+      favorites: workspace.favorites,
+      recents: workspace.recents,
+    });
+  },
+
+  setStorageError: (cause) => {
+    set({ storageError: cause === null ? null : { cause } });
+  },
 
   setLimits: (limits) => {
     set({ limits });

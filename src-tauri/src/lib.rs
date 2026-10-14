@@ -178,79 +178,96 @@ pub fn run() {
         app_builder = app_builder.plugin(tauri_plugin_wdio_webdriver::init());
     }
 
-    if let Err(error) = app_builder
-        .manage(std::sync::Arc::new(
-            gitcanvas_core::history::HistoryReader::default(),
-        ))
-        .manage(commands::repo_access::AllowedRepos::default())
-        .manage(commands::open_repos::OpenRepos::default())
-        .invoke_handler(builder.invoke_handler())
-        .setup(move |app| {
-            use tauri::Manager;
-            let data_dir = data_dir::resolve(
-                std::env::var_os(data_dir::DATA_DIR_ENV),
-                app.path().app_data_dir()?,
-            )?;
-            let guard = logging::initialize(&data_dir.join("logs"))?;
-            app.manage(guard);
+    if let Err(error) =
+        app_builder
+            .manage(std::sync::Arc::new(
+                gitcanvas_core::history::HistoryReader::default(),
+            ))
+            .manage(commands::repo_access::AllowedRepos::default())
+            .manage(commands::open_repos::OpenRepos::default())
+            .invoke_handler(builder.invoke_handler())
+            .setup(move |app| {
+                use tauri::Manager;
+                let data_dir = data_dir::resolve(
+                    std::env::var_os(data_dir::DATA_DIR_ENV),
+                    app.path().app_data_dir()?,
+                )?;
+                let guard = logging::initialize(&data_dir.join("logs"))?;
+                app.manage(guard);
 
-            // Resolved once, here, where the concrete handle exists. The
-            // commands themselves stay free of `AppHandle`, which is what lets
-            // the typed builder collect them without a runtime parameter.
-            app.manage(commands::github::CacheRoot(data_dir.join("clones")));
-            app.manage(std::sync::Arc::new(
-                gitcanvas_core::workspace::store::WorkspaceStore::new(data_dir),
-            ));
+                // Resolved once, here, where the concrete handle exists. The
+                // commands themselves stay free of `AppHandle`, which is what lets
+                // the typed builder collect them without a runtime parameter.
+                app.manage(commands::github::CacheRoot(data_dir.join("clones")));
+                app.manage(std::sync::Arc::new(
+                    gitcanvas_core::workspace::store::WorkspaceStore::new(data_dir),
+                ));
 
-            let handle = app.handle().clone();
-            app.manage(commands::watch::ActiveWatch::default());
+                let handle = app.handle().clone();
+                app.manage(commands::watch::ActiveWatch::default());
 
-            let watch_handle = app.handle().clone();
-            app.manage(commands::watch::ChangeNotifier(std::sync::Arc::new(
-                move |event: commands::watch::RepositoryChangedEvent| {
-                    use tauri_specta::Event as _;
-                    let _ = event.emit(&watch_handle);
-                },
-            )));
-
-            app.manage(commands::github::ProgressEmitter(std::sync::Arc::new(
-                move |event: commands::github::CloneProgressEvent| {
-                    use tauri_specta::Event as _;
-                    // Best-effort: a dropped progress frame must never fail a
-                    // clone that is otherwise succeeding.
-                    let _ = event.emit(&handle);
-                },
-            )));
-
-            // The menu bar exists only on macOS. Elsewhere the applier accepts
-            // the labels and does nothing, so the interface asks the same way
-            // on every platform.
-            #[cfg(target_os = "macos")]
-            {
-                use tauri_specta::Event as _;
-                let name = app.package_info().name.clone();
-                app.set_menu(menu::to_native(app, &menu::initial_spec(&name))?)?;
-                let applier_handle = app.handle().clone();
-                app.manage(commands::menu::MenuApplier(std::sync::Arc::new(
-                    move |labels| install_menu(&applier_handle, &labels),
+                let watch_handle = app.handle().clone();
+                app.manage(commands::watch::ChangeNotifier(std::sync::Arc::new(
+                    move |event: commands::watch::RepositoryChangedEvent| {
+                        use tauri_specta::Event as _;
+                        let _ = event.emit(&watch_handle);
+                    },
                 )));
-                app.on_menu_event(|app, event| {
-                    if let Some(action) = menu::action_for(event.id().as_ref()) {
-                        let _ = commands::menu::MenuActionEvent { action }.emit(app);
+
+                app.manage(commands::github::ProgressEmitter(std::sync::Arc::new(
+                    move |event: commands::github::CloneProgressEvent| {
+                        use tauri_specta::Event as _;
+                        // Best-effort: a dropped progress frame must never fail a
+                        // clone that is otherwise succeeding.
+                        let _ = event.emit(&handle);
+                    },
+                )));
+
+                // The menu bar exists only on macOS. Elsewhere the applier accepts
+                // the labels and does nothing, so the interface asks the same way
+                // on every platform.
+                #[cfg(target_os = "macos")]
+                {
+                    use tauri_specta::Event as _;
+                    let name = app.package_info().name.clone();
+                    app.set_menu(menu::to_native(app, &menu::initial_spec(&name))?)?;
+                    let applier_handle = app.handle().clone();
+                    app.manage(commands::menu::MenuApplier(std::sync::Arc::new(
+                        move |labels| install_menu(&applier_handle, &labels),
+                    )));
+                    app.on_menu_event(|app, event| {
+                        if let Some(action) = menu::action_for(event.id().as_ref()) {
+                            let _ = commands::menu::MenuActionEvent { action }.emit(app);
+                        }
+                    });
+                }
+                #[cfg(not(target_os = "macos"))]
+                app.manage(commands::menu::MenuApplier(std::sync::Arc::new(|_| Ok(()))));
+
+                tracing::info!(version = env!("CARGO_PKG_VERSION"), "GitCanvas started");
+
+                // Paid here, on the main thread, while nobody is waiting for it.
+                warmup::open_panel();
+                builder.mount_events(app);
+                Ok(())
+            })
+            .build(app_context())
+            .map(|app| {
+                app.run(|handle, event| {
+                // Route system quit (including Cmd+Q) through the window's
+                // close request so the interface can flush its durable state.
+                // A destroyed last window has nothing left to flush.
+                if let tauri::RunEvent::ExitRequested { code: None, api, .. } = event {
+                    use tauri::Manager;
+                    if let Some(window) = handle.get_webview_window("main") {
+                        api.prevent_exit();
+                        if let Err(error) = window.close() {
+                            tracing::error!(%error, "could not request window close before exit");
+                        }
                     }
-                });
-            }
-            #[cfg(not(target_os = "macos"))]
-            app.manage(commands::menu::MenuApplier(std::sync::Arc::new(|_| Ok(()))));
-
-            tracing::info!(version = env!("CARGO_PKG_VERSION"), "GitCanvas started");
-
-            // Paid here, on the main thread, while nobody is waiting for it.
-            warmup::open_panel();
-            builder.mount_events(app);
-            Ok(())
-        })
-        .run(app_context())
+                }
+            });
+            })
     {
         report_early_startup_error(&format!("fatal: could not start GitCanvas: {error}"));
         std::process::exit(1);
@@ -281,9 +298,13 @@ mod tests {
                     .expect("capability permissions must be strings")
             })
             .collect::<std::collections::BTreeSet<_>>();
-        let expected = ["core:event:default", "dialog:allow-open"]
-            .into_iter()
-            .collect::<std::collections::BTreeSet<_>>();
+        let expected = [
+            "core:event:default",
+            "dialog:allow-open",
+            "core:window:allow-destroy",
+        ]
+        .into_iter()
+        .collect::<std::collections::BTreeSet<_>>();
 
         assert_eq!(permissions, expected);
     }
