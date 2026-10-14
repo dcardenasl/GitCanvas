@@ -271,6 +271,20 @@ export const e2eSecondRepository = secondFixture?.repository ?? null;
  * fixture. Only the launcher clears it: a worker evaluating this file after the
  * application started must not wipe what the application already wrote.
  */
+/**
+ * A path the way the application names it. The application canonicalizes every
+ * project root, and on Windows that is the extended-length form (`\\?\C:\…`)
+ * with short 8.3 names expanded, which is not what `fs.realpathSync` returns.
+ * A tab restored under any other spelling is refused because its project now
+ * "resolves to" a different path, so the seeded workspace must use this form.
+ */
+function canonicalForApplication(location: string): string {
+  const native = fs.realpathSync.native(location);
+  return process.platform === "win32" && !native.startsWith("\\\\?\\")
+    ? `\\\\?\\${native}`
+    : native;
+}
+
 export const e2eDataDir = path.join(
   os.tmpdir(),
   `gitcanvas-e2e-data-${path.basename(fixture)}`,
@@ -278,6 +292,7 @@ export const e2eDataDir = path.join(
 if (process.env.WDIO_WORKER_ID === undefined) {
   fs.rmSync(e2eDataDir, { recursive: true, force: true });
   if (secondFixture !== null) {
+    const restoredRoot = canonicalForApplication(fixture);
     fs.mkdirSync(e2eDataDir, { recursive: true });
     fs.writeFileSync(
       path.join(e2eDataDir, "workspace.json"),
@@ -287,18 +302,21 @@ if (process.env.WDIO_WORKER_ID === undefined) {
           tabs: Array.from({ length: 30 }, (_, index) => ({
             path:
               index === 0
-                ? fixture
+                ? restoredRoot
                 : path.join(
-                    fixture,
+                    restoredRoot,
                     `remembered-tab-${String(index).padStart(2, "0")}`,
                   ),
             selection: { kind: "history" },
             history_anchor: null,
             collapsed_folders: [],
           })),
-          active: fixture,
+          active: restoredRoot,
           favorites: Array.from({ length: 199 }, (_, index) =>
-            path.join(fixture, `remembered-${String(index).padStart(3, "0")}`),
+            path.join(
+              restoredRoot,
+              `remembered-${String(index).padStart(3, "0")}`,
+            ),
           ),
           recents: [secondFixture.repository],
         },
