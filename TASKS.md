@@ -462,9 +462,17 @@ Origen: auditoría del 2026-10-14 sobre `dev` (706 pruebas, matriz remota todav�
       ya no calcula una lista de protegidas por adelantado.
       → `fix(clone): make the replace decision and tab registration mutually exclusive`
 
-- [ ] **HRD-4 — Dividir el store del workspace.** `state/workspace.ts` mezcla pestañas,
+- [x] **HRD-4 — Dividir el store del workspace.** `state/workspace.ts` mezcla pestañas,
       favoritos, recientes, errores de almacenamiento, vista de biblioteca y avisos. Se separa
       por responsabilidad, con un único punto de composición y sin cambiar su contrato.
+      *Decisiones al implementar:* `state/workspace.ts` pasa de 498 a ~190 líneas y se compone de cinco
+      porciones en `state/workspaceStore/` (pestañas, biblioteca, vistas a pantalla completa,
+      almacenamiento y límites). Sigue siendo **un** almacén con el mismo contrato: usar un
+      proyecto toca pestañas, recientes y vistas a la vez y esas actualizaciones deben aterrizar
+      juntas, así que las porciones se comparten solo funciones puras (`recentsAfterVisit`,
+      `NO_FULL_VIEW`, `prepareActivation`) y cada acción hace un único `set`.
+      *Hallazgo durante la ejecución:* activar una pestaña con los límites aún desconocidos
+      vaciaba los recientes (`slice(0, 0)`); ahora la lista se conserva.
       → `refactor(workspace): split the workspace store into focused slices`
 
 - [ ] **HRD-5 — Ruido visual y menú «+».** La marca «sin comprobar» sale de las pestañas
