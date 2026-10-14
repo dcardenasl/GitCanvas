@@ -18,8 +18,7 @@ todavía no se publicó en `origin/dev`. Antes de editar, inspeccionar `git stat
 
 ## Siguiente paso
 
-Resolver las decisiones abiertas de la serie WS y empezar por **WS-1** y **WS-2** (backend,
-independientes entre sí); después WS-3, que es la refactorización que desbloquea el resto.
+Empezar la serie WS por **WS-1** y **WS-2** (backend, independientes entre sí); después WS-3, que es la refactorización que desbloquea el resto.
 Los commits desde la interfaz (sección 2 del plan) quedan para v0.4.
 
 ## Cola de trabajo
@@ -28,7 +27,7 @@ Los commits desde la interfaz (sección 2 del plan) quedan para v0.4.
 
 Origen: sección 4 del [plan de tres funcionalidades](docs/plan/2026-10-08-plan-tres-funcionalidades.md).
 Objetivo: **v0.3.0**. Cada tarea deja la aplicación funcional y verificable, sin adaptadores
-temporales ni estado duplicado. Las decisiones abiertas están al final de esta sección.
+temporales ni estado duplicado. Las decisiones que la definen están al final de esta sección.
 
 *Punto de partida (2026-10-13):* `state/session.ts` guarda un único `repository` más la
 selección, el reveal y el archivo expandido; `AppShell`, `HistoryView`, `Sidebar` y
@@ -36,29 +35,35 @@ selección, el reveal y el archivo expandido; `AppShell`, `HistoryView`, `Sideba
 backend ya autoriza por ruta canónica (`AllowedRepos`) y observa un solo repositorio
 (`ActiveWatch`). La protección de la caché de clones conserva una sola ruta activa
 (`commands/github.rs`). Hay estado de vista en componentes (`CommitSearch`,
-`ChangedFilesBrowser`, `sidebarPinned` en `AppShell`) y `worktree.ts` usa
-`keepPreviousData`, que muestra los archivos del proyecto anterior mientras carga el nuevo.
+`ChangedFilesBrowser`, `sidebarPinned` en `AppShell`), `worktree.ts` usa `keepPreviousData`
+(muestra los archivos del proyecto anterior mientras carga el nuevo), la toolbar tiene los
+botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto de Tauri.
 
 - [ ] **WS-1 — Registro backend de repositorios abiertos.** Estado `OpenRepos` en Tauri y un
       comando `sync_open_repositories(paths)` que **reemplaza el conjunto completo** (idempotente:
-      no hay apertura y cierre incrementales que puedan desviarse). Las rutas pasan por la
-      misma canonicalización que `with_repo`. `clone_github_repository` deja de recibir
-      `active_repository_path` y conserva toda entrada de caché que esté en el registro, además
-      del clon nuevo. Una ruta no autorizada se ignora para protección sin error.
+      no hay apertura y cierre incrementales que puedan desviarse). Lo protegido son las
+      **pestañas abiertas**, estén o no ya revalidadas. Las rutas pasan por la misma
+      canonicalización que `with_repo`. `clone_github_repository` deja de recibir
+      `active_repository_path` y conserva toda entrada de caché presente en el registro, además
+      del clon nuevo. Una ruta inexistente se ignora para protección sin error.
       *Pruebas:* un clon abierto en una pestaña inactiva sobrevive a la retención; alias y
       rutas inexistentes; reemplazo del conjunto; bindings regenerados sin deriva.
       → `feat(workspace): protect every open clone from cache retention`
 
-- [ ] **WS-2 — Almacén persistente del workspace en Rust.** `workspace.json` en
-      `app_data_dir`: esquema con `version`, pestañas (ruta, orden, navegación), pestaña activa,
+- [ ] **WS-2 — Almacén persistente del workspace en Rust.** `workspace.json` en el directorio de
+      datos: esquema con `version`, pestañas (ruta, orden, navegación), pestaña activa,
       favoritos y recientes (máximo 20). Un único escritor (cola serializada), escritura a
-      archivo temporal en el mismo directorio y reemplazo atómico, límites de tamaño y de
-      longitud de ruta, y validación al leer. Datos corruptos o de una versión futura se
-      conservan como `workspace.json.corrupt-<fecha>` y se arranca vacío con el fallo
-      reportado, nunca se pierde silenciosamente. Comandos `load_workspace` y `save_workspace`
-      con tipos Specta. Nada leído de disco autoriza operaciones Git.
+      archivo temporal en el mismo directorio y reemplazo atómico, límites de tamaño, de
+      longitud de ruta y de pestañas (30), y validación al leer. Datos corruptos o de una
+      versión futura se conservan como `workspace.json.corrupt-<fecha>` y se arranca vacío con
+      el fallo reportado; nunca se pierden en silencio. Comandos `load_workspace` y
+      `save_workspace` con tipos Specta. Nada leído de disco autoriza operaciones Git.
+      La variable `GITCANVAS_DATA_DIR` sustituye el directorio de datos completo (almacén,
+      clones y registros), igual que `GITCANVAS_REPOSITORY` ya sustituye el argumento de
+      arranque; `wdio.conf.ts` la apunta a un directorio temporal para que el E2E nunca lea ni
+      escriba la sesión real del usuario.
       *Pruebas:* ida y vuelta, escritura interrumpida (el original sigue válido), corrupción,
-      versión desconocida, límites, escrituras concurrentes.
+      versión desconocida, límites, escrituras concurrentes, sustitución del directorio.
       → `feat(workspace): persist tabs, favorites and recents in a versioned store`
 
 - [ ] **WS-3 — Workspace en el frontend.** `state/workspace.ts` reemplaza la sesión global:
@@ -66,16 +71,20 @@ backend ya autoriza por ruta canónica (`AllowedRepos`) y observa un solo reposi
       (`RepositoryInfo.path`). La sesión conserva selección, reveal y archivo expandido; las
       acciones se dirigen a una raíz explícita, así un resultado tardío nunca se aplica a la
       pestaña activa por accidente. `useSession` pasa a ser un selector de la sesión activa y
-      se migran todos sus consumidores. Sin sesión de repositorio global.
+      se migran todos sus consumidores. Tope de **30 pestañas**: superarlo no abre ninguna y
+      muestra un aviso traducido que ofrece cerrar una; nunca se cierra una por su cuenta.
+      Sin sesión de repositorio global.
       *Pruebas:* las de `session.test.ts` reescritas sobre el workspace; sesiones aisladas;
-      acción sobre una pestaña no activa; cerrar la activa elige vecina.
+      acción sobre una pestaña no activa; cerrar la activa elige vecina; tope de 30.
       → `refactor(workspace): replace the single-repository session with per-tab sessions`
 
 - [ ] **WS-4 — Un solo flujo de apertura.** `openProject(info)` es la única puerta: el selector
       nativo, el repositorio de línea de comandos, el clon de GitHub y la restauración. Si la
       raíz ya está abierta, activa su pestaña; dos worktrees del mismo repositorio son pestañas
-      distintas. Un repositorio explícito al iniciar se abre y se activa sin descartar sesiones
-      ya presentes. Cada cambio de pestañas llama a `sync_open_repositories` (WS-1).
+      distintas; una pestaña nueva va al final. Un repositorio explícito al iniciar se abre y se
+      activa sin descartar sesiones ya presentes. La vista de clonado de GitHub pasa a ser
+      estado de la aplicación (no de una pestaña): abrirla no altera ninguna sesión. Cada cambio
+      de pestañas llama a `sync_open_repositories` (WS-1).
       *Pruebas:* alias y duplicados, worktrees vinculados, apertura desde el clon, inicio con
       argumento y sesión restaurada, sincronización con el backend.
       → `feat(workspace): route every open through one entry that reuses existing tabs`
@@ -83,10 +92,13 @@ backend ya autoriza por ruta canónica (`AllowedRepos`) y observa un solo reposi
 - [ ] **WS-5 — Estado de vista por proyecto, fuera de los componentes.** Lo que hoy muere al
       cambiar de proyecto pasa a la sesión: consulta de `CommitSearch`, carpetas colapsadas y
       «mostrar todos» de `ChangedFilesBrowser`, ancla de scroll del historial (id de commit) y
-      `sidebarPinned`. Solo se monta la vista activa; al volver se recupera tal cual estaba.
-      Tamaños de panel, tema, idioma y modo de listado siguen siendo preferencias generales.
+      `sidebarPinned`. Solo se monta la vista activa. **Ancla:** se restaura únicamente si el
+      commit ya está cargado; si no lo está (típico tras reiniciar, cuando solo existe la
+      primera página), el historial empieza arriba y la selección y su panel de detalle se
+      conservan, porque el detalle se pide por id. Sin cargas ocultas de páginas. Tamaños de
+      panel, tema, idioma y modo de listado siguen siendo preferencias generales.
       *Pruebas:* cambiar de pestaña y volver conserva cada elemento; dos proyectos no comparten
-      búsqueda ni carpetas.
+      búsqueda ni carpetas; ancla cargada y no cargada.
       → `refactor(workspace): keep search, folders and scroll anchor in each tab session`
 
 - [ ] **WS-6 — Aislamiento de datos y de operaciones.** Quitar `keepPreviousData` de las
@@ -102,93 +114,135 @@ backend ya autoriza por ruta canónica (`AllowedRepos`) y observa un solo reposi
 - [ ] **WS-7 — Observación del proyecto activo y verificación al activar.** Un único watcher y
       poller, solo para la pestaña activa (se reutiliza el control de generaciones); los
       inactivos no consultan. Al activar una pestaña: revalidar identidad con el flujo de
-      apertura, releer ramas y etiquetas y la huella del árbol de trabajo; las acciones de
-      escritura (checkout, pull, push) quedan deshabilitadas hasta terminar. El historial en
-      caché se reutiliza si las referencias no cambiaron y se invalida si cambiaron. Indicadores
-      de proyectos inactivos con el último estado conocido.
+      apertura (que también la **autoriza** si venía de la restauración), releer ramas y etiquetas
+      y la huella del árbol de trabajo; las acciones de escritura (checkout, pull, push) quedan
+      deshabilitadas hasta terminar. El historial en caché se reutiliza si las referencias no
+      cambiaron y se invalida si cambiaron.
       *Pruebas:* solo un watcher vivo tras varios cambios rápidos; referencias iguales
-      reutilizan páginas; referencias distintas las invalidan; ruta desaparecida al activar.
+      reutilizan páginas; referencias distintas las invalidan; ruta desaparecida al activar;
+      pestaña restaurada se autoriza al activarse.
       → `feat(workspace): observe only the active tab and verify it on activation`
 
-- [ ] **WS-8 — Barra de pestañas.** Componente accesible sobre la toolbar: pestañas, cierre,
-      botón de apertura y menú de desbordamiento. Nombres repetidos se distinguen con la carpeta
-      contenedora y el tooltip muestra la ruta completa. Textos en los catálogos en inglés y
+- [ ] **WS-8 — Barra de pestañas y menú de apertura.** Componente accesible sobre la toolbar:
+      pestañas, cierre, desbordamiento y un botón «+» que abre un **menú** (Abrir carpeta…,
+      Clonar de GitHub…, Favoritos, Recientes); toda pestaña es un proyecto, no existe una
+      pestaña vacía. Cada pestaña muestra su nombre y solo **estado operativo**: indicador de
+      escritura en curso y marca de «sin verificar» o «inaccesible»; nada que pueda quedar
+      obsoleto. Nombres repetidos se distinguen con la carpeta contenedora y el tooltip muestra la
+      ruta completa. Los botones de GitHub y de abrir carpeta salen de la toolbar y quedan en el
+      menú y en la pantalla de inicio, sin duplicados. Textos en los catálogos en inglés y
       español, CSS con propiedades lógicas, correcta a 940 px y en ambos temas.
       *Pruebas:* render y cierre, desbordamiento, nombres repetidos, textos largos, test de
-      literales y de propiedades lógicas.
-      → `feat(workspace): add an accessible tab bar with overflow and disambiguation`
+      literales y de propiedades lógicas, toolbar sin los botones movidos.
+      → `feat(workspace): add an accessible tab bar with an open menu`
 
 - [ ] **WS-9 — Reordenar y teclado.** Reordenar por arrastre y por teclado; patrón WAI-ARIA de
-      pestañas (`tablist`, foco itinerante, foco visible). Atajos: abrir (⌘/Ctrl+O), cerrar
-      (⌘/Ctrl+W), recorrer (Ctrl+Tab y Ctrl+Mayús+Tab) y saltar a la pestaña N (⌘/Ctrl+1–8, 9 a
-      la última). No se interceptan al escribir en campos de texto.
+      pestañas (`tablist`, foco itinerante, foco visible). Atajos manejados en la página:
+      recorrer (Ctrl+Tab y Ctrl+Mayús+Tab), saltar a la pestaña N (⌘/Ctrl+1–8, 9 a la última) y,
+      en Windows y Linux, abrir (Ctrl+O) y cerrar (Ctrl+W). No se interceptan al escribir en
+      campos de texto. Todos llaman a las mismas acciones del workspace que usa WS-10.
       *Pruebas:* recorrido completo solo con teclado, atajos con foco en un campo, reorden y
       persistencia del orden en la sesión.
       → `feat(workspace): reorder tabs and drive them from the keyboard`
 
-- [ ] **WS-10 — Guardar y restaurar la sesión.** Guardado con debounce hacia `save_workspace`
-      de pestañas, orden, activa y navegación (selección, carpetas, ancla). No se persisten
-      diffs, historiales ni operaciones en curso. Al iniciar se restaura de forma progresiva:
-      primero la pestaña activa, el resto en segundo plano; cada ruta se revalida con el flujo
-      autorizado de apertura y lo guardado nunca autoriza nada por sí solo.
-      *Pruebas:* ida y vuelta con el almacén real, restauración priorizada, ruta que ya no es
-      repositorio, ráfaga de cambios produce una sola escritura.
-      → `feat(workspace): save and restore the session, active tab first`
+- [ ] **WS-10 — Menú nativo propio en macOS.** El menú por defecto de Tauri liga ⌘W a «Cerrar
+      ventana» antes de que la página lo vea, así que cerraría toda la ventana. Se construye un
+      menú propio solo en macOS (Aplicación, Archivo con **Abrir** ⌘O y **Cerrar pestaña** ⌘W,
+      Edición con los elementos predefinidos para que copiar y pegar sigan funcionando, Ventana)
+      cuyos elementos emiten eventos que ejecutan las mismas acciones de WS-9. Los textos salen
+      de los catálogos: el frontend los envía con un comando tipado al arrancar y en cada cambio
+      de idioma (ADR 0004). Windows y Linux no tienen menú por defecto y siguen con los atajos
+      de la página.
+      *Pruebas:* comando de etiquetas (todas las claves presentes en ambos idiomas), reconstrucción
+      al cambiar de idioma, ⌘W cierra la pestaña y no la ventana; verificación manual en macOS.
+      → `feat(workspace): own the macos menu so close tab and open use the standard shortcuts`
 
-- [ ] **WS-11 — Pestañas recuperables y fallos de persistencia visibles.** Ruta desaparecida o
-      repositorio inaccesible: la pestaña se conserva con **Reintentar**, **Localizar** (elegir
-      otra carpeta) y **Cerrar**. Un fallo de guardado o un almacén corrupto se muestra con
-      `ErrorMessage` y la aplicación sigue funcionando en memoria.
-      *Pruebas:* cada una de las tres acciones, almacén corrupto al arrancar, fallo de escritura.
+- [ ] **WS-11 — Guardar y restaurar la sesión.** Cambios estructurales (abrir, cerrar, reordenar,
+      activar) se guardan de inmediato; la navegación con debounce; todo se vacía al cerrar la
+      ventana. Se persisten pestañas, orden, activa y navegación; nunca diffs, historiales ni
+      operaciones en curso. Al iniciar se carga el almacén y se abre la pestaña activa por el
+      flujo autorizado; las demás se restauran **perezosamente**: aparecen marcadas «sin
+      verificar» y su ruta se revalida y autoriza solo cuando se activan (WS-7). Su ruta sí
+      entra en `sync_open_repositories` para que su clon no se borre. Lo guardado nunca autoriza
+      nada por sí solo.
+      *Pruebas:* ida y vuelta con el almacén real, restauración con solo la activa validada,
+      activación de una restaurada, ráfaga de navegación produce una sola escritura, vaciado al
+      cerrar.
+      → `feat(workspace): save and restore the session, validating tabs on first use`
+
+- [ ] **WS-12 — Pestañas recuperables y fallos de persistencia visibles.** Ruta desaparecida o
+      repositorio inaccesible, detectada al activar: la pestaña se conserva con **Reintentar**,
+      **Localizar** (elegir otra carpeta; si esa raíz ya está abierta en otra pestaña, se activa
+      esa y se cierra la rota) y **Cerrar**. Un fallo de guardado o un almacén corrupto se
+      muestra con `ErrorMessage` y la aplicación sigue funcionando en memoria.
+      *Pruebas:* cada una de las tres acciones, Localizar hacia una raíz ya abierta, almacén
+      corrupto al arrancar, fallo de escritura.
       → `feat(workspace): keep unreachable tabs recoverable and surface storage failures`
 
-- [ ] **WS-12 — Favoritos y recientes.** Marcar y desmarcar favoritos, lista de los 20 más
-      recientes y acceso desde la pantalla vacía y un menú de la barra. Favoritos y pestañas son
-      independientes: cerrar una pestaña no borra el favorito. Entradas con ruta inaccesible se
-      muestran como tales y se pueden quitar.
-      *Pruebas:* alta, baja, orden por uso, tope de 20, persistencia, ruta desaparecida.
+- [ ] **WS-13 — Favoritos y recientes.** Estrella en la pestaña y en el menú; pantalla de inicio
+      (cero pestañas) con Abrir carpeta, Clonar de GitHub, favoritos y recientes. Favoritos por
+      nombre (nombres repetidos desambiguados con la carpeta), recientes del más nuevo al más
+      viejo con tope de 20, un favorito no se repite en recientes, sin reordenamiento manual.
+      Favoritos y pestañas son independientes: cerrar una pestaña no borra el favorito. Un
+      favorito o reciente cuya ruta no responde se muestra como inaccesible y se puede quitar.
+      *Los clones guardados como favorito no se protegen de la retención* (decisión
+      explícita): si el clon fue expulsado, la entrada queda inaccesible.
+      *Pruebas:* alta, baja, orden, tope de 20, sin duplicados entre listas, persistencia, ruta
+      desaparecida.
       → `feat(workspace): add favorites and a recent projects list`
 
-- [ ] **WS-13 — Liberar recursos al cerrar y acotar los inactivos.** Cerrar una pestaña quita
+- [ ] **WS-14 — Liberar recursos al cerrar y acotar los inactivos.** Cerrar una pestaña quita
       su sesión, sus consultas (`removeQueries` por ruta con un helper en `queryKeys.ts`) y su
-      entrada en el registro del backend. Se retienen consultas pesadas del proyecto activo y de
-      **como máximo cinco** inactivos (LRU); el presupuesto global de `HistoryReader` (8
-      instantáneas, 2 000 000 de ids) no cambia.
+      entrada en el registro del backend. LRU explícito: se retienen consultas pesadas del
+      proyecto activo y de **como máximo cinco** inactivos, además de `gcTime`; la activa nunca
+      se expulsa. El presupuesto global de `HistoryReader` (8 instantáneas, 2 000 000 de ids)
+      no cambia.
       *Pruebas:* cierre libera todo lo de esa ruta, el sexto inactivo expulsa al más antiguo,
-      el activo nunca se expulsa.
+      volver a uno expulsado carga normalmente, el activo nunca se expulsa.
       → `perf(workspace): release closed tabs and bound inactive project caches`
 
-- [ ] **WS-14 — E2E de varias pestañas.** Dos repositorios de fixture: abrir ambos, alternar sin
-      mezclar historial ni cambios locales, reabrir un repositorio ya abierto sin duplicar,
-      cerrar una pestaña, favorito que sobrevive al cierre. En los cuatro specs existentes la
-      pestaña única sigue funcionando sin cambios.
+- [ ] **WS-15 — E2E de varias pestañas.** Dos repositorios de fixture y un directorio de datos
+      temporal (WS-2): abrir ambos, alternar sin mezclar historial ni cambios locales, reabrir
+      un repositorio ya abierto sin duplicar, cerrar una pestaña, un favorito que sobrevive al
+      cierre. Los cuatro specs existentes siguen pasando con su pestaña única.
       → `test(e2e): cover switching, reopening and closing tabs across two repositories`
 
-- [ ] **WS-15 — Documentación.** ADR 0006 (workspace, identidad por raíz, almacén y
-      restauración), ARCHITECTURE, CONTEXT (observación y registro de repositorios abiertos),
-      PRODUCT, DESIGN (barra de pestañas), README, CLAUDE.md (el estado ya no es una sesión
-      única) y CHANGELOG.
+- [ ] **WS-16 — Documentación.** ADR 0006 (workspace, identidad por raíz, almacén, restauración
+      perezosa, menú de macOS y decisiones de este plan), ARCHITECTURE, CONTEXT (observación y
+      registro de repositorios abiertos), PRODUCT, DESIGN (barra de pestañas), README, CLAUDE.md
+      (el estado ya no es una sesión única) y CHANGELOG.
       → `docs(workspace): record the tabs, favorites and persistence decisions in adr 0006`
 
-- [ ] **WS-16 — Verificar en Linux y Windows y publicar v0.3.0.** Corrida de `quality` sobre
+- [ ] **WS-17 — Verificar en Linux y Windows y publicar v0.3.0.** Corrida de `quality` sobre
       `dev` (matriz de tres sistemas, cobertura, Clippy, bindings sin deriva, E2E nativos) y
-      validación manual del flujo de pestañas en cada sistema. Después, `/release` (versión
-      confirmada con David).
+      validación manual del flujo de pestañas en cada sistema; en macOS, también ⌘O y ⌘W.
+      Después, `/release` (versión confirmada con David).
       → `docs: close the workspace series and record the v0.3.0 verification`
 
-#### Decisiones abiertas
+#### Decisiones cerradas (2026-10-14)
 
-1. **El idioma sigue en `localStorage`.** El plan dice centralizar el idioma en el almacén de
-   Rust, pero el ADR 0004 exige resolverlo **antes del primer render** y esa lectura es
-   síncrona; un almacén asíncrono mostraría primero otro idioma. *Recomendación:* idioma, tema y
-   tamaños de panel se quedan en `localStorage`; el almacén de Rust guarda solo workspace,
-   favoritos y recientes.
-2. **Los borradores de commit no entran en la 0.3.** Todavía no existe la función de commit; el
-   esquema versionado de WS-2 deja espacio para añadirlos con la sección 2.
-3. **Tope de pestañas abiertas.** El plan no lo fija. *Recomendación:* 30, con un aviso claro al
-   superarlo, para acotar memoria y observación.
-4. **Fuera de la 0.3:** la exclusión mutua de escrituras por directorio Git común (pertenece a
-   los commits) y la preparación y el commit desde la interfaz.
+1. **El idioma, el tema y los tamaños de panel siguen en `localStorage`.** El ADR 0004 exige
+   resolver el idioma antes del primer render y esa lectura es síncrona. El almacén de Rust
+   guarda solo workspace, favoritos y recientes.
+2. **Tope de 30 pestañas**, con aviso claro; nunca se cierra una por su cuenta.
+3. **Restauración perezosa:** al arrancar solo se valida la pestaña activa; las demás se
+   revalidan y autorizan al activarse y mientras tanto se marcan «sin verificar».
+4. **Las pestañas muestran solo estado operativo** (escribiendo, sin verificar, inaccesible):
+   rama y cambios locales de una pestaña inactiva podrían ser falsos.
+5. **El «+» abre un menú y toda pestaña es un proyecto.** No existe la pestaña vacía.
+6. **Los botones de GitHub y de abrir carpeta salen de la toolbar** y quedan en el menú «+» y en la
+   pantalla de inicio.
+7. **La retención de clones protege solo las pestañas abiertas.** Un favorito o reciente cuyo
+   clon fue expulsado queda inaccesible (alternativa descartada: proteger favoritos).
+8. **macOS recibe un menú nativo propio** con textos de los catálogos, para que ⌘W cierre la
+   pestaña y ⌘O abra.
+9. **El ancla del historial se restaura solo si su commit está cargado;** si no, el historial
+   empieza arriba y la selección se conserva.
+10. **LRU explícito de cinco pestañas inactivas** además de `gcTime`.
+11. **Favoritos por nombre, recientes por último uso, sin duplicados y sin orden manual.**
+12. **Los borradores de commit no entran en la 0.3** (todavía no existe la función); el
+    esquema versionado deja espacio. Quedan fuera también la exclusión mutua de escrituras y
+    los commits desde la interfaz (v0.4), y reabrir una pestaña cerrada.
 
 ## Cómo se usa este archivo
 
