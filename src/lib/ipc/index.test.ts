@@ -129,6 +129,12 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
     [expect.objectContaining({ file: "f", close_tab: "ct" })],
   ],
   [
+    "acknowledgeShutdown",
+    () => ipc.acknowledgeShutdown(),
+    "acknowledgeShutdown",
+    [],
+  ],
+  [
     "getWorkspaceLimits",
     () => ipc.getWorkspaceLimits(),
     "getWorkspaceLimits",

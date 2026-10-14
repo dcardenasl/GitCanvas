@@ -420,10 +420,19 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
 
 Origen: auditoría del 2026-10-14 sobre `dev` (706 pruebas, matriz remota todavía sin correr).
 
-- [ ] **HRD-1 — Salida con plazo.** Si la interfaz no responde, cerrar la ventana (botón rojo o
+- [x] **HRD-1 — Salida con plazo.** Si la interfaz no responde, cerrar la ventana (botón rojo o
       ⌘Q) no debe dejar la aplicación colgada. La interfaz confirma la petición de cierre con un
       comando que no pasa por las compuertas (una clonación larga las ocupa) y, si no llega en el
       plazo, el backend destruye la ventana. Un plazo vencido deja constancia en el registro.
+      *Decisiones al implementar:* el cierre se vigila en `WindowEvent::CloseRequested`, no en
+      `ExitRequested`, así que cubre el botón rojo, ⌘Q y el cierre pedido por la propia interfaz.
+      `ShutdownGate` numera cada petición: una petición nueva releva a la vigilancia anterior y una
+      confirmación llegada antes de empezar a esperar no se pierde. El plazo (3 s) es solo para
+      *responder*; guardar no tiene plazo, porque lo acota el backend y un fallo deja la ventana
+      abierta con el error visible. `acknowledge_shutdown` es la primera excepción a las
+      compuertas de lectura y escritura, con su motivo en la prueba de invariantes.
+      *Sin verificar en la aplicación real:* provocar un renderizador bloqueado exige permisos de
+      accesibilidad que no hay en esta sesión; la lógica está cubierta por pruebas de la compuerta.
       → `fix(lifecycle): destroy the window when the interface never answers a close request`
 
 - [ ] **HRD-2 — Tabla de historial a ancho mínimo.** A 940×600 con el inspector abierto, hash y

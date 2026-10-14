@@ -60,6 +60,7 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::open_repos::sync_open_repositories,
             commands::repository::get_startup_repository,
             commands::lifecycle::restart_application,
+            commands::lifecycle::acknowledge_shutdown,
             commands::repository::get_commits,
             commands::repository::get_commit,
             commands::repository::get_branches,
@@ -198,6 +199,8 @@ pub fn run() {
         ))
         .manage(commands::repo_access::AllowedRepos::default())
         .manage(commands::open_repos::OpenRepos::default())
+        .manage(std::sync::Arc::new(lifecycle::ShutdownGate::default()))
+        .on_window_event(lifecycle::on_window_event)
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             use tauri::Manager;

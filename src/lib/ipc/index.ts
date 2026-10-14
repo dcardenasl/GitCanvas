@@ -173,3 +173,9 @@ export const saveWorkspace = (request: SaveWorkspaceRequest) =>
 
 /** Restarts the native application after an explicit recovery request. */
 export const restartApplication = () => result(commands.restartApplication());
+
+/**
+ * Tells the backend a close request reached the interface, so it does not
+ * presume the interface hung and destroy the window before the session is saved.
+ */
+export const acknowledgeShutdown = () => result(commands.acknowledgeShutdown());

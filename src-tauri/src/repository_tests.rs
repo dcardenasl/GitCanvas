@@ -15,6 +15,9 @@ pub(super) fn test_webview() -> tauri::WebviewWindow<MockRuntime> {
         .manage(crate::commands::repo_access::AllowedRepos::default())
         .manage(crate::commands::open_repos::OpenRepos::default())
         .manage(std::sync::Arc::new(
+            crate::lifecycle::ShutdownGate::default(),
+        ))
+        .manage(std::sync::Arc::new(
             gitcanvas_core::workspace::store::WorkspaceStore::new(
                 std::env::temp_dir()
                     .join(format!("gitcanvas-test-workspace-{}", std::process::id())),

@@ -1,6 +1,7 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef } from "react";
 
+import { acknowledgeShutdown } from "../lib/ipc";
 import { startWorkspacePersistence } from "./workspacePersistence";
 import { useWorkspace } from "./workspace";
 
@@ -24,6 +25,9 @@ export function useWorkspaceLifecycle(): { readonly retry: () => void } {
           if (closing) return;
           closing = true;
           try {
+            // First, before anything that can take time: the backend destroys
+            // a window whose close request nobody acknowledges.
+            await acknowledgeShutdown();
             await persistence.flush();
             await window.destroy();
           } catch (cause) {

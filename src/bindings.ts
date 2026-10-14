@@ -34,6 +34,15 @@ export const commands = {
 } | null, AppError>(__TAURI_INVOKE("get_startup_repository")),
 	/**  Restarts the native process, resetting backend and renderer request generations together. */
 	restartApplication: () => typedError<null, AppError>(__TAURI_INVOKE("restart_application")),
+	/**
+	 *  Tells the backend that the interface received a close request.
+	 *
+	 *  Deliberately outside the read and write gates: a long clone or push holds
+	 *  every write slot, and a close request that could not be acknowledged while
+	 *  one runs would be taken for an unresponsive interface and the window
+	 *  destroyed before the session was saved. It only sets a flag.
+	 */
+	acknowledgeShutdown: () => typedError<null, AppError>(__TAURI_INVOKE("acknowledge_shutdown")),
 	/**  Reads a bounded history page using the selected repository's canonical path. */
 	getCommits: (path: string, request: HistoryRequest) => typedError<HistoryPage, AppError>(__TAURI_INVOKE("get_commits", { path, request })),
 	/**  Reads a selected commit by full id, independently of the loaded history pages. */
