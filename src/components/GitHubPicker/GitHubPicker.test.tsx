@@ -124,10 +124,7 @@ describe("GitHubPicker", () => {
     );
 
     await waitFor(() => {
-      expect(cloneGithubRepository).toHaveBeenCalledWith(
-        REPO.full_name,
-        "/cache/current",
-      );
+      expect(cloneGithubRepository).toHaveBeenCalledWith(REPO.full_name);
     });
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled();

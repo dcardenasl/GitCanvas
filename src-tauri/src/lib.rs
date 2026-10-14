@@ -16,6 +16,7 @@
 //! depend on Tauri.
 
 mod commands;
+mod limits;
 mod logging;
 mod resources;
 mod warmup;
@@ -51,6 +52,7 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
     tauri_specta::Builder::<R>::new()
         .commands(collect_commands![
             commands::repository::open_repository,
+            commands::open_repos::sync_open_repositories,
             commands::repository::get_startup_repository,
             commands::repository::get_commits,
             commands::repository::get_branches,
@@ -145,6 +147,7 @@ pub fn run() {
             gitcanvas_core::history::HistoryReader::default(),
         ))
         .manage(commands::repo_access::AllowedRepos::default())
+        .manage(commands::open_repos::OpenRepos::default())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             use tauri::Manager;

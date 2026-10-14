@@ -43,9 +43,6 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
   const { t } = useTranslation("github");
   const queryClient = useQueryClient();
   const setRepository = useSession((state) => state.openRepository);
-  const activeRepositoryPath = useSession(
-    (state) => state.repository?.path ?? null,
-  );
 
   const [token, setToken] = useState("");
   const [progress, setProgress] = useState<CloneProgressEvent | null>(null);
@@ -89,8 +86,7 @@ export function GitHubPicker({ onClose }: { readonly onClose: () => void }) {
   });
 
   const clone = useMutation({
-    mutationFn: ({ name }: { name: string }) =>
-      cloneGithubRepository(name, activeRepositoryPath),
+    mutationFn: ({ name }: { name: string }) => cloneGithubRepository(name),
     onSuccess: async (cloned) => {
       setProgress(null);
       setRepository(await openRepository(cloned.path));

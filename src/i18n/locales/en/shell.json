@@ -41,6 +41,7 @@
     "branchesHint": "Show the branches while reading a file",
     "github": "GitHub",
     "noRepository": "No repository open",
+    "openSyncFailed": "Could not tell the backend which repositories are open",
     "refresh": "Refresh",
     "refreshHint": "Re-read the repository from disk"
   }

@@ -97,9 +97,15 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
   ],
   [
     "cloneGithubRepository",
-    () => ipc.cloneGithubRepository("o/r", null),
+    () => ipc.cloneGithubRepository("o/r"),
     "cloneGithubRepository",
-    ["o/r", null],
+    ["o/r"],
+  ],
+  [
+    "syncOpenRepositories",
+    () => ipc.syncOpenRepositories({ revision: 1, paths: [PATH] }),
+    "syncOpenRepositories",
+    [{ revision: 1, paths: [PATH] }],
   ],
   [
     "checkoutBranch",

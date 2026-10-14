@@ -17,6 +17,7 @@ const getBranches = vi.fn<() => Promise<BranchInfo[]>>();
 const getStartupRepository =
   vi.fn<() => Promise<{ path: string; name: string } | null>>();
 const watchRepository = vi.fn<(request: unknown) => Promise<null>>();
+const syncOpenRepositories = vi.fn<(request: unknown) => Promise<null>>();
 
 vi.mock("../../lib/ipc", () => ({
   getCommits: () => getCommits(),
@@ -52,6 +53,7 @@ vi.mock("../../lib/ipc", () => ({
   storeGithubToken: () => Promise.resolve(null),
   forgetGithubToken: () => Promise.resolve(null),
   cloneGithubRepository: () => Promise.resolve(null),
+  syncOpenRepositories: (request: unknown) => syncOpenRepositories(request),
   openRepository: () => Promise.resolve(null),
   listGithubRepositories: () =>
     Promise.resolve({ repositories: [], truncated: false }),
@@ -126,6 +128,7 @@ beforeEach(() => {
   getBranches.mockResolvedValue([]);
   getStartupRepository.mockResolvedValue(null);
   watchRepository.mockResolvedValue(null);
+  syncOpenRepositories.mockResolvedValue(null);
   getCommitDiff.mockResolvedValue({
     commit_id: COMMIT.id,
     parent_id: null,
@@ -365,6 +368,32 @@ describe("AppShell toolbar", () => {
     await waitFor(() => {
       expect(screen.queryByText(/too many watches/)).toBeNull();
     });
+  });
+
+  it("tells the backend which repository is open", async () => {
+    useSession.setState({ repository: { path: "/tmp/repo", name: "repo" } });
+    renderShell();
+
+    await waitFor(() => {
+      expect(syncOpenRepositories).toHaveBeenCalledWith(
+        expect.objectContaining({ paths: ["/tmp/repo"] }),
+      );
+    });
+  });
+
+  it("says when the open repository could not be reported and retries on request", async () => {
+    useSession.setState({ repository: { path: "/tmp/repo", name: "repo" } });
+    syncOpenRepositories.mockRejectedValueOnce(new Error("registry poisoned"));
+    renderShell();
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("registry poisoned");
+    await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/registry poisoned/)).toBeNull();
+    });
+    expect(syncOpenRepositories).toHaveBeenCalledTimes(2);
   });
 
   it("offers to pin the branch list while a file is open", async () => {

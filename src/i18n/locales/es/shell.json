@@ -41,6 +41,7 @@
     "branchesHint": "Mostrar las ramas mientras se lee un archivo",
     "github": "GitHub",
     "noRepository": "Ningún repositorio abierto",
+    "openSyncFailed": "No se pudo informar al backend qué repositorios están abiertos",
     "refresh": "Actualizar",
     "refreshHint": "Volver a leer el repositorio desde el disco"
   }

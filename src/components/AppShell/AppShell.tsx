@@ -24,6 +24,7 @@ import {
   selectedFilePath as getSelectedFilePath,
   useSession,
 } from "../../state/session";
+import { useOpenRepositoriesSync } from "../../state/openRepositories";
 import { invalidateLive } from "../../state/queryKeys";
 
 import { HistoryView } from "./HistoryView";
@@ -44,6 +45,9 @@ export function AppShell() {
   const queryClient = useQueryClient();
 
   const watcher = useLiveRepository(repository?.path ?? null);
+  const openSync = useOpenRepositoriesSync(
+    repository === null ? [] : [repository.path],
+  );
   const currentBranch = useCurrentBranch(repository?.path ?? null);
   const gitActions = useGitActions(repository?.path ?? null);
   const [sidebarPinned, setSidebarPinned] = useState(false);
@@ -130,6 +134,17 @@ export function AppShell() {
           <div role="alert" className="toolbar__status">
             <ErrorMessage error={watcher.status.error} />
             <button type="button" className="button" onClick={watcher.retry}>
+              {t("common:actions.retry")}
+            </button>
+          </div>
+        )}
+        {openSync.error !== null && (
+          <div role="alert" className="toolbar__status">
+            <ErrorMessage
+              error={openSync.error}
+              lead={t("toolbar.openSyncFailed")}
+            />
+            <button type="button" className="button" onClick={openSync.retry}>
               {t("common:actions.retry")}
             </button>
           </div>

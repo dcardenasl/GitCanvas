@@ -6,6 +6,7 @@ import type {
   CommitTreeRequest,
   FileContentRequest,
   HistoryRequest,
+  OpenRepositoriesRequest,
   WorktreeFileDiffRequest,
   WorktreeFileContentRequest,
   WorktreeSnapshotRequest,
@@ -91,10 +92,8 @@ export const forgetGithubToken = () => result(commands.forgetGithubToken());
 export const listGithubRepositories = () =>
   result(commands.listGithubRepositories());
 /** Clones a repository into the application cache. */
-export const cloneGithubRepository = (
-  fullName: string,
-  activeRepositoryPath: string | null = null,
-) => result(commands.cloneGithubRepository(fullName, activeRepositoryPath));
+export const cloneGithubRepository = (fullName: string) =>
+  result(commands.cloneGithubRepository(fullName));
 /** Subscribes to clone progress. Returns the unsubscribe function. */
 export const onCloneProgress = events.cloneProgressEvent.listen;
 
@@ -129,6 +128,14 @@ export const getWorktreeFileContent = (
 /** Reads the current local revision without materializing patches. */
 export const getWorktreeFingerprint = (path: string) =>
   result(commands.getWorktreeFingerprint(path));
+
+/**
+ * Reports the complete set of open repositories, so the backend never evicts a
+ * cached clone a tab is using. A request no newer than the last one applied is
+ * ignored.
+ */
+export const syncOpenRepositories = (request: OpenRepositoriesRequest) =>
+  result(commands.syncOpenRepositories(request));
 
 /** Starts watching the open repository, replacing any previous watch. */
 export const watchRepository = (request: WatchRequest) =>

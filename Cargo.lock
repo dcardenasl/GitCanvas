@@ -1316,6 +1316,7 @@ dependencies = [
 name = "gitcanvas"
 version = "0.2.0"
 dependencies = [
+ "filetime",
  "git2",
  "gitcanvas-core",
  "objc2-app-kit",

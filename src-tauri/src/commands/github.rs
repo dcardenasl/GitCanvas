@@ -17,6 +17,7 @@ use specta::Type;
 use std::{path::PathBuf, sync::Arc};
 
 use super::{
+    open_repos::OpenRepos,
     repo_access::AllowedRepos,
     runtime::{read, write},
 };
@@ -83,24 +84,25 @@ pub async fn list_github_repositories() -> Result<GitHubRepositoryList, AppError
 }
 
 /// Clones a repository into the application cache, emitting progress as it goes.
+///
+/// Afterwards the cache is trimmed to its budget, never evicting the new clone
+/// or any clone an open tab is using.
 #[tauri::command]
 #[specta::specta]
 pub async fn clone_github_repository(
     full_name: String,
-    active_repository_path: Option<String>,
     allowed: tauri::State<'_, AllowedRepos>,
+    open: tauri::State<'_, OpenRepos>,
     root: tauri::State<'_, CacheRoot>,
     emitter: tauri::State<'_, ProgressEmitter>,
 ) -> Result<clone::ClonedRepository, AppError> {
     let destination = root.0.clone();
     let publish = Arc::clone(&emitter.0);
     let allowed = allowed.inner().clone();
+    let open = open.inner().clone();
     // Validated before any work starts, so a malformed name fails here rather
     // than after the transfer.
     let entry = clone::cache_entry_name(&full_name)?;
-    let active_entry = active_repository_path
-        .as_deref()
-        .and_then(|path| cache::cached_entry_name(&destination, std::path::Path::new(path)));
 
     let cloned = write("clone_github_repository", move || {
         let cloned = clone::clone_repository(&full_name, &destination, |progress| {
@@ -116,16 +118,13 @@ pub async fn clone_github_repository(
     })
     .await?;
 
-    // Keep both the new clone and the currently open cache entry. A retention
-    // failure must not turn a completed clone into an apparent clone failure.
+    // Keep the new clone and every clone an open tab uses. The open set is read
+    // when retention runs, not when the clone started, so a tab opened while the
+    // transfer was in flight is protected too. A retention failure must not turn
+    // a completed clone into an apparent clone failure.
     let destination = root.0.clone();
     write("enforce_cache_retention", move || {
-        let mut keep = vec![entry];
-        if let Some(active_entry) = active_entry {
-            if !keep.contains(&active_entry) {
-                keep.push(active_entry);
-            }
-        }
+        let keep = open.retention_keep_list(&destination, entry)?;
         cache::enforce_retention(&destination, &keep)
     })
     .await

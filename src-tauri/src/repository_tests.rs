@@ -13,6 +13,7 @@ pub(super) fn test_webview() -> tauri::WebviewWindow<MockRuntime> {
             gitcanvas_core::history::HistoryReader::default(),
         ))
         .manage(crate::commands::repo_access::AllowedRepos::default())
+        .manage(crate::commands::open_repos::OpenRepos::default())
         .manage(crate::commands::watch::ActiveWatch::default())
         .manage(crate::commands::watch::ChangeNotifier(std::sync::Arc::new(
             |_| {},

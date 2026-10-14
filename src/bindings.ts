@@ -7,6 +7,8 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 export const commands = {
 	/**  Validates and opens a local repository, returning its canonical identity. */
 	openRepository: (path: string) => typedError<RepositoryInfo, AppError>(__TAURI_INVOKE("open_repository", { path })),
+	/**  Reports which repositories the interface has open. */
+	syncOpenRepositories: (request: OpenRepositoriesRequest) => typedError<null, AppError>(__TAURI_INVOKE("sync_open_repositories", { request })),
 	/**
 	 *  The repository named on the command line, if the application was launched
 	 *  with one.
@@ -68,8 +70,13 @@ export const commands = {
 	forgetGithubToken: () => typedError<null, AppError>(__TAURI_INVOKE("forget_github_token")),
 	/**  Lists the repositories the stored token can reach. */
 	listGithubRepositories: () => typedError<GitHubRepositoryList, AppError>(__TAURI_INVOKE("list_github_repositories")),
-	/**  Clones a repository into the application cache, emitting progress as it goes. */
-	cloneGithubRepository: (fullName: string, activeRepositoryPath: string | null) => typedError<ClonedRepository, AppError>(__TAURI_INVOKE("clone_github_repository", { fullName, activeRepositoryPath })),
+	/**
+	 *  Clones a repository into the application cache, emitting progress as it goes.
+	 *
+	 *  Afterwards the cache is trimmed to its budget, never evicting the new clone
+	 *  or any clone an open tab is using.
+	 */
+	cloneGithubRepository: (fullName: string) => typedError<ClonedRepository, AppError>(__TAURI_INVOKE("clone_github_repository", { fullName })),
 	/**  Checks out a local branch, refusing by default when work would be lost. */
 	checkoutBranch: (path: string, branch: string, force: boolean) => typedError<CheckoutOutcome, AppError>(__TAURI_INVOKE("checkout_branch", { path, branch, force })),
 	/**  Fetches and fast-forwards the current branch, reporting anything else. */
@@ -398,6 +405,17 @@ export type HistoryRequest = {
 	cursor: string | null,
 	/**  Walk roots to use when resuming a paged history traversal. */
 	roots: string[] | null,
+};
+
+/**  The interface's complete set of open repositories at one moment. */
+export type OpenRepositoriesRequest = {
+	/**
+	 *  Increases with every request. A request no newer than the last one applied
+	 *  is ignored, so one that arrives late cannot undo a newer report.
+	 */
+	revision: number,
+	/**  Working-tree roots of the open tabs, in any form that resolves to them. */
+	paths: string[],
 };
 
 /**  The outcome of a pull attempt. */

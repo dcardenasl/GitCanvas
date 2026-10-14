@@ -39,7 +39,7 @@ backend ya autoriza por ruta canónica (`AllowedRepos`) y observa un solo reposi
 (muestra los archivos del proyecto anterior mientras carga el nuevo), la toolbar tiene los
 botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto de Tauri.
 
-- [ ] **WS-1 — Registro backend de repositorios abiertos.** Estado `OpenRepos` en Tauri y un
+- [x] **WS-1 — Registro backend de repositorios abiertos.** Estado `OpenRepos` en Tauri y un
       comando `sync_open_repositories(paths)` que **reemplaza el conjunto completo** (idempotente:
       no hay apertura y cierre incrementales que puedan desviarse). Lo protegido son las
       **pestañas abiertas**, estén o no ya revalidadas. Las rutas pasan por la misma
