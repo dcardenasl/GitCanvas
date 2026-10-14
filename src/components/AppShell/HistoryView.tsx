@@ -28,8 +28,14 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
   const selection = useNavigation((navigation) => navigation.selection);
   const selectedCommitId = useNavigation(getSelectedCommitId);
 
-  const { selectCommit, selectFile, clearReveal, clearOrphanedReveal } =
-    useNavigationActions();
+  const {
+    selectCommit,
+    selectFile,
+    clearReveal,
+    clearOrphanedReveal,
+    setHistoryAnchor,
+  } = useNavigationActions();
+  const historyAnchor = useNavigation((navigation) => navigation.historyAnchor);
   const revealCommitId = useNavigation(
     (navigation) => navigation.revealCommitId,
   );
@@ -167,6 +173,8 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
         onReachEnd={fetchNextPage}
         revealCommitId={revealCommitId}
         onRevealed={clearReveal}
+        anchorCommitId={historyAnchor}
+        onAnchorChange={setHistoryAnchor}
         refsByCommit={refsByCommit}
         renderGraph={(window) => (
           <GraphCanvas

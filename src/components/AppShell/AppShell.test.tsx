@@ -454,6 +454,26 @@ describe("AppShell toolbar", () => {
     expect(useWorkspace.getState().notice).toBeNull();
   });
 
+  it("gives each project back the search it was left with", async () => {
+    renderShell();
+    const search = () =>
+      screen.getByRole<HTMLInputElement>("searchbox", {
+        name: "Buscar en el historial cargado",
+      });
+    await userEvent.type(search(), "feat");
+    expect(search().value).toBe("feat");
+
+    act(() => {
+      openTestProject({ path: "/tmp/other", name: "other" });
+    });
+    expect(search().value).toBe("");
+
+    act(() => {
+      useWorkspace.getState().activate("/tmp/repo");
+    });
+    expect(search().value).toBe("feat");
+  });
+
   it("offers to pin the branch list while a file is open", async () => {
     patchNavigation({
       selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },

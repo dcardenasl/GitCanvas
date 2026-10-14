@@ -17,7 +17,49 @@ import { ROW_HEIGHT, graphWidth } from "../../lib/historyGeometry";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
+  Reflect.deleteProperty(HTMLElement.prototype, "scrollTo");
+  Reflect.deleteProperty(HTMLElement.prototype, "scrollHeight");
 });
+
+/**
+ * jsdom has no `scrollTo` and lays nothing out, so a scroll can never go far
+ * enough to be seen. This records where the virtualizer asks to go, and gives
+ * the container the height `rows` rows would have, which is what bounds it.
+ */
+function recordScrolling(rows = 500) {
+  const scrollTo = vi.fn();
+  Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+    configurable: true,
+    value: scrollTo,
+  });
+  Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
+    configurable: true,
+    get: () => rows * ROW_HEIGHT,
+  });
+  return scrollTo;
+}
+
+/** The offsets the table scrolled to, in rows. */
+function scrolledToRows(
+  scrollTo: ReturnType<typeof recordScrolling>,
+): number[] {
+  return scrollTo.mock.calls.map(
+    ([options]) => (options as { top: number }).top / ROW_HEIGHT,
+  );
+}
+
+function scrollContainer(): HTMLElement {
+  const element = document.querySelector<HTMLElement>(".commit-table");
+  if (element === null) throw new Error("the table did not render");
+  return element;
+}
+
+function scrollTo(rows: number): void {
+  const element = scrollContainer();
+  element.scrollTop = rows * ROW_HEIGHT;
+  fireEvent.scroll(element);
+}
 
 function makeCommits(count: number): CommitInfo[] {
   return Array.from({ length: count }, (_, index) => ({
@@ -426,6 +468,160 @@ describe("CommitTable", () => {
     // Doing nothing is what makes the caller safe to keep fetching pages and
     // re-rendering until the commit turns up.
     expect(onRevealed).not.toHaveBeenCalled();
+  });
+
+  describe("remembering where the history was", () => {
+    function renderTable(
+      props: Partial<Parameters<typeof CommitTable>[0]> = {},
+    ) {
+      const commits = props.commits ?? makeCommits(500);
+      return render(
+        <CommitTable
+          commits={commits}
+          selectedId={null}
+          onSelect={() => undefined}
+          maxLanes={1}
+          {...props}
+        />,
+      );
+    }
+
+    it("returns to the commit it was left on when that commit is loaded", () => {
+      withViewport(ROW_HEIGHT * 10);
+      const scrolling = recordScrolling();
+      const commits = makeCommits(500);
+
+      renderTable({ commits, anchorCommitId: commits[300]?.id ?? null });
+
+      expect(scrolledToRows(scrolling)).toContain(300);
+    });
+
+    it("starts at the top when the anchor is not among the loaded commits", () => {
+      withViewport(ROW_HEIGHT * 10);
+      const scrolling = recordScrolling();
+
+      renderTable({ anchorCommitId: "f".repeat(40) });
+
+      // The virtualizer's own initial placement at the top is not a restore.
+      expect(scrolledToRows(scrolling).filter((row) => row !== 0)).toEqual([]);
+    });
+
+    it("lets a pending reveal choose where to go instead", () => {
+      withViewport(ROW_HEIGHT * 10);
+      const scrolling = recordScrolling();
+      const commits = makeCommits(500);
+
+      renderTable({
+        commits,
+        anchorCommitId: commits[300]?.id ?? null,
+        revealCommitId: commits[10]?.id ?? null,
+        onRevealed: () => undefined,
+      });
+
+      const rows = scrolledToRows(scrolling);
+      expect(rows).not.toContain(300);
+    });
+
+    it("restores once, not again when the anchor later changes", () => {
+      withViewport(ROW_HEIGHT * 10);
+      const scrolling = recordScrolling();
+      const commits = makeCommits(500);
+      const { rerender } = renderTable({
+        commits,
+        anchorCommitId: commits[300]?.id ?? null,
+      });
+      const calls = scrolling.mock.calls.length;
+
+      rerender(
+        <CommitTable
+          commits={commits}
+          selectedId={null}
+          onSelect={() => undefined}
+          maxLanes={1}
+          anchorCommitId={commits[50]?.id ?? null}
+        />,
+      );
+
+      expect(scrolling.mock.calls.length).toBe(calls);
+    });
+
+    it("waits for the first rows, then tries once", () => {
+      withViewport(ROW_HEIGHT * 10);
+      const scrolling = recordScrolling();
+      const commits = makeCommits(500);
+      const anchor = commits[300]?.id ?? null;
+      const { rerender } = renderTable({ commits: [], anchorCommitId: anchor });
+      expect(scrolledToRows(scrolling).filter((row) => row !== 0)).toEqual([]);
+
+      rerender(
+        <CommitTable
+          commits={commits}
+          selectedId={null}
+          onSelect={() => undefined}
+          maxLanes={1}
+          anchorCommitId={anchor}
+        />,
+      );
+
+      expect(scrolledToRows(scrolling)).toContain(300);
+    });
+
+    it("reports the commit at the top once scrolling settles", () => {
+      withViewport(ROW_HEIGHT * 10);
+      vi.useFakeTimers();
+      const commits = makeCommits(500);
+      const onAnchorChange = vi.fn();
+      renderTable({ commits, onAnchorChange });
+
+      scrollTo(20);
+      scrollTo(40);
+      expect(onAnchorChange).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(149);
+      expect(onAnchorChange).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+
+      // One report, for where the scrolling ended.
+      expect(onAnchorChange).toHaveBeenCalledTimes(1);
+      expect(onAnchorChange).toHaveBeenCalledWith(commits[40]?.id);
+    });
+
+    it("never names a commit past the end of what is loaded", () => {
+      withViewport(ROW_HEIGHT * 10);
+      vi.useFakeTimers();
+      const commits = makeCommits(20);
+      const onAnchorChange = vi.fn();
+      renderTable({ commits, onAnchorChange });
+
+      scrollTo(900);
+      vi.advanceTimersByTime(150);
+
+      expect(onAnchorChange).toHaveBeenCalledWith(commits[19]?.id);
+    });
+
+    it("reports a move that was still settling when the table is replaced", () => {
+      withViewport(ROW_HEIGHT * 10);
+      vi.useFakeTimers();
+      const commits = makeCommits(500);
+      const onAnchorChange = vi.fn();
+      const { unmount } = renderTable({ commits, onAnchorChange });
+      scrollTo(30);
+
+      unmount();
+
+      expect(onAnchorChange).toHaveBeenCalledWith(commits[30]?.id);
+      vi.advanceTimersByTime(1000);
+      expect(onAnchorChange).toHaveBeenCalledTimes(1);
+    });
+
+    it("reports nothing when it is replaced without having been scrolled", () => {
+      withViewport(ROW_HEIGHT * 10);
+      const onAnchorChange = vi.fn();
+      const { unmount } = renderTable({ onAnchorChange });
+
+      unmount();
+
+      expect(onAnchorChange).not.toHaveBeenCalled();
+    });
   });
 
   it("hands the graph layer the row window it should draw", () => {

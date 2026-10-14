@@ -10,6 +10,12 @@ import {
   revealCommit,
   selectCommit,
   selectFile,
+  setCollapsedFolders,
+  setHistoryAnchor,
+  setSearchQuery,
+  setShowAllCommitFiles,
+  setSidebarPinned,
+  toggleFolder,
   type FileSource,
   type Navigation,
   type Transition,
@@ -190,6 +196,12 @@ export interface NavigationActions {
   readonly revealCommit: (id: string) => void;
   readonly clearReveal: () => void;
   readonly clearOrphanedReveal: () => void;
+  readonly setSearchQuery: (query: string) => void;
+  readonly toggleFolder: (path: string) => void;
+  readonly setCollapsedFolders: (paths: ReadonlySet<string>) => void;
+  readonly setShowAllCommitFiles: (show: boolean) => void;
+  readonly setHistoryAnchor: (commitId: string | null) => void;
+  readonly setSidebarPinned: (pinned: boolean) => void;
 }
 
 /**
@@ -221,6 +233,24 @@ export function navigationActionsFor(root: string | null): NavigationActions {
     },
     clearOrphanedReveal: () => {
       apply(clearOrphanedReveal);
+    },
+    setSearchQuery: (query) => {
+      apply(setSearchQuery(query));
+    },
+    toggleFolder: (path) => {
+      apply(toggleFolder(path));
+    },
+    setCollapsedFolders: (paths) => {
+      apply(setCollapsedFolders(paths));
+    },
+    setShowAllCommitFiles: (show) => {
+      apply(setShowAllCommitFiles(show));
+    },
+    setHistoryAnchor: (commitId) => {
+      apply(setHistoryAnchor(commitId));
+    },
+    setSidebarPinned: (pinned) => {
+      apply(setSidebarPinned(pinned));
     },
   };
 }

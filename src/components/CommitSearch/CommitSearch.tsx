@@ -10,6 +10,9 @@ import "./CommitSearch.css";
 /** Loaded commits to search and callback for navigating to a match. */
 export interface CommitSearchProps {
   readonly commits: readonly CommitInfo[];
+  /** What is typed. Held by the caller, so it survives the view being replaced. */
+  readonly query: string;
+  readonly onQueryChange: (query: string) => void;
   /** Called with the commit to select and scroll to. */
   readonly onGo: (commitId: string) => void;
 }
@@ -22,9 +25,13 @@ export interface CommitSearchProps {
  * worse than an honest count. Enter walks the matches, so a query with many
  * hits is still navigable.
  */
-export function CommitSearch({ commits, onGo }: CommitSearchProps) {
+export function CommitSearch({
+  commits,
+  query,
+  onQueryChange,
+  onGo,
+}: CommitSearchProps) {
   const { t } = useTranslation("history");
-  const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -89,7 +96,7 @@ export function CommitSearch({ commits, onGo }: CommitSearchProps) {
         placeholder={t("search.placeholder")}
         aria-label={t("search.aria")}
         onChange={(event) => {
-          setQuery(event.currentTarget.value);
+          onQueryChange(event.currentTarget.value);
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
@@ -97,7 +104,7 @@ export function CommitSearch({ commits, onGo }: CommitSearchProps) {
             if (query === deferredQuery) go(event.shiftKey ? -1 : 1);
           }
           if (event.key === "Escape") {
-            setQuery("");
+            onQueryChange("");
             event.currentTarget.blur();
           }
         }}

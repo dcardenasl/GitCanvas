@@ -120,7 +120,7 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       navegación de una pestaña no cuenta como eso.
       → `feat(workspace): route every open through one entry that reuses existing tabs`
 
-- [ ] **WS-5 — Estado de vista por proyecto, fuera de los componentes.** Lo que hoy muere al
+- [x] **WS-5 — Estado de vista por proyecto, fuera de los componentes.** Lo que hoy muere al
       cambiar de proyecto pasa a la sesión: consulta de `CommitSearch`, carpetas colapsadas y
       «mostrar todos» de `ChangedFilesBrowser`, ancla de scroll del historial (id de commit) y
       `sidebarPinned`. Solo se monta la vista activa. **Ancla:** se restaura únicamente si el
@@ -130,6 +130,17 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       panel, tema, idioma y modo de listado siguen siendo preferencias generales.
       *Pruebas:* cambiar de pestaña y volver conserva cada elemento; dos proyectos no comparten
       búsqueda ni carpetas; ancla cargada y no cargada.
+      *Decisiones al implementar:* `Navigation` suma `searchQuery`, `collapsedFolders`,
+      `showAllCommitFiles`, `historyAnchor` y `sidebarPinned`, con sus transiciones puras;
+      `CommitSearch` pasa a ser controlado y `ChangedFilesBrowser` lee y escribe en la pestaña. El
+      cuerpo de la ventana y el buscador llevan `key={repository.path}`: al cambiar de proyecto se
+      reemplazan, así ningún estado local (scroll, foco, campo a medias) viaja de un proyecto al
+      siguiente. El ancla se informa al asentarse el desplazamiento leyendo `scrollTop` del DOM al
+      disparar el temporizador (las filas tienen altura fija) y no el estado del virtualizador, que
+      se actualiza un cuadro después de una restauración; si la tabla se reemplaza antes de
+      asentarse, el movimiento se informa igualmente. La restauración ocurre una vez, cuando hay
+      las primeras filas, y cede ante un reveal pendiente. De `Navigation`, solo selección, ancla
+      y carpetas colapsadas se guardan en disco (WS-11); el resto vive mientras dura la sesión.
       → `refactor(workspace): keep search, folders and scroll anchor in each tab session`
 
 - [ ] **WS-6 — Aislamiento de datos y de operaciones.** Quitar `keepPreviousData` de las

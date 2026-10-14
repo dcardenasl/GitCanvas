@@ -56,6 +56,19 @@ interface CommitTableProps {
   /** Called once a reveal has been carried out, so it is not repeated. */
   readonly onRevealed?: () => void;
   /**
+   * The commit to put at the top once, when the first rows are shown.
+   *
+   * Applied only if that commit is already loaded: finding it would mean
+   * fetching pages nobody asked for, and the history simply starts at the top
+   * when it is not.
+   */
+  readonly anchorCommitId?: string | null;
+  /**
+   * Called, once scrolling settles, with the commit now at the top, so the
+   * position can be returned to after this table has been replaced.
+   */
+  readonly onAnchorChange?: (commitId: string | null) => void;
+  /**
    * Branch and tag badges, keyed by the commit they point at.
    *
    * Shown on the row rather than only in the sidebar: the whole point of a
@@ -63,6 +76,9 @@ interface CommitTableProps {
    */
   readonly refsByCommit?: ReadonlyMap<string, readonly RefBadge[]>;
 }
+
+/** How long scrolling must pause before the position is reported. */
+const ANCHOR_SETTLE_MS = 150;
 
 /** What a context-menu copy puts on the clipboard, and how it is announced. */
 type CopyTarget = "hash" | "fullHash" | "message" | "author";
@@ -101,6 +117,8 @@ export function CommitTable({
   onReachEnd,
   revealCommitId = null,
   onRevealed,
+  anchorCommitId = null,
+  onAnchorChange,
   refsByCommit,
 }: CommitTableProps) {
   const { t } = useTranslation("history");
@@ -149,6 +167,53 @@ export function CommitTable({
     virtualizer.scrollToIndex(index, { align: "center" });
     onRevealed?.();
   }, [revealCommitId, commitIndexById, virtualizer, onRevealed]);
+
+  // Restoring the position happens once, at the first moment there are rows. A
+  // pending reveal has a destination of its own and wins over it.
+  const anchorTried = useRef(false);
+  useEffect(() => {
+    if (anchorTried.current || commits.length === 0) return;
+    anchorTried.current = true;
+    if (anchorCommitId === null || revealCommitId !== null) return;
+    const index = commitIndexById.get(anchorCommitId);
+    if (index !== undefined)
+      virtualizer.scrollToIndex(index, { align: "start" });
+  }, [
+    commits.length,
+    anchorCommitId,
+    revealCommitId,
+    commitIndexById,
+    virtualizer,
+  ]);
+
+  // Reporting the position reads the scroll offset when the timer fires rather
+  // than any virtualizer state: rows have one fixed height, so the offset alone
+  // names the top commit, and it is already right the instant a restore moves
+  // it, whereas the virtualizer catches up a frame later.
+  const scrollTop = useRef(0);
+  const anchorTimer = useRef<number | null>(null);
+  const latest = useRef({ commits, onAnchorChange });
+  useEffect(() => {
+    latest.current = { commits, onAnchorChange };
+  });
+  const reportAnchor = useCallback(() => {
+    const { commits: shown, onAnchorChange: report } = latest.current;
+    const top = Math.min(
+      Math.floor(scrollTop.current / ROW_HEIGHT),
+      shown.length - 1,
+    );
+    report?.(shown[top]?.id ?? null);
+  }, []);
+  useEffect(
+    () => () => {
+      // Replacing the table within the settle window must not lose the move.
+      if (anchorTimer.current !== null) {
+        window.clearTimeout(anchorTimer.current);
+        reportAnchor();
+      }
+    },
+    [reportAnchor],
+  );
 
   const copy = useCallback(
     async (value: string, target: CopyTarget) => {
@@ -275,7 +340,20 @@ export function CommitTable({
   );
 
   return (
-    <div className="commit-table" ref={scrollRef}>
+    <div
+      className="commit-table"
+      ref={scrollRef}
+      onScroll={(event) => {
+        scrollTop.current = event.currentTarget.scrollTop;
+        if (anchorTimer.current !== null) {
+          window.clearTimeout(anchorTimer.current);
+        }
+        anchorTimer.current = window.setTimeout(() => {
+          anchorTimer.current = null;
+          reportAnchor();
+        }, ANCHOR_SETTLE_MS);
+      }}
+    >
       <div
         className="commit-table__content"
         style={{ height: `${String(totalHeight)}px` }}

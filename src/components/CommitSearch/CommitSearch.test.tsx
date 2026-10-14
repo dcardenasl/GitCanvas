@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CommitInfo } from "../../bindings";
@@ -28,9 +29,22 @@ const COMMITS = [
   commit("c", "docs: readme"),
 ];
 
-function renderSearch() {
+/** Holds the query the way the shell does, so typing changes what is shown. */
+function Held({ onGo, initial = "" }: { onGo: () => void; initial?: string }) {
+  const [query, setQuery] = useState(initial);
+  return (
+    <CommitSearch
+      commits={COMMITS}
+      query={query}
+      onQueryChange={setQuery}
+      onGo={onGo}
+    />
+  );
+}
+
+function renderSearch(initial = "") {
   const onGo = vi.fn();
-  render(<CommitSearch commits={COMMITS} onGo={onGo} />);
+  render(<Held onGo={onGo} initial={initial} />);
   return {
     onGo,
     input: screen.getByRole("searchbox", {
@@ -88,6 +102,13 @@ describe("CommitSearch", () => {
     await userEvent.type(input, "fix");
 
     expect(screen.getByRole("status").textContent).toBe("1 de 1");
+  });
+
+  it("shows a query the caller already holds, as when returning to a project", () => {
+    const { input } = renderSearch("login");
+
+    expect((input as HTMLInputElement).value).toBe("login");
+    expect(screen.getByRole("status").textContent).toBe("1 de 2");
   });
 
   it("clears and leaves the field on Escape", async () => {

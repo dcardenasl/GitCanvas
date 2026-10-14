@@ -186,6 +186,33 @@ describe("per-tab navigation", () => {
   });
 });
 
+describe("view state per tab", () => {
+  it("keeps the search, folders and pin of each project to itself", () => {
+    openTestProject(alpha);
+    const forAlpha = navigationActionsFor(alpha.path);
+    forAlpha.setSearchQuery("login");
+    forAlpha.toggleFolder("src");
+    forAlpha.setSidebarPinned(true);
+    forAlpha.setHistoryAnchor(COMMIT);
+    openTestProject(beta);
+
+    expect(activeNavigation()).toMatchObject({
+      searchQuery: "",
+      sidebarPinned: false,
+      historyAnchor: null,
+    });
+    expect(activeNavigation().collapsedFolders.size).toBe(0);
+
+    useWorkspace.getState().activate(alpha.path);
+    expect(activeNavigation()).toMatchObject({
+      searchQuery: "login",
+      sidebarPinned: true,
+      historyAnchor: COMMIT,
+    });
+    expect([...activeNavigation().collapsedFolders]).toEqual(["src"]);
+  });
+});
+
 describe("hooks", () => {
   it("follow the active tab", () => {
     openTestProject(alpha);

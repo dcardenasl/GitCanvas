@@ -1,9 +1,10 @@
-import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ChangedFile } from "../../lib/changedFiles";
 import type { FileSource } from "../../state/navigation";
 import { useFileListPreferences } from "../../state/fileListPreferences";
+import { useNavigation, useNavigationActions } from "../../state/workspace";
 import { CommitTreeBrowser } from "./CommitTreeBrowser";
 import { ChangedFileRow } from "../ChangedFileRow/ChangedFileRow";
 import { FolderIcon } from "../FolderIcon/FolderIcon";
@@ -49,10 +50,16 @@ export function ChangedFilesBrowser({
   const { t } = useTranslation("files");
   const view = useFileListPreferences((state) => state.view);
   const setView = useFileListPreferences((state) => state.setView);
-  const [showAllCommitFiles, setShowAllCommitFiles] = useState(false);
-  const [collapsedPaths, setCollapsedPaths] = useState<ReadonlySet<string>>(
-    () => new Set(),
+  // Kept with the project, not with this list: a list that is replaced when
+  // another project is shown must come back as it was left.
+  const showAllCommitFiles = useNavigation(
+    (navigation) => navigation.showAllCommitFiles,
   );
+  const collapsedPaths = useNavigation(
+    (navigation) => navigation.collapsedFolders,
+  );
+  const { setShowAllCommitFiles, setCollapsedFolders, toggleFolder } =
+    useNavigationActions();
 
   const trees = useMemo(
     () => groups.map((group) => buildFileTree(group.files)),
@@ -67,17 +74,8 @@ export function ChangedFilesBrowser({
     allCommitFiles !== undefined;
   const allExpanded = directoryPaths.every((path) => !collapsedPaths.has(path));
 
-  const toggleDirectory = (path: string) => {
-    setCollapsedPaths((current) => {
-      const next = new Set(current);
-      if (next.has(path)) next.delete(path);
-      else next.add(path);
-      return next;
-    });
-  };
-
   const toggleAll = () => {
-    setCollapsedPaths(allExpanded ? new Set(directoryPaths) : new Set());
+    setCollapsedFolders(allExpanded ? new Set(directoryPaths) : new Set());
   };
 
   return (
@@ -182,7 +180,7 @@ export function ChangedFilesBrowser({
                   selectedFileSource={selectedFileSource}
                   source={group.source}
                   onOpen={onOpen}
-                  onToggleDirectory={toggleDirectory}
+                  onToggleDirectory={toggleFolder}
                 />
               </ul>
             );

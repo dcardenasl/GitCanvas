@@ -29,6 +29,16 @@ export interface Navigation {
   readonly revealCommitId: string | null;
   /** File whose bounded content is currently expanded. */
   readonly expandedFilePath: string | null;
+  /** What was typed in the commit search. */
+  readonly searchQuery: string;
+  /** Folders collapsed in the file lists, as repository-relative paths. */
+  readonly collapsedFolders: ReadonlySet<string>;
+  /** Whether the commit's whole tree is listed instead of only what changed. */
+  readonly showAllCommitFiles: boolean;
+  /** Commit at the top of the history viewport, to return to it. */
+  readonly historyAnchor: string | null;
+  /** Whether the branch list stays open while a file is being read. */
+  readonly sidebarPinned: boolean;
 }
 
 /** A project that has just been opened: history, nothing pending. */
@@ -36,6 +46,11 @@ export const EMPTY_NAVIGATION: Navigation = {
   selection: { kind: "history" },
   revealCommitId: null,
   expandedFilePath: null,
+  searchQuery: "",
+  collapsedFolders: new Set(),
+  showAllCommitFiles: false,
+  historyAnchor: null,
+  sidebarPinned: false,
 };
 
 /** A change to a project's navigation. Returns the same value when nothing changes. */
@@ -151,6 +166,52 @@ export const clearOrphanedReveal: Transition = (navigation) => {
         : selection,
   };
 };
+
+/** Records what was typed in the commit search. */
+export function setSearchQuery(query: string): Transition {
+  return (navigation) =>
+    navigation.searchQuery === query
+      ? navigation
+      : { ...navigation, searchQuery: query };
+}
+
+/** Collapses a folder in the file lists, or expands it when it is collapsed. */
+export function toggleFolder(path: string): Transition {
+  return (navigation) => {
+    const collapsedFolders = new Set(navigation.collapsedFolders);
+    if (!collapsedFolders.delete(path)) collapsedFolders.add(path);
+    return { ...navigation, collapsedFolders };
+  };
+}
+
+/** Replaces the whole set of collapsed folders. */
+export function setCollapsedFolders(paths: ReadonlySet<string>): Transition {
+  return (navigation) => ({ ...navigation, collapsedFolders: new Set(paths) });
+}
+
+/** Chooses between listing what changed and the commit's whole tree. */
+export function setShowAllCommitFiles(show: boolean): Transition {
+  return (navigation) =>
+    navigation.showAllCommitFiles === show
+      ? navigation
+      : { ...navigation, showAllCommitFiles: show };
+}
+
+/** Records the commit at the top of the history viewport. */
+export function setHistoryAnchor(commitId: string | null): Transition {
+  return (navigation) =>
+    navigation.historyAnchor === commitId
+      ? navigation
+      : { ...navigation, historyAnchor: commitId };
+}
+
+/** Pins or unpins the branch list while a file is being read. */
+export function setSidebarPinned(pinned: boolean): Transition {
+  return (navigation) =>
+    navigation.sidebarPinned === pinned
+      ? navigation
+      : { ...navigation, sidebarPinned: pinned };
+}
 
 /**
  * Returns the selected commit id, or `null` when history itself is selected.

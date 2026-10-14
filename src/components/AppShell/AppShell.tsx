@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 
@@ -54,9 +54,11 @@ export function AppShell() {
   const watcher = useLiveRepository(repository?.path ?? null);
   const currentBranch = useCurrentBranch(repository?.path ?? null);
   const gitActions = useGitActions(repository?.path ?? null);
-  const [sidebarPinned, setSidebarPinned] = useState(false);
+  const sidebarPinned = useNavigation((navigation) => navigation.sidebarPinned);
+  const searchQuery = useNavigation((navigation) => navigation.searchQuery);
 
-  const { revealCommit } = useNavigationActions();
+  const { revealCommit, setSidebarPinned, setSearchQuery } =
+    useNavigationActions();
   const openProject = useWorkspace((state) => state.openProject);
   const notice = useWorkspace((state) => state.notice);
   const dismissNotice = useWorkspace((state) => state.dismissNotice);
@@ -177,14 +179,20 @@ export function AppShell() {
             aria-pressed={sidebarPinned}
             title={t("toolbar.branchesHint")}
             onClick={() => {
-              setSidebarPinned((pinned) => !pinned);
+              setSidebarPinned(!sidebarPinned);
             }}
           >
             {t("toolbar.branches")}
           </button>
         )}
         {repository !== null && !readingFile && (
-          <CommitSearch commits={history.commits} onGo={revealCommit} />
+          <CommitSearch
+            key={repository.path}
+            commits={history.commits}
+            query={searchQuery}
+            onQueryChange={setSearchQuery}
+            onGo={revealCommit}
+          />
         )}
         <div className="toolbar__spacer" />
         <PreferencesMenu />
@@ -217,6 +225,10 @@ export function AppShell() {
         </div>
       ) : (
         <div
+          // Replaced, not updated, when another project is shown, so nothing a
+          // view keeps for itself (scroll offset, focus, a half-typed field)
+          // carries over from the project that was on screen before.
+          key={repository.path}
           className="app-shell__body"
           style={
             {

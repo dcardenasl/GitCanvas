@@ -11,6 +11,12 @@ import {
   selectedFilePath,
   selectedFileSource,
   selectFile,
+  setCollapsedFolders,
+  setHistoryAnchor,
+  setSearchQuery,
+  setShowAllCommitFiles,
+  setSidebarPinned,
+  toggleFolder,
   type Navigation,
   type Transition,
 } from "./navigation";
@@ -156,6 +162,63 @@ describe("navigation reveal", () => {
       filePath: null,
     });
     expect(navigation.revealCommitId).toBeNull();
+  });
+});
+
+describe("navigation view state", () => {
+  it("starts empty for a project that has just been opened", () => {
+    expect(EMPTY_NAVIGATION).toMatchObject({
+      searchQuery: "",
+      showAllCommitFiles: false,
+      historyAnchor: null,
+      sidebarPinned: false,
+    });
+    expect(EMPTY_NAVIGATION.collapsedFolders.size).toBe(0);
+  });
+
+  it("records the search, the anchor, the pin and the listing choice", () => {
+    const navigation = after(
+      setSearchQuery("login"),
+      setHistoryAnchor(COMMIT),
+      setSidebarPinned(true),
+      setShowAllCommitFiles(true),
+    );
+
+    expect(navigation).toMatchObject({
+      searchQuery: "login",
+      historyAnchor: COMMIT,
+      sidebarPinned: true,
+      showAllCommitFiles: true,
+    });
+  });
+
+  it.each([
+    ["the search", setSearchQuery("")],
+    ["the anchor", setHistoryAnchor(null)],
+    ["the pin", setSidebarPinned(false)],
+    ["the listing choice", setShowAllCommitFiles(false)],
+  ])("returns the same value when %s does not change", (_name, transition) => {
+    expect(transition(EMPTY_NAVIGATION)).toBe(EMPTY_NAVIGATION);
+  });
+
+  it("collapses a folder and expands it again without touching earlier values", () => {
+    const collapsed = after(toggleFolder("src"));
+    const expanded = toggleFolder("src")(collapsed);
+
+    expect([...collapsed.collapsedFolders]).toEqual(["src"]);
+    expect(expanded.collapsedFolders.size).toBe(0);
+    // The value a view may still be holding was not changed under it.
+    expect([...collapsed.collapsedFolders]).toEqual(["src"]);
+    expect(EMPTY_NAVIGATION.collapsedFolders.size).toBe(0);
+  });
+
+  it("replaces the collapsed folders with a copy, not the caller's set", () => {
+    const given = new Set(["a", "b"]);
+
+    const navigation = after(setCollapsedFolders(given));
+    given.add("c");
+
+    expect([...navigation.collapsedFolders]).toEqual(["a", "b"]);
   });
 });
 
