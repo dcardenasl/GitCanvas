@@ -183,6 +183,15 @@ jobs:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
 
+      # An unsealed bundle opens fine where it was built and is reported as
+      # damaged once a download marks it quarantined, so it must not be published.
+      - name: Verify the macOS bundle seal
+        if: matrix.os == 'macos-latest'
+        run: |
+          bundle=$(find target -type d -name GitCanvas.app -path '*release/bundle/macos*' | head -n 1)
+          test -n "$bundle"
+          codesign --verify --deep --strict --verbose=2 "$bundle"
+
   publish:
     needs: [create-release, bundle]
     permissions:
