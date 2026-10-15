@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-10-14
+
 ### Fixed
 
 - **macOS installer** — the app opened from a downloaded `.dmg` was reported as damaged because its signature did not cover the bundle; it is now sealed, so the usual first-launch steps in the README are enough.

@@ -1,7 +1,7 @@
 {
   "name": "gitcanvas",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "license": "MIT",
   "packageManager": "npm@10.9.8",
   "type": "module",
