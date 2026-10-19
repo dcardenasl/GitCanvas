@@ -8,6 +8,7 @@
 
 mod support;
 
+use git2::{Repository, Signature};
 use gitcanvas_core::{
     refs::{get_branches, get_tags},
     repository::ActiveRepo,
@@ -115,4 +116,64 @@ fn empty_repository_has_no_refs() {
     let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
     assert!(get_branches(&active).unwrap().is_empty());
     assert!(get_tags(&active).unwrap().is_empty());
+}
+
+#[test]
+fn snapshot_freezes_head_roots_and_configured_upstream() {
+    let directory = tempfile::tempdir().unwrap();
+    let repo = Repository::init(directory.path()).unwrap();
+    let signature = Signature::now("Author", "author@example.com").unwrap();
+    let tree_id = repo.treebuilder(None).unwrap().write().unwrap();
+    let tree = repo.find_tree(tree_id).unwrap();
+    let id = repo
+        .commit(Some("HEAD"), &signature, &signature, "root", &tree, &[])
+        .unwrap();
+    let head_name = repo.head().unwrap().name().unwrap().to_owned();
+    let local_name = head_name.strip_prefix("refs/heads/").unwrap();
+    repo.reference("refs/remotes/origin/trunk", id, false, "test")
+        .unwrap();
+    repo.reference_symbolic(
+        "refs/remotes/origin/HEAD",
+        "refs/remotes/origin/trunk",
+        false,
+        "test",
+    )
+    .unwrap();
+    let mut config = repo.config().unwrap();
+    config
+        .set_str("remote.origin.url", "https://example.com/project.git")
+        .unwrap();
+    config
+        .set_str("remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
+        .unwrap();
+    config
+        .set_str(&format!("branch.{local_name}.remote"), "origin")
+        .unwrap();
+    config
+        .set_str(&format!("branch.{local_name}.merge"), "refs/heads/trunk")
+        .unwrap();
+    let active = ActiveRepo::validate(directory.path()).unwrap();
+    let snapshot = gitcanvas_core::refs::get_repository_refs(&active).unwrap();
+    assert_eq!(snapshot.head, Some(id.to_string()));
+    assert_eq!(snapshot.roots, vec![id.to_string()]);
+    assert_eq!(
+        snapshot
+            .branches
+            .iter()
+            .find(|b| b.is_head)
+            .unwrap()
+            .upstream
+            .as_deref(),
+        Some("refs/remotes/origin/trunk")
+    );
+    assert_eq!(
+        snapshot
+            .branches
+            .iter()
+            .find(|b| b.is_symbolic)
+            .unwrap()
+            .symbolic_target
+            .as_deref(),
+        Some("refs/remotes/origin/trunk")
+    );
 }

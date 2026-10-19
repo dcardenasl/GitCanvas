@@ -26,8 +26,8 @@ function makeClient(): QueryClient {
 function seedLiveQueries(client: QueryClient): void {
   const keys = [
     queryKeys.history(PATH),
-    queryKeys.branches(PATH),
-    queryKeys.tags(PATH),
+    queryKeys.refs(PATH),
+    queryKeys.refs(PATH),
     queryKeys.worktree(PATH, SNAPSHOT_REQUEST),
     queryKeys.worktreeFileDiff(PATH, FILE_DIFF_REQUEST),
     queryKeys.worktreeFingerprint(PATH),
@@ -49,10 +49,10 @@ describe("queryKeys and invalidateLive", () => {
     expect(client.getQueryState(queryKeys.history(PATH))?.isInvalidated).toBe(
       true,
     );
-    expect(client.getQueryState(queryKeys.branches(PATH))?.isInvalidated).toBe(
+    expect(client.getQueryState(queryKeys.refs(PATH))?.isInvalidated).toBe(
       true,
     );
-    expect(client.getQueryState(queryKeys.tags(PATH))?.isInvalidated).toBe(
+    expect(client.getQueryState(queryKeys.refs(PATH))?.isInvalidated).toBe(
       true,
     );
     expect(
@@ -99,8 +99,8 @@ describe("queryKeys and invalidateLive", () => {
 
     for (const key of [
       queryKeys.history(PATH),
-      queryKeys.branches(PATH),
-      queryKeys.tags(PATH),
+      queryKeys.refs(PATH),
+      queryKeys.refs(PATH),
       queryKeys.worktree(PATH, SNAPSHOT_REQUEST),
       queryKeys.worktreeFileDiff(PATH, FILE_DIFF_REQUEST),
       queryKeys.worktreeFingerprint(PATH),
@@ -120,10 +120,10 @@ describe("queryKeys and invalidateLive", () => {
     expect(client.getQueryState(queryKeys.history(PATH))?.isInvalidated).toBe(
       false,
     );
-    expect(client.getQueryState(queryKeys.branches(PATH))?.isInvalidated).toBe(
+    expect(client.getQueryState(queryKeys.refs(PATH))?.isInvalidated).toBe(
       false,
     );
-    expect(client.getQueryState(queryKeys.tags(PATH))?.isInvalidated).toBe(
+    expect(client.getQueryState(queryKeys.refs(PATH))?.isInvalidated).toBe(
       false,
     );
     expect(

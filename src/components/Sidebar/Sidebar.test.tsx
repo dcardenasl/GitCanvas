@@ -3,11 +3,12 @@ import { cleanup, fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BranchInfo } from "../../bindings";
+import type { BranchInfo, TagInfo } from "../../bindings";
 import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
 
-const mockIpc = createIpcMocks(["getBranches", "getTags"] as const);
-const { getBranches, getTags } = mockIpc;
+const getBranches = vi.fn<() => Promise<BranchInfo[]>>();
+const getTags = vi.fn<() => Promise<TagInfo[]>>();
+const mockIpc = createIpcMocks(["getRepositoryRefs"] as const);
 
 vi.mock("../../lib/ipc", () => mockIpc);
 
@@ -26,6 +27,8 @@ function branch(overrides: Partial<BranchInfo> = {}): BranchInfo {
     is_remote: false,
     is_head: false,
     is_symbolic: false,
+    upstream: null,
+    symbolic_target: null,
     ...overrides,
   };
 }
@@ -38,6 +41,23 @@ function renderSidebar(onCheckout?: (branch: string) => void) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockIpc.getRepositoryRefs.mockImplementation(async () => {
+    const branches = await getBranches();
+    const tags = await getTags();
+    return {
+      branches,
+      tags,
+      head: null,
+      head_reference: null,
+      roots: [
+        ...new Set(
+          branches.flatMap((branch) =>
+            branch.target === null ? [] : [branch.target],
+          ),
+        ),
+      ],
+    };
+  });
   getBranches.mockResolvedValue([
     branch(),
     branch({

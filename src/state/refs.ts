@@ -1,8 +1,8 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import type { BranchInfo, TagInfo } from "../bindings";
-import { getBranches, getTags } from "../lib/ipc";
+import type { RepositoryRefsSnapshot } from "../bindings";
+import { getRepositoryRefs } from "../lib/ipc";
 import { queryKeys } from "./queryKeys";
 
 /** A ref that can be shown as a badge on the commit it points at. */
@@ -19,42 +19,38 @@ const ORDER: Record<RefBadge["kind"], number> = {
   tag: 2,
 };
 
-/**
- * The branch query: the one place it is defined.
- *
- * The sidebar, the row badges, the toolbar and the check made when a tab is
- * activated all use it, so they share a cache entry and can never disagree
- * about which branch is checked out.
- */
-export function branchesQuery(path: string | null) {
-  return queryOptions<BranchInfo[]>({
-    queryKey: queryKeys.branches(path),
+/** A shared generation for every reference consumer. */
+export function refsQuery(path: string | null) {
+  return queryOptions<RepositoryRefsSnapshot>({
+    queryKey: queryKeys.refs(path),
     queryFn: () => {
       if (path === null) throw new Error("No repository is open");
-      return getBranches(path);
+      return getRepositoryRefs(path);
     },
   });
 }
 
-/** The tag query, defined once for the same reason as {@link branchesQuery}. */
-export function tagsQuery(path: string | null) {
-  return queryOptions<TagInfo[]>({
-    queryKey: queryKeys.tags(path),
-    queryFn: () => {
-      if (path === null) throw new Error("No repository is open");
-      return getTags(path);
-    },
-  });
+/** Observes references only for the supplied active project. */
+export function useRepositoryRefs(path: string | null) {
+  return useQuery({ ...refsQuery(path), enabled: path !== null });
 }
 
-/** Branches of the open repository. See {@link branchesQuery}. */
+/** Branch projection of the shared reference generation. */
 export function useBranches(path: string | null) {
-  return useQuery({ ...branchesQuery(path), enabled: path !== null });
+  return useQuery({
+    ...refsQuery(path),
+    enabled: path !== null,
+    select: (data) => data.branches,
+  });
 }
 
-/** Tags of the open repository. See {@link branchesQuery}. */
+/** Tag projection of the shared reference generation. */
 export function useTags(path: string | null) {
-  return useQuery({ ...tagsQuery(path), enabled: path !== null });
+  return useQuery({
+    ...refsQuery(path),
+    enabled: path !== null,
+    select: (data) => data.tags,
+  });
 }
 
 /**
@@ -95,6 +91,7 @@ export function useRefsByCommit(
     };
 
     for (const branch of branches.data ?? []) {
+      if (branch.is_symbolic) continue;
       add(branch.target, {
         name: branch.name,
         kind: branch.is_remote ? "remote" : "local",

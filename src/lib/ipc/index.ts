@@ -75,10 +75,9 @@ export const getCommits = (path: string, request: HistoryRequest) =>
 /** Reads immutable metadata for one full commit id without paging history. */
 export const getCommit = (path: string, commitId: string) =>
   result(commands.getCommit(path, commitId));
-/** Lists local and remote branches. */
-export const getBranches = (path: string) => result(commands.getBranches(path));
-/** Lists lightweight and annotated tags. */
-export const getTags = (path: string) => result(commands.getTags(path));
+/** Reads branches, tags, HEAD and frozen roots as one reference generation. */
+export const getRepositoryRefs = (path: string) =>
+  result(commands.getRepositoryRefs(path));
 /** Reads a commit's changes against its first parent. */
 export const getCommitDiff = (path: string, request: DiffRequest) =>
   result(commands.getCommitDiff(path, request));

@@ -58,8 +58,12 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
     "getCommits",
     [PATH, { limit: 5, cursor: null, roots: null }],
   ],
-  ["getBranches", () => ipc.getBranches(PATH), "getBranches", [PATH]],
-  ["getTags", () => ipc.getTags(PATH), "getTags", [PATH]],
+  [
+    "getRepositoryRefs",
+    () => ipc.getRepositoryRefs(PATH),
+    "getRepositoryRefs",
+    [PATH],
+  ],
   [
     "getCommitDiff",
     () =>

@@ -47,10 +47,8 @@ export const commands = {
 	getCommits: (path: string, request: HistoryRequest) => typedError<HistoryPage, AppError>(__TAURI_INVOKE("get_commits", { path, request })),
 	/**  Reads a selected commit by full id, independently of the loaded history pages. */
 	getCommit: (path: string, commitId: string) => typedError<CommitInfo, AppError>(__TAURI_INVOKE("get_commit", { path, commitId })),
-	/**  Lists local and remote branches and identifies the current branch. */
-	getBranches: (path: string) => typedError<BranchInfo[], AppError>(__TAURI_INVOKE("get_branches", { path })),
-	/**  Lists tags, peeling annotated tags to commits when applicable. */
-	getTags: (path: string) => typedError<TagInfo[], AppError>(__TAURI_INVOKE("get_tags", { path })),
+	/**  Reads one coherent generation of branches, tags, HEAD and history roots. */
+	getRepositoryRefs: (path: string) => typedError<RepositoryRefsSnapshot, AppError>(__TAURI_INVOKE("get_repository_refs", { path })),
 	/**
 	 *  Reads a commit's changes against its first parent.
 	 *
@@ -179,7 +177,11 @@ export type BranchInfo = {
 	/**  Full ref name used as branch identity. */
 	full_name: string,
 	/**  Commit id at the branch tip. */
-	target: string,
+	target: string | null,
+	/**  Configured upstream, using its full reference name. */
+	upstream: string | null,
+	/**  Destination of a symbolic reference, including a missing destination. */
+	symbolic_target: string | null,
 	/**  Whether this branch belongs to a remote. */
 	is_remote: boolean,
 	/**  Whether this is the currently checked-out branch. */
@@ -556,6 +558,20 @@ export type RepositoryInfo = {
 	path: string,
 	/**  Repository directory name for display. */
 	name: string,
+};
+
+/**  One locally observed reference generation. Stored paths still authorize nothing. */
+export type RepositoryRefsSnapshot = {
+	/**  Local and remote branches, including symbolic aliases. */
+	branches: BranchInfo[],
+	/**  Annotated and lightweight tags, including non-commit tags. */
+	tags: TagInfo[],
+	/**  Resolved HEAD commit, absent before the first commit. */
+	head: string | null,
+	/**  HEAD's symbolic branch, absent when detached. */
+	head_reference: string | null,
+	/**  Frozen, sorted, unique commit roots for history pagination. */
+	roots: string[],
 };
 
 /**  A workspace to persist, numbered so a late arrival cannot undo a newer save. */

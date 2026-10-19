@@ -16,9 +16,7 @@ export const queryKeys = {
     ["history", repositoryPath] as const,
   commit: (repositoryPath: string | null, commitId: string | null) =>
     ["commit", repositoryPath, commitId] as const,
-  branches: (repositoryPath: string | null) =>
-    ["branches", repositoryPath] as const,
-  tags: (repositoryPath: string | null) => ["tags", repositoryPath] as const,
+  refs: (repositoryPath: string | null) => ["refs", repositoryPath] as const,
   worktree: (
     repositoryPath: string | null,
     request?: WorktreeSnapshotRequest,
@@ -74,8 +72,7 @@ type LiveQueryScope = "metadata" | "worktree" | "all";
 function liveKeys(repositoryPath: string, scope: LiveQueryScope): QueryKey[] {
   const metadata: QueryKey[] = [
     queryKeys.history(repositoryPath),
-    queryKeys.branches(repositoryPath),
-    queryKeys.tags(repositoryPath),
+    queryKeys.refs(repositoryPath),
   ];
   const worktree: QueryKey[] = [
     queryKeys.worktree(repositoryPath),
@@ -145,8 +142,7 @@ export function removeHeavyProjectQueries(
   root: string,
 ): void {
   const light = new Set<string>([
-    queryKeys.branches(root)[0],
-    queryKeys.tags(root)[0],
+    queryKeys.refs(root)[0],
     queryKeys.worktreeFingerprint(root)[0],
   ]);
   queryClient.removeQueries({
