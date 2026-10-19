@@ -27,7 +27,6 @@ function seedLiveQueries(client: QueryClient): void {
   const keys = [
     queryKeys.history(PATH),
     queryKeys.refs(PATH),
-    queryKeys.refs(PATH),
     queryKeys.worktree(PATH, SNAPSHOT_REQUEST),
     queryKeys.worktreeFileDiff(PATH, FILE_DIFF_REQUEST),
     queryKeys.worktreeFingerprint(PATH),
@@ -47,9 +46,6 @@ describe("queryKeys and invalidateLive", () => {
     await invalidateLive(client, PATH, "metadata");
 
     expect(client.getQueryState(queryKeys.history(PATH))?.isInvalidated).toBe(
-      true,
-    );
-    expect(client.getQueryState(queryKeys.refs(PATH))?.isInvalidated).toBe(
       true,
     );
     expect(client.getQueryState(queryKeys.refs(PATH))?.isInvalidated).toBe(

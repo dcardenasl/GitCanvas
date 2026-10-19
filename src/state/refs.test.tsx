@@ -146,6 +146,7 @@ describe("useRefsByCommit", () => {
       result.current.get(TIP)?.map((ref) => `${ref.kind}:${ref.name}`),
     ).toEqual(["local:alpha", "local:zeta", "remote:origin/main", "tag:v1"]);
     expect(result.current.get(TIP)?.[0]?.isHead).toBe(true);
+    expect(mockIpc.getRepositoryRefs).toHaveBeenCalledTimes(1);
     // A tag that points at no commit has no row to sit on.
     expect(result.current.get(OTHER)?.map((ref) => ref.name)).toEqual([
       "other",

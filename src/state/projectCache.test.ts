@@ -33,7 +33,6 @@ it("closing removes every resource of that root without touching another project
     queryKeys.history(root),
     queryKeys.commit(root, "id"),
     queryKeys.refs(root),
-    queryKeys.refs(root),
     queryKeys.worktree(root),
     queryKeys.worktreeFileDiff(root),
     queryKeys.worktreeFingerprint(root),
@@ -72,11 +71,7 @@ it("LRU eviction retains the small refs and fingerprint but closing removes thos
   const client = createTestQueryClient();
   const cache = new ProjectCache();
   const root = "/repo/old";
-  const light = [
-    queryKeys.refs(root),
-    queryKeys.refs(root),
-    queryKeys.worktreeFingerprint(root),
-  ];
+  const light = [queryKeys.refs(root), queryKeys.worktreeFingerprint(root)];
   for (const key of light) client.setQueryData(key, { known: true });
   client.setQueryData(queryKeys.worktree(root), { heavy: true });
   cache.retain(client, [root], root);
