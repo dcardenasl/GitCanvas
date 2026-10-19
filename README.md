@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="GitCanvas walking a commit graph, opening a merge commit and reading its diff" width="860">
+  <img src="docs/assets/demo.gif" alt="GitCanvas 0.4: changing a branch color, choosing the visual main branch and opening the +N reference menu" width="860">
 </p>
 
 GitCanvas does one thing: it lets you **see the shape of a repository's history**.
@@ -27,8 +27,26 @@ rebase or pull-request workflows, tools like GitKraken, Tower or Fork do far mor
 GitCanvas is the opposite trade: small, fast, free, and focused on reading history well.
 
 <p align="center">
-  <img src="docs/assets/screenshot.jpg" alt="GitCanvas showing the branch graph, a selected merge commit and its diff" width="860">
+  <img src="docs/assets/screenshot.jpg" alt="GitCanvas showing the branch graph with a color per branch, a selected merge commit and its details" width="860">
 </p>
+
+## What's new in 0.4
+
+The graph gets an identity: every branch keeps its color and its lane, and you decide how it looks.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/assets/screenshot-branch-colors.jpg" alt="Choosing a named color for a branch from its menu"><br><sub><strong>Your color, per branch.</strong> Open a branch's menu and pick a named color; the graph updates at once and the choice survives restarts, independently for each worktree.</sub></td>
+    <td width="50%"><img src="docs/assets/screenshot-visual-main.jpg" alt="The release branch chosen as the visual main branch, drawn in the leftmost lane"><br><sub><strong>A visual main branch.</strong> Mark any branch as the main one and it takes the leftmost lane; the others arrange themselves around it.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/assets/screenshot-references.jpg" alt="Tags listed first on a commit and a +2 menu with the hidden reference names"><br><sub><strong>Readable reference labels.</strong> Tags come first, the color dot keeps a fixed size, long names truncate with an ellipsis, and whatever does not fit folds into a <code>+N</code> menu where each name can be copied.</sub></td>
+  </tr>
+</table>
+
+Also in 0.4: merges and shared-base branches use compact curves with no lane detours, colors stay
+stable as you load more pages, and obsolete history walks are released when references move.
+See the [changelog](CHANGELOG.md) for the full list.
 
 ## Features
 
@@ -40,9 +58,10 @@ GitCanvas is the opposite trade: small, fast, free, and focused on reading histo
 
 - **Branch graph with stable lanes.** Branches and merges are drawn as lanes in SVG, and
   lanes never reorder as you load more history. Branch and tag badges sit on the commits
-  they point at. On `dev` for v0.4, named colors stay with branches across pages and
-  restarts, configured upstreams share colors, and a chosen visual main branch keeps
-  the leftmost lane. Branch menus let you change appearance without checkout.
+  they point at, tags first, with overflow folded into a `+N` menu. Named colors stay with
+  branches across pages and restarts, configured upstreams share colors, and a chosen
+  visual main branch keeps the leftmost lane. Branch menus change a branch's color or
+  visual main without a checkout.
 - **Fast on large repositories.** History loads 500 commits at a time and the graph layout
   is extended page by page instead of recomputed. Only visible rows are rendered;
   later pages reuse the bounded traversal cache and existing geometry.
