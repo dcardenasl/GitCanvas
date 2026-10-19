@@ -25,7 +25,7 @@ alcance aquí y mantener TASKS.md como fuente de ejecución. Cada entrega debe q
 | Objetivo | Entrega | Alcance |
 |---|---|---|
 | v0.4 | Ramas visualmente claras | Continuidad, curvas, separación y cruces de líneas; colores estables por rama, coherentes entre panel y gráfico; paleta accesible en claro/oscuro; selección de color y principal visual. |
-| v0.5 | Panel izquierdo y filtros | Búsqueda, secciones plegables, carpetas por prefijos, contadores, menús; activar/desactivar ramas y tags; Solo esta, restablecer y deshacer; persistencia por repositorio e indicador de filtros durante el diff. |
+| v0.5 | Panel izquierdo, filtros y worktrees | Reconocimiento y navegación de worktrees del mismo repositorio; búsqueda, secciones plegables, carpetas por prefijos, contadores, menús; activar/desactivar ramas y tags; Solo esta, restablecer y deshacer; persistencia por repositorio e indicador de filtros durante el diff. |
 | v0.6 | Historial por archivo | Entrada desde inspector/lista de archivos; commits que modificaron el archivo, diff y contenido histórico; seguimiento de renombrados cuando sea determinable, con límites explícitos. |
 | v0.7 | Contribuyentes y releases | Identidades con .mailmap, énfasis y navegación por autor; releases GitHub, notas, tag, adjuntos, caché sin conexión, recuperación de acceso y descargas explícitas. |
 | v0.8 | Múltiples proveedores | Separar Git local de capacidades del proveedor; GitLab como primera ampliación; cuentas/servidores y credenciales aisladas. Bitbucket, Azure DevOps y servidores propios quedan para ampliaciones según necesidad. |
@@ -115,6 +115,54 @@ independiente del futuro alcance y de la posición del carril.
   Probar primer commit, renombrados, fallos de hooks/firma, cambios externos y pérdida
   de respuesta. Sin reintentos automáticos de escrituras.
 
+## Worktrees — ampliación aprobada el 2026-10-19
+
+Estado: decisión de producto aprobada; implementación pendiente. v0.4 sigue guardando
+colores y principal visual por raíz canónica de worktree. La siguiente entrega cambiará
+ese alcance de preferencias; no se presenta como comportamiento ya disponible.
+
+### v0.5 — Reconocimiento y navegación
+
+- Presentar los worktrees como espacios de trabajo de un mismo repositorio. Añadir
+  sección **Worktrees** al panel con nombre, rama activa y ubicación. HEAD detached y
+  ubicaciones ausentes tendrán estados explícitos.
+- Marcar en las ramas **Abierta en…** cuando estén ocupadas por otro worktree.
+  En ese caso, ofrecer **Abrir ese worktree** en lugar de intentar cambiar a la rama.
+- Abrir cada worktree en su propia pestaña o activar la existente; mantener una
+  agrupación visual por repositorio y distinguir el nombre del worktree. Cerrar una
+  pestaña no cierra las demás ni elimina un worktree.
+- Conservar un único nodo por commit en el gráfico y señalar las ramas abiertas en
+  cada worktree. La relación entre worktrees no crea commits ni trayectorias nuevas.
+- Compartir colores y principal visual entre los worktrees del mismo repositorio.
+  Conservar selección, búsqueda, filtros, desplazamiento, HEAD, índice y cambios
+  locales independientes; el contexto activo siempre identifica el worktree.
+- Identificar la relación desde los metadatos Git y el directorio Git común canónico,
+  nunca por nombre de carpeta o URL de remoto. Dos clones independientes del mismo
+  remoto no comparten automáticamente identidad ni preferencias.
+- El descubrimiento no autoriza rutas ni operaciones: abrir un worktree pasa por la
+  validación y autorización existentes. No añadir sondeo periódico de worktrees
+  inactivos ni recorrer carpetas arbitrarias para encontrarlos.
+
+Antes de implementar, concretar la migración de las preferencias v0.4: conciliar
+colores y principales distintos entre worktrees, preservar los datos anteriores y
+hacer explícita cualquier elección necesaria. Las secuencias de edición actuales son
+por raíz y no establecen un orden global entre worktrees. El cambio de alcance no
+permite perder personalizaciones silenciosamente. Documentar la nueva decisión de
+arquitectura y sus pruebas junto con la migración.
+
+Aceptación: repositorio principal y varios worktrees vinculados; misma rama marcada
+con su ubicación; HEAD detached; raíz ausente, bloqueada o eliminada externamente;
+pestaña existente sin duplicación; clones independientes; reinicio y migración con
+preferencias en conflicto; cambio de worktree sin mezclar archivos, HEAD ni navegación.
+Las pruebas deben conservar los límites de caché y la observación del proyecto activo.
+
+### Entrega posterior — Gestión
+
+Sin versión asignada: crear worktrees desde ramas nuevas o existentes, detectar los
+bloqueados o ausentes y permitir retirarlos con protección de cambios locales.
+Planificar guardias, concurrencia por directorio Git común y recuperación antes de
+exponer escrituras. Esta ampliación no adelanta creación ni eliminación a v0.5.
+
 ## Reserva de futuras funcionalidades
 
 Sin versión ni implementación comprometida:
@@ -122,7 +170,7 @@ Sin versión ni implementación comprometida:
 - Comparar dos commits o ramas.
 - Blame por línea.
 - Stash.
-- Gestión de worktrees.
+- Gestión de worktrees: creación y retirada; reconocimiento/navegación ya planificados para v0.5.
 - Acceso a pull requests/merge requests según proveedor.
 - Proveedores adicionales: Bitbucket, Azure DevOps y servidores propios.
 - Merge, rebase, cherry-pick y resolución de conflictos: requieren planificación

@@ -9,7 +9,7 @@
 **Estado al 2026-10-19:** v0.3.1 publicada. H2, I18N y workspace están
 implementados. El alcance de v0.4 está implementado en commits locales de dev;
 GRF-5 conserva las puertas externas/manuales pendientes. La estrategia aprobada prioriza líneas/colores del gráfico en v0.4,
-seguida de panel y filtros en v0.5. Commits se desplaza al final de la secuencia,
+seguida de panel, filtros y reconocimiento/navegación de worktrees en v0.5. Commits se desplaza al final de la secuencia,
 objetivo v0.11. Ver el [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md),
 que prevalece sobre asignaciones de versiones de planes anteriores.
 
@@ -60,9 +60,35 @@ Tipos, lint, formato, auditorías y build de producción macOS aprobados; firma 
 verificada. GRF-5 permanece abierta por Linux/Windows, lector de pantalla real y
 recorridos manuales sin evidencia. Detalles y límites en la verificación de v0.4.
 
+### v0.5 — Worktrees: reconocimiento y navegación
+
+Ampliación aprobada el 2026-10-19; pendiente de implementación. Contrato completo en
+[Worktrees — ampliación aprobada](docs/plan/2026-10-19-roadmap-de-versiones.md#worktrees--ampliación-aprobada-el-2026-10-19).
+Se integra en la entrega del panel y filtros, sin adelantar escrituras Git.
+
+- [ ] **WT-1 — Identidad y descubrimiento.** Relacionar worktrees por directorio Git
+      común canónico; distinguir clones independientes, ubicaciones ausentes y HEAD
+      detached. Descubrir una ruta no la autoriza para operaciones.
+- [ ] **WT-2 — Preferencias compartidas.** Migrar colores y principal visual al alcance
+      del repositorio común, conservando datos y resolviendo conflictos explícitamente.
+      Las secuencias actuales por raíz no son comparables entre worktrees. Registrar
+      ADR y pruebas; conservar navegación y filtros independientes por worktree.
+- [ ] **WT-3 — Panel y pestañas.** Sección Worktrees, nombre/rama/ubicación, distintivos
+      de ramas ocupadas, agrupación visual de pestañas y abrir/activar sin duplicados.
+      Ofrecer abrir el worktree que ocupa una rama; mantener un nodo por commit y
+      cambios locales claramente ligados al worktree activo.
+- [ ] **WT-4 — Verificación integrada.** Varios worktrees, clones independientes,
+      cambios externos, migración con conflictos, reinicio y navegación aislada;
+      accesibilidad, idiomas y temas. Sin sondeo de proyectos inactivos ni ampliación
+      silenciosa de autorizaciones o límites de caché.
+
+Crear o retirar worktrees queda para una entrega posterior sin versión asignada,
+con protección de cambios locales y planificación de concurrencia/recuperación.
+El comportamiento vigente de v0.4 sigue siendo preferencias por raíz independiente.
+
 ### Entregas posteriores
 
-v0.5 panel/filtros → v0.6 historial por archivo → v0.7 contribuyentes/releases →
+v0.5 panel/filtros y navegación de worktrees → v0.6 historial por archivo → v0.7 contribuyentes/releases →
 v0.8 proveedores → v0.9 crear/conectar repositorios → v0.10 gestión de ramas →
 v0.11 preparar/crear commits. Objetivos de planificación, sin fechas ni bumps.
 Desglosar cada entrega al prepararla siguiendo el roadmap y los acuerdos existentes.
