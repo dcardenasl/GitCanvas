@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import type { RefBadge } from "../../state/refs";
@@ -7,15 +7,28 @@ import { useThemePreferences } from "../../state/themePreferences";
 import { ContextMenu } from "../ContextMenu";
 
 const MAX_VISIBLE = 3;
+/** Share of the message cell the references may take; the rest is the summary. */
+const MAX_SHARE = 0.5;
+
+/** Tags lead, then the checked-out branch, local branches and remotes. */
+function rank(ref: RefBadge): number {
+  if (ref.kind === "tag") return 0;
+  if (ref.isHead) return 1;
+  return ref.kind === "local" ? 2 : 3;
+}
 
 /** Bounded reference previews; the overflow menu exposes every remaining name. */
 export function CommitRefs({
-  refs,
+  refs: unsorted,
   onCopy,
 }: {
   readonly refs: readonly RefBadge[];
   readonly onCopy: (name: string) => void;
 }) {
+  const refs = useMemo(
+    () => [...unsorted].sort((a, b) => rank(a) - rank(b)),
+    [unsorted],
+  );
   const { t } = useTranslation("history");
   const theme = useThemePreferences((state) => state.resolvedTheme);
   const root = useRef<HTMLSpanElement>(null);
@@ -31,6 +44,8 @@ export function CommitRefs({
     const element = root.current;
     const metrics = measure.current;
     if (element === null || metrics === null) return;
+    const parent = element.parentElement;
+    if (parent === null) return;
     const update = () => {
       const children = [...metrics.children];
       const widths = children
@@ -38,23 +53,15 @@ export function CommitRefs({
         .map((child) => child.getBoundingClientRect().width);
       const counter = children.at(-1)?.getBoundingClientRect().width ?? 0;
       const gap = Number.parseFloat(getComputedStyle(metrics).columnGap) || 0;
-      const width =
-        widths.reduce((sum, value) => sum + value, 0) +
-        Math.max(widths.length - 1, 0) * gap +
-        (refs.length > MAX_VISIBLE ? counter + gap : 0);
-      const available = element.getBoundingClientRect().width;
+      const available = parent.getBoundingClientRect().width * MAX_SHARE;
+      const needed = (shown: number) =>
+        widths.slice(0, shown).reduce((sum, value) => sum + value, 0) +
+        Math.max(shown - 1, 0) * gap +
+        (shown < refs.length ? counter + gap : 0);
+      // The first badge always shows (its label truncates); the rest fit or fold into +N.
       let count = widths.length;
-      let used = widths.reduce((sum, value) => sum + value, 0);
-      while (
-        count > 0 &&
-        used +
-          Math.max(count - 1, 0) * gap +
-          (count < refs.length ? counter + gap : 0) >
-          available
-      ) {
-        count -= 1;
-        used -= widths[count] ?? 0;
-      }
+      while (count > 1 && needed(count) > available) count -= 1;
+      const width = Math.min(needed(count), available);
       setFit((previous) =>
         previous.count === count && previous.width === width
           ? previous
@@ -63,7 +70,7 @@ export function CommitRefs({
     };
     update();
     const observer = new ResizeObserver(update);
-    observer.observe(element);
+    observer.observe(parent);
     observer.observe(metrics);
     return () => {
       observer.disconnect();
@@ -91,7 +98,7 @@ export function CommitRefs({
     <span
       ref={root}
       className="commit-refs"
-      style={{ inlineSize: fit.width > 0 ? fit.width : "50%" }}
+      style={{ inlineSize: fit.width > 0 ? fit.width : undefined }}
     >
       <span ref={measure} className="commit-refs__measure" aria-hidden="true">
         {refs.slice(0, MAX_VISIBLE).map(pill)}

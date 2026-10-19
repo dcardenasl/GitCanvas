@@ -219,6 +219,11 @@
   min-inline-size: 0;
 }
 
+/* The leading badge may shrink so its label truncates; the +N counter never does. */
+.commit-refs__measure + .ref-pill {
+  flex-shrink: 1;
+}
+
 .commit-refs__measure {
   position: absolute;
   display: inline-flex;
