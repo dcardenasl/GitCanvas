@@ -1,5 +1,9 @@
 # GitCanvas: commits, idiomas y múltiples proyectos
 
+> Actualización 2026-10-19: el [roadmap vigente](2026-10-19-roadmap-de-versiones.md)
+> sustituye el orden de entrega: gráfico/panel primero y commits al final (objetivo
+> v0.11). Los contratos funcionales de este documento siguen como referencia.
+
 ## 1. Objetivo y arquitectura
 
 Incorporar las tres funcionalidades manteniendo las responsabilidades actuales: operaciones Git en `gitcanvas-core`, autorización y ejecución en Tauri, estado y presentación en React. Los contratos IPC seguirán definidos en Rust y generados mediante Specta.

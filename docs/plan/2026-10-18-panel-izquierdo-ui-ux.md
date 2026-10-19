@@ -2,6 +2,10 @@
 
 Fecha: 2026-10-18. Estado: definición funcional consolidada, sin implementación. Acuerdos de David D01–D50, registrados en [la bitácora](../audits/2026-10-18-panel-izquierdo.md). Los criterios siguientes describen comportamiento futuro; no son pruebas aprobadas de capacidades aún inexistentes.
 
+> Secuencia aprobada el 2026-10-19: [roadmap de versiones](2026-10-19-roadmap-de-versiones.md).
+> Gráfico/colores en v0.4, panel/filtros en v0.5 y contribuyentes/releases en v0.7.
+> D01–D50 permanecen vigentes; este reparto no implica implementación ni verificación.
+
 ## Alcance
 
 Panel de ramas locales, remotas, tags, releases GitHub y contribuyentes. Navegación, alcance del historial, énfasis por autor, colores persistentes y consulta de releases. Se conserva checkout existente. Crear, renombrar y eliminar ramas/tags son futuras mejoras (D34).
