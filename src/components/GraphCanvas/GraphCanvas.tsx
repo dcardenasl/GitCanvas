@@ -5,10 +5,14 @@ import {
   rowCenterY,
   type VisibleWindow,
 } from "../../lib/historyGeometry";
-import { laneColor } from "../../lib/graph-layout/colors";
+import {
+  graphColor,
+  trajectoryColor,
+  type GraphColorId,
+} from "../../lib/graph-layout/colors";
 import type { GraphRow } from "../../lib/graph-layout/types";
 import { useThemePreferences } from "../../state/themePreferences";
-import { edgePath, incomingPath } from "./path";
+import { connectionSegments } from "./path";
 
 import "./GraphCanvas.css";
 
@@ -21,6 +25,7 @@ export interface GraphCanvasProps {
   /** Widest lane count seen so far; sizes the drawing surface. */
   readonly maxLanes: number;
   readonly selectedId: string | null;
+  readonly colors?: ReadonlyMap<string, GraphColorId>;
 }
 
 /** Radius of a commit node, in CSS pixels. */
@@ -40,8 +45,11 @@ export function GraphCanvas({
   window,
   maxLanes,
   selectedId,
+  colors,
 }: GraphCanvasProps) {
   const theme = useThemePreferences((state) => state.resolvedTheme);
+  const color = (id: string) =>
+    graphColor(colors?.get(id) ?? trajectoryColor(id), theme);
   const first = Math.max(window.startIndex - 1, 0);
   const last = Math.min(window.endIndex + 1, rows.length - 1);
   const offsetY = first * ROW_HEIGHT;
@@ -54,6 +62,9 @@ export function GraphCanvas({
   }
 
   const width = graphWidth(maxLanes);
+  const segments = visible.flatMap((row) =>
+    connectionSegments(row, rows[row.index - 1], rows[row.index + 1]),
+  );
 
   return (
     <svg
@@ -65,26 +76,29 @@ export function GraphCanvas({
       aria-hidden="true"
       focusable="false"
     >
+      <g className="graph-canvas__outlines">
+        {segments.map((segment) => (
+          <path
+            key={segment.key}
+            className="graph-canvas__outline"
+            d={segment.path}
+          />
+        ))}
+      </g>
+      <g className="graph-canvas__connections">
+        {segments.map((segment) => (
+          <path
+            key={segment.key}
+            className="graph-canvas__edge"
+            d={segment.path}
+            stroke={color(segment.trajectory)}
+          />
+        ))}
+      </g>
       {visible.map((row) => {
         const selected = row.id === selectedId;
         return (
           <g key={row.id} className="graph-canvas__row">
-            {row.incoming.map((lane) => (
-              <path
-                key={`in-${String(lane)}`}
-                className="graph-canvas__edge"
-                d={incomingPath(row.index, lane)}
-                stroke={laneColor(lane, theme)}
-              />
-            ))}
-            {row.outgoing.map((edge) => (
-              <path
-                key={`out-${String(edge.from)}-${String(edge.to)}`}
-                className="graph-canvas__edge"
-                d={edgePath(row.index, edge.from, edge.to)}
-                stroke={laneColor(edge.colorLane, theme)}
-              />
-            ))}
             <circle
               className={
                 selected
@@ -94,8 +108,8 @@ export function GraphCanvas({
               cx={laneCenterX(row.lane)}
               cy={rowCenterY(row.index)}
               r={selected ? SELECTED_RADIUS : NODE_RADIUS}
-              fill={selected ? "var(--surface)" : laneColor(row.lane, theme)}
-              stroke={laneColor(row.lane, theme)}
+              fill={selected ? "var(--surface)" : color(row.trajectory)}
+              stroke={color(row.trajectory)}
             />
           </g>
         );

@@ -1,6 +1,6 @@
 # GitCanvas — ficha del asset
 
-> Estado actualizado: 2026-10-14. La fuente de ejecución es [`TASKS.md`](../TASKS.md);
+> Estado actualizado: 2026-10-19. La fuente de ejecución es [`TASKS.md`](../TASKS.md);
 > la fase de endurecimiento se define en [`plan/2026-10-04-plan-de-endurecimiento.md`](plan/2026-10-04-plan-de-endurecimiento.md).
 
 ## Identidad
@@ -11,8 +11,8 @@
 | Tipo | Aplicación de escritorio para inspección de Git |
 | Repositorio | [`dcardenasl/gitcanvas`](https://github.com/dcardenasl/gitcanvas) |
 | Licencia | MIT (véase LICENSE) |
-| Versión publicada | [v0.2.0](https://github.com/dcardenasl/gitcanvas/releases/tag/v0.2.0) (2026-10-12) |
-| Estado | v0.2.0 publicado, con la interfaz en inglés y español |
+| Versión publicada | [v0.3.1](https://github.com/dcardenasl/GitCanvas/releases/tag/v0.3.1) |
+| Estado | v0.3.1 publicada; gráfico v0.4 implementado en dev, con verificación externa pendiente |
 | Stack | Tauri 2, Rust/libgit2, React, TypeScript, Vite |
 
 ## Propósito y alcance
@@ -35,17 +35,22 @@ read-only; véase [`CONTEXT.md`](../CONTEXT.md) y el [ADR 0001](adr/0001-working
 | Checkout, pull fast-forward y push | Implementado con guardias |
 | Endurecimiento H2 | Cerrado: 46 de 46; 38 cierres con commit dedicado y H2-34–41 integradas en `437ff07` |
 | Interfaz en inglés y español | Publicada en v0.2.0; CI verde en Linux, macOS y Windows |
-| Workspace: pestañas, favoritos y restauración | Implementado en dev; verificación local macOS, matriz externa pendiente en WS-17 |
-| Publicación | v0.2.0 publicada (PR [#9](https://github.com/dcardenasl/GitCanvas/pull/9), merge `1ca6b73`, tag sobre `main`); el workflow `release` creó el Release con instaladores de Linux, macOS y Windows. v0.1.0 salió el 2026-10-09 |
+| Workspace: pestañas, favoritos y restauración | Publicado en v0.3.0; conciliar evidencia manual histórica en GRF-0/WS-17 |
+| Publicación | v0.3.0 y v0.3.1 publicadas; quality y publicación de v0.3.1 completadas correctamente |
 
 ## Próximo paso
 
-Continuar en [`TASKS.md`](../TASKS.md): completar la verificación externa de WS-17 cuando
-se autorice publicar. El workspace está implementado en commits locales de dev; la
-creación de commits desde la interfaz sigue reservada para v0.4. Cada release usa exclusivamente el procedimiento de
-`CLAUDE.md` y requiere aprobación de David para mergear el PR.
+Completar GRF-5: matriz externa y verificaciones manuales de v0.4. La implementación
+local está terminada; ver [evidencia](verification/v0.4.md) y [TASKS.md](../TASKS.md).
+El [roadmap aprobado](plan/2026-10-19-roadmap-de-versiones.md)
+define la secuencia: gráfico → panel/filtros → historial por archivo →
+contribuyentes/releases → proveedores → crear/conectar repositorios → gestión de
+ramas → preparar/crear commits (objetivo v0.11). Sustituye la anterior reserva de
+commits para v0.4. Cada publicación sigue el procedimiento de CLAUDE.md.
 
 ## Registro
+
+- 2026-10-19: roadmap aprobado; gráfico/panel primero y commits al final. Estado documental reconciliado con v0.3.1; evidencia manual histórica por revisar.
 
 - 2026-10-12: v0.2.0 publicado con la interfaz en inglés y español; H2 e I18N cerradas.
 - 2026-10-09: v0.1.0 publicado.

@@ -19,7 +19,8 @@ Read the shape of repository history at a glance, then inspect the changes in a 
 ## Capabilities and Constraints
 
 The governing scope is TASKS.md: local history, a resumable graph, first-parent diffs,
-working-tree snapshots and diffs, ordered project tabs with independent navigation,
+working-tree snapshots and diffs, stable branch trajectories/colors and a configurable
+visual main branch (v0.4 in dev), ordered project tabs with independent navigation,
 lazy session restoration, favorites, recent projects, GitHub cloning, guarded checkout, fast-forward pull,
 and authenticated push. Git data comes from local repositories and full clones; shallow
 clones are not used. Credentials stay in Rust and the OS keychain. The product is

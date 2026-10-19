@@ -3,16 +3,13 @@ import { useEffect } from "react";
 
 import { getWorktreeFingerprint, openRepository } from "../lib/ipc";
 import { invalidateLive, queryKeys } from "./queryKeys";
-import { branchesQuery, tagsQuery } from "./refs";
+import { refsQuery } from "./refs";
 import { tabOf, useWorkspace } from "./workspace";
 
 /** What the cached refs say, or `null` when nothing is cached to compare. */
 function cachedRefs(queryClient: QueryClient, root: string): string | null {
-  const branches = queryClient.getQueryData(queryKeys.branches(root));
-  const tags = queryClient.getQueryData(queryKeys.tags(root));
-  return branches === undefined || tags === undefined
-    ? null
-    : JSON.stringify([branches, tags]);
+  const refs = queryClient.getQueryData(queryKeys.refs(root));
+  return refs === undefined ? null : JSON.stringify(refs);
 }
 
 /**
@@ -49,13 +46,12 @@ export async function verifyProject(
 
     if (!current()) return;
     const before = cachedRefs(queryClient, root);
-    const [branches, tags, fingerprint] = await Promise.all([
-      queryClient.query({ ...branchesQuery(root), staleTime: 0 }),
-      queryClient.query({ ...tagsQuery(root), staleTime: 0 }),
+    const [refs, fingerprint] = await Promise.all([
+      queryClient.query({ ...refsQuery(root), staleTime: 0 }),
       getWorktreeFingerprint(root),
     ]);
     if (!current()) return;
-    if (before !== null && before !== JSON.stringify([branches, tags])) {
+    if (before !== null && before !== JSON.stringify(refs)) {
       await invalidateLive(queryClient, root, "metadata");
     }
     queryClient.setQueryData(queryKeys.worktreeFingerprint(root), fingerprint);

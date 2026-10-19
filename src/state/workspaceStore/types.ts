@@ -1,4 +1,5 @@
 import type {
+  GraphPreferences,
   RepositoryInfo,
   Workspace,
   WorkspaceLimits,
@@ -152,8 +153,15 @@ export interface BoundsSlice {
   dismissNotice: () => void;
 }
 
+/** Durable graph preferences are independent of open tabs. */
+export interface GraphSlice {
+  readonly graphPreferences: readonly GraphPreferences[];
+  setGraphPreferences: (preferences: GraphPreferences) => void;
+}
+
 /** The whole workspace: every slice, in one store. */
-export type WorkspaceState = TabsSlice &
+export type WorkspaceState = GraphSlice &
+  TabsSlice &
   ClosedTabsSlice &
   LibrarySlice &
   ViewSlice &

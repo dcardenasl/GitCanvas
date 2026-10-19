@@ -6,7 +6,7 @@ use gitcanvas_core::{
     error::AppError,
     github::cache,
     history::{self, CommitInfo, HistoryPage, HistoryReader, HistoryRequest},
-    refs::{self, BranchInfo, TagInfo},
+    refs::{self, RepositoryRefsSnapshot},
     repository::{ActiveRepo, RepositoryInfo},
 };
 
@@ -74,30 +74,16 @@ pub async fn get_commit(
     .await
 }
 
-/// Lists local and remote branches and identifies the current branch.
+/// Reads one coherent generation of branches, tags, HEAD and history roots.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_branches(
+pub async fn get_repository_refs(
     path: String,
     allowed: tauri::State<'_, AllowedRepos>,
-) -> Result<Vec<BranchInfo>, AppError> {
+) -> Result<RepositoryRefsSnapshot, AppError> {
     let allowed = allowed.inner().clone();
-    read("get_branches", move || {
-        with_repo(&allowed, &path, refs::get_branches)
-    })
-    .await
-}
-
-/// Lists tags, peeling annotated tags to commits when applicable.
-#[tauri::command]
-#[specta::specta]
-pub async fn get_tags(
-    path: String,
-    allowed: tauri::State<'_, AllowedRepos>,
-) -> Result<Vec<TagInfo>, AppError> {
-    let allowed = allowed.inner().clone();
-    read("get_tags", move || {
-        with_repo(&allowed, &path, refs::get_tags)
+    read("get_repository_refs", move || {
+        with_repo(&allowed, &path, refs::get_repository_refs)
     })
     .await
 }

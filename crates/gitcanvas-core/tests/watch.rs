@@ -235,7 +235,11 @@ fn reports_index_changes_as_worktree_changes() {
     let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
     let (tx, rx) = mpsc::channel();
     let _watcher = watch_repository(&active, move |event| {
-        let _ = tx.send(event);
+        // Other metadata can arrive late from the OS; this contract is about
+        // observing the index, not which unrelated notification arrives first.
+        if !matches!(event, WatchEvent::Changed(ChangeScope::Metadata)) {
+            let _ = tx.send(event);
+        }
     })
     .unwrap();
     wait_until_quiet(&rx);
@@ -261,4 +265,25 @@ fn watching_a_path_that_is_not_a_repository_is_an_error() {
         ActiveRepo::validate(dir.path()),
         Err(AppError::InvalidRepository(_))
     ));
+}
+
+#[test]
+fn reports_configuration_changes_as_metadata() {
+    let fixture = Fixture::new();
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let (tx, rx) = mpsc::channel();
+    let _watcher = watch_repository(&active, move |event| {
+        let _ = tx.send(event);
+    })
+    .unwrap();
+    wait_until_quiet(&rx);
+    let event = event_after_changing(&rx, |attempt| {
+        fixture
+            .repo
+            .config()
+            .unwrap()
+            .set_str("branch.main.merge", &format!("refs/heads/target-{attempt}"))
+            .unwrap();
+    });
+    assert!(matches!(event, WatchEvent::Changed(ChangeScope::Metadata)));
 }

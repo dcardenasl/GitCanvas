@@ -6,7 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { HistoryPage } from "../../bindings";
 import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
 
-const mockIpc = createIpcMocks(["getCommits", "getWorktreeSnapshot"] as const);
+const mockIpc = createIpcMocks([
+  "getCommits",
+  "getWorktreeSnapshot",
+  "getRepositoryRefs",
+] as const);
 const { getCommits, getWorktreeSnapshot } = mockIpc;
 
 vi.mock("../../lib/ipc", () => ({
@@ -57,6 +61,13 @@ function renderView() {
 }
 
 beforeEach(() => {
+  mockIpc.getRepositoryRefs.mockResolvedValue({
+    branches: [],
+    tags: [],
+    head: null,
+    head_reference: null,
+    roots: [],
+  });
   getCommits.mockReset();
   getWorktreeSnapshot.mockReset();
   getWorktreeSnapshot.mockResolvedValue({
@@ -178,5 +189,30 @@ describe("HistoryView", () => {
     await waitFor(() => {
       expect(screen.queryByRole("alert")).toBeNull();
     });
+  });
+});
+
+it("releases obsolete frozen walks when reference roots change", async () => {
+  const { act } = await import("@testing-library/react");
+  getCommits.mockResolvedValue(mergePage());
+  const { client, container } = renderView();
+  await waitFor(() => {
+    expect(container.querySelectorAll("circle")).toHaveLength(4);
+  });
+  expect(client.getQueryData(["history", "/tmp/repo", []])).toBeDefined();
+  act(() => {
+    client.setQueryData(["refs", "/tmp/repo"], {
+      branches: [],
+      tags: [],
+      head: null,
+      head_reference: null,
+      roots: ["next"],
+    });
+  });
+  await waitFor(() => {
+    expect(client.getQueryData(["history", "/tmp/repo", []])).toBeUndefined();
+  });
+  await waitFor(() => {
+    expect(container.querySelectorAll("circle")).toHaveLength(4);
   });
 });

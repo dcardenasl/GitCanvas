@@ -3,15 +3,16 @@ import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BranchInfo } from "../bindings";
+import type { BranchInfo, TagInfo } from "../bindings";
 import {
   createIpcMocks,
   createQueryClientWrapper,
   createTestQueryClient,
 } from "../test/test-utils";
 
-const mockIpc = createIpcMocks(["getBranches", "getTags"] as const);
-const { getBranches, getTags } = mockIpc;
+const getBranches = vi.fn<() => Promise<BranchInfo[]>>();
+const getTags = vi.fn<() => Promise<TagInfo[]>>();
+const mockIpc = createIpcMocks(["getRepositoryRefs"] as const);
 vi.mock("../lib/ipc", () => mockIpc);
 
 const { useBranches, useCurrentBranch, useRefsByCommit } =
@@ -28,6 +29,8 @@ function branch(overrides: Partial<BranchInfo>): BranchInfo {
     is_remote: false,
     is_head: false,
     is_symbolic: false,
+    upstream: null,
+    symbolic_target: null,
     ...overrides,
   };
 }
@@ -37,6 +40,23 @@ let wrapper: ReturnType<typeof createQueryClientWrapper>;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockIpc.getRepositoryRefs.mockImplementation(async () => {
+    const branches = await getBranches();
+    const tags = await getTags();
+    return {
+      branches,
+      tags,
+      head: null,
+      head_reference: null,
+      roots: [
+        ...new Set(
+          branches.flatMap((branch) =>
+            branch.target === null ? [] : [branch.target],
+          ),
+        ),
+      ],
+    };
+  });
   client = createTestQueryClient();
   wrapper = createQueryClientWrapper(client);
   getTags.mockResolvedValue([]);
@@ -126,6 +146,7 @@ describe("useRefsByCommit", () => {
       result.current.get(TIP)?.map((ref) => `${ref.kind}:${ref.name}`),
     ).toEqual(["local:alpha", "local:zeta", "remote:origin/main", "tag:v1"]);
     expect(result.current.get(TIP)?.[0]?.isHead).toBe(true);
+    expect(mockIpc.getRepositoryRefs).toHaveBeenCalledTimes(1);
     // A tag that points at no commit has no row to sit on.
     expect(result.current.get(OTHER)?.map((ref) => ref.name)).toEqual([
       "other",

@@ -19,6 +19,7 @@ export const createStorageSlice: StateCreator<
       activeRoot: workspace.active ?? workspace.tabs[0]?.path ?? null,
       favorites: workspace.favorites,
       recents: workspace.recents,
+      graphPreferences: workspace.graph_preferences,
     });
   },
 

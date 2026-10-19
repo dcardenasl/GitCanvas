@@ -30,6 +30,12 @@ from now.
 Dependencies point in one direction only. `gitcanvas-core` does not know the
 application exists; `src-tauri` does not know the interface exists.
 
+## Stable branch graph
+
+The v0.4 implementation uses one reference snapshot, frozen history roots, pure incremental
+trajectory geometry and separately persisted semantic colors. See [ADR 0007](docs/adr/0007-stable-branch-graph.md)
+for identity, upstream grouping, principal detection, schema migration and render ordering.
+
 ## Three boundaries, each enforced by a build failure
 
 A rule that depends on someone remembering it is already technical debt. Each
@@ -70,8 +76,9 @@ Generation alone is not enough — a stale generated file lies just as
 convincingly. So `cargo test` regenerates the file, and CI runs
 `git diff --exit-code src/bindings.ts`. A drifted contract fails the build.
 
-Application code imports from `lib/ipc/`, never from `bindings.ts` directly, so
-a changed command signature breaks one file instead of every call site.
+Application code calls commands through `lib/ipc/`; it may import generated types
+from `bindings.ts`. The wrapper keeps command dispatch in one place while type
+changes remain checked at every consumer.
 
 ## Rules inside the Rust code
 

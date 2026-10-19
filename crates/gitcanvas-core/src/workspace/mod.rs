@@ -72,6 +72,59 @@ pub struct TabRecord {
     pub collapsed_folders: Vec<String>,
 }
 
+/// Named palette identity, independent of theme and lane position.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum GraphColor {
+    /// Amber palette pair.
+    Amber,
+    /// Teal palette pair.
+    Teal,
+    /// Violet palette pair.
+    Violet,
+    /// Blue palette pair.
+    Blue,
+    /// Rose palette pair.
+    Rose,
+    /// Green palette pair.
+    Green,
+    /// Gold palette pair.
+    Gold,
+    /// Stone palette pair.
+    Stone,
+}
+
+/// Durable color for a full reference, retained while the reference is absent.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(deny_unknown_fields)]
+pub struct ReferenceColor {
+    /// Full branch reference name.
+    pub reference: String,
+    /// Named palette identity.
+    pub color: GraphColor,
+    /// Last explicit edit, zero for automatic assignments.
+    pub edited: u32,
+}
+
+/// Graph preferences belong to a canonical worktree, not its open tab.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(deny_unknown_fields)]
+pub struct GraphPreferences {
+    /// Canonical project root; does not authorize repository access.
+    pub path: String,
+    /// Explicit principal; absent means local automatic detection.
+    pub principal: Option<String>,
+    /// Monotonic explicit color edit sequence.
+    pub revision: u32,
+    /// Assignments, including references temporarily absent from Git.
+    pub colors: Vec<ReferenceColor>,
+}
+
+/// Maximum projects retaining graph preferences independently of tabs.
+pub const MAX_GRAPH_PROJECTS: usize = 200;
+/// Maximum remembered references per project.
+pub const MAX_GRAPH_REFERENCES: usize = 10_000;
+
 /// Everything the application remembers between runs about its projects.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(deny_unknown_fields)]
@@ -84,6 +137,8 @@ pub struct Workspace {
     pub favorites: Vec<String>,
     /// Recent projects, most recently used first.
     pub recents: Vec<String>,
+    /// Graph preferences survive closing their project.
+    pub graph_preferences: Vec<GraphPreferences>,
 }
 
 /// The bounds the workspace is held to, sent to the interface so it never keeps
@@ -97,6 +152,10 @@ pub struct WorkspaceLimits {
     pub max_favorites: u32,
     /// Most recents kept.
     pub max_recents: u32,
+    /// Maximum projects with graph preferences.
+    pub max_graph_projects: u32,
+    /// Maximum reference preferences per project.
+    pub max_graph_references: u32,
 }
 
 impl WorkspaceLimits {
@@ -108,6 +167,8 @@ impl WorkspaceLimits {
             max_tabs: as_u32(MAX_TABS),
             max_favorites: as_u32(MAX_FAVORITES),
             max_recents: as_u32(MAX_RECENTS),
+            max_graph_projects: as_u32(MAX_GRAPH_PROJECTS),
+            max_graph_references: as_u32(MAX_GRAPH_REFERENCES),
         }
     }
 }
@@ -226,6 +287,38 @@ impl Workspace {
             }
         }
         check_project_list("the favorites", &self.favorites, MAX_FAVORITES)?;
-        check_project_list("the recents", &self.recents, MAX_RECENTS)
+        check_project_list("the recents", &self.recents, MAX_RECENTS)?;
+        if self.graph_preferences.len() > MAX_GRAPH_PROJECTS {
+            return Err(invalid("too many graph projects"));
+        }
+        let mut roots = BTreeSet::new();
+        for preferences in &self.graph_preferences {
+            check_project_path("graph preferences", &preferences.path)?;
+            if !roots.insert(&preferences.path) || preferences.colors.len() > MAX_GRAPH_REFERENCES {
+                return Err(invalid(
+                    "duplicate graph project or too many reference colors",
+                ));
+            }
+            let check_ref = |value: &str| -> Result<(), AppError> {
+                if value.len() > MAX_PATH_BYTES
+                    || !git2::Reference::is_valid_name(value)
+                    || !(value.starts_with("refs/heads/") || value.starts_with("refs/remotes/"))
+                {
+                    return Err(invalid("invalid graph branch identity"));
+                }
+                Ok(())
+            };
+            if let Some(principal) = &preferences.principal {
+                check_ref(principal)?;
+            }
+            let mut references = BTreeSet::new();
+            for color in &preferences.colors {
+                check_ref(&color.reference)?;
+                if !references.insert(&color.reference) || color.edited > preferences.revision {
+                    return Err(invalid("duplicate color or invalid edit sequence"));
+                }
+            }
+        }
+        Ok(())
     }
 }

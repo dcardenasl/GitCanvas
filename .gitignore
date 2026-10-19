@@ -17,6 +17,7 @@ pnpm-debug.log*
 
 # Tauri build output
 brag-output/
+brag-output-*/
 src-tauri/target/
 src-tauri/gen/
 
@@ -28,6 +29,10 @@ docs/videos/*.mp4
 
 # Design-review tool output
 .impeccable/
+
+# Understand-Anything knowledge graph and scratch data
+.ua/
+.understand-anything/
 
 # Editors and OS
 .DS_Store

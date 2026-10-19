@@ -116,8 +116,7 @@ describe("useLiveRepository", () => {
 
     const keys = invalidate.mock.calls.map((call) => call[0]?.queryKey?.[0]);
     expect(keys).toContain("history");
-    expect(keys).toContain("branches");
-    expect(keys).toContain("tags");
+    expect(keys).toContain("refs");
     expect(keys).not.toContain("worktree");
     expect(keys).not.toContain("worktree-file-diff");
   });

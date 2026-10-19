@@ -28,7 +28,7 @@ use crate::error::AppError;
 /// Name of the workspace file inside the data directory.
 pub const FILE_NAME: &str = "workspace.json";
 /// Schema version this build reads and writes.
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 /// Largest workspace file read or written, in bytes.
 pub const MAX_FILE_BYTES: u64 = 4 * 1024 * 1024;
 /// Quarantined files kept; older ones are removed when a newer one is made.
@@ -124,12 +124,24 @@ fn read_contents(path: &Path) -> Result<Contents, AppError> {
 /// Understands a stored workspace, or says why it cannot be used.
 fn parse(bytes: &[u8]) -> Result<Workspace, (RecoveryKind, String)> {
     let corrupt = |error: &dyn std::fmt::Display| (RecoveryKind::Corrupt, error.to_string());
-    let value: serde_json::Value = serde_json::from_slice(bytes).map_err(|e| corrupt(&e))?;
+    let mut value: serde_json::Value = serde_json::from_slice(bytes).map_err(|e| corrupt(&e))?;
     if !value.is_object() {
         return Err(corrupt(&"the file does not hold a JSON object"));
     }
     let version = value.get("version").and_then(serde_json::Value::as_u64);
-    if version != Some(u64::from(SCHEMA_VERSION)) {
+    if version == Some(1) {
+        let workspace = value
+            .get_mut("workspace")
+            .and_then(serde_json::Value::as_object_mut)
+            .ok_or_else(|| corrupt(&"missing version 1 workspace"))?;
+        if workspace.contains_key("graph_preferences") {
+            return Err(corrupt(&"unexpected version 1 graph preferences"));
+        }
+        workspace.insert("graph_preferences".into(), serde_json::json!([]));
+        if let Some(object) = value.as_object_mut() {
+            object.insert("version".into(), serde_json::json!(SCHEMA_VERSION));
+        }
+    } else if version != Some(u64::from(SCHEMA_VERSION)) {
         return Err((
             RecoveryKind::UnsupportedVersion,
             format!("expected schema version {SCHEMA_VERSION}, found {version:?}"),

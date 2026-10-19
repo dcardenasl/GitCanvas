@@ -1,5 +1,6 @@
 dist
 coverage
+.ua
 brag-output
 target
 src-tauri/target

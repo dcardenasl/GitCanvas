@@ -47,10 +47,8 @@ export const commands = {
 	getCommits: (path: string, request: HistoryRequest) => typedError<HistoryPage, AppError>(__TAURI_INVOKE("get_commits", { path, request })),
 	/**  Reads a selected commit by full id, independently of the loaded history pages. */
 	getCommit: (path: string, commitId: string) => typedError<CommitInfo, AppError>(__TAURI_INVOKE("get_commit", { path, commitId })),
-	/**  Lists local and remote branches and identifies the current branch. */
-	getBranches: (path: string) => typedError<BranchInfo[], AppError>(__TAURI_INVOKE("get_branches", { path })),
-	/**  Lists tags, peeling annotated tags to commits when applicable. */
-	getTags: (path: string) => typedError<TagInfo[], AppError>(__TAURI_INVOKE("get_tags", { path })),
+	/**  Reads one coherent generation of branches, tags, HEAD and history roots. */
+	getRepositoryRefs: (path: string) => typedError<RepositoryRefsSnapshot, AppError>(__TAURI_INVOKE("get_repository_refs", { path })),
 	/**
 	 *  Reads a commit's changes against its first parent.
 	 *
@@ -179,7 +177,11 @@ export type BranchInfo = {
 	/**  Full ref name used as branch identity. */
 	full_name: string,
 	/**  Commit id at the branch tip. */
-	target: string,
+	target: string | null,
+	/**  Configured upstream, using its full reference name. */
+	upstream: string | null,
+	/**  Destination of a symbolic reference, including a missing destination. */
+	symbolic_target: string | null,
 	/**  Whether this branch belongs to a remote. */
 	is_remote: boolean,
 	/**  Whether this is the currently checked-out branch. */
@@ -422,6 +424,37 @@ export type GitHubRepositoryList = {
 	truncated: boolean,
 };
 
+/**  Named palette identity, independent of theme and lane position. */
+export type GraphColor =
+/**  Amber palette pair. */
+"amber" |
+/**  Teal palette pair. */
+"teal" |
+/**  Violet palette pair. */
+"violet" |
+/**  Blue palette pair. */
+"blue" |
+/**  Rose palette pair. */
+"rose" |
+/**  Green palette pair. */
+"green" |
+/**  Gold palette pair. */
+"gold" |
+/**  Stone palette pair. */
+"stone";
+
+/**  Graph preferences belong to a canonical worktree, not its open tab. */
+export type GraphPreferences = {
+	/**  Canonical project root; does not authorize repository access. */
+	path: string,
+	/**  Explicit principal; absent means local automatic detection. */
+	principal: string | null,
+	/**  Monotonic explicit color edit sequence. */
+	revision: number,
+	/**  Assignments, including references temporarily absent from Git. */
+	colors: ReferenceColor[],
+};
+
 /**  A bounded page and the information needed to resume its exact traversal. */
 export type HistoryPage = {
 	/**  Commits returned in topological history order. */
@@ -539,6 +572,16 @@ export type RecoveryKind =
 /**  Larger than the largest file this build reads. */
 "TooLarge";
 
+/**  Durable color for a full reference, retained while the reference is absent. */
+export type ReferenceColor = {
+	/**  Full branch reference name. */
+	reference: string,
+	/**  Named palette identity. */
+	color: GraphColor,
+	/**  Last explicit edit, zero for automatic assignments. */
+	edited: number,
+};
+
 export type RepositoryChangedEvent = {
 	path: string,
 	generation: number,
@@ -556,6 +599,20 @@ export type RepositoryInfo = {
 	path: string,
 	/**  Repository directory name for display. */
 	name: string,
+};
+
+/**  One locally observed reference generation. Stored paths still authorize nothing. */
+export type RepositoryRefsSnapshot = {
+	/**  Local and remote branches, including symbolic aliases. */
+	branches: BranchInfo[],
+	/**  Annotated and lightweight tags, including non-commit tags. */
+	tags: TagInfo[],
+	/**  Resolved HEAD commit, absent before the first commit. */
+	head: string | null,
+	/**  HEAD's symbolic branch, absent when detached. */
+	head_reference: string | null,
+	/**  Frozen, sorted, unique commit roots for history pagination. */
+	roots: string[],
 };
 
 /**  A workspace to persist, numbered so a late arrival cannot undo a newer save. */
@@ -627,6 +684,8 @@ export type Workspace = {
 	favorites: string[],
 	/**  Recent projects, most recently used first. */
 	recents: string[],
+	/**  Graph preferences survive closing their project. */
+	graph_preferences: GraphPreferences[],
 };
 
 /**
@@ -641,6 +700,10 @@ export type WorkspaceLimits = {
 	max_favorites: number,
 	/**  Most recents kept. */
 	max_recents: number,
+	/**  Maximum projects with graph preferences. */
+	max_graph_projects: number,
+	/**  Maximum reference preferences per project. */
+	max_graph_references: number,
 };
 
 /**  A stored workspace that was set aside rather than loaded. */

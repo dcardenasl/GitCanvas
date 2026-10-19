@@ -1,8 +1,9 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import type { BranchInfo, TagInfo } from "../bindings";
-import { getBranches, getTags } from "../lib/ipc";
+import type { GraphColor, RepositoryRefsSnapshot } from "../bindings";
+import { getRepositoryRefs } from "../lib/ipc";
+import { useWorkspace } from "./workspace";
 import { queryKeys } from "./queryKeys";
 
 /** A ref that can be shown as a badge on the commit it points at. */
@@ -10,6 +11,7 @@ export interface RefBadge {
   readonly name: string;
   readonly kind: "local" | "remote" | "tag";
   readonly isHead: boolean;
+  readonly color?: GraphColor;
 }
 
 /** Local first, then remotes, then tags; alphabetical within each. */
@@ -19,42 +21,39 @@ const ORDER: Record<RefBadge["kind"], number> = {
   tag: 2,
 };
 
-/**
- * The branch query: the one place it is defined.
- *
- * The sidebar, the row badges, the toolbar and the check made when a tab is
- * activated all use it, so they share a cache entry and can never disagree
- * about which branch is checked out.
- */
-export function branchesQuery(path: string | null) {
-  return queryOptions<BranchInfo[]>({
-    queryKey: queryKeys.branches(path),
+/** A shared generation for every reference consumer. */
+export function refsQuery(path: string | null) {
+  return queryOptions<RepositoryRefsSnapshot>({
+    queryKey: queryKeys.refs(path),
+    staleTime: 30_000,
     queryFn: () => {
       if (path === null) throw new Error("No repository is open");
-      return getBranches(path);
+      return getRepositoryRefs(path);
     },
   });
 }
 
-/** The tag query, defined once for the same reason as {@link branchesQuery}. */
-export function tagsQuery(path: string | null) {
-  return queryOptions<TagInfo[]>({
-    queryKey: queryKeys.tags(path),
-    queryFn: () => {
-      if (path === null) throw new Error("No repository is open");
-      return getTags(path);
-    },
-  });
+/** Observes references only for the supplied active project. */
+export function useRepositoryRefs(path: string | null) {
+  return useQuery({ ...refsQuery(path), enabled: path !== null });
 }
 
-/** Branches of the open repository. See {@link branchesQuery}. */
+/** Branch projection of the shared reference generation. */
 export function useBranches(path: string | null) {
-  return useQuery({ ...branchesQuery(path), enabled: path !== null });
+  return useQuery({
+    ...refsQuery(path),
+    enabled: path !== null,
+    select: (data) => data.branches,
+  });
 }
 
-/** Tags of the open repository. See {@link branchesQuery}. */
+/** Tag projection of the shared reference generation. */
 export function useTags(path: string | null) {
-  return useQuery({ ...tagsQuery(path), enabled: path !== null });
+  return useQuery({
+    ...refsQuery(path),
+    enabled: path !== null,
+    select: (data) => data.tags,
+  });
 }
 
 /**
@@ -83,8 +82,14 @@ export function useRefsByCommit(
 ): ReadonlyMap<string, readonly RefBadge[]> {
   const branches = useBranches(path);
   const tags = useTags(path);
+  const saved = useWorkspace((state) =>
+    state.graphPreferences.find((p) => p.path === path),
+  );
 
   return useMemo(() => {
+    const colors = new Map(
+      saved?.colors.map((record) => [record.reference, record.color]),
+    );
     const byCommit = new Map<string, RefBadge[]>();
 
     const add = (commitId: string | null, badge: RefBadge) => {
@@ -95,10 +100,12 @@ export function useRefsByCommit(
     };
 
     for (const branch of branches.data ?? []) {
+      if (branch.is_symbolic) continue;
       add(branch.target, {
         name: branch.name,
         kind: branch.is_remote ? "remote" : "local",
         isHead: branch.is_head,
+        color: colors.get(branch.full_name) ?? "stone",
       });
     }
 
@@ -115,5 +122,5 @@ export function useRefsByCommit(
     }
 
     return byCommit;
-  }, [branches.data, tags.data]);
+  }, [branches.data, tags.data, saved]);
 }

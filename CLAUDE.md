@@ -11,7 +11,9 @@ el render SVG. El graph es el núcleo de valor: todo lo demás está subordinado
 
 ## Cómo retomar en frío
 
-1. Leer [`TASKS.md`](TASKS.md) → primera tarea sin marcar. Ese es el punto de partida.
+1. Leer [`TASKS.md`](TASKS.md) → primera tarea sin marcar de la cola vigente.
+   El [roadmap de versiones](docs/plan/2026-10-19-roadmap-de-versiones.md) prioriza
+   gráfico/colores v0.4 y panel/filtros v0.5; commits al final (objetivo v0.11).
 2. Leer la sección de esa fase en
    [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
    Trae las decisiones técnicas ya cerradas: no las vuelvas a abrir.
@@ -26,7 +28,8 @@ el render SVG. El graph es el núcleo de valor: todo lo demás está subordinado
 | `TASKS.md` | **Fuente de verdad de ejecución.** Qué falta, qué se hizo, qué se descubrió |
 | `CONTEXT.md` | Contexto vigente de arquitectura, observación del repositorio y límites de mutación |
 | `docs/plans/2026-09-08-plan-de-implementacion.md` | Plan rector: fases, deltas, ledger de commits |
-| `docs/plan/2026-10-08-plan-tres-funcionalidades.md` | Workspace v0.3 and commit creation v0.4 |
+| `docs/plan/2026-10-19-roadmap-de-versiones.md` | Approved release sequence: graph/sidebar first, commit creation last |
+| `docs/plan/2026-10-08-plan-tres-funcionalidades.md` | Workspace and future commit creation contracts; delivery order superseded by roadmap |
 | `docs/plan/2026-10-04-plan-de-endurecimiento.md` | Plan de endurecimiento H2 y sus criterios de verificación |
 | `docs/PLAN-DESARROLLO.md` | Plan de diseño original. El plan rector lo endurece en 10 puntos (D1–D10) |
 | `PRODUCT.md` | Propósito, plataforma, capacidades y límites del producto |
@@ -183,7 +186,9 @@ serialized saves, recoverable tabs and the five-inactive-project cache bound int
 Do not move synchronous theme/language preferences into the Rust store. Native macOS
 menu and page shortcuts call the same workspace actions. E2E runs use temporary Rust
 data and private webviews so user sessions and localStorage are never touched.
-See ADR 0006 and the WS task evidence.
+See ADR 0006 and the WS task evidence. ADR 0007 defines the v0.4 reference snapshot,
+pure trajectory layout and durable branch appearance. Graph preferences survive tab
+closure; their worktree roots remain presentation identities, never authorization.
 
 ## Verificación
 

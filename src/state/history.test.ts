@@ -59,7 +59,9 @@ describe("incremental history layout", () => {
     const second = layout(page2, first.state);
 
     // `b` was reserved on page one and must land in that exact lane.
-    const reservedLane = first.state.lanes.indexOf("b");
+    const reservedLane = first.state.lanes.findIndex(
+      (pending) => pending?.target === "b",
+    );
     expect(reservedLane).toBeGreaterThanOrEqual(0);
     expect(second.rows[0]?.lane).toBe(reservedLane);
   });

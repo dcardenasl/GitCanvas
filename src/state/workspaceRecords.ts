@@ -1,4 +1,9 @@
-import type { SavedSelection, TabRecord, Workspace } from "../bindings";
+import type {
+  GraphPreferences,
+  SavedSelection,
+  TabRecord,
+  Workspace,
+} from "../bindings";
 import { projectName } from "./projectNames";
 import { IDLE_GIT_ACTIONS } from "./gitActionState";
 import { EMPTY_NAVIGATION, type Selection } from "./navigation";
@@ -69,6 +74,7 @@ export function workspaceRecord(state: {
   readonly activeRoot: string | null;
   readonly favorites: readonly string[];
   readonly recents: readonly string[];
+  readonly graphPreferences: readonly GraphPreferences[];
 }): Workspace {
   return {
     tabs: state.tabs.map(({ repository, navigation }) => ({
@@ -80,5 +86,6 @@ export function workspaceRecord(state: {
     active: state.activeRoot,
     favorites: [...state.favorites],
     recents: [...state.recents],
+    graph_preferences: [...state.graphPreferences],
   };
 }

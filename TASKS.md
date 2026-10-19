@@ -6,22 +6,97 @@
 > [tres funcionalidades](docs/plan/2026-10-08-plan-tres-funcionalidades.md) y el
 > [plan general](docs/plans/2026-09-08-plan-de-implementacion.md).
 
-**Estado al 2026-10-14:** v0.2.0 sigue siendo la versión publicada. H2, I18N y la auditoría
-posterior están cerradas y archivadas. El workspace (WS-1 a WS-16 y las correcciones
-WS-1a, WS-7a, WS-8a, WS-11a/b/c y WS-13a) está implementado en `dev`. Preparación y creación de commits desde
-la interfaz siguen fuera de esta serie y reservadas para v0.4.
+**Estado al 2026-10-19:** v0.3.1 publicada. H2, I18N y workspace están
+implementados. El alcance de v0.4 está implementado en commits locales de dev;
+GRF-5 conserva las puertas externas/manuales pendientes. La estrategia aprobada prioriza líneas/colores del gráfico en v0.4,
+seguida de panel, filtros y reconocimiento/navegación de worktrees en v0.5. Commits se desplaza al final de la secuencia,
+objetivo v0.11. Ver el [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md),
+que prevalece sobre asignaciones de versiones de planes anteriores.
 
-**Estado del checkout:** `dev` está por delante de `main` (release v0.2.0, PR #9).
-Por instrucción de David, esta entrega termina en **implementación y commits locales**:
-sin push, PR ni publicación. Inspeccionar siempre `git status` y el historial al retomar.
+**Estado de trabajo:** rama `dev`, commits locales sin push. Se preservan las carpetas
+de evidencia/media sin seguimiento. Inspeccionar estado e historial al retomar.
+La versión de la aplicación no se cambia hasta su release.
 
 ## Siguiente paso
 
-WS-17 conserva la verificación externa pendiente: matriz Linux/Windows y comprobación
-manual del menú de macOS. La publicación de v0.3.0 está fuera del alcance autorizado de
-esta sesión. La evidencia local está bajo WS-17; no presentar esos sistemas como verificados.
+Completar las puertas externas/manuales de GRF-5. El código de v0.4 y su verificación
+local están implementados; consultar [evidencia](docs/verification/v0.4.md).
+WS-17 es seguimiento histórico: v0.3.0/v0.3.1 y su CI ya se publicaron; los recorridos
+manuales sin evidencia permanecen pendientes. No repetir esa publicación ni atribuir
+la matriz antigua a esta revisión. No se ha autorizado push, PR o publicación de v0.4.
 
 ## Cola de trabajo
+
+### v0.4 — Líneas y colores de las ramas
+
+Estrategia aprobada el 2026-10-19. Alcance, orden y aceptación en el
+[roadmap de versiones](docs/plan/2026-10-19-roadmap-de-versiones.md).
+
+- [x] **GRF-0 — Reconciliar evidencia histórica de WS-17.** Separar CI y publicación
+      ya realizadas de comprobaciones manuales sin evidencia. No repetir la release.
+- [x] **GRF-1 — Contrato y casos de referencia.** Separar geometría, identidad de
+      referencia y color; definir diseño técnico y fixtures del gráfico.
+- [x] **GRF-2 — Identidad cromática y persistencia.** Paleta, principal visual,
+      relación local/upstream y migración de preferencias por repositorio.
+- [x] **GRF-3 — Líneas del gráfico.** Mejorar continuidad, curvas, separación y cruces
+      conservando topología, nodos únicos y layout reanudable.
+- [x] **GRF-4 — Integración y controles.** Colores coherentes panel/gráfico y controles
+      accesibles de color/principal visual; historia compartida y recuperación.
+- [ ] **GRF-5 — Verificación.** Paginación, temas, idiomas, reinicio, pestañas,
+      upstream, tamaño mínimo y recorridos nativos en los tres sistemas.
+- [x] **GRF-6 — Documentación y preparación de release.** Evidencia y CHANGELOG;
+      publicación según flujo del proyecto cuando se autorice.
+
+Evidencia de implementación: snapshot compartido y upstreams; esquema 1→2 y
+preferencias independientes del cierre; modelo puro con primer padre, carril principal
+reservado y trayectorias que confluyen en el nodo. Pruebas de equivalencia paginada,
+principal tardía, octopus y DAGs generados; verificación integrada aún en GRF-5.
+
+Verificación local cerrada: 807 pruebas frontend (95,50% statements, 96,87% líneas;
+umbrales globales y por módulo aprobados), 220 Rust con todas las features, Clippy
+estricto y bindings sin deriva. Siete specs/dieciséis pruebas E2E nativas en macOS,
+incluyendo ambos temas/idiomas a 940×600 y fixture de 10.000 commits/doce trayectorias.
+Tipos, lint, formato, auditorías y build de producción macOS aprobados; firma local
+verificada. GRF-5 permanece abierta por Linux/Windows, lector de pantalla real y
+recorridos manuales sin evidencia. Detalles y límites en la verificación de v0.4.
+
+### v0.5 — Worktrees: reconocimiento y navegación
+
+Ampliación aprobada el 2026-10-19; pendiente de implementación. Contrato completo en
+[Worktrees — ampliación aprobada](docs/plan/2026-10-19-roadmap-de-versiones.md#worktrees--ampliación-aprobada-el-2026-10-19).
+Se integra en la entrega del panel y filtros, sin adelantar escrituras Git.
+
+- [ ] **WT-1 — Identidad y descubrimiento.** Relacionar worktrees por directorio Git
+      común canónico; distinguir clones independientes, ubicaciones ausentes y HEAD
+      detached. Descubrir una ruta no la autoriza para operaciones.
+- [ ] **WT-2 — Preferencias compartidas.** Migrar colores y principal visual al alcance
+      del repositorio común, conservando datos y resolviendo conflictos explícitamente.
+      Las secuencias actuales por raíz no son comparables entre worktrees. Registrar
+      ADR y pruebas; conservar navegación y filtros independientes por worktree.
+- [ ] **WT-3 — Panel y pestañas.** Sección Worktrees, nombre/rama/ubicación, distintivos
+      de ramas ocupadas, agrupación visual de pestañas y abrir/activar sin duplicados.
+      Ofrecer abrir el worktree que ocupa una rama; mantener un nodo por commit y
+      cambios locales claramente ligados al worktree activo.
+- [ ] **WT-4 — Verificación integrada.** Varios worktrees, clones independientes,
+      cambios externos, migración con conflictos, reinicio y navegación aislada;
+      accesibilidad, idiomas y temas. Sin sondeo de proyectos inactivos ni ampliación
+      silenciosa de autorizaciones o límites de caché.
+
+Crear o retirar worktrees queda para una entrega posterior sin versión asignada,
+con protección de cambios locales y planificación de concurrencia/recuperación.
+El comportamiento vigente de v0.4 sigue siendo preferencias por raíz independiente.
+
+### Entregas posteriores
+
+v0.5 panel/filtros y navegación de worktrees → v0.6 historial por archivo → v0.7 contribuyentes/releases →
+v0.8 proveedores → v0.9 crear/conectar repositorios → v0.10 gestión de ramas →
+v0.11 preparar/crear commits. Objetivos de planificación, sin fechas ni bumps.
+Desglosar cada entrega al prepararla siguiendo el roadmap y los acuerdos existentes.
+
+### Seguimiento histórico de v0.3
+
+Las secciones siguientes conservan decisiones y evidencia de su momento. En caso de
+contradicción de alcance/estado, prevalecen el roadmap vigente y la cabecera actual.
 
 ### Workspace: pestañas, favoritos y persistencia
 
@@ -399,7 +474,11 @@ botones de GitHub y de abrir carpeta, y la app usa el menú nativo por defecto d
       Se distingue la implementación local de los instaladores v0.2.0 publicados.
       → `docs(workspace): record the tabs, favorites and persistence decisions in adr 0006`
 
-- [ ] **WS-17 — Verificar en Linux y Windows y publicar v0.3.0.** Corrida de `quality` sobre
+- [ ] **WS-17 — Conciliar verificación y publicación de v0.3.0 (seguimiento histórico).**
+      *Actualización 2026-10-19:* v0.3.0 y v0.3.1 ya publicadas; CI de v0.3.1 verde.
+      GRF-0 debe conciliar evidencia y comprobaciones manuales antes de cerrar el ID.
+      El alcance original se conserva a continuación como registro histórico.
+      **Alcance original:** Corrida de `quality` sobre
       `dev` (matriz de tres sistemas, cobertura, Clippy, bindings sin deriva, E2E nativos) y
       validación manual del flujo de pestañas en cada sistema; en macOS, también ⌘O y ⌘W.
       Después, `/release` (versión confirmada con David).

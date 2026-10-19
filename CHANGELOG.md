@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-19
+
+### Fixed
+
+- **Branch curves** — keep the same compact join for every branch sharing a base, including an adjacent tip; simplify only connections that actually detour.
+- **Merge connections** — connect adjacent commits directly without bending through a temporary lane and back.
+- **History reference labels** — keep the color dot a fixed size and truncate only the name with an ellipsis, list tags first, always show at least one label without reserving empty space, and collapse overflow into a `+N` menu that copies any hidden name.
+
+### Added
+
+- **Branch appearance** — choose a named branch color and visual main branch from each branch menu; preferences survive closing projects and restarting, independently for each worktree.
+
+### Changed
+
+- **History memory** — obsolete history walks are released when references move, while unchanged roots reuse their loaded pages.
+- **Branch graph** — branch colors remain stable across pages and restarts, the visual main branch keeps the leftmost lane, and compact curves join at the actual destination commit.
+
 ## [0.3.1] — 2026-10-14
 
 ### Fixed

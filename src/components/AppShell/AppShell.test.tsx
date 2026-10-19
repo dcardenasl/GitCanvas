@@ -64,8 +64,16 @@ vi.mock("../../lib/ipc", () => ({
     }),
   getWorktreeFingerprint: () => Promise.resolve({ revision: "revision" }),
   getWorktreeFileContent: () => Promise.resolve(null),
-  getBranches: () => getBranches(),
-  getTags: () => Promise.resolve([]),
+  getRepositoryRefs: async () => {
+    const branches = await getBranches();
+    return {
+      branches,
+      tags: [],
+      head: null,
+      head_reference: null,
+      roots: branches.flatMap((b) => (b.target === null ? [] : [b.target])),
+    };
+  },
   getStartupRepository: () => getStartupRepository(),
   hasGithubToken: () => Promise.resolve(false),
   storeGithubToken: () => Promise.resolve(null),
@@ -244,6 +252,8 @@ describe("AppShell push confirmation", () => {
         is_remote: false,
         is_head: true,
         is_symbolic: false,
+        upstream: null,
+        symbolic_target: null,
       },
     ]);
     renderShell();

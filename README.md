@@ -40,10 +40,12 @@ GitCanvas is the opposite trade: small, fast, free, and focused on reading histo
 
 - **Branch graph with stable lanes.** Branches and merges are drawn as lanes in SVG, and
   lanes never reorder as you load more history. Branch and tag badges sit on the commits
-  they point at.
+  they point at. On `dev` for v0.4, named colors stay with branches across pages and
+  restarts, configured upstreams share colors, and a chosen visual main branch keeps
+  the leftmost lane. Branch menus let you change appearance without checkout.
 - **Fast on large repositories.** History loads 500 commits at a time and the graph layout
-  is extended page by page instead of recomputed, so a repository with a hundred thousand
-  commits opens as quickly as one with fifty.
+  is extended page by page instead of recomputed. Only visible rows are rendered;
+  later pages reuse the bounded traversal cache and existing geometry.
 - **Commit inspector.** Author, full message, changed files (as a list or a directory
   tree) and a line-numbered diff against the first parent. Binary and oversized files are
   reported instead of rendered.

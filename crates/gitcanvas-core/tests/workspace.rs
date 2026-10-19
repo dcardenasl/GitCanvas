@@ -45,6 +45,7 @@ fn workspace(names: &[&str]) -> Workspace {
         active: names.first().map(|name| project(name)),
         favorites: Vec::new(),
         recents: Vec::new(),
+        graph_preferences: Vec::new(),
     }
 }
 
@@ -312,7 +313,7 @@ fn a_newer_schema_version_is_set_aside_and_reported_as_such() {
     let directory = tempfile::tempdir().unwrap();
     write_raw(
         directory.path(),
-        r#"{"version": 2, "workspace": {"anything": true}}"#,
+        r#"{"version": 3, "workspace": {"anything": true}}"#,
     );
 
     let recovery = store(directory.path())
@@ -365,7 +366,7 @@ fn well_formed_data_that_breaks_a_workspace_rule_is_corrupt() {
     let mut duplicate = workspace(&["a"]);
     duplicate.tabs.push(tab("a"));
     // Written by hand, bypassing `save`, the way an edit or another tool would.
-    let json = serde_json::json!({ "version": 1, "workspace": duplicate });
+    let json = serde_json::json!({ "version": 2, "workspace": duplicate });
     write_raw(directory.path(), &json.to_string());
 
     let recovery = store(directory.path()).load().unwrap().recovery.unwrap();
@@ -455,4 +456,46 @@ fn a_file_that_cannot_be_read_is_an_error_and_loses_nothing() {
     assert!(matches!(result, Err(AppError::Io(_))), "{result:?}");
     assert!(directory.path().join(FILE_NAME).is_dir());
     assert!(backups(directory.path()).is_empty());
+}
+
+#[test]
+fn version_one_migrates_without_losing_workspace_data() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut old = serde_json::to_value(workspace(&["migration"])).unwrap();
+    old.as_object_mut().unwrap().remove("graph_preferences");
+    write_raw(
+        dir.path(),
+        &serde_json::json!({"version": 1, "workspace": old}).to_string(),
+    );
+    let loaded = store(dir.path()).load().unwrap();
+    assert_eq!(loaded.workspace, workspace(&["migration"]));
+    assert!(loaded.recovery.is_none());
+    store(dir.path()).save(1, &loaded.workspace).unwrap();
+    let written: serde_json::Value =
+        serde_json::from_slice(&fs::read(dir.path().join(FILE_NAME)).unwrap()).unwrap();
+    assert_eq!(written["version"], 2);
+}
+
+#[test]
+fn graph_preferences_validate_identity_and_edit_sequence() {
+    use gitcanvas_core::workspace::{GraphColor, GraphPreferences, ReferenceColor};
+    let mut data = Workspace::default();
+    data.graph_preferences.push(GraphPreferences {
+        path: project("closed"),
+        principal: Some("refs/heads/main".into()),
+        revision: 1,
+        colors: vec![ReferenceColor {
+            reference: "refs/heads/main".into(),
+            color: GraphColor::Violet,
+            edited: 1,
+        }],
+    });
+    let dir = tempfile::tempdir().unwrap();
+    store(dir.path()).save(1, &data).unwrap();
+    assert_eq!(store(dir.path()).load().unwrap().workspace, data);
+    data.graph_preferences[0].colors[0].edited = 2;
+    assert!(data.validate().is_err());
+    data.graph_preferences[0].colors[0].edited = 1;
+    data.graph_preferences[0].colors[0].reference = "../../escape".into();
+    assert!(data.validate().is_err());
 }

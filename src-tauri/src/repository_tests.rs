@@ -102,12 +102,12 @@ fn repository_history_and_refs_round_trip_with_real_payloads() {
     assert_eq!(page["commits"][0]["id"], id.to_string());
     assert!(page["next_cursor"].is_null());
     assert!(page["commits"][0]["author_time"].is_string());
-    let branches = invoke(&webview, "get_branches", json!({"path": path})).unwrap();
-    assert_eq!(branches[0]["target"], id.to_string());
-    assert_eq!(branches[0]["is_head"], true);
-    let tags = invoke(&webview, "get_tags", json!({"path": path})).unwrap();
-    assert_eq!(tags[0]["name"], "v1");
-    assert_eq!(tags[0]["commit_id"], id.to_string());
+    let branches = invoke(&webview, "get_repository_refs", json!({"path": path})).unwrap();
+    assert_eq!(branches["branches"][0]["target"], id.to_string());
+    assert_eq!(branches["branches"][0]["is_head"], true);
+    let tags = invoke(&webview, "get_repository_refs", json!({"path": path})).unwrap();
+    assert_eq!(tags["tags"][0]["name"], "v1");
+    assert_eq!(tags["tags"][0]["commit_id"], id.to_string());
 }
 
 #[test]
@@ -115,7 +115,11 @@ fn command_failures_are_structured_and_invalid_limits_are_rejected() {
     let dir = tempfile::tempdir().unwrap();
     let webview = test_webview();
     let path = dir.path().to_str().unwrap();
-    for command in ["open_repository", "get_branches", "get_tags"] {
+    for command in [
+        "open_repository",
+        "get_repository_refs",
+        "get_repository_refs",
+    ] {
         let response = invoke(&webview, command, json!({"path": path})).unwrap_err();
         assert_eq!(response["kind"], "InvalidRepository");
         assert!(response["message"].is_string());
@@ -138,7 +142,7 @@ fn git_commands_require_a_repository_to_be_opened_first() {
     let webview = test_webview();
     let path = dir.path().to_str().unwrap();
 
-    let denied = invoke(&webview, "get_branches", json!({"path": path})).unwrap_err();
+    let denied = invoke(&webview, "get_repository_refs", json!({"path": path})).unwrap_err();
     assert_eq!(denied["kind"], "InvalidRepository");
     assert!(denied["message"]
         .as_str()
@@ -155,7 +159,7 @@ fn git_commands_require_a_repository_to_be_opened_first() {
 
     invoke(&webview, "open_repository", json!({"path": path})).unwrap();
     assert_eq!(
-        invoke(&webview, "get_branches", json!({"path": path})).unwrap(),
+        invoke(&webview, "get_repository_refs", json!({"path": path})).unwrap()["branches"],
         json!([])
     );
 }
@@ -182,17 +186,17 @@ fn independent_requests_do_not_change_each_others_repository() {
     std::fs::remove_dir_all(first.path().join(".git")).unwrap();
     assert!(invoke(
         &webview,
-        "get_branches",
+        "get_repository_refs",
         json!({"path": first.path().to_str().unwrap()})
     )
     .is_err());
     assert_eq!(
         invoke(
             &webview,
-            "get_branches",
+            "get_repository_refs",
             json!({"path": second.path().to_str().unwrap()})
         )
-        .unwrap(),
+        .unwrap()["branches"],
         json!([])
     );
 }

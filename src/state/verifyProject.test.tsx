@@ -12,8 +12,7 @@ import { openTestProject, resetWorkspace } from "../test/workspace";
 
 const mockIpc = vi.hoisted(() => ({
   openRepository: vi.fn(),
-  getBranches: vi.fn(),
-  getTags: vi.fn(),
+  getRepositoryRefs: vi.fn(),
   getWorktreeFingerprint: vi.fn(),
 }));
 vi.mock("../lib/ipc", () => mockIpc);
@@ -35,11 +34,22 @@ function branch(name: string, tip: string): BranchInfo {
     is_remote: false,
     is_head: true,
     is_symbolic: false,
+    upstream: null,
+    symbolic_target: null,
   };
 }
 
-const MAIN = [branch("main", "a".repeat(40))];
-const MOVED = [branch("main", "b".repeat(40))];
+function snapshot(branches: BranchInfo[]) {
+  return {
+    branches,
+    tags: [],
+    head: null,
+    head_reference: null,
+    roots: branches.flatMap((b) => (b.target === null ? [] : [b.target])),
+  };
+}
+const MAIN = snapshot([branch("main", "a".repeat(40))]);
+const MOVED = snapshot([branch("main", "b".repeat(40))]);
 
 function page(): InfiniteData<HistoryPage> {
   const first: HistoryPage = { commits: [], next_cursor: "c1", roots: [] };
@@ -57,8 +67,7 @@ beforeEach(() => {
   mockIpc.openRepository.mockImplementation((path: string) =>
     Promise.resolve({ path, name: "project" }),
   );
-  mockIpc.getBranches.mockResolvedValue(MAIN);
-  mockIpc.getTags.mockResolvedValue([]);
+  mockIpc.getRepositoryRefs.mockResolvedValue(MAIN);
   mockIpc.getWorktreeFingerprint.mockResolvedValue({ revision: "local" });
 });
 
@@ -73,8 +82,7 @@ describe("verifyProject", () => {
     await done;
 
     expect(mockIpc.openRepository).toHaveBeenCalledWith(ALPHA.path);
-    expect(mockIpc.getBranches).toHaveBeenCalledWith(ALPHA.path);
-    expect(mockIpc.getTags).toHaveBeenCalledWith(ALPHA.path);
+    expect(mockIpc.getRepositoryRefs).toHaveBeenCalledWith(ALPHA.path);
     expect(status(ALPHA.path)).toBe("verified");
   });
 
@@ -82,8 +90,7 @@ describe("verifyProject", () => {
     const client = createTestQueryClient();
     openTestProject(ALPHA);
     client.setQueryData(queryKeys.history(ALPHA.path), page());
-    client.setQueryData(queryKeys.branches(ALPHA.path), MAIN);
-    client.setQueryData(queryKeys.tags(ALPHA.path), []);
+    client.setQueryData(queryKeys.refs(ALPHA.path), MAIN);
 
     await verifyProject(ALPHA.path, client);
 
@@ -100,9 +107,8 @@ describe("verifyProject", () => {
     const client = createTestQueryClient();
     openTestProject(ALPHA);
     client.setQueryData(queryKeys.history(ALPHA.path), page());
-    client.setQueryData(queryKeys.branches(ALPHA.path), MAIN);
-    client.setQueryData(queryKeys.tags(ALPHA.path), []);
-    mockIpc.getBranches.mockResolvedValue(MOVED);
+    client.setQueryData(queryKeys.refs(ALPHA.path), MAIN);
+    mockIpc.getRepositoryRefs.mockResolvedValue(MOVED);
 
     await verifyProject(ALPHA.path, client);
 
@@ -132,8 +138,7 @@ describe("verifyProject", () => {
     const client = createTestQueryClient();
     openTestProject(ALPHA);
     client.setQueryData(queryKeys.worktree(ALPHA.path), { revision: "old" });
-    client.setQueryData(queryKeys.branches(ALPHA.path), MAIN);
-    client.setQueryData(queryKeys.tags(ALPHA.path), []);
+    client.setQueryData(queryKeys.refs(ALPHA.path), MAIN);
 
     await verifyProject(ALPHA.path, client);
 
@@ -147,9 +152,8 @@ describe("verifyProject", () => {
     openTestProject(ALPHA);
     openTestProject(BETA);
     client.setQueryData(queryKeys.worktree(BETA.path), { revision: "beta" });
-    client.setQueryData(queryKeys.branches(ALPHA.path), MAIN);
-    client.setQueryData(queryKeys.tags(ALPHA.path), []);
-    mockIpc.getBranches.mockResolvedValue(MOVED);
+    client.setQueryData(queryKeys.refs(ALPHA.path), MAIN);
+    mockIpc.getRepositoryRefs.mockResolvedValue(MOVED);
 
     await verifyProject(ALPHA.path, client);
 
@@ -173,7 +177,7 @@ describe("verifyProject", () => {
     expect(String((verification as { error: unknown }).error)).toContain(
       "folder is gone",
     );
-    expect(mockIpc.getBranches).not.toHaveBeenCalled();
+    expect(mockIpc.getRepositoryRefs).not.toHaveBeenCalled();
   });
 
   it("marks the project unreachable when its path now resolves elsewhere", async () => {
@@ -192,7 +196,7 @@ describe("verifyProject", () => {
   it("can be tried again after it failed", async () => {
     const client = createTestQueryClient();
     openTestProject(ALPHA);
-    mockIpc.getBranches.mockRejectedValueOnce(new Error("busy"));
+    mockIpc.getRepositoryRefs.mockRejectedValueOnce(new Error("busy"));
     await verifyProject(ALPHA.path, client);
     expect(status(ALPHA.path)).toBe("unreachable");
 

@@ -12,13 +12,13 @@ import type {
 
 /** Canonical cache identities for every React Query resource in the app. */
 export const queryKeys = {
-  history: (repositoryPath: string | null) =>
-    ["history", repositoryPath] as const,
+  history: (repositoryPath: string | null, roots?: readonly string[]) =>
+    roots === undefined
+      ? (["history", repositoryPath] as const)
+      : (["history", repositoryPath, roots] as const),
   commit: (repositoryPath: string | null, commitId: string | null) =>
     ["commit", repositoryPath, commitId] as const,
-  branches: (repositoryPath: string | null) =>
-    ["branches", repositoryPath] as const,
-  tags: (repositoryPath: string | null) => ["tags", repositoryPath] as const,
+  refs: (repositoryPath: string | null) => ["refs", repositoryPath] as const,
   worktree: (
     repositoryPath: string | null,
     request?: WorktreeSnapshotRequest,
@@ -74,8 +74,7 @@ type LiveQueryScope = "metadata" | "worktree" | "all";
 function liveKeys(repositoryPath: string, scope: LiveQueryScope): QueryKey[] {
   const metadata: QueryKey[] = [
     queryKeys.history(repositoryPath),
-    queryKeys.branches(repositoryPath),
-    queryKeys.tags(repositoryPath),
+    queryKeys.refs(repositoryPath),
   ];
   const worktree: QueryKey[] = [
     queryKeys.worktree(repositoryPath),
@@ -101,24 +100,22 @@ export function invalidateLive(
 ): Promise<void> {
   if (scope !== "worktree") {
     const historyKey = queryKeys.history(repositoryPath);
-    const history =
-      queryClient.getQueryData<InfiniteData<HistoryPage>>(historyKey);
-    const [firstPage] = history?.pages ?? [];
-    const [firstPageParam] = history?.pageParams ?? [];
-
-    // Refetching every loaded history page on each metadata change scales the
-    // cost of one refresh with how far the user has scrolled. The first page
-    // is the moving branch tip; older pages are loaded again on demand from it.
-    if (
-      history !== undefined &&
-      firstPage !== undefined &&
-      firstPageParam !== undefined
-    ) {
-      queryClient.setQueryData<InfiniteData<HistoryPage>>(historyKey, {
-        ...history,
-        pages: [firstPage],
-        pageParams: [firstPageParam],
-      });
+    for (const [key, history] of queryClient.getQueriesData<
+      InfiniteData<HistoryPage>
+    >({ queryKey: historyKey })) {
+      const [firstPage] = history?.pages ?? [];
+      const [firstPageParam] = history?.pageParams ?? [];
+      if (
+        history !== undefined &&
+        firstPage !== undefined &&
+        firstPageParam !== undefined
+      ) {
+        queryClient.setQueryData<InfiniteData<HistoryPage>>(key, {
+          ...history,
+          pages: [firstPage],
+          pageParams: [firstPageParam],
+        });
+      }
     }
   }
 
@@ -145,8 +142,7 @@ export function removeHeavyProjectQueries(
   root: string,
 ): void {
   const light = new Set<string>([
-    queryKeys.branches(root)[0],
-    queryKeys.tags(root)[0],
+    queryKeys.refs(root)[0],
     queryKeys.worktreeFingerprint(root)[0],
   ]);
   queryClient.removeQueries({

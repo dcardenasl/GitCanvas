@@ -94,8 +94,8 @@
 .ref-pill {
   display: inline-flex;
 
-  /* Badges shrink (and truncate) before the summary is squeezed out. */
-  flex-shrink: 1;
+  /* Text truncates inside a bounded badge; fitting never crushes short names. */
+  flex-shrink: 0;
   min-width: 0;
   gap: var(--space-1);
   align-items: center;
@@ -107,6 +107,12 @@
   font-family: var(--font-mono);
   font-size: var(--font-size-caption);
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.ref-pill__label {
+  min-inline-size: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -192,4 +198,53 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+.ref-pill__color {
+  display: inline-block;
+  inline-size: 6px;
+  block-size: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.commit-refs {
+  position: relative;
+  display: inline-flex;
+
+  /* Sized by its badges and never squeezed by the summary: the share cap comes
+     from CommitRefs (the same constant that decides how many badges fit). */
+  flex: none;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+/* The leading badge may shrink so its label truncates; the +N counter never does. */
+.commit-refs__measure + .ref-pill {
+  flex-shrink: 1;
+
+  /* Never collapses to a bare dot: shorter than this the label becomes +N. */
+  min-inline-size: 9ch;
+}
+
+.commit-refs__measure {
+  position: absolute;
+  display: inline-flex;
+  gap: var(--space-1);
+  inline-size: max-content;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.commit-refs__more {
+  border-color: var(--border);
+  background: var(--control);
+  color: var(--ink-muted);
+  cursor: default;
+}
+
+.commit-refs__more:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
 }

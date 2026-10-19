@@ -1,3 +1,4 @@
+import { CommitRefs } from "./CommitRefs";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   useCallback,
@@ -12,6 +13,7 @@ import type { TFunction } from "i18next";
 
 import type { CommitInfo } from "../../bindings";
 import type { RefBadge } from "../../state/refs";
+
 import { copyText } from "../../lib/clipboard";
 import {
   graphWidth,
@@ -81,7 +83,7 @@ interface CommitTableProps {
 const ANCHOR_SETTLE_MS = 150;
 
 /** What a context-menu copy puts on the clipboard, and how it is announced. */
-type CopyTarget = "hash" | "fullHash" | "message" | "author";
+type CopyTarget = "hash" | "fullHash" | "message" | "author" | "reference";
 
 /** A spoken description of a row: what it is, who wrote it, and when. */
 function rowLabel(
@@ -430,21 +432,14 @@ export function CommitTable({
                 }}
               >
                 <span className="commit-row__message">
-                  {(refsByCommit?.get(commit.id) ?? []).map((ref) => (
-                    <span
-                      key={`${ref.kind}/${ref.name}`}
-                      className={`ref-pill ref-pill--${ref.kind}${
-                        ref.isHead ? " ref-pill--head" : ""
-                      }`}
-                      title={
-                        ref.isHead
-                          ? t("table.refActive", { name: ref.name })
-                          : ref.name
-                      }
-                    >
-                      {ref.name}
-                    </span>
-                  ))}
+                  {refsByCommit?.get(commit.id) !== undefined && (
+                    <CommitRefs
+                      refs={refsByCommit.get(commit.id) ?? []}
+                      onCopy={(name) => {
+                        void copy(name, "reference");
+                      }}
+                    />
+                  )}
                   <span className="commit-row__summary" title={commit.summary}>
                     {commit.summary}
                   </span>

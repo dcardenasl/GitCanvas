@@ -21,7 +21,15 @@ const SETTLE: Duration = Duration::from_millis(250);
 const MAX_DEBOUNCE: Duration = Duration::from_secs(2);
 const WATCH_RETRIES: u32 = 3;
 const WATCH_BACKOFF: Duration = Duration::from_millis(100);
-const INTERESTING_METADATA: [&str; 5] = ["HEAD", "refs", "packed-refs", "ORIG_HEAD", "MERGE_HEAD"];
+const INTERESTING_METADATA: [&str; 7] = [
+    "HEAD",
+    "refs",
+    "packed-refs",
+    "ORIG_HEAD",
+    "MERGE_HEAD",
+    "config",
+    "config.worktree",
+];
 
 /// Notification emitted when watched repository state changes or degrades.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -282,7 +290,7 @@ mod tests {
 
         assert_eq!(
             classify(&event("config"), std::slice::from_ref(&metadata)),
-            None
+            Some(ChangeScope::Metadata)
         );
         assert_eq!(
             classify(&event("refs/heads/main"), std::slice::from_ref(&metadata)),

@@ -4,6 +4,9 @@
 
 Aceptado — 2026-10-14
 
+Ampliado por [ADR 0007](0007-stable-branch-graph.md), 2026-10-19: esquema 2 y
+preferencias del gráfico independientes del cierre de pestañas.
+
 ## Decisión
 
 **Identidad y estado.** La raíz canónica del worktree (`RepositoryInfo.path`) identifica
