@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Branch graph** — branch colors remain stable across pages and restarts, the visual main branch keeps the leftmost lane, and compact curves join at the actual destination commit.
+
 ## [0.3.1] — 2026-10-14
 
 ### Fixed

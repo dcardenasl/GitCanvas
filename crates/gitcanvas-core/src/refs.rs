@@ -42,15 +42,6 @@ pub struct TagInfo {
     pub is_annotated: bool,
 }
 
-/// Lists branches in a stable order, identifying HEAD by ref identity, not SHA.
-///
-/// # Errors
-/// Returns repository, malformed ref or non-Unicode name errors.
-pub fn get_branches(active: &ActiveRepo) -> Result<Vec<BranchInfo>, AppError> {
-    let repo = active.open()?;
-    read_branches(&repo)
-}
-
 fn read_branches(repo: &Repository) -> Result<Vec<BranchInfo>, AppError> {
     let mut branches = Vec::new();
     for branch in repo.branches(None)? {
@@ -93,15 +84,6 @@ fn read_branches(repo: &Repository) -> Result<Vec<BranchInfo>, AppError> {
     }
     branches.sort_by(|a, b| a.full_name.cmp(&b.full_name));
     Ok(branches)
-}
-
-/// Lists both annotated and lightweight tags, preserving non-commit targets.
-///
-/// # Errors
-/// Returns repository, malformed ref or non-Unicode name errors.
-pub fn get_tags(active: &ActiveRepo) -> Result<Vec<TagInfo>, AppError> {
-    let repo = active.open()?;
-    read_tags(&repo)
 }
 
 fn read_tags(repo: &Repository) -> Result<Vec<TagInfo>, AppError> {

@@ -12,6 +12,8 @@ import type { TFunction } from "i18next";
 
 import type { CommitInfo } from "../../bindings";
 import type { RefBadge } from "../../state/refs";
+import { graphColor } from "../../lib/graph-layout/colors";
+import { useThemePreferences } from "../../state/themePreferences";
 import { copyText } from "../../lib/clipboard";
 import {
   graphWidth,
@@ -121,6 +123,7 @@ export function CommitTable({
   onAnchorChange,
   refsByCommit,
 }: CommitTableProps) {
+  const theme = useThemePreferences((state) => state.resolvedTheme);
   const { t } = useTranslation("history");
   const commitIndexById = useMemo(() => {
     if (suppliedCommitIndex !== undefined) return suppliedCommitIndex;
@@ -442,6 +445,15 @@ export function CommitTable({
                           : ref.name
                       }
                     >
+                      {ref.color !== undefined && (
+                        <span
+                          className="ref-pill__color"
+                          style={{
+                            backgroundColor: graphColor(ref.color, theme),
+                          }}
+                          aria-hidden="true"
+                        />
+                      )}
                       {ref.name}
                     </span>
                   ))}

@@ -290,7 +290,7 @@ mod tests {
 
         assert_eq!(
             classify(&event("config"), std::slice::from_ref(&metadata)),
-            None
+            Some(ChangeScope::Metadata)
         );
         assert_eq!(
             classify(&event("refs/heads/main"), std::slice::from_ref(&metadata)),

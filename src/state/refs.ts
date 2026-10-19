@@ -1,8 +1,9 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import type { RepositoryRefsSnapshot } from "../bindings";
+import type { GraphColor, RepositoryRefsSnapshot } from "../bindings";
 import { getRepositoryRefs } from "../lib/ipc";
+import { useWorkspace } from "./workspace";
 import { queryKeys } from "./queryKeys";
 
 /** A ref that can be shown as a badge on the commit it points at. */
@@ -10,6 +11,7 @@ export interface RefBadge {
   readonly name: string;
   readonly kind: "local" | "remote" | "tag";
   readonly isHead: boolean;
+  readonly color?: GraphColor;
 }
 
 /** Local first, then remotes, then tags; alphabetical within each. */
@@ -79,8 +81,14 @@ export function useRefsByCommit(
 ): ReadonlyMap<string, readonly RefBadge[]> {
   const branches = useBranches(path);
   const tags = useTags(path);
+  const saved = useWorkspace((state) =>
+    state.graphPreferences.find((p) => p.path === path),
+  );
 
   return useMemo(() => {
+    const colors = new Map(
+      saved?.colors.map((record) => [record.reference, record.color]),
+    );
     const byCommit = new Map<string, RefBadge[]>();
 
     const add = (commitId: string | null, badge: RefBadge) => {
@@ -96,6 +104,7 @@ export function useRefsByCommit(
         name: branch.name,
         kind: branch.is_remote ? "remote" : "local",
         isHead: branch.is_head,
+        color: colors.get(branch.full_name) ?? "stone",
       });
     }
 
@@ -112,5 +121,5 @@ export function useRefsByCommit(
     }
 
     return byCommit;
-  }, [branches.data, tags.data]);
+  }, [branches.data, tags.data, saved]);
 }

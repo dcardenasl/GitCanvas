@@ -6,7 +6,9 @@ import {
 import { useCallback, useMemo, useState } from "react";
 
 import type { CommitInfo, HistoryPage } from "../bindings";
-import { layout } from "../lib/graph-layout/layout";
+import { useGraphModel } from "./graph";
+import type { GraphContext } from "../lib/graph-layout/context";
+import { EMPTY_GRAPH_CONTEXT, layout } from "../lib/graph-layout/layout";
 import type { GraphRow, LayoutState } from "../lib/graph-layout/types";
 import { getCommits } from "../lib/ipc";
 import { queryKeys } from "./queryKeys";
@@ -48,6 +50,7 @@ export interface HistoryLayout {
   readonly rows: readonly GraphRow[];
   readonly maxLanes: number;
   readonly pages: readonly HistoryPage[];
+  readonly context: GraphContext;
   readonly checkpoints: readonly Checkpoint[];
 }
 
@@ -56,6 +59,7 @@ const EMPTY_LAYOUT: HistoryLayout = {
   rows: [],
   maxLanes: 0,
   pages: [],
+  context: EMPTY_GRAPH_CONTEXT,
   checkpoints: [],
 };
 
@@ -72,7 +76,9 @@ const EMPTY_LAYOUT: HistoryLayout = {
 export function layoutHistory(
   pages: readonly HistoryPage[],
   previous: HistoryLayout = EMPTY_LAYOUT,
+  context: GraphContext = EMPTY_GRAPH_CONTEXT,
 ): HistoryLayout {
+  if (previous.context !== context) previous = EMPTY_LAYOUT;
   let shared = 0;
   while (
     shared < pages.length &&
@@ -98,6 +104,7 @@ export function layoutHistory(
         parents: commit.parents,
       })),
       state,
+      context,
     );
     commits.push(...page.commits);
     rows.push(...result.rows);
@@ -114,6 +121,7 @@ export function layoutHistory(
     rows,
     maxLanes: state?.maxLanes ?? 0,
     pages,
+    context,
     checkpoints,
   };
 }
@@ -127,17 +135,19 @@ export function layoutHistory(
  * cursor while the user is reading it.
  */
 export function useHistory(path: string | null): HistoryData {
+  const graph = useGraphModel(path);
+  const roots = graph.refs.data?.roots;
   const query: UseInfiniteQueryResult<InfiniteData<HistoryPage>> =
     useInfiniteQuery({
-      queryKey: queryKeys.history(path),
-      enabled: path !== null,
+      queryKey: queryKeys.history(path, roots),
+      enabled: path !== null && roots !== undefined,
       initialPageParam: FIRST_PAGE,
       queryFn: ({ pageParam }) => {
         if (path === null) throw new Error("No repository is open");
         return getCommits(path, {
           limit: PAGE_SIZE,
           cursor: pageParam.cursor,
-          roots: pageParam.roots,
+          roots: pageParam.roots ?? roots ?? [],
         });
       },
       getNextPageParam: (last): HistoryCursor | undefined =>
@@ -162,7 +172,9 @@ export function useHistory(path: string | null): HistoryData {
   // the result while rendering is React's pattern for state derived from props.
   const [laidOut, setLaidOut] = useState<HistoryLayout>(EMPTY_LAYOUT);
   const current =
-    pages === undefined ? EMPTY_LAYOUT : layoutHistory(pages, laidOut);
+    pages === undefined
+      ? EMPTY_LAYOUT
+      : layoutHistory(pages, laidOut, graph.context);
   if (current !== laidOut) setLaidOut(current);
   const { commits, rows, maxLanes } = current;
   const commitIndexById = useMemo(() => {
@@ -190,8 +202,9 @@ export function useHistory(path: string | null): HistoryData {
     maxLanes,
     hasNextPage,
     isFetchingNextPage,
-    isLoading: query.isLoading,
-    error: query.error,
+    isLoading: query.isLoading || graph.refs.isLoading,
+    error:
+      query.error ?? (graph.refs.data === undefined ? graph.refs.error : null),
     fetchNextPage,
   };
 }

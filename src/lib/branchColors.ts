@@ -7,52 +7,7 @@ import type {
 } from "../bindings";
 import type { GraphContext } from "./graph-layout/context";
 
-/** Fixed named palette identities, paired across light and dark themes. */
-export const GRAPH_COLORS = [
-  "amber",
-  "teal",
-  "violet",
-  "blue",
-  "rose",
-  "green",
-  "gold",
-  "stone",
-] as const satisfies readonly GraphColor[];
-const PALETTE = {
-  dark: [
-    "#f0a63e",
-    "#4fd1c5",
-    "#b39df3",
-    "#73b7ff",
-    "#f58ba8",
-    "#b2d77c",
-    "#e6c76b",
-    "#c5b8a6",
-  ],
-  light: [
-    "#9a5700",
-    "#007b72",
-    "#6941a5",
-    "#1763a5",
-    "#b04461",
-    "#4d751c",
-    "#8a6510",
-    "#68523c",
-  ],
-} as const;
-
-/** Resolves a semantic color without tying it to geometry. */
-export function graphColor(color: GraphColor, theme: "light" | "dark"): string {
-  return PALETTE[theme][GRAPH_COLORS.indexOf(color)] ?? PALETTE[theme][0];
-}
-
-/** Stable palette fallback for unnamed historical trajectories. */
-export function trajectoryColor(id: string): GraphColor {
-  let hash = 2166136261;
-  for (let i = 0; i < id.length; i += 1)
-    hash = Math.imul(hash ^ id.charCodeAt(i), 16777619);
-  return GRAPH_COLORS[(hash >>> 0) % GRAPH_COLORS.length] ?? "stone";
-}
+import { GRAPH_COLORS } from "./graph-layout/colors";
 
 const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -177,11 +132,12 @@ export function visualPrincipal(
           ?.full_name ?? null,
       status: "missing",
     };
+  const identities = new Set(branches.map((branch) => branch.full_name));
   const defaults = snapshot.branches.filter(
     (branch) =>
       branch.is_symbolic &&
       branch.full_name.endsWith("/HEAD") &&
-      branches.some((b) => b.full_name === branch.symbolic_target),
+      identities.has(branch.symbolic_target ?? ""),
   );
   const origin = defaults.find(
     (branch) => branch.full_name === "refs/remotes/origin/HEAD",

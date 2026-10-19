@@ -329,8 +329,7 @@ describe("Actions", () => {
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual(
       [
         ["history", "/tmp/repo"],
-        ["branches", "/tmp/repo"],
-        ["tags", "/tmp/repo"],
+        ["refs", "/tmp/repo"],
         ["worktree", "/tmp/repo"],
         ["worktree-file-diff", "/tmp/repo"],
         ["worktree-fingerprint", "/tmp/repo"],

@@ -6,7 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { HistoryPage } from "../../bindings";
 import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
 
-const mockIpc = createIpcMocks(["getCommits", "getWorktreeSnapshot"] as const);
+const mockIpc = createIpcMocks([
+  "getCommits",
+  "getWorktreeSnapshot",
+  "getRepositoryRefs",
+] as const);
 const { getCommits, getWorktreeSnapshot } = mockIpc;
 
 vi.mock("../../lib/ipc", () => ({
@@ -57,6 +61,13 @@ function renderView() {
 }
 
 beforeEach(() => {
+  mockIpc.getRepositoryRefs.mockResolvedValue({
+    branches: [],
+    tags: [],
+    head: null,
+    head_reference: null,
+    roots: [],
+  });
   getCommits.mockReset();
   getWorktreeSnapshot.mockReset();
   getWorktreeSnapshot.mockResolvedValue({

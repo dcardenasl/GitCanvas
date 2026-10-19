@@ -1,3 +1,4 @@
+import type { GraphContext } from "./context";
 import type {
   GraphCommit,
   GraphRow,
@@ -6,79 +7,111 @@ import type {
   LayoutState,
 } from "./types";
 
+/** No configured references is useful for detached/tag-only synthetic histories. */
+export const EMPTY_GRAPH_CONTEXT: GraphContext = { principal: null, seeds: [] };
+
 /**
- * Extends a topologically ordered Git stream without rewriting earlier rows.
- * First parents continue their lane unless another child already reserved them.
- * A reservation remains live across page boundaries until its commit arrives.
- * Inputs and prior state are never mutated. Malformed page order is rejected.
+ * Resumes a topological stream without rewriting earlier rows. First parents
+ * retain trajectory identity; additional parents start independent paths. Even
+ * connections to the same future SHA stay separate until that SHA's node.
  */
 export function layout(
   commits: readonly GraphCommit[],
   previous?: LayoutState,
+  context: GraphContext = EMPTY_GRAPH_CONTEXT,
 ): LayoutResult {
   const lanes = [...(previous?.lanes ?? [])];
-  const reservations = new Map<string, number>();
-  for (const [lane, id] of lanes.entries()) {
-    if (id === null) continue;
-    if (reservations.has(id)) throw new Error("Duplicate lane reservation");
-    reservations.set(id, lane);
-  }
+  const rows: GraphRow[] = [];
   const rowCount = previous?.rowCount ?? 0;
   let maxLanes = previous?.maxLanes ?? 0;
-  const seen = new Set<string>();
-  const rows: GraphRow[] = [];
-
-  const reserve = (id: string): number => {
-    const existing = reservations.get(id);
-    if (existing !== undefined) return existing;
-    const vacant = lanes.indexOf(null);
-    const lane = vacant < 0 ? lanes.length : vacant;
-    lanes[lane] = id;
-    reservations.set(id, lane);
-    return lane;
+  const known = new Set(context.seeds.map((seed) => seed.id));
+  const seeds = new Map<string, string[]>();
+  const compare = (a: string, b: string) => {
+    const rank = (id: string) =>
+      id === context.principal ? 0 : known.has(id) ? 1 : 2;
+    return rank(a) - rank(b) || (a < b ? -1 : a > b ? 1 : 0);
   };
-
+  for (const seed of context.seeds) {
+    const group = seeds.get(seed.commitId) ?? [];
+    group.push(seed.id);
+    seeds.set(seed.commitId, group);
+  }
+  const allocate = (trajectory: string): number => {
+    if (
+      trajectory === context.principal &&
+      (lanes[0] === null || lanes[0] === undefined)
+    )
+      return 0;
+    const start = context.principal === null ? 0 : 1;
+    for (let lane = start; lane < lanes.length; lane += 1)
+      if (lanes[lane] === null) return lane;
+    return Math.max(start, lanes.length);
+  };
+  const seen = new Set<string>();
   for (const commit of commits) {
-    if (commit.id.length === 0 || seen.has(commit.id)) {
+    if (commit.id.length === 0 || seen.has(commit.id))
       throw new Error("Commit IDs must be nonempty and unique within a page");
-    }
     seen.add(commit.id);
-    for (const parent of commit.parents) {
-      if (parent.length === 0 || seen.has(parent)) {
+    const parents = [...new Set(commit.parents)];
+    for (const parent of parents)
+      if (parent.length === 0 || seen.has(parent))
         throw new Error(
           "Parents must follow their children in topological order",
         );
+    const matching: number[] = [];
+    const candidates = [...(seeds.get(commit.id) ?? [])];
+    for (const [lane, pending] of lanes.entries()) {
+      if (pending?.target === commit.id) {
+        matching.push(lane);
+        candidates.push(pending.trajectory);
       }
     }
-    const incoming = lanes.flatMap((id, lane) => (id === null ? [] : [lane]));
-    const lane = reserve(commit.id);
-    lanes[lane] = null;
-    reservations.delete(commit.id);
-    const outgoing: LaneEdge[] = lanes.flatMap((id, index) =>
-      id === null ? [] : [{ from: index, to: index, colorLane: index }],
+    const trajectory = candidates.sort(compare)[0] ?? `root:${commit.id}`;
+    const chosenLane = matching.find(
+      (lane) => lanes[lane]?.trajectory === trajectory,
     );
-
-    for (const [parentIndex, parent] of [
-      ...new Set(commit.parents),
-    ].entries()) {
-      if (parentIndex === 0 && !reservations.has(parent)) {
-        // The first parent inherits the node lane even if a lower lane is free.
-        lanes[lane] = parent;
-        reservations.set(parent, lane);
-      }
-      const target = reserve(parent);
-      outgoing.push({ from: lane, to: target, colorLane: target });
+    const lane =
+      trajectory === context.principal
+        ? 0
+        : (chosenLane ?? matching[0] ?? allocate(trajectory));
+    const incoming: LaneEdge[] = [];
+    for (const [from, pending] of lanes.entries()) {
+      if (pending === null) continue;
+      incoming.push({
+        from,
+        to: pending.target === commit.id ? lane : from,
+        trajectory: pending.trajectory,
+      });
     }
-    maxLanes = Math.max(maxLanes, lanes.length, lane + 1);
+    for (const matched of matching) lanes[matched] = null;
+    const outgoing: LaneEdge[] = [];
+    for (const [from, pending] of lanes.entries())
+      if (pending !== null)
+        outgoing.push({ from, to: from, trajectory: pending.trajectory });
+    for (const [index, target] of parents.entries()) {
+      const sideCandidates = seeds.get(target) ?? [];
+      const nextTrajectory =
+        index === 0
+          ? trajectory
+          : ([...sideCandidates].sort(compare)[0] ??
+            `merge:${commit.id}:${String(index)}:${target}`);
+      const to = index === 0 ? lane : allocate(nextTrajectory);
+      while (lanes.length <= to) lanes.push(null);
+      if (lanes[to] !== null)
+        throw new Error("A trajectory cannot overwrite a live lane");
+      lanes[to] = { target, trajectory: nextTrajectory };
+      outgoing.push({ from: lane, to, trajectory: nextTrajectory });
+    }
+    maxLanes = Math.max(maxLanes, lane + 1, lanes.length);
     rows.push({
       id: commit.id,
       index: rowCount + rows.length,
       lane,
+      trajectory,
       incoming,
       outgoing,
     });
     while (lanes.length > 0 && lanes.at(-1) === null) lanes.pop();
   }
-
   return { rows, state: { lanes, rowCount: rowCount + rows.length, maxLanes } };
 }

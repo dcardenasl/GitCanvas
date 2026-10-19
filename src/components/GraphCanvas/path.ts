@@ -35,10 +35,20 @@ export function edgePath(index: number, from: number, to: number): string {
 /**
  * SVG path for one incoming lane.
  *
- * The top half of a row is always a straight vertical, because the layout
- * resolves every lane change in the half-row above it.
+ * The top half routes incoming trajectories into the actual commit node.
+ * Pass-through trajectories stay vertical.
  */
-export function incomingPath(index: number, lane: number): string {
-  const x = laneCenterX(lane);
-  return `M${String(x)},${String(index * ROW_HEIGHT)} L${String(x)},${String(rowCenterY(index))}`;
+export function incomingPath(
+  index: number,
+  from: number,
+  to: number = from,
+): string {
+  const x1 = laneCenterX(from);
+  const x2 = laneCenterX(to);
+  const y1 = index * ROW_HEIGHT;
+  const y2 = rowCenterY(index);
+  if (from === to)
+    return `M${String(x1)},${String(y1)} L${String(x2)},${String(y2)}`;
+  const mid = (y1 + y2) / 2;
+  return `M${String(x1)},${String(y1)} C${String(x1)},${String(mid)} ${String(x2)},${String(mid)} ${String(x2)},${String(y2)}`;
 }

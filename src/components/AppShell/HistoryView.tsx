@@ -5,6 +5,7 @@ import { CommitTable } from "../CommitTable";
 import { ErrorMessage } from "../ErrorMessage";
 import { GraphCanvas } from "../GraphCanvas";
 import type { HistoryData } from "../../state/history";
+import { useGraphModel } from "../../state/graph";
 import { useRefsByCommit } from "../../state/refs";
 import { selectedCommitId as getSelectedCommitId } from "../../state/navigation";
 import {
@@ -40,6 +41,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
     (navigation) => navigation.revealCommitId,
   );
 
+  const graph = useGraphModel(repository?.path ?? null);
   const refsByCommit = useRefsByCommit(repository?.path ?? null);
   const local = useWorktreeSnapshot(repository?.path ?? null);
 
@@ -178,6 +180,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
         refsByCommit={refsByCommit}
         renderGraph={(window) => (
           <GraphCanvas
+            colors={graph.colors}
             rows={history.rows}
             window={window}
             maxLanes={history.maxLanes}

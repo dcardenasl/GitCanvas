@@ -9,10 +9,7 @@
 mod support;
 
 use git2::{Repository, Signature};
-use gitcanvas_core::{
-    refs::{get_branches, get_tags},
-    repository::ActiveRepo,
-};
+use gitcanvas_core::{refs::get_repository_refs, repository::ActiveRepo};
 use support::Fixture;
 
 #[test]
@@ -42,7 +39,7 @@ fn distinguishes_head_by_identity_from_branches_at_the_same_commit() {
         )
         .unwrap();
     let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
-    let branches = get_branches(&active).unwrap();
+    let branches = get_repository_refs(&active).unwrap().branches;
     assert_eq!(branches.iter().filter(|branch| branch.is_head).count(), 1);
     assert_eq!(
         branches
@@ -60,8 +57,9 @@ fn distinguishes_head_by_identity_from_branches_at_the_same_commit() {
         .windows(2)
         .all(|pair| pair[0].full_name < pair[1].full_name));
     fixture.repo.set_head_detached(root).unwrap();
-    assert!(get_branches(&active)
+    assert!(get_repository_refs(&active)
         .unwrap()
+        .branches
         .iter()
         .all(|branch| !branch.is_head));
 }
@@ -95,7 +93,7 @@ fn resolves_lightweight_annotated_nested_and_non_commit_tags() {
         )
         .unwrap();
     let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
-    let tags = get_tags(&active).unwrap();
+    let tags = get_repository_refs(&active).unwrap().tags;
     assert_eq!(tags.len(), 4);
     assert!(tags[0].commit_id.is_none());
     let nested = tags.iter().find(|tag| tag.name == "nested").unwrap();
@@ -114,8 +112,8 @@ fn resolves_lightweight_annotated_nested_and_non_commit_tags() {
 fn empty_repository_has_no_refs() {
     let fixture = Fixture::new();
     let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
-    assert!(get_branches(&active).unwrap().is_empty());
-    assert!(get_tags(&active).unwrap().is_empty());
+    assert!(get_repository_refs(&active).unwrap().branches.is_empty());
+    assert!(get_repository_refs(&active).unwrap().tags.is_empty());
 }
 
 #[test]
@@ -176,4 +174,26 @@ fn snapshot_freezes_head_roots_and_configured_upstream() {
             .as_deref(),
         Some("refs/remotes/origin/trunk")
     );
+}
+
+#[test]
+fn broken_symbolic_default_is_reported_without_losing_valid_branches() {
+    let fixture = Fixture::new();
+    fixture.commit("HEAD", "root", &[], 1);
+    fixture
+        .repo
+        .reference_symbolic(
+            "refs/remotes/origin/HEAD",
+            "refs/remotes/origin/missing",
+            false,
+            "test",
+        )
+        .unwrap();
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let snapshot = gitcanvas_core::refs::get_repository_refs(&active).unwrap();
+    assert!(snapshot.branches.iter().any(|branch| branch.is_head));
+    assert!(snapshot
+        .branches
+        .iter()
+        .any(|branch| branch.is_symbolic && branch.target.is_none()));
 }

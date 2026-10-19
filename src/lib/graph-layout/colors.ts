@@ -1,5 +1,17 @@
-/** High-contrast lane colors paired by position across the two themes. */
-export const LANE_PALETTES = {
+/** Fixed named palette identities, paired across light and dark themes. */
+export const GRAPH_COLORS = [
+  "amber",
+  "teal",
+  "violet",
+  "blue",
+  "rose",
+  "green",
+  "gold",
+  "stone",
+] as const satisfies readonly string[];
+/** Palette identity derived from the fixed named entries. */
+export type GraphColorId = (typeof GRAPH_COLORS)[number];
+const PALETTE = {
   dark: [
     "#f0a63e",
     "#4fd1c5",
@@ -12,24 +24,28 @@ export const LANE_PALETTES = {
   ],
   light: [
     "#9a5700",
-    "#007b72",
+    "#00756c",
     "#6941a5",
     "#1763a5",
     "#b04461",
-    "#4d751c",
-    "#8a6510",
+    "#4b721b",
+    "#87620f",
     "#68523c",
   ],
 } as const;
 
-/** Maps a nonnegative integral lane to a stable color, cycling the fixed palette. */
-export function laneColor(
-  lane: number,
-  theme: "dark" | "light" = "dark",
+/** Resolves a semantic color without tying it to geometry. */
+export function graphColor(
+  color: GraphColorId,
+  theme: "light" | "dark",
 ): string {
-  if (!Number.isSafeInteger(lane) || lane < 0) {
-    throw new RangeError("Lane index must be a nonnegative safe integer");
-  }
-  const palette = LANE_PALETTES[theme];
-  return palette[lane % palette.length] ?? palette[0];
+  return PALETTE[theme][GRAPH_COLORS.indexOf(color)] ?? PALETTE[theme][0];
+}
+
+/** Stable palette fallback for unnamed historical trajectories. */
+export function trajectoryColor(id: string): GraphColorId {
+  let hash = 2166136261;
+  for (let i = 0; i < id.length; i += 1)
+    hash = Math.imul(hash ^ id.charCodeAt(i), 16777619);
+  return GRAPH_COLORS[(hash >>> 0) % GRAPH_COLORS.length] ?? "stone";
 }

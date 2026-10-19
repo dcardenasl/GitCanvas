@@ -193,3 +193,12 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+.ref-pill__color {
+  display: inline-block;
+  inline-size: 6px;
+  block-size: 6px;
+  margin-inline-end: 4px;
+  border-radius: 50%;
+  vertical-align: middle;
+}

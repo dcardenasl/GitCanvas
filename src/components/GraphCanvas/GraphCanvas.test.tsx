@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { layout } from "../../lib/graph-layout/layout";
 import type { GraphCommit } from "../../lib/graph-layout/types";
 import { ROW_HEIGHT } from "../../lib/historyGeometry";
-import { laneColor } from "../../lib/graph-layout/colors";
+import { graphColor, trajectoryColor } from "../../lib/graph-layout/colors";
 import { useThemePreferences } from "../../state/themePreferences";
 
 import { GraphCanvas } from "./GraphCanvas";
@@ -135,9 +135,9 @@ describe("GraphCanvas", () => {
       />,
     );
 
-    expect(container.querySelector("path")?.getAttribute("stroke")).toBe(
-      laneColor(0, "light"),
-    );
+    expect(
+      container.querySelector(".graph-canvas__edge")?.getAttribute("stroke"),
+    ).toBe(graphColor(trajectoryColor("root:c0"), "light"));
   });
 
   it("stays out of the accessibility tree; the table carries the semantics", () => {

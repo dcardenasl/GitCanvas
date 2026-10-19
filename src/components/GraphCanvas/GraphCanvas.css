@@ -9,8 +9,11 @@
   pointer-events: none;
 }
 
-.graph-canvas__row {
-  filter: drop-shadow(0 0 1.25px var(--graph-outline));
+.graph-canvas__outline {
+  fill: none;
+  stroke: var(--surface);
+  stroke-width: 4;
+  stroke-linecap: round;
 }
 
 .graph-canvas__edge {

@@ -31,11 +31,11 @@ Estrategia aprobada el 2026-10-19. Alcance, orden y aceptación en el
 
 - [ ] **GRF-0 — Reconciliar evidencia histórica de WS-17.** Separar CI y publicación
       ya realizadas de comprobaciones manuales sin evidencia. No repetir la release.
-- [ ] **GRF-1 — Contrato y casos de referencia.** Separar geometría, identidad de
+- [x] **GRF-1 — Contrato y casos de referencia.** Separar geometría, identidad de
       referencia y color; definir diseño técnico y fixtures del gráfico.
-- [ ] **GRF-2 — Identidad cromática y persistencia.** Paleta, principal visual,
+- [x] **GRF-2 — Identidad cromática y persistencia.** Paleta, principal visual,
       relación local/upstream y migración de preferencias por repositorio.
-- [ ] **GRF-3 — Líneas del gráfico.** Mejorar continuidad, curvas, separación y cruces
+- [x] **GRF-3 — Líneas del gráfico.** Mejorar continuidad, curvas, separación y cruces
       conservando topología, nodos únicos y layout reanudable.
 - [ ] **GRF-4 — Integración y controles.** Colores coherentes panel/gráfico y controles
       accesibles de color/principal visual; historia compartida y recuperación.
@@ -43,6 +43,11 @@ Estrategia aprobada el 2026-10-19. Alcance, orden y aceptación en el
       upstream, tamaño mínimo y recorridos nativos en los tres sistemas.
 - [ ] **GRF-6 — Documentación y preparación de release.** Evidencia y CHANGELOG;
       publicación según flujo del proyecto cuando se autorice.
+
+Evidencia de implementación: snapshot compartido y upstreams; esquema 1→2 y
+preferencias independientes del cierre; modelo puro con primer padre, carril principal
+reservado y trayectorias que confluyen en el nodo. Pruebas de equivalencia paginada,
+principal tardía, octopus y DAGs generados; verificación integrada aún en GRF-5.
 
 ### Entregas posteriores
 
