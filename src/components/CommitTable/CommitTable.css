@@ -212,16 +212,20 @@
 .commit-refs {
   position: relative;
   display: inline-flex;
-  flex: 0 1 auto;
+
+  /* Sized by its badges and never squeezed by the summary: the share cap comes
+     from CommitRefs (the same constant that decides how many badges fit). */
+  flex: none;
   gap: var(--space-1);
   align-items: center;
-  max-inline-size: 50%;
-  min-inline-size: 0;
 }
 
 /* The leading badge may shrink so its label truncates; the +N counter never does. */
 .commit-refs__measure + .ref-pill {
   flex-shrink: 1;
+
+  /* Never collapses to a bare dot: shorter than this the label becomes +N. */
+  min-inline-size: 9ch;
 }
 
 .commit-refs__measure {

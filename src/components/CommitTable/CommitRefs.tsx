@@ -33,7 +33,7 @@ export function CommitRefs({
   const theme = useThemePreferences((state) => state.resolvedTheme);
   const root = useRef<HTMLSpanElement>(null);
   const measure = useRef<HTMLSpanElement>(null);
-  const [fit, setFit] = useState({ count: 0, width: 0 });
+  const [fit, setFit] = useState({ count: 0 });
   const [menu, setMenu] = useState<{
     x: number;
     y: number;
@@ -61,12 +61,7 @@ export function CommitRefs({
       // The first badge always shows (its label truncates); the rest fit or fold into +N.
       let count = widths.length;
       while (count > 1 && needed(count) > available) count -= 1;
-      const width = Math.min(needed(count), available);
-      setFit((previous) =>
-        previous.count === count && previous.width === width
-          ? previous
-          : { count, width },
-      );
+      setFit((previous) => (previous.count === count ? previous : { count }));
     };
     update();
     const observer = new ResizeObserver(update);
@@ -98,7 +93,7 @@ export function CommitRefs({
     <span
       ref={root}
       className="commit-refs"
-      style={{ inlineSize: fit.width > 0 ? fit.width : undefined }}
+      style={{ maxInlineSize: `${String(MAX_SHARE * 100)}%` }}
     >
       <span ref={measure} className="commit-refs__measure" aria-hidden="true">
         {refs.slice(0, MAX_VISIBLE).map(pill)}

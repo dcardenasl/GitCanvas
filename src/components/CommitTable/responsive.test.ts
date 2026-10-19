@@ -58,6 +58,6 @@ describe("the history table's responsive columns", () => {
     expect(css).toMatch(/\.ref-pill__color \{[^}]*flex: 0 0 6px/s);
     expect(css).not.toMatch(/\.ref-pill__color \{[^}]*margin-inline-end/s);
     expect(css).toMatch(/\.ref-pill__label \{[^}]*text-overflow: ellipsis/s);
-    expect(css).toMatch(/\.commit-refs \{[^}]*max-inline-size: 50%/s);
+    expect(css).toMatch(/\.commit-refs \{[^}]*flex: none/s);
   });
 });
