@@ -11,6 +11,8 @@ export const TEST_LIMITS = {
   max_tabs: 30,
   max_favorites: 200,
   max_recents: 20,
+  max_graph_projects: 200,
+  max_graph_references: 10000,
 } as const;
 
 /** The project tests open when they do not care which one it is. */
@@ -31,6 +33,7 @@ export function resetWorkspace(): void {
     homeOpen: false,
     favorites: [],
     recents: [],
+    graphPreferences: [],
     storageError: null,
   });
 }

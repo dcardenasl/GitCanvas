@@ -1,3 +1,4 @@
+import { createGraphSlice } from "./workspaceStore/graphSlice";
 import { useMemo } from "react";
 import { create } from "zustand";
 
@@ -49,6 +50,7 @@ export type {
  * project touches several at once, and those updates must land together.
  */
 export const useWorkspace = create<WorkspaceState>()((...slice) => ({
+  ...createGraphSlice(...slice),
   ...createTabsSlice(...slice),
   ...createClosedTabsSlice(...slice),
   ...createLibrarySlice(...slice),

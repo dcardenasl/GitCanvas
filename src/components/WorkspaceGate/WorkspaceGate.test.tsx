@@ -25,12 +25,24 @@ vi.mock("../../lib/ipc", () => ({
 const { WorkspaceGate } = await import("./WorkspaceGate");
 const { useWorkspace } = await import("../../state/workspace");
 
-const LIMITS = { max_tabs: 30, max_favorites: 200, max_recents: 20 };
+const LIMITS = {
+  max_tabs: 30,
+  max_favorites: 200,
+  max_recents: 20,
+  max_graph_projects: 200,
+  max_graph_references: 10000,
+};
 
 beforeEach(() => {
   getWorkspaceLimits.mockReset();
   loadWorkspace.mockResolvedValue({
-    workspace: { tabs: [], active: null, favorites: [], recents: [] },
+    workspace: {
+      tabs: [],
+      active: null,
+      favorites: [],
+      recents: [],
+      graph_preferences: [],
+    },
     recovery: null,
   });
   useWorkspace.setState({
@@ -101,6 +113,7 @@ describe("WorkspaceGate", () => {
         active: "/tmp/beta",
         favorites: ["/tmp/alpha"],
         recents: [],
+        graph_preferences: [],
       },
       recovery: null,
     });
@@ -115,7 +128,13 @@ describe("WorkspaceGate", () => {
   it("shows damaged storage while continuing in memory and preserves the warning after a save", async () => {
     getWorkspaceLimits.mockResolvedValue(LIMITS);
     loadWorkspace.mockResolvedValue({
-      workspace: { tabs: [], active: null, favorites: [], recents: [] },
+      workspace: {
+        tabs: [],
+        active: null,
+        favorites: [],
+        recents: [],
+        graph_preferences: [],
+      },
       recovery: {
         kind: "Corrupt",
         detail: "bad json",

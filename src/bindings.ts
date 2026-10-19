@@ -424,6 +424,37 @@ export type GitHubRepositoryList = {
 	truncated: boolean,
 };
 
+/**  Named palette identity, independent of theme and lane position. */
+export type GraphColor =
+/**  Amber palette pair. */
+"amber" |
+/**  Teal palette pair. */
+"teal" |
+/**  Violet palette pair. */
+"violet" |
+/**  Blue palette pair. */
+"blue" |
+/**  Rose palette pair. */
+"rose" |
+/**  Green palette pair. */
+"green" |
+/**  Gold palette pair. */
+"gold" |
+/**  Stone palette pair. */
+"stone";
+
+/**  Graph preferences belong to a canonical worktree, not its open tab. */
+export type GraphPreferences = {
+	/**  Canonical project root; does not authorize repository access. */
+	path: string,
+	/**  Explicit principal; absent means local automatic detection. */
+	principal: string | null,
+	/**  Monotonic explicit color edit sequence. */
+	revision: number,
+	/**  Assignments, including references temporarily absent from Git. */
+	colors: ReferenceColor[],
+};
+
 /**  A bounded page and the information needed to resume its exact traversal. */
 export type HistoryPage = {
 	/**  Commits returned in topological history order. */
@@ -541,6 +572,16 @@ export type RecoveryKind =
 /**  Larger than the largest file this build reads. */
 "TooLarge";
 
+/**  Durable color for a full reference, retained while the reference is absent. */
+export type ReferenceColor = {
+	/**  Full branch reference name. */
+	reference: string,
+	/**  Named palette identity. */
+	color: GraphColor,
+	/**  Last explicit edit, zero for automatic assignments. */
+	edited: number,
+};
+
 export type RepositoryChangedEvent = {
 	path: string,
 	generation: number,
@@ -643,6 +684,8 @@ export type Workspace = {
 	favorites: string[],
 	/**  Recent projects, most recently used first. */
 	recents: string[],
+	/**  Graph preferences survive closing their project. */
+	graph_preferences: GraphPreferences[],
 };
 
 /**
@@ -657,6 +700,10 @@ export type WorkspaceLimits = {
 	max_favorites: number,
 	/**  Most recents kept. */
 	max_recents: number,
+	/**  Maximum projects with graph preferences. */
+	max_graph_projects: number,
+	/**  Maximum reference preferences per project. */
+	max_graph_references: number,
 };
 
 /**  A stored workspace that was set aside rather than loaded. */

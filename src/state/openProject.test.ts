@@ -62,7 +62,13 @@ describe("openProjectAt", () => {
 
   it("reports the limit instead of opening past it", async () => {
     useWorkspace.setState({
-      limits: { max_tabs: 1, max_favorites: 200, max_recents: 20 },
+      limits: {
+        max_tabs: 1,
+        max_favorites: 200,
+        max_recents: 20,
+        max_graph_projects: 200,
+        max_graph_references: 10000,
+      },
     });
     openRepository.mockResolvedValueOnce({ path: "/a", name: "a" });
     openRepository.mockResolvedValueOnce({ path: "/b", name: "b" });

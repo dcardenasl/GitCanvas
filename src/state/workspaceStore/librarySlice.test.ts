@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { recentsAfterVisit } from "./librarySlice";
 
-const limits = { max_tabs: 30, max_favorites: 200, max_recents: 3 };
+const limits = {
+  max_tabs: 30,
+  max_favorites: 200,
+  max_recents: 3,
+  max_graph_projects: 200,
+  max_graph_references: 10000,
+};
 
 describe("recentsAfterVisit", () => {
   it("puts a project first, once", () => {

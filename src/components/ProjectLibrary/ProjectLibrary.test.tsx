@@ -67,7 +67,13 @@ it("bounds and deduplicates recents by last use, including reactivation", () => 
 
 it("reports the favorite limit without dropping an existing favorite", () => {
   useWorkspace.setState({
-    limits: { max_tabs: 30, max_favorites: 1, max_recents: 20 },
+    limits: {
+      max_tabs: 30,
+      max_favorites: 1,
+      max_recents: 20,
+      max_graph_projects: 200,
+      max_graph_references: 10000,
+    },
     favorites: ["/old"],
   });
   useWorkspace.getState().toggleFavorite("/new");
