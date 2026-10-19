@@ -65,6 +65,17 @@ one active path, including shared Git data used by external worktrees. Pending r
 and unknown dependencies prevent retention, and in-use entries cannot be replaced for
 repair. Favorites and recents do not protect clones. See ADR 0006.
 
+## Stable branch graph (v0.4 in dev)
+
+References share one locally stable snapshot, including upstreams and symbolic targets.
+History pages use frozen roots; obsolete frontend walks are released when roots change.
+The pure layout preserves pending trajectories until their actual target node, follows
+first parents, and reserves the left lane for a visual principal independent of HEAD.
+Semantic colors are shared by configured upstream groups, never derived from lanes.
+Schema 2 migrates schema 1 and retains graph preferences per canonical worktree after
+its tab closes. Automatic reconciliation cannot overwrite a later explicit edit.
+See ADR 0007 and docs/verification/v0.4.md for evidence and external gates.
+
 ## Session entry points
 
 Read `TASKS.md` for the next open task and its acceptance evidence. Read the referenced

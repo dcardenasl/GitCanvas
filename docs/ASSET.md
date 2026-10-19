@@ -12,7 +12,7 @@
 | Repositorio | [`dcardenasl/gitcanvas`](https://github.com/dcardenasl/gitcanvas) |
 | Licencia | MIT (véase LICENSE) |
 | Versión publicada | [v0.3.1](https://github.com/dcardenasl/GitCanvas/releases/tag/v0.3.1) |
-| Estado | v0.3.1 publicada; próxima entrega centrada en líneas y colores de ramas |
+| Estado | v0.3.1 publicada; gráfico v0.4 implementado en dev, con verificación externa pendiente |
 | Stack | Tauri 2, Rust/libgit2, React, TypeScript, Vite |
 
 ## Propósito y alcance
@@ -40,8 +40,9 @@ read-only; véase [`CONTEXT.md`](../CONTEXT.md) y el [ADR 0001](adr/0001-working
 
 ## Próximo paso
 
-Preparar v0.4: líneas y colores del gráfico, empezando por GRF-0/GRF-1 en
-[TASKS.md](../TASKS.md). El [roadmap aprobado](plan/2026-10-19-roadmap-de-versiones.md)
+Completar GRF-5: matriz externa y verificaciones manuales de v0.4. La implementación
+local está terminada; ver [evidencia](verification/v0.4.md) y [TASKS.md](../TASKS.md).
+El [roadmap aprobado](plan/2026-10-19-roadmap-de-versiones.md)
 define la secuencia: gráfico → panel/filtros → historial por archivo →
 contribuyentes/releases → proveedores → crear/conectar repositorios → gestión de
 ramas → preparar/crear commits (objetivo v0.11). Sustituye la anterior reserva de

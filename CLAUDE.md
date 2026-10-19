@@ -186,7 +186,9 @@ serialized saves, recoverable tabs and the five-inactive-project cache bound int
 Do not move synchronous theme/language preferences into the Rust store. Native macOS
 menu and page shortcuts call the same workspace actions. E2E runs use temporary Rust
 data and private webviews so user sessions and localStorage are never touched.
-See ADR 0006 and the WS task evidence.
+See ADR 0006 and the WS task evidence. ADR 0007 defines the v0.4 reference snapshot,
+pure trajectory layout and durable branch appearance. Graph preferences survive tab
+closure; their worktree roots remain presentation identities, never authorization.
 
 ## Verificación
 

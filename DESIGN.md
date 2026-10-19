@@ -17,7 +17,7 @@ horizontal graph scrolling for many lanes.
 - Dark theme: background #10131a; sidebar #14161d; toolbar #12141b; controls #171a22; borders #262b38; text #d3d6e0.
 - Light theme: background #f7f6f3; sidebar #f0efeb; toolbar #fbfaf8; controls white; borders #d9d6d0; text #25232c.
 - Orchid remains the brand accent (#c4a3ff dark, #6941a5 light); selected rows use a subtle violet tint in both themes.
-- Green and red remain reserved for added and removed code; graph lane hues stay stable and receive a subtle surface outline for separation.
+- Green and red identify added and removed code in diffs; the graph uses its own named eight-color palette with stable branch identities and a surface outline.
 - Code colors: 13 semantic tokens (`--syntax-keyword`, `--syntax-string`, …), each defined
   in both themes and checked at 4.5:1 or more over plain, added and deleted rows. Added and
   deleted rows keep their green and red as a row surface and marker; the text itself uses
@@ -79,3 +79,17 @@ The product is a desktop Tauri application for macOS, Linux, and Windows. The la
 designed for the 940×600 minimum window; there is no separate responsive web or mobile
 layout. No decorative cards, marketing header, fake traffic lights or mock profile
 identity.
+
+## Branch appearance (v0.4 in dev)
+
+Branches have named, theme-paired colors shared by their configured upstream component.
+Color dots appear beside branch names and row badges. HEAD, visual main and remote
+default use separate markers and accessible labels; inspecting does not change them.
+Every branch has a visible action menu for appearance and existing eligible checkout.
+A compact inline named palette uses native buttons, selected state and Escape/focus recovery.
+
+Compact curves connect vertical lanes at the actual commit node. The visual principal
+follows first parents in the leftmost reserved lane; side paths stay visible through
+merges. Outlines are drawn before colored connections and nodes to preserve continuity.
+Palette contrast is checked against normal and selected rows in both themes. No graph
+animation, panel redesign, filtering or new repository mutation is added.

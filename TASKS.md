@@ -7,20 +7,23 @@
 > [plan general](docs/plans/2026-09-08-plan-de-implementacion.md).
 
 **Estado al 2026-10-19:** v0.3.1 publicada. H2, I18N y workspace están
-implementados. La estrategia aprobada prioriza líneas/colores del gráfico en v0.4,
+implementados. El alcance de v0.4 está implementado en commits locales de dev;
+GRF-5 conserva las puertas externas/manuales pendientes. La estrategia aprobada prioriza líneas/colores del gráfico en v0.4,
 seguida de panel y filtros en v0.5. Commits se desplaza al final de la secuencia,
 objetivo v0.11. Ver el [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md),
 que prevalece sobre asignaciones de versiones de planes anteriores.
 
-**Estado del checkout al registrar el plan:** rama `dev`, un commit por delante de
-`origin/dev`; carpetas de evidencia/media sin seguimiento. Inspeccionar estado e
-historial al retomar. Este registro es documental; no inicia implementación ni release.
+**Estado de trabajo:** rama `dev`, commits locales sin push. Se preservan las carpetas
+de evidencia/media sin seguimiento. Inspeccionar estado e historial al retomar.
+La versión de la aplicación no se cambia hasta su release.
 
 ## Siguiente paso
 
-Preparar v0.4 empezando por GRF-0 y GRF-1. WS-17 es un seguimiento histórico para
-conciliar evidencia, no una publicación futura de v0.3.0. No presentar comprobaciones
-manuales como realizadas sin evidencia.
+Completar las puertas externas/manuales de GRF-5. El código de v0.4 y su verificación
+local están implementados; consultar [evidencia](docs/verification/v0.4.md).
+WS-17 es seguimiento histórico: v0.3.0/v0.3.1 y su CI ya se publicaron; los recorridos
+manuales sin evidencia permanecen pendientes. No repetir esa publicación ni atribuir
+la matriz antigua a esta revisión. No se ha autorizado push, PR o publicación de v0.4.
 
 ## Cola de trabajo
 
@@ -29,7 +32,7 @@ manuales como realizadas sin evidencia.
 Estrategia aprobada el 2026-10-19. Alcance, orden y aceptación en el
 [roadmap de versiones](docs/plan/2026-10-19-roadmap-de-versiones.md).
 
-- [ ] **GRF-0 — Reconciliar evidencia histórica de WS-17.** Separar CI y publicación
+- [x] **GRF-0 — Reconciliar evidencia histórica de WS-17.** Separar CI y publicación
       ya realizadas de comprobaciones manuales sin evidencia. No repetir la release.
 - [x] **GRF-1 — Contrato y casos de referencia.** Separar geometría, identidad de
       referencia y color; definir diseño técnico y fixtures del gráfico.
@@ -41,13 +44,21 @@ Estrategia aprobada el 2026-10-19. Alcance, orden y aceptación en el
       accesibles de color/principal visual; historia compartida y recuperación.
 - [ ] **GRF-5 — Verificación.** Paginación, temas, idiomas, reinicio, pestañas,
       upstream, tamaño mínimo y recorridos nativos en los tres sistemas.
-- [ ] **GRF-6 — Documentación y preparación de release.** Evidencia y CHANGELOG;
+- [x] **GRF-6 — Documentación y preparación de release.** Evidencia y CHANGELOG;
       publicación según flujo del proyecto cuando se autorice.
 
 Evidencia de implementación: snapshot compartido y upstreams; esquema 1→2 y
 preferencias independientes del cierre; modelo puro con primer padre, carril principal
 reservado y trayectorias que confluyen en el nodo. Pruebas de equivalencia paginada,
 principal tardía, octopus y DAGs generados; verificación integrada aún en GRF-5.
+
+Verificación local cerrada: 807 pruebas frontend (95,50% statements, 96,87% líneas;
+umbrales globales y por módulo aprobados), 220 Rust con todas las features, Clippy
+estricto y bindings sin deriva. Siete specs/dieciséis pruebas E2E nativas en macOS,
+incluyendo ambos temas/idiomas a 940×600 y fixture de 10.000 commits/doce trayectorias.
+Tipos, lint, formato, auditorías y build de producción macOS aprobados; firma local
+verificada. GRF-5 permanece abierta por Linux/Windows, lector de pantalla real y
+recorridos manuales sin evidencia. Detalles y límites en la verificación de v0.4.
 
 ### Entregas posteriores
 
