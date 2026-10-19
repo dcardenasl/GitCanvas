@@ -7,10 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-19
+
 ### Fixed
 
 - **Branch curves** — keep the same compact join for every branch sharing a base, including an adjacent tip; simplify only connections that actually detour.
-
 - **Merge connections** — connect adjacent commits directly without bending through a temporary lane and back.
 - **History reference labels** — keep the color dot a fixed size and truncate only the name with an ellipsis, list tags first, always show at least one label without reserving empty space, and collapse overflow into a `+N` menu that copies any hidden name.
 
