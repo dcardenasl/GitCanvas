@@ -157,3 +157,27 @@ describe("GraphCanvas", () => {
     );
   });
 });
+
+it("draws every outline below the connections so adjacent segments remain continuous", () => {
+  const { rows, state } = layout(linear(5));
+  const { container } = render(
+    <GraphCanvas
+      rows={rows}
+      maxLanes={state.maxLanes}
+      selectedId={null}
+      window={{ startIndex: 0, endIndex: 4, totalHeight: 5 * ROW_HEIGHT }}
+    />,
+  );
+  const layers = container.querySelector("svg")?.children;
+  expect(layers?.item(0)?.classList.contains("graph-canvas__outlines")).toBe(
+    true,
+  );
+  expect(layers?.item(1)?.classList.contains("graph-canvas__connections")).toBe(
+    true,
+  );
+  expect(
+    container.querySelectorAll(
+      ".graph-canvas__connections .graph-canvas__outline",
+    ),
+  ).toHaveLength(0);
+});

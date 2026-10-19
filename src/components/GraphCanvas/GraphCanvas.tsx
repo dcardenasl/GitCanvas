@@ -62,6 +62,18 @@ export function GraphCanvas({
   }
 
   const width = graphWidth(maxLanes);
+  const segments = visible.flatMap((row) => [
+    ...row.incoming.map((edge, index) => ({
+      key: `${row.id}:in:${String(index)}`,
+      trajectory: edge.trajectory,
+      path: incomingPath(row.index, edge.from, edge.to),
+    })),
+    ...row.outgoing.map((edge, index) => ({
+      key: `${row.id}:out:${String(index)}`,
+      trajectory: edge.trajectory,
+      path: edgePath(row.index, edge.from, edge.to),
+    })),
+  ]);
 
   return (
     <svg
@@ -73,29 +85,25 @@ export function GraphCanvas({
       aria-hidden="true"
       focusable="false"
     >
-      {visible.map((row) => (
-        <g key={row.id}>
-          {[
-            ...row.incoming.map((edge) => ({
-              edge,
-              path: incomingPath(row.index, edge.from, edge.to),
-            })),
-            ...row.outgoing.map((edge) => ({
-              edge,
-              path: edgePath(row.index, edge.from, edge.to),
-            })),
-          ].map(({ edge, path }, index) => (
-            <g key={index}>
-              <path className="graph-canvas__outline" d={path} />
-              <path
-                className="graph-canvas__edge"
-                d={path}
-                stroke={color(edge.trajectory)}
-              />
-            </g>
-          ))}
-        </g>
-      ))}
+      <g className="graph-canvas__outlines">
+        {segments.map((segment) => (
+          <path
+            key={segment.key}
+            className="graph-canvas__outline"
+            d={segment.path}
+          />
+        ))}
+      </g>
+      <g className="graph-canvas__connections">
+        {segments.map((segment) => (
+          <path
+            key={segment.key}
+            className="graph-canvas__edge"
+            d={segment.path}
+            stroke={color(segment.trajectory)}
+          />
+        ))}
+      </g>
       {visible.map((row) => {
         const selected = row.id === selectedId;
         return (
