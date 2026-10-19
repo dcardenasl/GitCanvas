@@ -48,7 +48,15 @@ the limits. Corruption, future versions and failures retain existing recovery be
 No stored path authorizes Git. Reconciliation checks that its source preferences are
 still current before saving, so a later explicit edit cannot be overwritten by an effect.
 
-The SVG contains only visible rows plus margin. Half-row paths have vertical tangents;
+The SVG contains only visible rows plus margin. Adjacent commits connect with one
+node-to-node cubic, split exactly at the row boundary. This bypasses temporary frontier
+lanes that would otherwise produce an outward-and-back bend. Tangents are vertical at
+nodes and continuous at the split; the connection meets other trajectories only at its
+destination node. Nonadjacent destinations retain their independent pending paths.
+Routing consults the neighboring loaded rows even outside the mounted window, with
+linear work in visible connections. When a page arrives, the preceding final half-row
+may simplify; layout rows and lane reservations remain immutable. No extra page is read.
+Other half-row paths have vertical endpoint tangents;
 all outlines are drawn before colored connections, then nodes, avoiding endpoint gaps.
 Rows remain 40 px, lane spacing 14 px and colored strokes 2 px. A single scroll owner
 serves rows and graph. Palette edits change presentation; principal changes recompute

@@ -181,3 +181,51 @@ it("draws every outline below the connections so adjacent segments remain contin
     ),
   ).toHaveLength(0);
 });
+
+it("keeps the simplified merge continuous when its source leaves the mounted window", () => {
+  const { rows, state } = layout(
+    [
+      { id: "dev", parents: ["release"] },
+      { id: "merge", parents: ["base", "release"] },
+      { id: "release", parents: ["base"] },
+      { id: "base", parents: ["root"] },
+      { id: "root", parents: [] },
+    ],
+    undefined,
+    {
+      principal: "main",
+      seeds: [
+        { id: "dev", commitId: "dev" },
+        { id: "main", commitId: "merge" },
+      ],
+    },
+  );
+  const props = {
+    rows,
+    maxLanes: state.maxLanes,
+    selectedId: null,
+  };
+  const { container, rerender } = render(
+    <GraphCanvas
+      {...props}
+      window={{ startIndex: 0, endIndex: 4, totalHeight: 200 }}
+    />,
+  );
+  const paths = () =>
+    [...container.querySelectorAll(".graph-canvas__edge")].map((path) =>
+      path.getAttribute("d"),
+    );
+  const fullPaths = paths();
+  rerender(
+    <GraphCanvas
+      {...props}
+      window={{ startIndex: 3, endIndex: 4, totalHeight: 200 }}
+    />,
+  );
+  expect(paths().length).toBeGreaterThan(0);
+  for (const path of paths()) expect(fullPaths).toContain(path);
+  // The node above the overscan is absent; its outgoing geometry is still
+  // consulted to start the incoming merge segment at the same boundary.
+  expect(container.querySelectorAll("circle")).toHaveLength(3);
+  expect(paths()).toContain("M23,80 C26.5,85 30,90 30,100");
+});

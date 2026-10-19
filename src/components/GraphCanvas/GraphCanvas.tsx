@@ -12,7 +12,7 @@ import {
 } from "../../lib/graph-layout/colors";
 import type { GraphRow } from "../../lib/graph-layout/types";
 import { useThemePreferences } from "../../state/themePreferences";
-import { edgePath, incomingPath } from "./path";
+import { connectionSegments } from "./path";
 
 import "./GraphCanvas.css";
 
@@ -62,18 +62,9 @@ export function GraphCanvas({
   }
 
   const width = graphWidth(maxLanes);
-  const segments = visible.flatMap((row) => [
-    ...row.incoming.map((edge, index) => ({
-      key: `${row.id}:in:${String(index)}`,
-      trajectory: edge.trajectory,
-      path: incomingPath(row.index, edge.from, edge.to),
-    })),
-    ...row.outgoing.map((edge, index) => ({
-      key: `${row.id}:out:${String(index)}`,
-      trajectory: edge.trajectory,
-      path: edgePath(row.index, edge.from, edge.to),
-    })),
-  ]);
+  const segments = visible.flatMap((row) =>
+    connectionSegments(row, rows[row.index - 1], rows[row.index + 1]),
+  );
 
   return (
     <svg

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Merge connections** — connect adjacent commits directly without bending through a temporary lane and back.
+
 ### Added
 
 - **Branch appearance** — choose a named branch color and visual main branch from each branch menu; preferences survive closing projects and restarting, independently for each worktree.
