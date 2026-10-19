@@ -46,5 +46,7 @@ it("refuses new preferences past the backend limit without losing earlier data",
   expect(useWorkspace.getState().graphPreferences.map((p) => p.path)).toEqual([
     "/one",
   ]);
-  expect(useWorkspace.getState().storageError).not.toBeNull();
+  expect(useWorkspace.getState().storageError?.cause).toMatchObject({
+    kind: "ResourceLimitExceeded",
+  });
 });

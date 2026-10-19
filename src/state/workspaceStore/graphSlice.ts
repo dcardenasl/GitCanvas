@@ -20,7 +20,10 @@ export const createGraphSlice: StateCreator<
       (!exists && state.graphPreferences.length >= limits.max_graph_projects) ||
       preferences.colors.length > limits.max_graph_references
     ) {
-      state.setStorageError(new Error("Graph preference capacity exceeded"));
+      state.setStorageError({
+        kind: "ResourceLimitExceeded",
+        message: "Graph preference capacity exceeded",
+      });
       return;
     }
     set({
