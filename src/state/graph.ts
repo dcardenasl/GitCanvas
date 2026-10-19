@@ -24,10 +24,14 @@ export function useGraphModel(root: string | null) {
         : reconcileColors(root, refs.data.branches, saved),
     [root, refs.data, saved],
   );
-  const main =
-    refs.data === undefined
-      ? null
-      : visualPrincipal(refs.data, preferences?.principal ?? null);
+  const explicitPrincipal = preferences?.principal ?? null;
+  const main = useMemo(
+    () =>
+      refs.data === undefined
+        ? null
+        : visualPrincipal(refs.data, explicitPrincipal),
+    [refs.data, explicitPrincipal],
+  );
   const principal = main?.reference ?? null;
   const context = useMemo(
     () =>
@@ -47,9 +51,13 @@ export function useGraphModel(root: string | null) {
     if (
       preferences !== null &&
       JSON.stringify(preferences) !== JSON.stringify(saved)
-    )
-      useWorkspace.getState().setGraphPreferences(preferences);
-  }, [preferences, saved]);
+    ) {
+      const store = useWorkspace.getState();
+      // A later user edit or another mounted consumer wins over this render.
+      if (store.graphPreferences.find((p) => p.path === root) === saved)
+        store.setGraphPreferences(preferences);
+    }
+  }, [preferences, saved, root]);
   const changeColor = (reference: string, color: GraphColor) => {
     if (root === null) return;
     const latest = useWorkspace
