@@ -165,7 +165,7 @@ describe("adjacent merge routing", () => {
   });
 });
 
-it("routes adjacent joins to the left without reversing direction", () => {
+it("retains the compact curve for an adjacent join without a detour", () => {
   const result = layout(
     [
       { id: "merge", parents: ["a", "b"] },
@@ -183,8 +183,48 @@ it("routes adjacent joins to the left without reversing direction", () => {
   );
   const coords = points(outgoing?.path ?? "");
   expect(coords[0]?.[0]).toBe(laneCenterX(1));
-  expect(coords.at(-1)?.[0]).toBe((laneCenterX(0) + laneCenterX(1)) / 2);
+  expect(coords.at(-1)?.[0]).toBe(laneCenterX(1));
+  const destination = result.rows[3];
+  if (destination === undefined) throw new Error("Missing fixture");
+  expect(connectionSegments(destination, row, undefined).at(-1)?.path).toBe(
+    incomingPath(3, 1, 0),
+  );
   expect(
     coords.every(([x], index) => x <= (coords[index - 1]?.[0] ?? Infinity)),
   ).toBe(true);
+});
+
+it("gives all three branches the same compact join at their shared base", () => {
+  const { rows } = layout(
+    [
+      { id: "pink", parents: ["base"] },
+      { id: "blue", parents: ["base"] },
+      { id: "violet", parents: ["base"] },
+      { id: "base", parents: [] },
+    ],
+    undefined,
+    {
+      principal: "main",
+      seeds: [
+        { id: "pink", commitId: "pink" },
+        { id: "blue", commitId: "blue" },
+        { id: "violet", commitId: "violet" },
+        { id: "main", commitId: "base" },
+      ],
+    },
+  );
+  const base = rows[3];
+  if (base === undefined) throw new Error("Missing fixture");
+  const joins = connectionSegments(base, rows[2], undefined);
+  expect(joins.map((segment) => segment.path)).toEqual([
+    incomingPath(3, 1, 0),
+    incomingPath(3, 2, 0),
+    incomingPath(3, 3, 0),
+  ]);
+  for (const row of rows.slice(0, 3)) {
+    expect(
+      connectionSegments(row, rows[row.index - 1], rows[row.index + 1]).at(-1)
+        ?.path,
+    ).toBe(edgePath(row.index, row.lane, row.lane));
+  }
 });

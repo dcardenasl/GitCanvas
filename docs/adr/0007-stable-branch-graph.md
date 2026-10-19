@@ -48,9 +48,11 @@ the limits. Corruption, future versions and failures retain existing recovery be
 No stored path authorizes Git. Reconciliation checks that its source preferences are
 still current before saving, so a later explicit edit cannot be overwritten by an effect.
 
-The SVG contains only visible rows plus margin. Adjacent commits connect with one
-node-to-node cubic, split exactly at the row boundary. This bypasses temporary frontier
-lanes that would otherwise produce an outward-and-back bend. Tangents are vertical at
+The SVG contains only visible rows plus margin. Adjacent commits whose temporary lane
+overshoots their endpoint lanes connect with one node-to-node cubic, split exactly at
+the row boundary. Ordinary forks and joins keep the same compact half-row curves,
+including the last of several branches meeting one node. Only outward-and-back bends
+bypass their temporary frontier lane. Tangents are vertical at
 nodes and continuous at the split; the connection meets other trajectories only at its
 destination node. Nonadjacent destinations retain their independent pending paths.
 Routing consults the neighboring loaded rows even outside the mounted window, with

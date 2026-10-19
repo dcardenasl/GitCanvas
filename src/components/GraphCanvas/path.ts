@@ -73,6 +73,11 @@ function adjacentPath(
     : `M${String(x1)},${String(y)} C${String(x1)},${String(y + half / 2)} ${String((3 * x1 + x2) / 4)},${String(y + half * 0.75)} ${String(middle)},${String(y + half)}`;
 }
 
+/** Whether the intermediate lane overshoots both endpoint lanes. */
+function hasDetour(from: number, through: number, to: number): boolean {
+  return through < Math.min(from, to) || through > Math.max(from, to);
+}
+
 /** One visible half-row path, retaining its semantic trajectory color. */
 export interface ConnectionSegment {
   readonly key: string;
@@ -83,7 +88,8 @@ export interface ConnectionSegment {
 /**
  * Routes adjacent commits directly, bypassing temporary layout lanes. A pending
  * trajectory still owns its lane until its destination arrives; only an edge
- * whose destination is the very next node can skip that lane in presentation.
+ * whose destination is the very next node can skip an overshooting lane.
+ * Ordinary forks and joins retain their compact half-row curves.
  * Both halves consult the same boundary, including outside the mounted window.
  */
 export function connectionSegments(
@@ -100,7 +106,8 @@ export function connectionSegments(
         edge.to === row.lane &&
         source !== undefined &&
         source.from === previous?.lane &&
-        source.trajectory === edge.trajectory;
+        source.trajectory === edge.trajectory &&
+        hasDetour(source.from, edge.from, edge.to);
       return {
         key: `${row.id}:in:${String(index)}`,
         trajectory: edge.trajectory,
@@ -115,7 +122,8 @@ export function connectionSegments(
         edge.from === row.lane &&
         destination !== undefined &&
         destination.to === next?.lane &&
-        destination.trajectory === edge.trajectory;
+        destination.trajectory === edge.trajectory &&
+        hasDetour(edge.from, edge.to, destination.to);
       return {
         key: `${row.id}:out:${String(index)}`,
         trajectory: edge.trajectory,

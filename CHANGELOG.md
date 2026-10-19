@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Branch curves** — keep the same compact join for every branch sharing a base, including an adjacent tip; simplify only connections that actually detour.
+
 - **Merge connections** — connect adjacent commits directly without bending through a temporary lane and back.
 
 ### Added
