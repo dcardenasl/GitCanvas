@@ -10,5 +10,30 @@
   },
   "head": "HEAD",
   "headLabel": "Rama activa",
-  "notCommit": "{{name}} no apunta a un commit"
+  "notCommit": "{{name}} no apunta a un commit",
+  "loading": "Cargando referencias…",
+  "retry": "Reintentar",
+  "empty": "Sin ramas ni etiquetas",
+  "principalMissing": "Rama principal visual no disponible. Elige otra desde el menú de una rama.",
+  "principalChoose": "Elige la rama principal visual desde el menú de una rama.",
+  "principalLabel": "Rama principal visual",
+  "principalMark": "P",
+  "defaultLabel": "Rama predeterminada del remoto",
+  "defaultMark": "D",
+  "defaultMissing": "Una referencia predeterminada del remoto no está disponible.",
+  "actions": "Acciones de {{branch}}",
+  "changeColor": "Cambiar color de rama…",
+  "choosePrincipal": "Usar como principal visual",
+  "colorsFor": "Color de {{branch}}",
+  "closeColors": "Cerrar paleta",
+  "colors": {
+    "amber": "Ámbar",
+    "teal": "Turquesa",
+    "violet": "Violeta",
+    "blue": "Azul",
+    "rose": "Rosa",
+    "green": "Verde",
+    "gold": "Dorado",
+    "stone": "Piedra"
+  }
 }

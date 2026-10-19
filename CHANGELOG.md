@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Branch appearance** — choose a named branch color and visual main branch from each branch menu; preferences survive closing projects and restarting, independently for each worktree.
+
 ### Changed
 
 - **Branch graph** — branch colors remain stable across pages and restarts, the visual main branch keeps the leftmost lane, and compact curves join at the actual destination commit.

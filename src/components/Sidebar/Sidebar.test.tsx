@@ -100,9 +100,9 @@ describe("Sidebar", () => {
 
     expect(await screen.findByText("Local")).toBeInstanceOf(HTMLElement);
     expect(screen.getByText("Remotas")).toBeInstanceOf(HTMLElement);
-    expect(screen.getByRole("button", { name: /origin\/main/ })).toBeInstanceOf(
-      HTMLElement,
-    );
+    expect(
+      screen.getByRole("button", { name: /^origin\/main/ }),
+    ).toBeInstanceOf(HTMLElement);
   });
 
   it("marks the checked-out branch", async () => {
@@ -190,29 +190,33 @@ describe("Sidebar", () => {
       const branchButton = await screen.findByRole("button", { name: /^main/ });
       branchButton.focus();
       await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-      await userEvent.keyboard("{Enter}");
+      await userEvent.keyboard("{End}{Enter}");
 
       expect(onCheckout).toHaveBeenCalledWith("main");
     });
 
-    it("offers nothing on the branch that is already checked out", async () => {
+    it("offers visual actions without checkout on the checked-out branch", async () => {
       renderSidebar(vi.fn());
 
       fireEvent.contextMenu(
         await screen.findByRole("button", { name: /^dev/ }),
       );
 
-      expect(screen.queryByRole("menu")).toBeNull();
+      expect(
+        screen.queryByRole("menuitem", { name: /^Cambiar a / }),
+      ).toBeNull();
     });
 
-    it("offers nothing on remote branches or tags", async () => {
+    it("offers visual actions without checkout on remote branches", async () => {
       renderSidebar(vi.fn());
 
       fireEvent.contextMenu(
-        await screen.findByRole("button", { name: /origin\/main/ }),
+        await screen.findByRole("button", { name: /^origin\/main/ }),
       );
 
-      expect(screen.queryByRole("menu")).toBeNull();
+      expect(
+        screen.queryByRole("menuitem", { name: /^Cambiar a / }),
+      ).toBeNull();
     });
 
     it("offers no checkout when the caller cannot perform one", async () => {
@@ -222,7 +226,71 @@ describe("Sidebar", () => {
         await screen.findByRole("button", { name: /^main/ }),
       );
 
-      expect(screen.queryByRole("menu")).toBeNull();
+      expect(
+        screen.queryByRole("menuitem", { name: /^Cambiar a / }),
+      ).toBeNull();
     });
   });
+});
+
+it("chooses colors and a visual principal without checkout or another Git read", async () => {
+  const { useWorkspace } = await import("../../state/workspace");
+  const onCheckout = vi.fn();
+  renderSidebar(onCheckout);
+  const actions = await screen.findByRole("button", {
+    name: "Acciones de main",
+  });
+  const before = mockIpc.getRepositoryRefs.mock.calls.length;
+  await userEvent.click(actions);
+  await userEvent.click(
+    await screen.findByRole("menuitem", { name: "Cambiar color de rama…" }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Azul" }));
+  expect(
+    useWorkspace
+      .getState()
+      .graphPreferences[0]?.colors.find(
+        (color) => color.reference === "refs/heads/main",
+      )?.color,
+  ).toBe("blue");
+  await userEvent.click(actions);
+  await userEvent.click(
+    await screen.findByRole("menuitem", { name: "Usar como principal visual" }),
+  );
+  expect(useWorkspace.getState().graphPreferences[0]?.principal).toBe(
+    "refs/heads/main",
+  );
+  expect(onCheckout).not.toHaveBeenCalled();
+  expect(mockIpc.getRepositoryRefs).toHaveBeenCalledTimes(before);
+  expect(activeNavigation().selection).toEqual({ kind: "history" });
+});
+
+it("restores the action button's focus when the palette closes with Escape", async () => {
+  renderSidebar();
+  const actions = await screen.findByRole("button", {
+    name: "Acciones de main",
+  });
+  await userEvent.click(actions);
+  await userEvent.click(
+    await screen.findByRole("menuitem", { name: "Cambiar color de rama…" }),
+  );
+  expect(screen.getByRole("group", { name: "Color de main" })).toBeInstanceOf(
+    HTMLElement,
+  );
+  await userEvent.keyboard("{Escape}");
+  expect(screen.queryByRole("group", { name: "Color de main" })).toBeNull();
+  expect(document.activeElement).toBe(actions);
+});
+
+it("shows a read failure with retry rather than treating it as an empty repository", async () => {
+  mockIpc.getRepositoryRefs.mockRejectedValueOnce(
+    new Error("reference read failed"),
+  );
+  renderSidebar();
+  expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
+  expect(screen.queryByText("Sin ramas ni etiquetas")).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+  expect(await screen.findByRole("button", { name: /^main/ })).toBeInstanceOf(
+    HTMLElement,
+  );
 });

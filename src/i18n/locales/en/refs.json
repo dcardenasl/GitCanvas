@@ -10,5 +10,30 @@
   },
   "head": "HEAD",
   "headLabel": "Active branch",
-  "notCommit": "{{name}} does not point to a commit"
+  "notCommit": "{{name}} does not point to a commit",
+  "loading": "Loading references…",
+  "retry": "Retry",
+  "empty": "No branches or tags",
+  "principalMissing": "Visual main branch unavailable. Choose another from a branch menu.",
+  "principalChoose": "Choose a visual main branch from a branch menu.",
+  "principalLabel": "Visual main branch",
+  "principalMark": "M",
+  "defaultLabel": "Remote default branch",
+  "defaultMark": "D",
+  "defaultMissing": "A remote default reference is unavailable.",
+  "actions": "Actions for {{branch}}",
+  "changeColor": "Change branch color…",
+  "choosePrincipal": "Use as visual main branch",
+  "colorsFor": "Color for {{branch}}",
+  "closeColors": "Close palette",
+  "colors": {
+    "amber": "Amber",
+    "teal": "Teal",
+    "violet": "Violet",
+    "blue": "Blue",
+    "rose": "Rose",
+    "green": "Green",
+    "gold": "Gold",
+    "stone": "Stone"
+  }
 }

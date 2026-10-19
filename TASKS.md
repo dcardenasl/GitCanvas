@@ -37,7 +37,7 @@ Estrategia aprobada el 2026-10-19. Alcance, orden y aceptación en el
       relación local/upstream y migración de preferencias por repositorio.
 - [x] **GRF-3 — Líneas del gráfico.** Mejorar continuidad, curvas, separación y cruces
       conservando topología, nodos únicos y layout reanudable.
-- [ ] **GRF-4 — Integración y controles.** Colores coherentes panel/gráfico y controles
+- [x] **GRF-4 — Integración y controles.** Colores coherentes panel/gráfico y controles
       accesibles de color/principal visual; historia compartida y recuperación.
 - [ ] **GRF-5 — Verificación.** Paginación, temas, idiomas, reinicio, pestañas,
       upstream, tamaño mínimo y recorridos nativos en los tres sistemas.
