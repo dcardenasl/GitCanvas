@@ -120,7 +120,7 @@ function removeOwnedFixture(fixture: OwnedFixture): void {
 
 /** Build a temporary fixture before the app starts, then remove it on failure. */
 function createFixtureRepository(
-  kind: "history" | "local-changes" | "workspace",
+  kind: "history" | "local-changes" | "workspace" | "graph-performance",
 ): OwnedFixture {
   const repository = fs.mkdtempSync(path.join(os.tmpdir(), "gitcanvas-e2e-"));
   const token = randomUUID();
@@ -135,6 +135,27 @@ function createFixtureRepository(
     });
     git("config", "user.email", "e2e@example.com");
     git("config", "user.name", "End To End");
+
+    if (kind === "graph-performance") {
+      const stream: string[] = [];
+      for (let index = 1; index <= 10_000; index += 1) {
+        const message = `history commit ${String(index)}\n`;
+        stream.push(
+          `commit refs/heads/main\nmark :${String(index)}\ncommitter End To End <e2e@example.com> ${String(1_000_000_000 + index)} +0000\ndata ${String(Buffer.byteLength(message))}\n${message}${index > 1 ? `from :${String(index - 1)}\n` : ""}\n`,
+        );
+      }
+      for (let index = 1; index <= 11; index += 1) {
+        const message = `branch tip ${String(index)}\n`;
+        stream.push(
+          `commit refs/heads/branch-${String(index).padStart(2, "0")}\ncommitter End To End <e2e@example.com> ${String(1_000_020_000 + index)} +0000\ndata ${String(Buffer.byteLength(message))}\n${message}from :8000\n\n`,
+        );
+      }
+      execFileSync("git", ["-C", repository, "fast-import", "--quiet"], {
+        input: stream.join(""),
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+      return { repository: fs.realpathSync(repository), token };
+    }
 
     if (kind === "local-changes" || kind === "workspace") {
       fs.writeFileSync(path.join(repository, "base.txt"), "base\n");
@@ -193,7 +214,8 @@ const fixtureKind = process.env.GITCANVAS_E2E_FIXTURE_KIND ?? "history";
 if (
   fixtureKind !== "history" &&
   fixtureKind !== "local-changes" &&
-  fixtureKind !== "workspace"
+  fixtureKind !== "workspace" &&
+  fixtureKind !== "graph-performance"
 ) {
   throw new Error(`Unsupported E2E fixture kind: ${fixtureKind}`);
 }

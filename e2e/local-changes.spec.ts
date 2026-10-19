@@ -77,27 +77,32 @@ describe("local changes", () => {
     // Still open, and showing the new content: an edit while reading a file
     // must refresh the view, not close it.
     await browser.waitUntil(
-      async () => {
-        const view = await browser.$(".file-diff");
-        return (
-          (await view.isDisplayed()) && (await view.getText()).includes("after")
-        );
-      },
+      async () =>
+        browser.execute(() => {
+          const view = document.querySelector(".file-diff");
+          return (
+            view !== null &&
+            view.getBoundingClientRect().height > 0 &&
+            (view.textContent ?? "").includes("after")
+          );
+        }),
       { timeout: 20_000, timeoutMsg: "the staged diff did not refresh" },
     );
 
     fs.rmSync(path.join(e2eRepository, "staged.txt"));
     git("add", "-u", "staged.txt");
     await browser.waitUntil(
-      async () => {
-        const alert = await browser.$(".file-diff [role=alert]");
-        return (
-          (await alert.isDisplayed()) &&
-          (await alert.getText()).includes(
-            "El archivo local no está disponible",
-          )
-        );
-      },
+      async () =>
+        browser.execute(() => {
+          const alert = document.querySelector(".file-diff [role=alert]");
+          return (
+            alert !== null &&
+            alert.getBoundingClientRect().height > 0 &&
+            (alert.textContent ?? "").includes(
+              "El archivo local no está disponible",
+            )
+          );
+        }),
       {
         timeout: 20_000,
         timeoutMsg: "the unavailable local file was not reported",

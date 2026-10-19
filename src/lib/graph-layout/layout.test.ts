@@ -149,3 +149,23 @@ it("preserves topology and pagination across deterministic generated DAGs", () =
     expect(whole.rows).toHaveLength(commits.length);
   }
 });
+
+it("keeps more than 500 commits stable across production-sized pages", () => {
+  const commits = Array.from({ length: 1200 }, (_, i) => ({
+    id: `long-${String(i)}`,
+    parents: i === 1199 ? [] : [`long-${String(i + 1)}`],
+  }));
+  const ctx = {
+    principal: "main",
+    seeds: [
+      { id: "main", commitId: "long-700" },
+      { id: "feature", commitId: "long-0" },
+    ],
+  };
+  const whole = layout(commits, undefined, ctx);
+  const first = layout(commits.slice(0, 500), undefined, ctx);
+  const second = layout(commits.slice(500, 1000), first.state, ctx);
+  const third = layout(commits.slice(1000), second.state, ctx);
+  expect([...first.rows, ...second.rows, ...third.rows]).toEqual(whole.rows);
+  expect(whole.rows[700]?.lane).toBe(0);
+});
