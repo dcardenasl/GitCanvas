@@ -92,3 +92,18 @@ describe("branch color identity", () => {
     });
   });
 });
+
+it("does not mistake a local symbolic alias for a remote default", () => {
+  const refs = snapshot([
+    branch(main),
+    {
+      ...branch("refs/heads/local/HEAD"),
+      is_symbolic: true,
+      symbolic_target: main,
+    },
+  ]);
+  expect(visualPrincipal(refs, null)).toEqual({
+    reference: main,
+    status: "choose",
+  });
+});

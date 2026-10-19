@@ -83,7 +83,12 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
   );
   const defaultTargets = new Set(
     branches
-      .filter((alias) => alias.is_symbolic)
+      .filter(
+        (alias) =>
+          alias.is_symbolic &&
+          alias.is_remote &&
+          alias.full_name.endsWith("/HEAD"),
+      )
       .map((alias) => alias.symbolic_target),
   );
   const entry = (branch: BranchInfo): RefTarget => ({

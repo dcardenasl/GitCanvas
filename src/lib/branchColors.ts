@@ -136,6 +136,7 @@ export function visualPrincipal(
   const defaults = snapshot.branches.filter(
     (branch) =>
       branch.is_symbolic &&
+      branch.is_remote &&
       branch.full_name.endsWith("/HEAD") &&
       identities.has(branch.symbolic_target ?? ""),
   );
