@@ -11,6 +11,7 @@ export default tseslint.config(
     ignores: [
       "dist",
       "coverage",
+      ".ua",
       "brag-output",
       "target",
       "src-tauri/target",
