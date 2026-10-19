@@ -25,6 +25,7 @@ const ORDER: Record<RefBadge["kind"], number> = {
 export function refsQuery(path: string | null) {
   return queryOptions<RepositoryRefsSnapshot>({
     queryKey: queryKeys.refs(path),
+    staleTime: 30_000,
     queryFn: () => {
       if (path === null) throw new Error("No repository is open");
       return getRepositoryRefs(path);

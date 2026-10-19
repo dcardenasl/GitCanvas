@@ -1,9 +1,10 @@
 import {
   useInfiniteQuery,
+  useQueryClient,
   type InfiniteData,
   type UseInfiniteQueryResult,
 } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { CommitInfo, HistoryPage } from "../bindings";
 import { useGraphModel } from "./graph";
@@ -135,8 +136,17 @@ export function layoutHistory(
  * cursor while the user is reading it.
  */
 export function useHistory(path: string | null): HistoryData {
+  const queryClient = useQueryClient();
   const graph = useGraphModel(path);
   const roots = graph.refs.data?.roots;
+  const rootsIdentity = roots === undefined ? null : JSON.stringify(roots);
+  useEffect(() => {
+    if (path === null || rootsIdentity === null) return;
+    queryClient.removeQueries({
+      queryKey: queryKeys.history(path),
+      predicate: (query) => JSON.stringify(query.queryKey[2]) !== rootsIdentity,
+    });
+  }, [path, rootsIdentity, queryClient]);
   const query: UseInfiniteQueryResult<InfiniteData<HistoryPage>> =
     useInfiniteQuery({
       queryKey: queryKeys.history(path, roots),

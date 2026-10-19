@@ -191,3 +191,28 @@ describe("HistoryView", () => {
     });
   });
 });
+
+it("releases obsolete frozen walks when reference roots change", async () => {
+  const { act } = await import("@testing-library/react");
+  getCommits.mockResolvedValue(mergePage());
+  const { client, container } = renderView();
+  await waitFor(() => {
+    expect(container.querySelectorAll("circle")).toHaveLength(4);
+  });
+  expect(client.getQueryData(["history", "/tmp/repo", []])).toBeDefined();
+  act(() => {
+    client.setQueryData(["refs", "/tmp/repo"], {
+      branches: [],
+      tags: [],
+      head: null,
+      head_reference: null,
+      roots: ["next"],
+    });
+  });
+  await waitFor(() => {
+    expect(client.getQueryData(["history", "/tmp/repo", []])).toBeUndefined();
+  });
+  await waitFor(() => {
+    expect(container.querySelectorAll("circle")).toHaveLength(4);
+  });
+});
