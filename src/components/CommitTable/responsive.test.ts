@@ -49,8 +49,15 @@ describe("the history table's responsive columns", () => {
     );
   });
 
-  it("keeps a readable stretch of the summary and lets badges shrink first", () => {
+  it("keeps a readable summary and fits references without crushing badges", () => {
     expect(css).toMatch(/\.commit-row__summary \{[^}]*min-width: 12ch/s);
-    expect(css).toMatch(/\.ref-pill \{[^}]*flex-shrink: 1/s);
+    expect(css).toMatch(/\.ref-pill \{[^}]*flex-shrink: 0/s);
+  });
+
+  it("keeps the colour dot fixed-size and truncates only the label", () => {
+    expect(css).toMatch(/\.ref-pill__color \{[^}]*flex: 0 0 6px/s);
+    expect(css).not.toMatch(/\.ref-pill__color \{[^}]*margin-inline-end/s);
+    expect(css).toMatch(/\.ref-pill__label \{[^}]*text-overflow: ellipsis/s);
+    expect(css).toMatch(/\.commit-refs \{[^}]*max-inline-size: 50%/s);
   });
 });

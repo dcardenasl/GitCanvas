@@ -31,13 +31,15 @@
       "author": "author copied",
       "fullHash": "full hash copied",
       "hash": "hash copied",
-      "message": "message copied"
+      "message": "message copied",
+      "reference": "reference copied"
     },
     "copyFailed": {
       "author": "could not copy the author",
       "fullHash": "could not copy the full hash",
       "hash": "could not copy the hash",
-      "message": "could not copy the message"
+      "message": "could not copy the message",
+      "reference": "could not copy the reference"
     },
     "label": "Commit history",
     "menu": {
@@ -49,6 +51,8 @@
     "refActive": "{{name}} (active branch)",
     "rowBy": "by {{author}}",
     "rowCommit": "commit {{id}}",
-    "rowOn": "on {{refs}}"
+    "rowOn": "on {{refs}}",
+    "moreRefs": "Show {{count, number}} more references",
+    "copyRef": "Copy name"
   }
 }

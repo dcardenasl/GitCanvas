@@ -32,13 +32,15 @@
       "author": "autor copiado",
       "fullHash": "hash completo copiado",
       "hash": "hash copiado",
-      "message": "mensaje copiado"
+      "message": "mensaje copiado",
+      "reference": "referencia copiada"
     },
     "copyFailed": {
       "author": "no se pudo copiar el autor",
       "fullHash": "no se pudo copiar el hash completo",
       "hash": "no se pudo copiar el hash",
-      "message": "no se pudo copiar el mensaje"
+      "message": "no se pudo copiar el mensaje",
+      "reference": "no se pudo copiar la referencia"
     },
     "label": "Historial de commits",
     "menu": {
@@ -50,6 +52,8 @@
     "refActive": "{{name}} (rama activa)",
     "rowBy": "por {{author}}",
     "rowCommit": "commit {{id}}",
-    "rowOn": "en {{refs}}"
+    "rowOn": "en {{refs}}",
+    "moreRefs": "Mostrar {{count, number}} referencias más",
+    "copyRef": "Copiar nombre"
   }
 }
