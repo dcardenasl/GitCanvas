@@ -14,7 +14,8 @@ type Handler = (event: {
   payload: {
     path: string;
     generation: number;
-    kind: "Metadata" | "Worktree" | { Degraded: { message: string } };
+    kind:
+      "Metadata" | "Worktree" | "Worktrees" | { Degraded: { message: string } };
   };
 }) => void;
 
@@ -145,6 +146,35 @@ describe("useLiveRepository", () => {
     expect(keys).toContain("worktree-file-diff");
     expect(keys).not.toContain("diff");
     expect(keys).not.toContain("file");
+  });
+
+  it("refreshes the worktree inventory and native subscriptions after registry changes", async () => {
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    renderHook(() => useLiveRepository("/tmp/repo"), { wrapper });
+    await waitFor(() => {
+      expect(watchRepository).toHaveBeenCalledTimes(1);
+    });
+    const generation = (
+      watchRepository.mock.calls[0]?.[0] as { generation: number }
+    ).generation;
+
+    act(() => {
+      handler?.({
+        payload: { path: "/tmp/repo", generation, kind: "Worktrees" },
+      });
+    });
+    await waitFor(() => {
+      expect(watchRepository).toHaveBeenCalledTimes(2);
+    });
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: queryKeys.repositoryWorktrees("/tmp/repo"),
+      });
+    });
+    expect(watchRepository.mock.calls[1]?.[0]).toEqual({
+      path: "/tmp/repo",
+      generation,
+    });
   });
 
   it("stops watching when the repository is closed", async () => {

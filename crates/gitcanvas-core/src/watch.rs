@@ -30,6 +30,7 @@ const INTERESTING_METADATA: [&str; 7] = [
     "config",
     "config.worktree",
 ];
+const WORKTREE_ADMIN_FILES: [&str; 4] = ["HEAD", "locked", "gitdir", "commondir"];
 
 /// Notification emitted when watched repository state changes or degrades.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -47,6 +48,8 @@ pub enum ChangeScope {
     Metadata,
     /// The index changed; worktree content should be refreshed.
     Worktree,
+    /// A linked-worktree registration or its shared administrative metadata changed.
+    Worktrees,
 }
 
 enum Message {
@@ -56,6 +59,9 @@ enum Message {
 }
 
 fn merge_scope(pending: ChangeScope, next: ChangeScope) -> ChangeScope {
+    if pending == ChangeScope::Worktrees || next == ChangeScope::Worktrees {
+        return ChangeScope::Worktrees;
+    }
     match (pending, next) {
         (ChangeScope::Metadata, _) | (_, ChangeScope::Metadata) => ChangeScope::Metadata,
         _ => ChangeScope::Worktree,
@@ -88,28 +94,77 @@ impl Drop for RepositoryWatcher {
     }
 }
 
-fn metadata_dirs(active: &ActiveRepo) -> Result<Vec<PathBuf>, AppError> {
+struct WatchPaths {
+    metadata: Vec<PathBuf>,
+    registry: PathBuf,
+}
+
+fn watch_paths(active: &ActiveRepo) -> Result<WatchPaths, AppError> {
     let repo = active.open()?;
-    Ok(
-        BTreeSet::from([repo.path().to_path_buf(), repo.commondir().to_path_buf()])
+    let common = repo.commondir().canonicalize()?;
+    let registry = common.join("worktrees");
+    Ok(WatchPaths {
+        metadata: BTreeSet::from([repo.path().to_path_buf(), common])
             .into_iter()
             .collect(),
-    )
+        registry,
+    })
 }
 
 fn is_mutating(kind: EventKind) -> bool {
     !matches!(kind, EventKind::Access(_))
 }
 
-fn classify(event: &Event, metadata: &[PathBuf]) -> Option<ChangeScope> {
+fn registry_event(path: &Path, registry: &Path) -> bool {
+    // Some native backends report creation of the first registry directory on
+    // the common Git directory itself instead of the new child path.
+    if path == registry || registry.parent().is_some_and(|parent| path == parent) {
+        return true;
+    }
+    let Ok(relative) = path.strip_prefix(registry) else {
+        return false;
+    };
+    let components = relative.components().collect::<Vec<_>>();
+    match components.as_slice() {
+        [std::path::Component::Normal(_)] => true,
+        [std::path::Component::Normal(_), std::path::Component::Normal(file)] => {
+            WORKTREE_ADMIN_FILES.iter().any(|name| file == name)
+        }
+        _ => false,
+    }
+}
+
+fn admin_event(path: &Path, registry: &Path) -> bool {
+    let Ok(relative) = path.strip_prefix(registry) else {
+        return false;
+    };
+    matches!(
+        relative.components().collect::<Vec<_>>().as_slice(),
+        [std::path::Component::Normal(_), std::path::Component::Normal(file)]
+            if WORKTREE_ADMIN_FILES.iter().any(|name| file == name)
+    )
+}
+
+fn classify(event: &Event, paths: &WatchPaths) -> Option<ChangeScope> {
     if !is_mutating(event.kind) {
         return None;
     }
+    if event
+        .paths
+        .iter()
+        .any(|path| registry_event(path, &paths.registry) || admin_event(path, &paths.registry))
+    {
+        return Some(ChangeScope::Worktrees);
+    }
     if event.paths.iter().any(|path| {
-        metadata
+        paths
+            .metadata
             .iter()
             .filter_map(|root| path.strip_prefix(root).ok())
             .any(|relative| {
+                if path.starts_with(&paths.registry) {
+                    return false;
+                }
                 relative
                     .file_name()
                     .is_some_and(|name| name == "index" || name == "index.lock")
@@ -118,10 +173,14 @@ fn classify(event: &Event, metadata: &[PathBuf]) -> Option<ChangeScope> {
         return Some(ChangeScope::Worktree);
     }
     if event.paths.iter().any(|path| {
-        metadata
+        paths
+            .metadata
             .iter()
             .filter_map(|root| path.strip_prefix(root).ok())
             .any(|relative| {
+                if path.starts_with(&paths.registry) {
+                    return false;
+                }
                 relative.components().any(|component| {
                     INTERESTING_METADATA
                         .iter()
@@ -175,15 +234,18 @@ pub fn watch_repository(
     active: &ActiveRepo,
     on_event: impl Fn(WatchEvent) + Send + 'static,
 ) -> Result<RepositoryWatcher, AppError> {
-    let metadata = metadata_dirs(active)?;
+    let paths = watch_paths(active)?;
     let (message_tx, message_rx) = mpsc::channel::<Message>();
     let callback_tx = message_tx.clone();
-    let callback_metadata = metadata.clone();
+    let callback_paths = WatchPaths {
+        metadata: paths.metadata.clone(),
+        registry: paths.registry.clone(),
+    };
 
     let mut watcher = RecommendedWatcher::new(
         move |result: notify::Result<Event>| match result {
             Ok(event) => {
-                if let Some(scope) = classify(&event, &callback_metadata) {
+                if let Some(scope) = classify(&event, &callback_paths) {
                     let _ = callback_tx.send(Message::Changed(scope));
                 }
             }
@@ -195,7 +257,7 @@ pub fn watch_repository(
     )
     .map_err(|error| AppError::WatchDegraded(format!("could not create watcher: {error}")))?;
 
-    for directory in &metadata {
+    for directory in &paths.metadata {
         subscribe(
             &mut watcher,
             directory,
@@ -203,11 +265,19 @@ pub fn watch_repository(
             "metadata",
         )?;
     }
-    for directory in &metadata {
+    for directory in &paths.metadata {
         let refs = directory.join("refs");
         if refs.is_dir() {
             subscribe(&mut watcher, &refs, RecursiveMode::Recursive, "refs")?;
         }
+    }
+    if paths.registry.is_dir() {
+        subscribe(
+            &mut watcher,
+            &paths.registry,
+            RecursiveMode::Recursive,
+            "worktree registry",
+        )?;
     }
     let worker = thread::spawn(move || {
         while let Ok(message) = message_rx.recv() {
@@ -277,29 +347,44 @@ mod tests {
     };
 
     use super::{
-        classify, debounce_expired, debounce_wait, merge_scope, ChangeScope, MAX_DEBOUNCE, SETTLE,
+        classify, debounce_expired, debounce_wait, merge_scope, ChangeScope, WatchPaths,
+        MAX_DEBOUNCE, SETTLE,
     };
 
     #[test]
     fn classifies_only_components_relative_to_the_metadata_directory() {
         let metadata = PathBuf::from("/tmp/refs/repository/.git");
+        let registry = metadata.join("worktrees");
+        let paths = WatchPaths {
+            metadata: vec![PathBuf::from("/tmp/refs/repository"), metadata.clone()],
+            registry: registry.clone(),
+        };
         let event = |path: &str| {
             Event::new(EventKind::Modify(ModifyKind::Data(DataChange::Content)))
                 .add_path(metadata.join(path))
         };
 
         assert_eq!(
-            classify(&event("config"), std::slice::from_ref(&metadata)),
+            classify(&event("config"), &paths),
             Some(ChangeScope::Metadata)
         );
         assert_eq!(
-            classify(&event("refs/heads/main"), std::slice::from_ref(&metadata)),
+            classify(&event("refs/heads/main"), &paths),
             Some(ChangeScope::Metadata)
         );
         assert_eq!(
-            classify(&event("index.lock"), std::slice::from_ref(&metadata)),
+            classify(&event("index.lock"), &paths),
             Some(ChangeScope::Worktree)
         );
+        assert_eq!(
+            classify(&event("worktrees/topic/HEAD"), &paths),
+            Some(ChangeScope::Worktrees)
+        );
+        assert_eq!(
+            classify(&event("worktrees/new-topic"), &paths),
+            Some(ChangeScope::Worktrees)
+        );
+        assert_eq!(classify(&event("worktrees/topic/index"), &paths), None);
     }
 
     #[test]
@@ -325,6 +410,10 @@ mod tests {
         assert_eq!(
             merge_scope(ChangeScope::Worktree, ChangeScope::Worktree),
             ChangeScope::Worktree
+        );
+        assert_eq!(
+            merge_scope(ChangeScope::Metadata, ChangeScope::Worktrees),
+            ChangeScope::Worktrees
         );
     }
 }

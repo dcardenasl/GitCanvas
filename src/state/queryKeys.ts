@@ -19,6 +19,8 @@ export const queryKeys = {
   commit: (repositoryPath: string | null, commitId: string | null) =>
     ["commit", repositoryPath, commitId] as const,
   refs: (repositoryPath: string | null) => ["refs", repositoryPath] as const,
+  repositoryWorktrees: (repositoryPath: string | null) =>
+    ["repository-worktrees", repositoryPath] as const,
   worktree: (
     repositoryPath: string | null,
     request?: WorktreeSnapshotRequest,
@@ -75,6 +77,7 @@ function liveKeys(repositoryPath: string, scope: LiveQueryScope): QueryKey[] {
   const metadata: QueryKey[] = [
     queryKeys.history(repositoryPath),
     queryKeys.refs(repositoryPath),
+    queryKeys.repositoryWorktrees(repositoryPath),
   ];
   const worktree: QueryKey[] = [
     queryKeys.worktree(repositoryPath),

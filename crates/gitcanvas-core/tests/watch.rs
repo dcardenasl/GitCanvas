@@ -155,6 +155,59 @@ fn reports_a_branch_moving() {
 }
 
 #[test]
+fn reports_a_linked_worktree_registration_change() {
+    let fixture = Fixture::new();
+    fixture.commit("HEAD", "base", &[], 1_000);
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let external = tempfile::tempdir().unwrap();
+    let target = external.path().join("linked");
+    let (tx, rx) = mpsc::channel();
+    let _watcher = watch_repository(&active, move |event| {
+        let _ = tx.send(event);
+    })
+    .unwrap();
+    wait_until_quiet(&rx);
+
+    fixture.repo.worktree("linked", &target, None).unwrap();
+    let deadline = Instant::now() + WAIT;
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        assert!(
+            !remaining.is_zero(),
+            "worktree registration change was not reported"
+        );
+        match rx.recv_timeout(remaining) {
+            Ok(WatchEvent::Changed(ChangeScope::Worktrees)) => break,
+            Ok(_) => {}
+            Err(error) => panic!("worktree registration change was not reported: {error}"),
+        }
+    }
+}
+
+#[test]
+fn reports_changes_to_a_linked_worktree_head() {
+    let fixture = Fixture::new();
+    let root = fixture.commit("HEAD", "base", &[], 1_000);
+    let external = tempfile::tempdir().unwrap();
+    let target = external.path().join("linked");
+    fixture.repo.worktree("linked", &target, None).unwrap();
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let (tx, rx) = mpsc::channel();
+    let _watcher = watch_repository(&active, move |event| {
+        let _ = tx.send(event);
+    })
+    .unwrap();
+    wait_until_quiet(&rx);
+
+    git2::Repository::open(&target)
+        .unwrap()
+        .set_head_detached(root)
+        .unwrap();
+    let event = rx.recv_timeout(WAIT).unwrap();
+    assert!(matches!(event, WatchEvent::Changed(ChangeScope::Worktrees)));
+}
+
+#[test]
 fn coalesces_the_burst_a_single_commit_produces() {
     let fixture = Fixture::new();
     let first = fixture.commit_files("refs/heads/main", "first", &[], 1_000, &[("a.txt", b"a\n")]);

@@ -49,6 +49,8 @@ export const commands = {
 	getCommit: (path: string, commitId: string) => typedError<CommitInfo, AppError>(__TAURI_INVOKE("get_commit", { path, commitId })),
 	/**  Reads one coherent generation of branches, tags, HEAD and history roots. */
 	getRepositoryRefs: (path: string) => typedError<RepositoryRefsSnapshot, AppError>(__TAURI_INVOKE("get_repository_refs", { path })),
+	/**  Reads linked-worktree metadata from the authorized active repository. */
+	getRepositoryWorktrees: (path: string) => typedError<RepositoryWorktreesSnapshot, AppError>(__TAURI_INVOKE("get_repository_worktrees", { path })),
 	/**
 	 *  Reads a commit's changes against its first parent.
 	 *
@@ -589,7 +591,7 @@ export type RepositoryChangedEvent = {
 };
 
 /**  Announces a scoped change in the generation currently shown by the window. */
-export type RepositoryChangedKind = "Metadata" | "Worktree" | { Degraded: {
+export type RepositoryChangedKind = "Metadata" | "Worktree" | "Worktrees" | { Degraded: {
 	message: string,
 } };
 
@@ -613,6 +615,36 @@ export type RepositoryRefsSnapshot = {
 	head_reference: string | null,
 	/**  Frozen, sorted, unique commit roots for history pagination. */
 	roots: string[],
+};
+
+/**  One worktree registered in a shared Git repository. */
+export type RepositoryWorktree = {
+	/**  Git's worktree registration name (the main worktree uses its directory name). */
+	name: string,
+	/**  Display/navigation data only. Opening this path still requires normal IPC authorization. */
+	root: string,
+	/**  Whether this is the repository's main working tree. */
+	is_main: boolean,
+	/**  Whether this entry corresponds to the already-authorized active root. */
+	is_active: boolean,
+	/**  Availability of the working-tree location. */
+	availability: WorktreeAvailability,
+	/**  Current HEAD without opening another worktree. */
+	head: WorktreeHead,
+	/**  Whether Git marks the worktree as locked. */
+	locked: boolean,
+	/**  Optional human-provided lock reason. */
+	lock_reason: string | null,
+};
+
+/**  Stable inventory and identity for a shared Git directory. */
+export type RepositoryWorktreesSnapshot = {
+	/**  Canonical common Git directory; identity only, never an authorized repository path. */
+	repository_id: string,
+	/**  Root of the worktree through which this inventory was requested. */
+	current_root: string,
+	/**  Main worktree followed by linked worktrees sorted by canonical root. */
+	worktrees: RepositoryWorktree[],
 };
 
 /**  A workspace to persist, numbered so a late arrival cannot undo a newer save. */
@@ -716,6 +748,17 @@ export type WorkspaceRecovery = {
 	backup: string,
 };
 
+/**  Filesystem state of a registered worktree location. */
+export type WorktreeAvailability =
+/**  The working directory currently exists and is a directory. */
+"available" |
+/**  The registered working directory is absent but is not marked prunable. */
+"missing" |
+/**  Git reports that the absent registration could be pruned. */
+"prunable" |
+/**  The location exists but cannot be inspected as a working directory. */
+"unavailable";
+
 /**
  *  A bounded page of local file summaries.
  *
@@ -786,6 +829,17 @@ export type WorktreeFingerprint = {
 	/**  Compact revision token for the current local changes. */
 	revision: string,
 };
+
+/**  HEAD identity read from a worktree's administration metadata. */
+export type WorktreeHead =
+/**  HEAD points symbolically to this full local branch reference. */
+{ kind: "branch"; reference: string } |
+/**  HEAD points directly to this commit id. */
+{ kind: "detached"; reference: string } |
+/**  HEAD points to a local branch that has no commit yet. */
+{ kind: "unborn"; reference: string } |
+/**  HEAD could not be decoded safely. */
+{ kind: "unknown" };
 
 /**  Which side of the local changes the caller wants to inspect. */
 export type WorktreeSide =

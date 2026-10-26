@@ -40,6 +40,10 @@ export type {
   WorktreeFileContent,
   WorktreeFingerprint,
   WorktreeSnapshot,
+  RepositoryWorktree,
+  RepositoryWorktreesSnapshot,
+  WorktreeAvailability,
+  WorktreeHead,
 } from "../../bindings";
 
 /** A domain error with a stable category for actionable UI messages. */
@@ -78,6 +82,9 @@ export const getCommit = (path: string, commitId: string) =>
 /** Reads branches, tags, HEAD and frozen roots as one reference generation. */
 export const getRepositoryRefs = (path: string) =>
   result(commands.getRepositoryRefs(path));
+/** Reads worktree registration metadata through the authorized active repository. */
+export const getRepositoryWorktrees = (path: string) =>
+  result(commands.getRepositoryWorktrees(path));
 /** Reads a commit's changes against its first parent. */
 export const getCommitDiff = (path: string, request: DiffRequest) =>
   result(commands.getCommitDiff(path, request));

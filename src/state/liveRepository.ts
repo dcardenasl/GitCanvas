@@ -76,6 +76,7 @@ export function useLiveRepository(path: string | null): {
     const lifecycle = { cancelled: false };
     const isCancelled = () => lifecycle.cancelled;
     const generation = nextGeneration();
+    let refreshingWorktreeWatch = false;
     const invalidate = (scope: "metadata" | "worktree") => {
       void invalidateLive(queryClient, path, scope);
     };
@@ -87,6 +88,28 @@ export function useLiveRepository(path: string | null): {
         invalidate("metadata");
       } else if (payload.kind === "Worktree") {
         invalidate("worktree");
+      } else if (payload.kind === "Worktrees") {
+        invalidate("metadata");
+        if (refreshingWorktreeWatch) return;
+        refreshingWorktreeWatch = true;
+        void (async () => {
+          try {
+            // New registrations need their admin directory added to the native
+            // watch. Re-establishing the same generation replaces one watch.
+            await watchRepository({ path, generation });
+            if (isCancelled()) return;
+            degradedGenerations.delete(generation);
+            setOutcome({ path, status: { kind: "ready" } });
+            await invalidateLive(queryClient, path, "metadata");
+          } catch (error: unknown) {
+            if (!isCancelled()) {
+              degradedGenerations.add(generation);
+              setOutcome({ path, status: { kind: "degraded", error } });
+            }
+          } finally {
+            refreshingWorktreeWatch = false;
+          }
+        })();
       } else {
         degradedGenerations.add(generation);
         setOutcome({

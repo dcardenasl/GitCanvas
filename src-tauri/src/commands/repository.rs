@@ -8,6 +8,7 @@ use gitcanvas_core::{
     history::{self, CommitInfo, HistoryPage, HistoryReader, HistoryRequest},
     refs::{self, RepositoryRefsSnapshot},
     repository::{ActiveRepo, RepositoryInfo},
+    worktrees::{self, RepositoryWorktreesSnapshot},
 };
 
 use super::{
@@ -84,6 +85,20 @@ pub async fn get_repository_refs(
     let allowed = allowed.inner().clone();
     read("get_repository_refs", move || {
         with_repo(&allowed, &path, refs::get_repository_refs)
+    })
+    .await
+}
+
+/// Reads linked-worktree metadata from the authorized active repository.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_repository_worktrees(
+    path: String,
+    allowed: tauri::State<'_, AllowedRepos>,
+) -> Result<RepositoryWorktreesSnapshot, AppError> {
+    let allowed = allowed.inner().clone();
+    read("get_repository_worktrees", move || {
+        with_repo(&allowed, &path, worktrees::get_repository_worktrees)
     })
     .await
 }
