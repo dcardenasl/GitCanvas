@@ -143,6 +143,13 @@ describe("v0.5 reference filters and linked worktrees", () => {
     await expect(inventory).toBeDisplayed();
     await expect(inventory).toHaveText(expect.stringContaining("side"));
     await $('[aria-label="Actualizar worktrees"]').click();
+    await browser.waitUntil(
+      async () =>
+        (await $('[aria-label="Worktrees vinculados"]').getAttribute(
+          "aria-busy",
+        )) === "false",
+      { timeoutMsg: "the linked-worktree inventory did not finish refreshing" },
+    );
 
     await $('[aria-label="Acciones de side"]').click();
     await $('[role="menuitem"]*=Abrir el worktree que usa esta rama').click();

@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BranchInfo, TagInfo } from "../../bindings";
+import type {
+  BranchInfo,
+  RepositoryWorktreesSnapshot,
+  TagInfo,
+} from "../../bindings";
 import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
 
 const getBranches = vi.fn<() => Promise<BranchInfo[]>>();
@@ -107,7 +111,62 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+function deferred<T>() {
+  let resolve: (value: T) => void = () => undefined;
+  const promise = new Promise<T>((complete) => {
+    resolve = complete;
+  });
+  return { promise, resolve };
+}
+
 describe("Sidebar", () => {
+  it("announces and disables the worktree inventory while it refreshes", async () => {
+    renderSidebar();
+
+    const section = await screen.findByRole("region", {
+      name: "Worktrees vinculados",
+    });
+    const pending = deferred<RepositoryWorktreesSnapshot>();
+    mockIpc.getRepositoryWorktrees.mockReturnValueOnce(pending.promise);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Actualizar worktrees" }),
+    );
+
+    expect(section.getAttribute("aria-busy")).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: "Actualizar worktrees" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+
+    pending.resolve({
+      repository_id: "/common/repo.git",
+      current_root: "/tmp/repo",
+      worktrees: [
+        {
+          name: "repo",
+          root: "/tmp/repo",
+          is_main: true,
+          is_active: true,
+          availability: "available",
+          head: { kind: "branch", reference: "refs/heads/main" },
+          locked: false,
+          lock_reason: null,
+        },
+      ],
+    });
+
+    await waitFor(() => {
+      expect(section.getAttribute("aria-busy")).toBe("false");
+      expect(
+        screen
+          .getByRole("button", { name: "Actualizar worktrees" })
+          .hasAttribute("disabled"),
+      ).toBe(false);
+    });
+  });
+
   it("opens an inventoried linked worktree through normal repository validation", async () => {
     mockIpc.getRepositoryWorktrees.mockResolvedValue({
       repository_id: "/common/repo.git",

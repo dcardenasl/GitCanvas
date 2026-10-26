@@ -297,6 +297,7 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
         <section
           className="sidebar__worktrees"
           aria-label={t("worktrees.aria")}
+          aria-busy={graph.worktrees.isFetching}
         >
           <div className="sidebar__label">
             <button
@@ -316,6 +317,7 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
               type="button"
               aria-label={t("worktrees.refresh")}
               title={t("worktrees.refresh")}
+              disabled={graph.worktrees.isFetching}
               onClick={() => void graph.worktrees.refetch()}
             >
               {t("worktrees.refreshShort")}
