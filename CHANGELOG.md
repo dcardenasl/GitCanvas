@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Reference sidebar** — search and organize branches and tags with virtual folders, bulk selection, undo and a temporary diff-panel shortcut.
 - **Shared graph preferences** — share branch colors and the visual main branch across validated linked worktrees while migrating existing preferences atomically.
 
+### Changed
+
+- **Feature loading** — load the GitHub picker and file diff viewer only when those views are opened, keeping their code out of the initial application bundle.
+
 ## [0.4.0] — 2026-10-19
 
 ### Fixed

@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 
@@ -9,8 +9,6 @@ import { BrandLogo } from "../BrandLogo/BrandLogo";
 import { CommitDetailPanel } from "../CommitDetailPanel";
 import { CommitSearch } from "../CommitSearch";
 import { ErrorMessage } from "../ErrorMessage";
-import { FileDiffView } from "../FileDiffView";
-import { GitHubPicker } from "../GitHubPicker";
 import { ProjectLibrary } from "../ProjectLibrary/ProjectLibrary";
 import { PreferencesMenu } from "../PreferencesMenu";
 import { Resizer } from "../Resizer";
@@ -51,6 +49,14 @@ import { useOpenFolder } from "./useOpenFolder";
 import "./AppShell.css";
 
 const NO_EXCLUSIONS: readonly string[] = [];
+const FileDiffView = lazy(async () => {
+  const module = await import("../FileDiffView/FileDiffView");
+  return { default: module.FileDiffView };
+});
+const GitHubPicker = lazy(async () => {
+  const module = await import("../GitHubPicker/GitHubPicker");
+  return { default: module.GitHubPicker };
+});
 
 /** The application window: toolbar, navigation and history. */
 export function AppShell() {
@@ -313,11 +319,19 @@ export function AppShell() {
       </div>
 
       {showGitHub ? (
-        <GitHubPicker
-          onClose={() => {
-            setShowGitHub(false);
-          }}
-        />
+        <Suspense
+          fallback={
+            <p className="state" role="status">
+              {t("startup.loading")}
+            </p>
+          }
+        >
+          <GitHubPicker
+            onClose={() => {
+              setShowGitHub(false);
+            }}
+          />
+        </Suspense>
       ) : project === null ? (
         <div className="app-shell__empty">
           <BrandLogo className="app-shell__empty-logo" variant="stacked" />
@@ -386,25 +400,33 @@ export function AppShell() {
             hidden={collapseSidebar}
           />
           <main className="app-shell__history" aria-label={t("history.label")}>
-            {selected !== null && selectedFilePath !== null ? (
-              <FileDiffView
-                repositoryPath={project.path}
-                commit={selected}
-                path={selectedFilePath}
-                snapshot={
-                  selection.kind === "commit" &&
-                  selection.fileMode === "snapshot"
-                }
-              />
-            ) : worktreeFile !== null && worktreeFile.filePath !== null ? (
-              <FileDiffView
-                repositoryPath={project.path}
-                path={worktreeFile.filePath}
-                worktree={{ side: worktreeFile.side }}
-              />
-            ) : (
-              <HistoryView history={history} />
-            )}
+            <Suspense
+              fallback={
+                <p className="state" role="status">
+                  {t("startup.loading")}
+                </p>
+              }
+            >
+              {selected !== null && selectedFilePath !== null ? (
+                <FileDiffView
+                  repositoryPath={project.path}
+                  commit={selected}
+                  path={selectedFilePath}
+                  snapshot={
+                    selection.kind === "commit" &&
+                    selection.fileMode === "snapshot"
+                  }
+                />
+              ) : worktreeFile !== null && worktreeFile.filePath !== null ? (
+                <FileDiffView
+                  repositoryPath={project.path}
+                  path={worktreeFile.filePath}
+                  worktree={{ side: worktreeFile.side }}
+                />
+              ) : (
+                <HistoryView history={history} />
+              )}
+            </Suspense>
           </main>
           <Resizer
             label={t("resizer.inspector")}
