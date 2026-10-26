@@ -1,5 +1,6 @@
 import { createGraphSlice } from "./workspaceStore/graphSlice";
 import { createReferenceFilterSlice } from "./workspaceStore/referenceFilterSlice";
+import { createReferenceTreeSlice } from "./workspaceStore/referenceTreeSlice";
 import { useMemo } from "react";
 import { create } from "zustand";
 
@@ -54,6 +55,7 @@ export type {
 export const useWorkspace = create<WorkspaceState>()((...slice) => ({
   ...createGraphSlice(...slice),
   ...createReferenceFilterSlice(...slice),
+  ...createReferenceTreeSlice(...slice),
   ...createTabsSlice(...slice),
   ...createClosedTabsSlice(...slice),
   ...createLibrarySlice(...slice),

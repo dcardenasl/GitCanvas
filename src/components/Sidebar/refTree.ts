@@ -1,4 +1,4 @@
-import type { RefTarget } from "./Sidebar";
+import type { RefTarget } from "./refTypes";
 
 /** Folder node representing an intermediate path segment in the reference tree. */
 export interface RefFolderNode {

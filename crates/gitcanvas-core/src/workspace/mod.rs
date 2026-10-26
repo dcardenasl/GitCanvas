@@ -142,6 +142,16 @@ pub struct ReferenceFilterPreferences {
     pub excluded: Vec<String>,
 }
 
+/// Collapsed reference groups and folders for one canonical worktree root.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(deny_unknown_fields)]
+pub struct ReferenceTreePreferences {
+    /// Canonical worktree root; never used as authorization.
+    pub path: String,
+    /// Stable group and folder keys that should remain collapsed.
+    pub collapsed: Vec<String>,
+}
+
 /// Maximum projects retaining graph preferences independently of tabs.
 pub const MAX_GRAPH_PROJECTS: usize = 200;
 /// Maximum remembered references per project.
@@ -150,6 +160,10 @@ pub const MAX_GRAPH_REFERENCES: usize = 10_000;
 pub const MAX_REFERENCE_FILTER_WORKTREES: usize = 200;
 /// Maximum known reference exclusions per worktree.
 pub const MAX_EXCLUDED_REFERENCES: usize = 20_001;
+/// Maximum worktrees retaining reference-tree preferences.
+pub const MAX_REFERENCE_TREE_WORKTREES: usize = 200;
+/// Maximum collapsed reference groups and folders remembered per worktree.
+pub const MAX_COLLAPSED_REFERENCE_FOLDERS: usize = 500;
 
 /// Everything the application remembers between runs about its projects.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -167,6 +181,8 @@ pub struct Workspace {
     pub graph_preferences: Vec<GraphPreferences>,
     /// History filter state remains isolated by worktree across restarts.
     pub reference_filters: Vec<ReferenceFilterPreferences>,
+    /// Reference tree expansion state remains isolated by worktree across restarts.
+    pub reference_tree_preferences: Vec<ReferenceTreePreferences>,
 }
 
 /// The bounds the workspace is held to, sent to the interface so it never keeps
@@ -188,6 +204,10 @@ pub struct WorkspaceLimits {
     pub max_reference_filter_worktrees: u32,
     /// Maximum reference exclusions per worktree.
     pub max_excluded_references: u32,
+    /// Maximum worktrees retaining reference-tree preferences.
+    pub max_reference_tree_worktrees: u32,
+    /// Maximum collapsed reference nodes per worktree.
+    pub max_collapsed_reference_folders: u32,
 }
 
 impl WorkspaceLimits {
@@ -203,6 +223,8 @@ impl WorkspaceLimits {
             max_graph_references: as_u32(MAX_GRAPH_REFERENCES),
             max_reference_filter_worktrees: as_u32(MAX_REFERENCE_FILTER_WORKTREES),
             max_excluded_references: as_u32(MAX_EXCLUDED_REFERENCES),
+            max_reference_tree_worktrees: as_u32(MAX_REFERENCE_TREE_WORKTREES),
+            max_collapsed_reference_folders: as_u32(MAX_COLLAPSED_REFERENCE_FOLDERS),
         }
     }
 }
@@ -380,6 +402,32 @@ impl Workspace {
                     || !names.insert(reference.as_str())
                 {
                     return Err(invalid("invalid or duplicate excluded reference"));
+                }
+            }
+        }
+        if self.reference_tree_preferences.len() > MAX_REFERENCE_TREE_WORKTREES {
+            return Err(invalid(
+                "too many worktrees with reference-tree preferences",
+            ));
+        }
+        let mut tree_roots = BTreeSet::new();
+        for preferences in &self.reference_tree_preferences {
+            check_project_path("reference-tree preferences", &preferences.path)?;
+            if !tree_roots.insert(preferences.path.as_str())
+                || preferences.collapsed.len() > MAX_COLLAPSED_REFERENCE_FOLDERS
+            {
+                return Err(invalid(
+                    "duplicate reference-tree worktree or too many collapsed nodes",
+                ));
+            }
+            let mut keys = BTreeSet::new();
+            for key in &preferences.collapsed {
+                if key.is_empty()
+                    || key.len() > MAX_PATH_BYTES
+                    || key.contains('\0')
+                    || !keys.insert(key.as_str())
+                {
+                    return Err(invalid("invalid or duplicate collapsed reference node"));
                 }
             }
         }

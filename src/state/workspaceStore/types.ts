@@ -1,6 +1,7 @@
 import type {
   GraphPreferences,
   ReferenceFilterPreferences,
+  ReferenceTreePreferences,
   RepositoryInfo,
   Workspace,
   WorkspaceLimits,
@@ -183,9 +184,19 @@ export interface ReferenceFilterSlice {
   clearReferenceSearch: (path: string) => void;
 }
 
+/** Durable reference-tree expansion, scoped to each canonical worktree root. */
+export interface ReferenceTreeSlice {
+  readonly referenceTreePreferences: readonly ReferenceTreePreferences[];
+  setReferenceTreeCollapsed: (
+    path: string,
+    collapsed: readonly string[],
+  ) => void;
+}
+
 /** The whole workspace: every slice, in one store. */
 export type WorkspaceState = GraphSlice &
   ReferenceFilterSlice &
+  ReferenceTreeSlice &
   TabsSlice &
   ClosedTabsSlice &
   LibrarySlice &

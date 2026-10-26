@@ -70,6 +70,8 @@ describe("openProjectAt", () => {
         max_graph_references: 10000,
         max_reference_filter_worktrees: 200,
         max_excluded_references: 20001,
+        max_reference_tree_worktrees: 200,
+        max_collapsed_reference_folders: 500,
       },
     });
     openRepository.mockResolvedValueOnce({ path: "/a", name: "a" });

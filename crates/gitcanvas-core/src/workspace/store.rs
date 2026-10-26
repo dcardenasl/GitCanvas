@@ -28,7 +28,7 @@ use crate::error::AppError;
 /// Name of the workspace file inside the data directory.
 pub const FILE_NAME: &str = "workspace.json";
 /// Schema version this build reads and writes.
-pub const SCHEMA_VERSION: u32 = 3;
+pub const SCHEMA_VERSION: u32 = 4;
 /// Largest workspace file read or written, in bytes.
 pub const MAX_FILE_BYTES: u64 = 4 * 1024 * 1024;
 /// Quarantined files kept; older ones are removed when a newer one is made.
@@ -139,6 +139,7 @@ fn parse(bytes: &[u8]) -> Result<Workspace, (RecoveryKind, String)> {
         }
         workspace.insert("graph_preferences".into(), serde_json::json!([]));
         workspace.insert("reference_filters".into(), serde_json::json!([]));
+        workspace.insert("reference_tree_preferences".into(), serde_json::json!([]));
         if let Some(object) = value.as_object_mut() {
             object.insert("version".into(), serde_json::json!(SCHEMA_VERSION));
         }
@@ -158,6 +159,16 @@ fn parse(bytes: &[u8]) -> Result<Workspace, (RecoveryKind, String)> {
             record.insert("scope".into(), serde_json::json!("worktree"));
         }
         workspace.insert("reference_filters".into(), serde_json::json!([]));
+        workspace.insert("reference_tree_preferences".into(), serde_json::json!([]));
+        if let Some(object) = value.as_object_mut() {
+            object.insert("version".into(), serde_json::json!(SCHEMA_VERSION));
+        }
+    } else if version == Some(3) {
+        let workspace = value
+            .get_mut("workspace")
+            .and_then(serde_json::Value::as_object_mut)
+            .ok_or_else(|| corrupt(&"missing version 3 workspace"))?;
+        workspace.insert("reference_tree_preferences".into(), serde_json::json!([]));
         if let Some(object) = value.as_object_mut() {
             object.insert("version".into(), serde_json::json!(SCHEMA_VERSION));
         }

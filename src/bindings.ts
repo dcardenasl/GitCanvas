@@ -605,6 +605,14 @@ export type ReferenceFilterPreferences = {
 	excluded: string[],
 };
 
+/**  Collapsed reference groups and folders for one canonical worktree root. */
+export type ReferenceTreePreferences = {
+	/**  Canonical worktree root; never used as authorization. */
+	path: string,
+	/**  Stable group and folder keys that should remain collapsed. */
+	collapsed: string[],
+};
+
 export type RepositoryChangedEvent = {
 	path: string,
 	generation: number,
@@ -743,6 +751,8 @@ export type Workspace = {
 	graph_preferences: GraphPreferences[],
 	/**  History filter state remains isolated by worktree across restarts. */
 	reference_filters: ReferenceFilterPreferences[],
+	/**  Reference tree expansion state remains isolated by worktree across restarts. */
+	reference_tree_preferences: ReferenceTreePreferences[],
 };
 
 /**
@@ -765,6 +775,10 @@ export type WorkspaceLimits = {
 	max_reference_filter_worktrees: number,
 	/**  Maximum reference exclusions per worktree. */
 	max_excluded_references: number,
+	/**  Maximum worktrees retaining reference-tree preferences. */
+	max_reference_tree_worktrees: number,
+	/**  Maximum collapsed reference nodes per worktree. */
+	max_collapsed_reference_folders: number,
 };
 
 /**  A stored workspace that was set aside rather than loaded. */
