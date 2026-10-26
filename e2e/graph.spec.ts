@@ -5,10 +5,24 @@ import { $, browser, expect } from "@wdio/globals";
 import type { Workspace } from "../src/bindings";
 import { e2eDataDir, e2eRepository, e2eRepositoryRoot } from "../wdio.conf";
 import { waitForHistory } from "./history";
+import { clickAndConfirm, setReactSelectValue } from "./interactions";
 
 /** Real native UI, Rust store and Git fixture, isolated from the user's projects. */
 describe("stable branch graph preferences", () => {
   it("chooses the main trajectory and color without changing the working branch", async () => {
+    // The fixture starts with the host's locale, which differs on macOS and
+    // Linux. This scenario uses Spanish labels, so make that precondition
+    // explicit instead of depending on the runner's system language.
+    await clickAndConfirm(
+      ".preferences-menu__toggle",
+      async () => await expect($(".preferences-menu__panel")).toBeDisplayed(),
+    );
+    await setReactSelectValue(".language-selector__select", "es");
+    await clickAndConfirm(
+      ".preferences-menu__toggle",
+      async () =>
+        await expect($(".preferences-menu__panel")).not.toBeDisplayed(),
+    );
     await waitForHistory(3);
     await browser.setWindowSize(940, 600);
     await browser.executeAsync((done) => {
@@ -18,13 +32,44 @@ describe("stable branch graph preferences", () => {
         });
       });
     });
-    await $('[aria-label="Acciones de main"]').click();
-    await $('[role="menuitem"]*=Cambiar color de rama').click();
-    await $(
+    await clickAndConfirm(
+      '[aria-label="Acciones de main"]',
+      async () =>
+        await expect(
+          $('[role="menuitem"]*=Cambiar color de rama'),
+        ).toBeDisplayed(),
+    );
+    await clickAndConfirm(
+      '[role="menuitem"]*=Cambiar color de rama',
+      async () => await expect($(".sidebar__palette")).toBeDisplayed(),
+    );
+    await clickAndConfirm(
       '//div[contains(@class,"sidebar__palette")]//button[normalize-space(.)="Azul"]',
-    ).click();
-    await $('[aria-label="Acciones de main"]').click();
-    await $('[role="menuitem"]*=Usar como principal visual').click();
+      async () => await expect($(".sidebar__palette")).not.toExist(),
+    );
+    await clickAndConfirm(
+      '[aria-label="Acciones de main"]',
+      async () =>
+        await expect(
+          $('[role="menuitem"]*=Usar como principal visual'),
+        ).toBeDisplayed(),
+    );
+    await clickAndConfirm(
+      '[role="menuitem"]*=Usar como principal visual',
+      async () => {
+        await browser.waitUntil(() =>
+          browser.execute(() => {
+            const node = document.querySelector(".graph-canvas__node");
+            return (
+              node?.getAttribute("cx") === "16" &&
+              document
+                .querySelector(".sidebar__item--head")
+                ?.textContent?.includes("main") === true
+            );
+          }),
+        );
+      },
+    );
     await browser.waitUntil(async () =>
       browser.execute(() => {
         const node = document.querySelector(".graph-canvas__node");
@@ -63,11 +108,29 @@ describe("stable branch graph preferences", () => {
     const color = await $(".sidebar__item .branch-color").getCSSProperty(
       "background-color",
     );
-    await $(`[aria-label="Cerrar ${path.basename(e2eRepository)}"]`).click();
-    await $(
+    await clickAndConfirm(
+      `[aria-label="Cerrar ${path.basename(e2eRepository)}"]`,
+      async () => await expect($(".project-library")).toBeDisplayed(),
+    );
+    await clickAndConfirm(
       `.project-library__open[title$="${path.basename(e2eRepository)}"]`,
-    ).click();
+      async () => {
+        await browser.waitUntil(async () =>
+          browser.execute(
+            () =>
+              document.querySelector('[role="tab"][aria-selected="true"]') !==
+              null,
+          ),
+        );
+      },
+    );
     await waitForHistory(3);
+    await browser.waitUntil(
+      async () => await $('[aria-label="Rama principal visual"]').isDisplayed(),
+      {
+        timeoutMsg: "the saved visual principal did not return after reopening",
+      },
+    );
     await expect($(".sidebar__item .branch-color")).toHaveStyle({
       "background-color": String(color.value),
     });
@@ -78,30 +141,47 @@ describe("stable branch graph preferences", () => {
   });
 
   it("keeps keyboard controls usable in English and light theme at minimum size", async () => {
-    await $(".preferences-menu__toggle").click();
-    await browser.execute(() => {
-      for (const [selector, value] of [
-        [".theme-selector__select", "light"],
-        [".language-selector__select", "en"],
-      ]) {
-        const select = document.querySelector<HTMLSelectElement>(
-          selector ?? "",
-        );
-        if (select === null || value === undefined)
-          throw new Error("Preference selector missing");
-        select.value = value;
-        select.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-    });
-    await $(".preferences-menu__toggle").click();
-    await $('[aria-label="Actions for side"]').click();
-    await $('[role="menuitem"]*=Use as visual main branch').click();
+    await clickAndConfirm(
+      ".preferences-menu__toggle",
+      async () => await expect($(".preferences-menu__panel")).toBeDisplayed(),
+    );
+    await setReactSelectValue(".theme-selector__select", "light");
+    await setReactSelectValue(".language-selector__select", "en");
+    await clickAndConfirm(
+      ".preferences-menu__toggle",
+      async () =>
+        await expect($(".preferences-menu__panel")).not.toBeDisplayed(),
+    );
+    await clickAndConfirm(
+      '[aria-label="Actions for side"]',
+      async () =>
+        await expect(
+          $('[role="menuitem"]*=Use as visual main branch'),
+        ).toBeDisplayed(),
+    );
+    await clickAndConfirm(
+      '[role="menuitem"]*=Use as visual main branch',
+      async () =>
+        await expect($('[aria-label="Visual main branch"]')).toBeDisplayed(),
+    );
     await expect($(".sidebar__item--head")).toHaveText(
       expect.stringContaining("main"),
     );
     await expect($('[aria-label="Visual main branch"]')).toBeDisplayed();
-    await $('[aria-label="Actions for side"]').click();
-    await $('[role="menuitem"]*=Change branch color').click();
+    await clickAndConfirm(
+      '[aria-label="Actions for side"]',
+      async () =>
+        await expect(
+          $('[role="menuitem"]*=Change branch color'),
+        ).toBeDisplayed(),
+    );
+    await clickAndConfirm(
+      '[role="menuitem"]*=Change branch color',
+      async () =>
+        await expect(
+          $('[role="group"][aria-label="Color for side"]'),
+        ).toBeDisplayed(),
+    );
     await expect(
       $('[role="group"][aria-label="Color for side"]'),
     ).toBeDisplayed();

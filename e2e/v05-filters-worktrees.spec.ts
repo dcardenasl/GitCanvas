@@ -1,6 +1,7 @@
 import { $, $$, browser, expect } from "@wdio/globals";
 import { e2eRepositoryRoot } from "../wdio.conf";
 import { waitForHistory } from "./history";
+import { clickAndConfirm, setReactSelectValue } from "./interactions";
 
 describe("v0.5 reference filters and linked worktrees", () => {
   it("keeps the reference and worktree controls translated at minimum size", async () => {
@@ -22,25 +23,17 @@ describe("v0.5 reference filters and linked worktrees", () => {
     });
 
     const setPreferences = async (theme: string, language: string) => {
-      await $(".preferences-menu__toggle").click();
-      await browser.execute(
-        (nextTheme, nextLanguage) => {
-          const preferences: readonly (readonly [string, string])[] = [
-            [".theme-selector__select", nextTheme],
-            [".language-selector__select", nextLanguage],
-          ];
-          for (const [selector, value] of preferences) {
-            const select = document.querySelector<HTMLSelectElement>(selector);
-            if (select === null)
-              throw new Error(`Preference selector missing: ${selector}`);
-            select.value = value;
-            select.dispatchEvent(new Event("change", { bubbles: true }));
-          }
-        },
-        theme,
-        language,
+      await clickAndConfirm(
+        ".preferences-menu__toggle",
+        async () => await expect($(".preferences-menu__panel")).toBeDisplayed(),
       );
-      await $(".preferences-menu__toggle").click();
+      await setReactSelectValue(".theme-selector__select", theme);
+      await setReactSelectValue(".language-selector__select", language);
+      await clickAndConfirm(
+        ".preferences-menu__toggle",
+        async () =>
+          await expect($(".preferences-menu__panel")).not.toBeDisplayed(),
+      );
     };
 
     try {
@@ -152,20 +145,40 @@ describe("v0.5 reference filters and linked worktrees", () => {
     );
 
     await $('[aria-label="Acciones de side"]').click();
-    await $('[role="menuitem"]*=Abrir el worktree que usa esta rama').click();
-    await browser.waitUntil(
-      async () =>
-        (await (await $$('[role="tab"]:not([data-home])')).length) === 2,
+    const sideRoot = await browser.execute(() => {
+      const side = Array.from(
+        document.querySelectorAll<HTMLButtonElement>(".sidebar__worktree"),
+      ).find((button) => button.textContent?.includes("side") === true);
+      if (side === undefined) throw new Error("The side worktree is missing");
+      return side.title;
+    });
+    await clickAndConfirm(
+      '[role="menuitem"]*=Abrir el worktree que usa esta rama',
+      async () => {
+        await browser.waitUntil(() =>
+          browser.execute((root) => {
+            const active = document.querySelector<HTMLButtonElement>(
+              '[role="tab"][aria-selected="true"]:not([data-home])',
+            );
+            return active?.title === root;
+          }, sideRoot),
+        );
+      },
     );
     await expect($$("[data-repository-group]")).toBeElementsArrayOfSize(2);
 
-    const originalRoot = await $(
+    await clickAndConfirm(
       `.sidebar__worktree[title="${e2eRepositoryRoot}"]`,
-    );
-    await originalRoot.click();
-    await browser.waitUntil(
-      async () =>
-        (await (await $$('[role="tab"]:not([data-home])')).length) === 2,
+      async () => {
+        await browser.waitUntil(() =>
+          browser.execute((root) => {
+            const active = document.querySelector<HTMLButtonElement>(
+              '[role="tab"][aria-selected="true"]:not([data-home])',
+            );
+            return active?.title === root;
+          }, e2eRepositoryRoot),
+        );
+      },
     );
     await expect($$('[role="tab"]:not([data-home])')).toBeElementsArrayOfSize(
       2,
