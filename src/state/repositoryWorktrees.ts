@@ -12,7 +12,11 @@ export function useRepositoryWorktrees(path: string | null) {
       return getRepositoryWorktrees(path);
     },
     enabled: path !== null,
-    staleTime: 30_000,
+    // This inventory belongs to the active repository context. A cached
+    // inactive entry must be revalidated when its worktree becomes active;
+    // the active watcher handles changes between activations, so this does
+    // not poll inactive worktrees.
+    staleTime: 0,
     gcTime: 5 * 60_000,
   });
 }
