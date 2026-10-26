@@ -77,8 +77,9 @@ See the [changelog](CHANGELOG.md) for the full list.
 - **Guarded actions.** Checkout refuses when it would lose uncommitted work. Pull is
   fast-forward only. Push always asks first and never forces.
 - **Keyboard friendly**, with dark, light and system appearance.
-- **No telemetry.** GitCanvas makes no analytics or tracking requests. Its only network
-  access is Git itself (clone, fetch, pull, push) and, if you sign in, the GitHub API.
+- **No telemetry.** GitCanvas makes no analytics or tracking requests. Its network
+  access is Git itself (clone, fetch, pull, push), the GitHub API if you sign in, and
+  GitHub Releases when you check for app updates.
 
 > The interface is available in English and Spanish. It follows the system language by
 > default and can be switched from the toolbar.
@@ -97,6 +98,11 @@ Download the installer for your system from the
 GitCanvas is developed mostly on macOS. The release workflow also builds the Linux and
 Windows installers, but those have seen much less hands-on use, so bug reports there are
 especially welcome.
+
+To check for a newer version, open **Preferences → Check for updates**. GitCanvas verifies
+the signed release before offering **Install and restart**. The first release that includes
+the updater must be installed manually by existing users; later releases can be installed
+from the app.
 
 ### First launch: the "unidentified developer" warning
 

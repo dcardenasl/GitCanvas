@@ -46,3 +46,18 @@
 .preferences-menu__panel .language-selector__select {
   max-inline-size: none;
 }
+
+.update-control {
+  display: grid;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--border);
+}
+
+.update-control__status:empty {
+  display: none;
+}
+
+.update-control__action {
+  justify-self: start;
+}

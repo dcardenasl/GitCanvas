@@ -95,6 +95,8 @@ keyring = { version = "3", features = [
     "sync-secret-service",
 ] }
 tauri-plugin-dialog = "2"
+tauri-plugin-process = "2"
+tauri-plugin-updater = "2"
 
 # Embedded WebDriver, for the end-to-end suite only. Behind the `e2e` feature so
 # the shipped binary never carries a WebDriver server: a released application

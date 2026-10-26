@@ -185,6 +185,9 @@ pub fn run() {
         // The native folder picker. Without this the "open repository" button
         // fails at runtime with a missing-plugin error.
         .plugin(tauri_plugin_dialog::init());
+    app_builder = app_builder
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build());
 
     // Only present in an `e2e` build. The released binary carries no WebDriver
     // server, so nothing can drive it remotely.
@@ -322,6 +325,8 @@ mod tests {
             "core:event:default",
             "dialog:allow-open",
             "core:window:allow-destroy",
+            "process:allow-restart",
+            "updater:default",
         ]
         .into_iter()
         .collect::<std::collections::BTreeSet<_>>();
@@ -398,5 +403,13 @@ mod tests {
             source.contains(".plugin(tauri_plugin_dialog::init())"),
             "the dialog plugin must be registered on the builder"
         );
+    }
+
+    /// Automatic updates must be registered in the same app builder that ships.
+    #[test]
+    fn updater_and_process_plugins_are_registered() {
+        let source = include_str!("lib.rs");
+        assert!(source.contains("tauri_plugin_updater::Builder::new().build()"));
+        assert!(source.contains("tauri_plugin_process::init()"));
     }
 }

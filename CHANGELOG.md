@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **App updates** — check GitHub releases for signed updates and install them with a restart from Preferences.
 - **Linked worktree inventory** — read shared Git metadata for worktree roots, HEAD and lock state, with refresh notifications from the active repository.
 - **Reference filters** — filter the complete commit history by selected branches, tags and HEAD, with per-worktree saved selections, search terms and stable pagination scopes.
 - **Reference explorer** — browse nested branches and tags, toggle their history visibility with eye controls, fold groups, and use contextual help; remember folded groups and folders per worktree across restarts.

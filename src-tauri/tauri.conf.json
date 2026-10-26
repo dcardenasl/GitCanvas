@@ -26,6 +26,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": ["app", "dmg", "deb", "appimage", "rpm", "nsis", "msi"],
     "macOS": {
       "minimumSystemVersion": "10.13",
@@ -38,5 +39,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ5NEQ4M0EyOTVEMjA1ODEKUldTQkJkS1Zvb05OU2VhemZhTkhKTm9QN0JtcWsxdm1URHhUTzZxaU9iSEZNZFd1bDh1b21FTTkK",
+      "endpoints": [
+        "https://github.com/dcardenasl/GitCanvas/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

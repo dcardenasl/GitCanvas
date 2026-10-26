@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { LanguageSelector } from "../LanguageSelector";
 import { ThemeSelector } from "../ThemeSelector/ThemeSelector";
+import { UpdateControl } from "./UpdateControl";
 
 import "./PreferencesMenu.css";
 
@@ -86,6 +87,7 @@ export function PreferencesMenu() {
       >
         <ThemeSelector />
         <LanguageSelector />
+        <UpdateControl />
       </div>
     </div>
   );

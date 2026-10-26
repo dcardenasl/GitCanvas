@@ -59,6 +59,16 @@
     "unreachable": "No se pudo abrir",
     "writing": "Escribiendo en el repositorio"
   },
+  "updates": {
+    "available": "Disponible la versión {{version}}",
+    "check": "Buscar actualizaciones",
+    "checking": "Buscando actualizaciones…",
+    "current": "GitCanvas está actualizado.",
+    "error": "No se pudo comprobar o instalar la actualización.",
+    "install": "Instalar y reiniciar",
+    "installing": "Descargando e instalando…{{progress}}",
+    "retry": "Reintentar"
+  },
   "theme": {
     "aria": "Tema de la aplicación",
     "dark": "Oscuro",
