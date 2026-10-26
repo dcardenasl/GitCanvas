@@ -15,15 +15,16 @@ worktrees. La creación de commits permanece al final de la secuencia, objetivo 
 El [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md) prevalece sobre
 asignaciones de versiones de planes anteriores.
 
-**Estado de trabajo:** rama `dev`, sincronizada con `origin/dev` al registrar este
-estado. Se preservan `docs/audits/evidence/` y `docs/media/`, que están sin seguimiento;
+**Estado de trabajo:** rama `dev`. La implementación v0.5 está integrada localmente;
+los commits de esta entrega quedan en `dev` sin push. Se preservan `docs/audits/evidence/`
+y `docs/media/`, que están sin seguimiento;
 no agregarlas a commits de documentación. Inspeccionar estado e historial al retomar.
 La versión de la aplicación no se cambia hasta preparar un release autorizado.
 
 ## Siguiente paso
 
-Comenzar **WT-1** de v0.5 según el
-[plan de implementación](docs/plan/2026-10-26-v0.5-implementacion.md#wt-1--identidad-inventario-y-actualizacion).
+Completar **V05-VERIFY** de v0.5 según el
+[plan de implementación](docs/plan/2026-10-26-v0.5-implementacion.md#v05-verify--verificacion-y-documentacion-de-cierre).
 Las puertas manuales de GRF-5 que carecen de evidencia se mantienen como seguimiento
 separado; consultar [verificación v0.4](docs/verification/v0.4.md). La release v0.4.0
 ya existe: no repetirla ni atribuir sus resultados a recorridos no comprobados.
@@ -74,15 +75,14 @@ definen el alcance funcional. Leer también [ADR 0006](docs/adr/0006-workspace.m
 en la sección enlazada del plan. Sin creación/retirada de worktrees, commits, resolución
 de conflictos Git, autores ni releases; el checkout explícito existente se conserva.
 
-- [ ] **WT-1 — Identidad, inventario y actualización.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#wt-1--identidad-inventario-y-actualizacion). Inventario por directorio Git común; estados detached/ausente/bloqueado; watcher, activación y actualización explícita, sin sondeo inactivo. Descubrir una ruta no autoriza Git.
-  - Avance de backend: contrato Rust/IPC, consulta React Query por repositorio activo y eventos del registro/HEAD implementados. Pruebas de worktrees enlazados, clones independientes, HEAD detached, ubicación ausente, bloqueo, alta externa y cambios de HEAD; `cargo test -p gitcanvas-core`, Clippy, bindings, typecheck, lint, formato y pruebas de watcher/query aprobados. La acción explícita visible del panel queda integrada con WT-3 antes de cerrar esta tarea.
-- [ ] **WT-2 — Preferencias compartidas y migración.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#wt-2--preferencias-compartidas-y-migracion). Migración workspace 2→3 por grupo validado; principal prevalece y activo es fallback; reemplazo atómico, sin duplicados legacy tras éxito; filtros durables por worktree.
-- [ ] **FLT-1 — Filtrado del historial completo.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#flt-1--filtrado-del-historial-completo). Resolver ramas, tags y HEAD en Rust; scope/cursor inmutables; paginación >500, commits compartidos únicos y detalles fuera de alcance conservados con aviso.
-- [ ] **FLT-2 — Estado, persistencia y deshacer.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#flt-2--estado-persistencia-y-deshacer). Filtros por worktree, nuevas refs activas, acciones Solo esta/Mostrar todo/Restablecer/localizar y undo de 50 pasos por worktree y sesión.
-- [ ] **SID-1 — Organización e interacción del panel.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#sid-1--organizacion-e-interaccion-del-panel). Búsqueda de sesión, secciones, carpetas virtuales, contadores, casillas tri-state, acciones masivas accesibles e i18n.
-- [ ] **WT-3 — Panel de worktrees, pestañas y checkout.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#wt-3--panel-de-worktrees-pestanas-y-checkout). Abrir/activar sin duplicar, marcar rama ocupada, grupos contiguos sin cambiar orden global y estado ligado al worktree activo.
-- [ ] **SID-2 — Indicador de filtros en el diff.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#sid-2--indicador-de-filtros-en-el-diff). Apertura temporal del panel sin perder diff/posición ni cambiar el pin explícito.
-- [ ] **V05-VERIFY — Verificación y cierre documental.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#v05-verify--verificacion-y-documentacion-de-cierre). Rust, frontend, migración, E2E nativo macOS/Linux/Windows, accesibilidad, temas, idiomas y evidencia manual sin atribuciones no demostradas.
+- [x] **WT-1 — Identidad, inventario y actualización.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#wt-1--identidad-inventario-y-actualizacion), [ADR 0006](docs/adr/0006-workspace.md), [`CONTEXT.md`](CONTEXT.md). Inventario por directorio Git común; estados detached/ausente/bloqueado; watcher, activación y actualización explícita, sin sondeo inactivo. Descubrir una ruta no autoriza Git. Evidencia: pruebas de worktrees enlazados, clones independientes, ubicación ausente/bloqueada, eventos externos y validación al abrir; `cargo test -p gitcanvas-core`, `cargo test -p gitcanvas --lib`, Clippy y bindings aprobados.
+- [x] **WT-2 — Preferencias compartidas y migración.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#wt-2--preferencias-compartidas-y-migracion), [ADR 0006](docs/adr/0006-workspace.md), [ADR 0007](docs/adr/0007-stable-branch-graph.md). Esquema 2→3, precedencia principal/fallback activo, preferencias compartidas por directorio Git común y filtros durables por worktree. Pruebas de migración y fallos atómicos Rust y pruebas de precedencia/fallback frontend aprobadas.
+- [x] **FLT-1 — Filtrado del historial completo.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#flt-1--filtrado-del-historial-completo), [roadmap](docs/plan/2026-10-19-roadmap-de-versiones.md), [ADR 0007](docs/adr/0007-stable-branch-graph.md). Rust resuelve ramas, tags y HEAD contra snapshot; scope/cursor inmutables; merges deduplicados, más de 500 commits, cursor obsoleto y detalle fuera de alcance con aviso cubiertos por pruebas.
+- [x] **FLT-2 — Estado, persistencia y deshacer.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#flt-2--estado-persistencia-y-deshacer), [especificación D01–D50](docs/plan/2026-10-18-panel-izquierdo-ui-ux.md), [ADR 0006](docs/adr/0006-workspace.md). Filtros por worktree, referencias nuevas activas, acciones y undo de 50 pasos por worktree/sesión; cobertura de slice e integración incluida en las 830 pruebas frontend.
+- [x] **SID-1 — Organización e interacción del panel.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#sid-1--organizacion-e-interaccion-del-panel), [especificación D01–D50](docs/plan/2026-10-18-panel-izquierdo-ui-ux.md), [`CONTEXT.md`](CONTEXT.md), [`CLAUDE.md`](CLAUDE.md). Búsqueda de sesión, secciones, carpetas virtuales, contadores, tri-state, acciones limitadas a coincidencias e inglés/español.
+- [x] **WT-3 — Panel de worktrees, pestañas y checkout.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#wt-3--panel-de-worktrees-pestanas-y-checkout), [ADR 0006](docs/adr/0006-workspace.md), [`CONTEXT.md`](CONTEXT.md). Apertura validada y sin duplicar, estado de ramas ocupadas, grupos contiguos sin alterar el orden global, checkout explícito separado.
+- [x] **SID-2 — Indicador de filtros en el diff.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#sid-2--indicador-de-filtros-en-el-diff), [especificación D01–D50](docs/plan/2026-10-18-panel-izquierdo-ui-ux.md). Apertura temporal sin perder diff/posición ni alterar fijación; prueba AppShell incluida.
+- [ ] **V05-VERIFY — Verificación y cierre documental.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#v05-verify--verificacion-y-documentacion-de-cierre), [verificación v0.4](docs/verification/v0.4.md), [`CLAUDE.md`](CLAUDE.md). Verificación local: 830 pruebas frontend, core Rust completo, 54 pruebas Tauri, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all --check`, typecheck, lint y build. Pendiente: E2E nativo en Linux/Windows, lector de pantalla real y recorridos manuales con evidencia; no se declaran verificados.
 
 Crear o retirar worktrees sigue reservado para una entrega futura sin versión asignada;
 preparación por líneas, amend y commits permanecen después de v0.10/v0.11 según el
