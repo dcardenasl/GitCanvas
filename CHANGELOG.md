@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Context menus** — keep menus open when focusing their first item scrolls the underlying view on WebKitGTK.
+
 ### Added
 
 - **Linked worktree inventory** — read shared Git metadata for worktree roots, HEAD and lock state, with refresh notifications from the active repository.

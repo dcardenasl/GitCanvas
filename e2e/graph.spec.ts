@@ -47,6 +47,27 @@ describe("stable branch graph preferences", () => {
       '//div[contains(@class,"sidebar__palette")]//button[normalize-space(.)="Azul"]',
       async () => await expect($(".sidebar__palette")).not.toExist(),
     );
+    await browser.waitUntil(
+      () => {
+        const file = path.join(e2eDataDir, "workspace.json");
+        if (!fs.existsSync(file)) return false;
+        const stored = JSON.parse(fs.readFileSync(file, "utf8")) as {
+          workspace: Workspace;
+        };
+        return stored.workspace.graph_preferences.some(
+          (preference) =>
+            preference.scope === "repository" &&
+            preference.path === path.join(e2eRepositoryRoot, ".git") &&
+            preference.colors.some(
+              (color) =>
+                color.reference === "refs/heads/main" &&
+                color.color === "blue" &&
+                color.edited > 0,
+            ),
+        );
+      },
+      { timeoutMsg: "the selected branch color was not persisted" },
+    );
     await clickAndConfirm(
       '[aria-label="Acciones de main"]',
       async () =>

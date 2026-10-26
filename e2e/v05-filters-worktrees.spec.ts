@@ -144,7 +144,6 @@ describe("v0.5 reference filters and linked worktrees", () => {
       { timeoutMsg: "the linked-worktree inventory did not finish refreshing" },
     );
 
-    await $('[aria-label="Acciones de side"]').click();
     const sideRoot = await browser.execute(() => {
       const side = Array.from(
         document.querySelectorAll<HTMLButtonElement>(".sidebar__worktree"),
@@ -152,6 +151,13 @@ describe("v0.5 reference filters and linked worktrees", () => {
       if (side === undefined) throw new Error("The side worktree is missing");
       return side.title;
     });
+    await clickAndConfirm(
+      '[aria-label="Acciones de side"]',
+      async () =>
+        await expect(
+          $('[role="menuitem"]*=Abrir el worktree que usa esta rama'),
+        ).toBeDisplayed(),
+    );
     await clickAndConfirm(
       '[role="menuitem"]*=Abrir el worktree que usa esta rama',
       async () => {
