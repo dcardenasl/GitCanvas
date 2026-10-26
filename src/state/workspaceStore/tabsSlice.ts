@@ -80,7 +80,7 @@ export const createTabsSlice: StateCreator<
   },
 
   closeTab: (root) => {
-    const { tabs, activeRoot } = get();
+    const { tabs, activeRoot, referenceSearches } = get();
     const tab = tabs.find((candidate) => candidate.repository.path === root);
     if (tab === undefined) return "closed";
     if (tab.gitActions.running !== null) return "busy";
@@ -93,6 +93,9 @@ export const createTabsSlice: StateCreator<
       ),
       activeRoot: next,
       closedTabs: closedTabsAfterClosing(get().closedTabs, tab),
+      referenceSearches: Object.fromEntries(
+        Object.entries(referenceSearches).filter(([path]) => path !== root),
+      ),
     });
     return "closed";
   },

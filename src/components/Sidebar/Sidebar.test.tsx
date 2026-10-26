@@ -8,13 +8,18 @@ import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
 
 const getBranches = vi.fn<() => Promise<BranchInfo[]>>();
 const getTags = vi.fn<() => Promise<TagInfo[]>>();
-const mockIpc = createIpcMocks(["getRepositoryRefs"] as const);
+const mockIpc = createIpcMocks([
+  "getRepositoryRefs",
+  "getRepositoryWorktrees",
+  "openRepository",
+] as const);
 
 vi.mock("../../lib/ipc", () => mockIpc);
 
 const { Sidebar } = await import("./Sidebar");
 const { resetWorkspace, openTestProject, patchNavigation, activeNavigation } =
   await import("../../test/workspace");
+const { useWorkspace } = await import("../../state/workspace");
 
 const MAIN_TIP = "1".repeat(40);
 const DEV_TIP = "2".repeat(40);
@@ -75,12 +80,115 @@ beforeEach(() => {
   ]);
   getTags.mockResolvedValue([]);
   resetWorkspace();
+  mockIpc.getRepositoryWorktrees.mockResolvedValue({
+    repository_id: "/common/repo.git",
+    current_root: "/tmp/repo",
+    worktrees: [
+      {
+        name: "repo",
+        root: "/tmp/repo",
+        is_main: true,
+        is_active: true,
+        availability: "available",
+        head: { kind: "unknown" },
+        locked: false,
+        lock_reason: null,
+      },
+    ],
+  });
+  mockIpc.openRepository.mockImplementation((path) =>
+    Promise.resolve({
+      path,
+      name: path.split("/").pop() ?? path,
+    }),
+  );
   openTestProject({ path: "/tmp/repo", name: "repo" });
   patchNavigation({ selection: { kind: "history" }, revealCommitId: null });
 });
 afterEach(cleanup);
 
 describe("Sidebar", () => {
+  it("opens an inventoried linked worktree through normal repository validation", async () => {
+    mockIpc.getRepositoryWorktrees.mockResolvedValue({
+      repository_id: "/common/repo.git",
+      current_root: "/tmp/repo",
+      worktrees: [
+        {
+          name: "repo",
+          root: "/tmp/repo",
+          is_main: true,
+          is_active: true,
+          availability: "available",
+          head: { kind: "branch", reference: "refs/heads/main" },
+          locked: false,
+          lock_reason: null,
+        },
+        {
+          name: "repo-feature",
+          root: "/tmp/repo-feature",
+          is_main: false,
+          is_active: false,
+          availability: "available",
+          head: { kind: "branch", reference: "refs/heads/feature" },
+          locked: false,
+          lock_reason: null,
+        },
+      ],
+    });
+    renderSidebar();
+
+    const linked = await screen.findByTitle("/tmp/repo-feature");
+    await userEvent.click(linked);
+    await userEvent.click(await screen.findByTitle("/tmp/repo-feature"));
+
+    expect(mockIpc.openRepository).toHaveBeenCalledTimes(2);
+    expect(
+      useWorkspace
+        .getState()
+        .tabs.filter((tab) => tab.repository.path === "/tmp/repo-feature"),
+    ).toHaveLength(1);
+  });
+
+  it("filters a whole reference folder as one undo step", async () => {
+    getBranches.mockResolvedValue([
+      branch({ name: "feature/one", full_name: "refs/heads/feature/one" }),
+      branch({ name: "feature/two", full_name: "refs/heads/feature/two" }),
+      branch({ name: "main", full_name: "refs/heads/main" }),
+    ]);
+    renderSidebar();
+
+    const folder = await screen.findByRole("checkbox", {
+      name: "Alternar referencias de feature",
+    });
+    await userEvent.click(folder);
+
+    expect(useWorkspace.getState().referenceFilters[0]?.excluded).toEqual([
+      "refs/heads/feature/one",
+      "refs/heads/feature/two",
+    ]);
+    expect(
+      useWorkspace.getState().referenceFilterUndo["/tmp/repo"],
+    ).toHaveLength(1);
+  });
+
+  it("limits bulk actions to references matching the panel search", async () => {
+    renderSidebar();
+    await userEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Incluir main en el historial",
+      }),
+    );
+    await userEvent.type(
+      screen.getByRole("searchbox", { name: "Filtrar referencias" }),
+      "origin",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Mostrar todo" }));
+
+    expect(useWorkspace.getState().referenceFilters[0]?.excluded).toEqual([
+      "refs/heads/main",
+    ]);
+  });
+
   it("takes you to the tip of the branch you choose", async () => {
     renderSidebar();
 
@@ -93,6 +201,33 @@ describe("Sidebar", () => {
       filePath: null,
     });
     expect(state.revealCommitId).toBe(MAIN_TIP);
+  });
+
+  it("offers filter actions for tags as well as branches", async () => {
+    getTags.mockResolvedValue([
+      {
+        name: "v1",
+        target: MAIN_TIP,
+        commit_id: MAIN_TIP,
+        is_annotated: false,
+        commit_time: "1",
+      },
+    ]);
+    renderSidebar();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Acciones de v1" }),
+    );
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: "Mostrar solo esta referencia" }),
+    );
+
+    expect(useWorkspace.getState().referenceFilters[0]?.excluded).toEqual([
+      "HEAD",
+      "refs/heads/dev",
+      "refs/heads/main",
+      "refs/remotes/origin/main",
+    ]);
   });
 
   it("separates local branches from remote ones", async () => {
@@ -131,11 +266,13 @@ describe("Sidebar", () => {
         target: "9".repeat(40),
         commit_id: null,
         is_annotated: true,
+        commit_time: "0",
       },
     ]);
     renderSidebar();
 
-    const tag = await screen.findByRole("button", { name: /v0\.1\.0/ });
+    const tag = (await screen.findAllByRole("button", { name: /v0\.1\.0/ }))[0];
+    if (!tag) throw new Error("Expected the tag row button to render");
     expect(tag.hasAttribute("disabled")).toBe(true);
   });
 
@@ -148,13 +285,17 @@ describe("Sidebar", () => {
         target: "9".repeat(40),
         commit_id: MAIN_TIP,
         is_annotated: true,
+        commit_time: "0",
       },
     ]);
     renderSidebar();
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /v0\.1\.0/ }),
-    );
+    const tagButtons = await screen.findAllByRole("button", {
+      name: /v0\.1\.0/,
+    });
+    const tag = tagButtons[0];
+    if (!tag) throw new Error("Expected the tag row button to render");
+    await userEvent.click(tag);
 
     expect(activeNavigation().revealCommitId).toBe(MAIN_TIP);
   });

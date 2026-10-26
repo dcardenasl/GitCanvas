@@ -1,5 +1,6 @@
 import type {
   GraphPreferences,
+  ReferenceFilterPreferences,
   RepositoryInfo,
   Workspace,
   WorkspaceLimits,
@@ -157,10 +158,34 @@ export interface BoundsSlice {
 export interface GraphSlice {
   readonly graphPreferences: readonly GraphPreferences[];
   setGraphPreferences: (preferences: GraphPreferences) => void;
+  /** Migrates validated worktree-local graph preferences to repository scope. */
+  migrateRepositoryPreferences: (input: {
+    readonly repositoryId: string;
+    readonly mainRoot: string | null;
+    readonly activeRoot: string;
+    readonly memberRoots: readonly string[];
+    readonly automatic: GraphPreferences;
+    readonly resolved: GraphPreferences;
+  }) => void;
+}
+
+/** Durable reference exclusions, one record per canonical worktree root. */
+export interface ReferenceFilterSlice {
+  readonly referenceFilters: readonly ReferenceFilterPreferences[];
+  readonly referenceFilterUndo: Readonly<
+    Record<string, readonly (readonly string[])[]>
+  >;
+  readonly referenceSearches: Readonly<Record<string, string>>;
+  setReferenceFilters: (preferences: ReferenceFilterPreferences) => void;
+  changeReferenceFilters: (path: string, excluded: readonly string[]) => void;
+  undoReferenceFilters: (path: string) => void;
+  setReferenceSearch: (path: string, query: string) => void;
+  clearReferenceSearch: (path: string) => void;
 }
 
 /** The whole workspace: every slice, in one store. */
 export type WorkspaceState = GraphSlice &
+  ReferenceFilterSlice &
   TabsSlice &
   ClosedTabsSlice &
   LibrarySlice &

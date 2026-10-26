@@ -13,17 +13,24 @@ import { EMPTY_GRAPH_CONTEXT, layout } from "../lib/graph-layout/layout";
 import type { GraphRow, LayoutState } from "../lib/graph-layout/types";
 import { getCommits } from "../lib/ipc";
 import { queryKeys } from "./queryKeys";
+import { useWorkspace } from "./workspace";
 
 /** Commits requested per page. Matches the engine's bounded page size. */
 const PAGE_SIZE = 500;
+const NO_EXCLUSIONS: readonly string[] = [];
 
 /** The cursor and walk roots that resume a traversal exactly. */
 interface HistoryCursor {
   readonly cursor: string | null;
   readonly roots: string[] | null;
+  readonly references: string[] | null;
 }
 
-const FIRST_PAGE: HistoryCursor = { cursor: null, roots: null };
+const FIRST_PAGE: HistoryCursor = {
+  cursor: null,
+  roots: null,
+  references: null,
+};
 
 /** Everything the history view needs, derived once per page arrival. */
 export interface HistoryData {
@@ -138,32 +145,80 @@ export function layoutHistory(
 export function useHistory(path: string | null): HistoryData {
   const queryClient = useQueryClient();
   const graph = useGraphModel(path);
-  const roots = graph.refs.data?.roots;
-  const rootsIdentity = roots === undefined ? null : JSON.stringify(roots);
+  const excludedReferences = useWorkspace(
+    (state) =>
+      state.referenceFilters.find((entry) => entry.path === path)?.excluded ??
+      NO_EXCLUSIONS,
+  );
+  const references = useMemo(
+    () =>
+      graph.refs.data === undefined
+        ? undefined
+        : [
+            "HEAD",
+            ...graph.refs.data.branches
+              .filter((branch) => !branch.is_symbolic)
+              .map((branch) => branch.full_name),
+            ...graph.refs.data.tags.map((tag) => `refs/tags/${tag.name}`),
+          ]
+            .filter((reference) => !excludedReferences.includes(reference))
+            .sort(),
+    [graph.refs.data, excludedReferences],
+  );
+  const targets = useMemo(() => {
+    const values = new Map<string, string | null>();
+    for (const branch of graph.refs.data?.branches ?? []) {
+      values.set(branch.full_name, branch.target);
+    }
+    for (const tag of graph.refs.data?.tags ?? []) {
+      values.set(`refs/tags/${tag.name}`, tag.commit_id);
+    }
+    return values;
+  }, [graph.refs.data]);
+  const snapshotRoots = references?.map((reference) => {
+    const target =
+      reference === "HEAD" ? graph.refs.data?.head : targets.get(reference);
+    return `${reference}\u0000${target ?? ""}`;
+  });
+  const rootsIdentity =
+    references === undefined ? null : JSON.stringify(references);
+  const snapshotIdentity =
+    snapshotRoots === undefined ? null : JSON.stringify(snapshotRoots);
   useEffect(() => {
-    if (path === null || rootsIdentity === null) return;
+    if (path === null || rootsIdentity === null || snapshotIdentity === null)
+      return;
     queryClient.removeQueries({
       queryKey: queryKeys.history(path),
-      predicate: (query) => JSON.stringify(query.queryKey[2]) !== rootsIdentity,
+      predicate: (query) =>
+        JSON.stringify(query.queryKey[2]) !== rootsIdentity ||
+        JSON.stringify(query.queryKey[3]) !== snapshotIdentity,
     });
-  }, [path, rootsIdentity, queryClient]);
+  }, [path, rootsIdentity, snapshotIdentity, queryClient]);
   const query: UseInfiniteQueryResult<InfiniteData<HistoryPage>> =
     useInfiniteQuery({
-      queryKey: queryKeys.history(path, roots),
-      enabled: path !== null && roots !== undefined,
+      queryKey: queryKeys.history(path, references, snapshotRoots),
+      enabled:
+        path !== null &&
+        references !== undefined &&
+        snapshotRoots !== undefined,
       initialPageParam: FIRST_PAGE,
       queryFn: ({ pageParam }) => {
         if (path === null) throw new Error("No repository is open");
         return getCommits(path, {
           limit: PAGE_SIZE,
           cursor: pageParam.cursor,
-          roots: pageParam.roots ?? roots ?? [],
+          roots: pageParam.roots,
+          references: pageParam.references ?? references ?? [],
         });
       },
       getNextPageParam: (last): HistoryCursor | undefined =>
         last.next_cursor === null
           ? undefined
-          : { cursor: last.next_cursor, roots: last.roots },
+          : {
+              cursor: last.next_cursor,
+              roots: last.roots,
+              references: last.references,
+            },
       /*
        * A walk is stable, but a repository is not: refs move and commits
        * arrive. Caching forever showed the repository as it was when it was

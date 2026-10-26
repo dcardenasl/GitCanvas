@@ -48,6 +48,7 @@
       "copyPath": "Copiar ruta"
     },
     "home": "Inicio",
+    "sameRepository": "Worktree contiguo del mismo repositorio",
     "label": "Proyectos abiertos",
     "menu": {
       "cloneGitHub": "Clonar de GitHub…",
@@ -67,6 +68,7 @@
   },
   "title": "{{name}} — GitCanvas",
   "toolbar": {
+    "filterIndicator": "Filtros ({{count}})",
     "branches": "Ramas",
     "branchesHint": "Mostrar las ramas mientras se lee un archivo",
     "menuFailed": "No se pudo configurar la barra de menús",

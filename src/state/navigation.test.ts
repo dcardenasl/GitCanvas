@@ -16,6 +16,7 @@ import {
   setSearchQuery,
   setShowAllCommitFiles,
   setSidebarPinned,
+  setSidebarTemporaryOpen,
   toggleFolder,
   type Navigation,
   type Transition,
@@ -33,6 +34,16 @@ function after(...transitions: Transition[]): Navigation {
 }
 
 describe("navigation selection", () => {
+  it("closes temporary sidebar visibility when the selected file changes", () => {
+    const navigation = after(
+      selectCommit(COMMIT),
+      selectFile("src/one.ts"),
+      setSidebarTemporaryOpen(true),
+      selectFile("src/two.ts"),
+    );
+    expect(navigation.sidebarTemporaryOpen).toBe(false);
+    expect(selectedFilePath(navigation)).toBe("src/two.ts");
+  });
   it("represents a commit file without independent source fields", () => {
     expect(
       after(selectCommit(COMMIT), selectFile("src/app.ts")).selection,
@@ -142,10 +153,14 @@ describe("navigation reveal", () => {
     expect(clearOrphanedReveal(EMPTY_NAVIGATION)).toBe(EMPTY_NAVIGATION);
   });
 
-  it("clears the selection when a requested commit is absent from history", () => {
+  it("keeps an excluded commit selected after its reveal request ends", () => {
     const navigation = after(revealCommit(COMMIT), clearOrphanedReveal);
 
-    expect(navigation.selection).toEqual({ kind: "history" });
+    expect(navigation.selection).toEqual({
+      kind: "commit",
+      commitId: COMMIT,
+      filePath: null,
+    });
     expect(navigation.revealCommitId).toBeNull();
   });
 

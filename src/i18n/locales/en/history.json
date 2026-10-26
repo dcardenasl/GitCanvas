@@ -6,6 +6,8 @@
     "filesChanged_one": "{{count}} file changed",
     "filesChanged_other": "{{count, number}} files changed",
     "mergeNote": "Merge commit: changes are shown against the first parent.",
+    "outsideFilter": "This commit is outside the references currently included in history.",
+    "showAllAndLocate": "Show all references and locate commit",
     "parent": "parent",
     "reading": "Reading files…"
   },
@@ -23,6 +25,8 @@
   },
   "state": {
     "empty": "This repository has no commits.",
+    "filteredEmpty": "No references are included in the history.",
+    "showAll": "Show all references",
     "loading": "Reading history…",
     "nextPageFailed": "Could not load the next page"
   },

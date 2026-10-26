@@ -131,8 +131,20 @@ describe("useRefsByCommit", () => {
       branch({ name: "other", target: OTHER }),
     ]);
     getTags.mockResolvedValue([
-      { name: "v1", target: TIP, commit_id: TIP, is_annotated: false },
-      { name: "v-blob", target: OTHER, commit_id: null, is_annotated: true },
+      {
+        name: "v1",
+        target: TIP,
+        commit_id: TIP,
+        is_annotated: false,
+        commit_time: "0",
+      },
+      {
+        name: "v-blob",
+        target: OTHER,
+        commit_id: null,
+        is_annotated: true,
+        commit_time: null,
+      },
     ]);
 
     const { result } = renderHook(() => useRefsByCommit("/tmp/repo"), {

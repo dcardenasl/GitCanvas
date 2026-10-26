@@ -48,6 +48,7 @@
       "copyPath": "Copy path"
     },
     "home": "Home",
+    "sameRepository": "Adjacent worktree from the same repository",
     "label": "Open projects",
     "menu": {
       "cloneGitHub": "Clone from GitHub…",
@@ -67,6 +68,7 @@
   },
   "title": "{{name}} — GitCanvas",
   "toolbar": {
+    "filterIndicator": "Filters ({{count}})",
     "branches": "Branches",
     "branchesHint": "Show the branches while reading a file",
     "menuFailed": "Could not set the menu bar",

@@ -12,9 +12,12 @@ import {
   useActiveRepository,
   useNavigation,
   useNavigationActions,
+  useWorkspace,
 } from "../../state/workspace";
 import { useWorktreeSnapshot } from "../../state/worktree";
 import { DiffStat } from "../DiffStat/DiffStat";
+
+const NO_EXCLUSIONS: readonly string[] = [];
 
 /**
  * The history pane: the virtualized table with the graph drawn over it.
@@ -42,6 +45,14 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
   );
 
   const graph = useGraphModel(repository?.path ?? null);
+  const changeReferenceFilters = useWorkspace(
+    (state) => state.changeReferenceFilters,
+  );
+  const excludedReferences = useWorkspace(
+    (state) =>
+      state.referenceFilters.find((entry) => entry.path === repository?.path)
+        ?.excluded ?? NO_EXCLUSIONS,
+  );
   const refsByCommit = useRefsByCommit(repository?.path ?? null);
   const local = useWorktreeSnapshot(repository?.path ?? null);
 
@@ -137,11 +148,26 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
   }
 
   if (commits.length === 0) {
+    const filtersAreEmpty =
+      graph.refs.data !== undefined && excludedReferences.length > 0;
     return (
       <div className="history-view">
         {localRow}
         {localState}
-        <p className="state history-view__state">{t("state.empty")}</p>
+        <p className="state history-view__state">
+          {filtersAreEmpty ? t("state.filteredEmpty") : t("state.empty")}
+        </p>
+        {filtersAreEmpty && repository !== null && (
+          <button
+            type="button"
+            className="button"
+            onClick={() => {
+              changeReferenceFilters(repository.path, []);
+            }}
+          >
+            {t("state.showAll")}
+          </button>
+        )}
       </div>
     );
   }

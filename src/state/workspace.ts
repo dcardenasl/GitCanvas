@@ -1,4 +1,5 @@
 import { createGraphSlice } from "./workspaceStore/graphSlice";
+import { createReferenceFilterSlice } from "./workspaceStore/referenceFilterSlice";
 import { useMemo } from "react";
 import { create } from "zustand";
 
@@ -17,6 +18,7 @@ import {
   setSearchQuery,
   setShowAllCommitFiles,
   setSidebarPinned,
+  setSidebarTemporaryOpen,
   toggleFolder,
   type FileSource,
   type Navigation,
@@ -51,6 +53,7 @@ export type {
  */
 export const useWorkspace = create<WorkspaceState>()((...slice) => ({
   ...createGraphSlice(...slice),
+  ...createReferenceFilterSlice(...slice),
   ...createTabsSlice(...slice),
   ...createClosedTabsSlice(...slice),
   ...createLibrarySlice(...slice),
@@ -96,6 +99,7 @@ export interface NavigationActions {
   readonly setShowAllCommitFiles: (show: boolean) => void;
   readonly setHistoryAnchor: (commitId: string | null) => void;
   readonly setSidebarPinned: (pinned: boolean) => void;
+  readonly setSidebarTemporaryOpen: (open: boolean) => void;
 }
 
 /**
@@ -145,6 +149,9 @@ export function navigationActionsFor(root: string | null): NavigationActions {
     },
     setSidebarPinned: (pinned) => {
       apply(setSidebarPinned(pinned));
+    },
+    setSidebarTemporaryOpen: (open) => {
+      apply(setSidebarTemporaryOpen(open));
     },
   };
 }

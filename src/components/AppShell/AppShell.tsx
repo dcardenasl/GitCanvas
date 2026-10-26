@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 
@@ -23,6 +23,7 @@ import { WorkingTreeDetailPanel } from "../WorkingTreeDetailPanel";
 import { useCommitMetadata } from "../../state/commitMetadata";
 import { useHistory } from "../../state/history";
 import { useCurrentBranch } from "../../state/refs";
+import { useRepositoryWorktrees } from "../../state/repositoryWorktrees";
 import {
   selectedCommitId as getSelectedCommitId,
   selectedFilePath as getSelectedFilePath,
@@ -49,6 +50,8 @@ import { useOpenFolder } from "./useOpenFolder";
 
 import "./AppShell.css";
 
+const NO_EXCLUSIONS: readonly string[] = [];
+
 /** The application window: toolbar, navigation and history. */
 export function AppShell() {
   const { t } = useTranslation(["shell", "common"]);
@@ -63,6 +66,12 @@ export function AppShell() {
   // so what belongs to a project shows only while that project does.
   const project = homeOpen ? null : repository;
   const readableRoot = verified ? (repository?.path ?? null) : null;
+  const activeWorktrees = useRepositoryWorktrees(readableRoot);
+  const repositoryRoots = useMemo(
+    () =>
+      new Set(activeWorktrees.data?.worktrees.map((tree) => tree.root) ?? []),
+    [activeWorktrees.data],
+  );
   const selection = useNavigation((navigation) => navigation.selection);
   const selectedCommitId = useNavigation(getSelectedCommitId);
   const history = useHistory(readableRoot);
@@ -71,15 +80,30 @@ export function AppShell() {
   const setShowGitHub = useWorkspace((state) => state.setGitHubOpen);
   const layout = useLayout();
   const queryClient = useQueryClient();
+  const excludedReferences = useWorkspace(
+    (state) =>
+      state.referenceFilters.find((entry) => entry.path === repository?.path)
+        ?.excluded ?? NO_EXCLUSIONS,
+  );
 
   const watcher = useLiveRepository(readableRoot);
   const currentBranch = useCurrentBranch(readableRoot);
   const gitActions = useGitActions(repository?.path ?? null);
   const sidebarPinned = useNavigation((navigation) => navigation.sidebarPinned);
+  const sidebarTemporaryOpen = useNavigation(
+    (navigation) => navigation.sidebarTemporaryOpen,
+  );
   const searchQuery = useNavigation((navigation) => navigation.searchQuery);
 
-  const { revealCommit, setSidebarPinned, setSearchQuery } =
-    useNavigationActions();
+  const {
+    revealCommit,
+    setSidebarPinned,
+    setSidebarTemporaryOpen,
+    setSearchQuery,
+  } = useNavigationActions();
+  const changeReferenceFilters = useWorkspace(
+    (state) => state.changeReferenceFilters,
+  );
   const openProject = useWorkspace((state) => state.openProject);
   const notice = useWorkspace((state) => state.notice);
   const dismissNotice = useWorkspace((state) => state.dismissNotice);
@@ -149,12 +173,19 @@ export function AppShell() {
     loadedSelection,
   );
   const selected = metadata.data ?? null;
+  const selectedOutOfScope =
+    selectedCommitId !== null &&
+    loadedSelection === null &&
+    !history.isLoading &&
+    !history.hasNextPage &&
+    history.error === null;
   const readingCommitFile = selected !== null && selectedFilePath !== null;
   const worktreeFile = selection.kind === "worktree" ? selection : null;
   const readingWorktreeFile =
     worktreeFile !== null && worktreeFile.filePath !== null;
   const readingFile = readingCommitFile || readingWorktreeFile;
-  const collapseSidebar = readingFile && !sidebarPinned;
+  const collapseSidebar =
+    readingFile && !sidebarPinned && !sidebarTemporaryOpen;
 
   return (
     <div className="app-shell">
@@ -164,7 +195,11 @@ export function AppShell() {
         </div>
       )}
       <div className="app-shell__chrome">
-        <TabBar folder={folder} />
+        <TabBar
+          folder={folder}
+          repositoryRoots={repositoryRoots}
+          repositoryId={activeWorktrees.data?.repository_id ?? null}
+        />
         <header className="toolbar">
           <BrandLogo className="toolbar__brand" variant="mark" decorative />
           {project !== null && (
@@ -229,6 +264,23 @@ export function AppShell() {
                 {t("common:actions.retry")}
               </button>
             </div>
+          )}
+          {project !== null && readingFile && excludedReferences.length > 0 && (
+            <button
+              type="button"
+              className="button"
+              aria-expanded={sidebarTemporaryOpen || sidebarPinned}
+              title={t("toolbar.filterIndicator", {
+                count: excludedReferences.length,
+              })}
+              onClick={() => {
+                setSidebarTemporaryOpen(!sidebarTemporaryOpen);
+              }}
+            >
+              {t("toolbar.filterIndicator", {
+                count: excludedReferences.length,
+              })}
+            </button>
           )}
           {project !== null && readingFile && (
             <button
@@ -396,6 +448,11 @@ export function AppShell() {
             <CommitDetailPanel
               repositoryPath={project.path}
               commit={selected}
+              outsideHistoryScope={selectedOutOfScope}
+              onShowAllAndLocate={() => {
+                changeReferenceFilters(project.path, []);
+                revealCommit(selectedCommitId ?? selected.id);
+              }}
             />
           )}
         </div>

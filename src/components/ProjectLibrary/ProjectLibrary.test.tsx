@@ -73,6 +73,8 @@ it("reports the favorite limit without dropping an existing favorite", () => {
       max_recents: 20,
       max_graph_projects: 200,
       max_graph_references: 10000,
+      max_reference_filter_worktrees: 200,
+      max_excluded_references: 20001,
     },
     favorites: ["/old"],
   });

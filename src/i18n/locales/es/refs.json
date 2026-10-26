@@ -1,5 +1,38 @@
 {
   "aria": "Ramas y etiquetas",
+  "search": "Filtrar referencias",
+  "searchPlaceholder": "Buscar ramas y etiquetas",
+  "showAll": "Mostrar todo",
+  "resetFilters": "Restablecer filtros",
+  "undo": "Deshacer cambio de filtro",
+  "headFilter": "Incluir HEAD",
+  "onlyThis": "Mostrar solo esta referencia",
+  "showAllAndLocate": "Mostrar todo y localizar",
+  "toggleGroup": "Alternar todas las referencias de {{group}}",
+  "toggleReference": "Incluir {{name}} en el historial",
+  "tagCommitDate": "Fecha del commit: {{date}}",
+  "activeCount": "{{active}} de {{total}} activas",
+  "toggleFolder": "Alternar referencias de {{folder}}",
+  "worktrees": {
+    "aria": "Worktrees vinculados",
+    "title": "Worktrees",
+    "refresh": "Actualizar worktrees",
+    "refreshShort": "Actualizar",
+    "openOccupied": "Abrir el worktree que usa esta rama",
+    "openElsewhere": "Abierta en otro worktree",
+    "locked": "Bloqueado: {{reason}}",
+    "availability": {
+      "available": "Disponible",
+      "missing": "Ubicación ausente",
+      "prunable": "Worktree eliminado",
+      "unavailable": "Ubicación no disponible"
+    },
+    "head": {
+      "detached": "HEAD separado",
+      "unborn": "Rama sin commits",
+      "unknown": "HEAD desconocido"
+    }
+  },
   "checkout": "Cambiar a {{branch}}",
   "goTo": "Ir al último commit de {{name}}",
   "goToWithCheckout": "Ir al último commit de {{name}}. Clic derecho para cambiar a esta rama",

@@ -31,6 +31,8 @@ const LIMITS = {
   max_recents: 20,
   max_graph_projects: 200,
   max_graph_references: 10000,
+  max_reference_filter_worktrees: 200,
+  max_excluded_references: 20001,
 };
 
 beforeEach(() => {
@@ -42,6 +44,7 @@ beforeEach(() => {
       favorites: [],
       recents: [],
       graph_preferences: [],
+      reference_filters: [],
     },
     recovery: null,
   });
@@ -114,6 +117,7 @@ describe("WorkspaceGate", () => {
         favorites: ["/tmp/alpha"],
         recents: [],
         graph_preferences: [],
+        reference_filters: [],
       },
       recovery: null,
     });
@@ -134,6 +138,7 @@ describe("WorkspaceGate", () => {
         favorites: [],
         recents: [],
         graph_preferences: [],
+        reference_filters: [],
       },
       recovery: {
         kind: "Corrupt",

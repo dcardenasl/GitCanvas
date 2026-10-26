@@ -94,7 +94,15 @@ function statusOf(tab: Tab): "writing" | "unreachable" | null {
  * could be out of date in a tab nobody is looking at — its branch, whether it
  * has changes — is not shown.
  */
-export function TabBar({ folder }: { readonly folder: OpenFolder }) {
+export function TabBar({
+  folder,
+  repositoryRoots = new Set<string>(),
+  repositoryId = null,
+}: {
+  readonly folder: OpenFolder;
+  readonly repositoryRoots?: ReadonlySet<string>;
+  readonly repositoryId?: string | null;
+}) {
   const { t } = useTranslation("shell");
   const tabs = useWorkspace(useShallow((state) => state.tabs));
   const activeRoot = useWorkspace((state) => state.activeRoot);
@@ -359,11 +367,32 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
           const status = statusOf(tab);
           const busy = tab.gitActions.running !== null;
           const name = label?.text ?? tab.repository.name;
+          const inActiveRepository = repositoryRoots.has(root);
+          const previousInGroup =
+            index > 0 &&
+            repositoryRoots.has(tabs[index - 1]?.repository.path ?? "");
+          const nextInGroup =
+            index + 1 < tabs.length &&
+            repositoryRoots.has(tabs[index + 1]?.repository.path ?? "");
+          const tabClass = [
+            active ? "tab-bar__tab tab-bar__tab--active" : "tab-bar__tab",
+            inActiveRepository && (previousInGroup || nextInGroup)
+              ? "tab-bar__tab--repository-group"
+              : "",
+            inActiveRepository && !previousInGroup && nextInGroup
+              ? "tab-bar__tab--repository-group-start"
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
           return (
             <div
               key={root}
-              className={
-                active ? "tab-bar__tab tab-bar__tab--active" : "tab-bar__tab"
+              className={tabClass}
+              data-repository-group={
+                inActiveRepository && (previousInGroup || nextInGroup)
+                  ? (repositoryId ?? "linked")
+                  : undefined
               }
               onContextMenu={(event) => {
                 // Also what the menu key and Shift+F10 raise on a focused tab.
@@ -376,6 +405,15 @@ export function TabBar({ folder }: { readonly folder: OpenFolder }) {
                 });
               }}
             >
+              {inActiveRepository && !previousInGroup && nextInGroup && (
+                <span
+                  className="tab-bar__group-indicator"
+                  title={t("tabs.sameRepository")}
+                  aria-label={t("tabs.sameRepository")}
+                >
+                  ↔
+                </span>
+              )}
               <button
                 type="button"
                 role="tab"

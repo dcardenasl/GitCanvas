@@ -23,6 +23,8 @@ import "./CommitDetailPanel.css";
 export interface CommitDetailPanelProps {
   readonly repositoryPath: string;
   readonly commit: CommitInfo;
+  readonly outsideHistoryScope?: boolean;
+  readonly onShowAllAndLocate?: () => void;
 }
 
 /**
@@ -36,6 +38,8 @@ export interface CommitDetailPanelProps {
 export function CommitDetailPanel({
   repositoryPath,
   commit,
+  outsideHistoryScope = false,
+  onShowAllAndLocate,
 }: CommitDetailPanelProps) {
   const { t } = useTranslation("history");
   const selection = useNavigation((navigation) => navigation.selection);
@@ -72,6 +76,20 @@ export function CommitDetailPanel({
       </p>
 
       <h2 className="detail-panel__summary">{commit.summary}</h2>
+      {outsideHistoryScope && (
+        <div className="detail-panel__note" role="status">
+          <p>{t("detail.outsideFilter")}</p>
+          {onShowAllAndLocate !== undefined && (
+            <button
+              type="button"
+              className="button"
+              onClick={onShowAllAndLocate}
+            >
+              {t("detail.showAllAndLocate")}
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="detail-panel__author">
         <span className="detail-panel__avatar" aria-hidden="true">

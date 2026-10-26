@@ -1,5 +1,38 @@
 {
   "aria": "Branches and tags",
+  "search": "Filter references",
+  "searchPlaceholder": "Search branches and tags",
+  "showAll": "Show all",
+  "resetFilters": "Reset filters",
+  "undo": "Undo filter change",
+  "headFilter": "Include HEAD",
+  "onlyThis": "Show only this reference",
+  "showAllAndLocate": "Show all and locate",
+  "toggleGroup": "Toggle all references in {{group}}",
+  "toggleReference": "Include {{name}} in history",
+  "tagCommitDate": "Commit date: {{date}}",
+  "activeCount": "{{active}} of {{total}} active",
+  "toggleFolder": "Toggle references in {{folder}}",
+  "worktrees": {
+    "aria": "Linked worktrees",
+    "title": "Worktrees",
+    "refresh": "Refresh worktrees",
+    "refreshShort": "Refresh",
+    "openOccupied": "Open the worktree using this branch",
+    "openElsewhere": "Open in another worktree",
+    "locked": "Locked: {{reason}}",
+    "availability": {
+      "available": "Available",
+      "missing": "Location missing",
+      "prunable": "Removed worktree",
+      "unavailable": "Location unavailable"
+    },
+    "head": {
+      "detached": "Detached HEAD",
+      "unborn": "Unborn branch",
+      "unknown": "Unknown HEAD"
+    }
+  },
   "checkout": "Switch to {{branch}}",
   "goTo": "Go to the latest commit of {{name}}",
   "goToWithCheckout": "Go to the latest commit of {{name}}. Right-click to switch to this branch",

@@ -7,6 +7,8 @@
     "filesChanged_one": "{{count}} archivo modificado",
     "filesChanged_other": "{{count, number}} archivos modificados",
     "mergeNote": "Commit de merge: se muestran los cambios contra el primer padre.",
+    "outsideFilter": "Este commit está fuera de las referencias incluidas en el historial.",
+    "showAllAndLocate": "Mostrar todas las referencias y localizar commit",
     "parent": "parent",
     "reading": "Leyendo los archivos…"
   },
@@ -24,6 +26,8 @@
   },
   "state": {
     "empty": "Este repositorio no tiene commits.",
+    "filteredEmpty": "No hay referencias incluidas en el historial.",
+    "showAll": "Mostrar todas las referencias",
     "loading": "Leyendo el historial…",
     "nextPageFailed": "No se pudo cargar la siguiente página"
   },

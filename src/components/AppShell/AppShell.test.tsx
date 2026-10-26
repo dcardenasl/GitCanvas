@@ -74,6 +74,23 @@ vi.mock("../../lib/ipc", () => ({
       roots: branches.flatMap((b) => (b.target === null ? [] : [b.target])),
     };
   },
+  getRepositoryWorktrees: () =>
+    Promise.resolve({
+      repository_id: "/common/repo.git",
+      current_root: "/tmp/repo",
+      worktrees: [
+        {
+          name: "repo",
+          root: "/tmp/repo",
+          is_main: true,
+          is_active: true,
+          availability: "available",
+          head: { kind: "unknown" },
+          locked: false,
+          lock_reason: null,
+        },
+      ],
+    }),
   getStartupRepository: () => getStartupRepository(),
   hasGithubToken: () => Promise.resolve(false),
   storeGithubToken: () => Promise.resolve(null),
@@ -98,6 +115,7 @@ vi.mock("../../lib/ipc", () => ({
 
 const { AppShell } = await import("./AppShell");
 const { useWorkspace } = await import("../../state/workspace");
+const { selectFile } = await import("../../state/navigation");
 const {
   resetWorkspace,
   openTestProject,
@@ -160,6 +178,7 @@ beforeEach(() => {
     commits: [COMMIT],
     next_cursor: null,
     roots: [],
+    references: [],
   });
   HTMLDialogElement.prototype.showModal = vi.fn();
   getBranches.mockResolvedValue([]);
@@ -283,6 +302,31 @@ describe("AppShell push confirmation", () => {
 });
 
 describe("AppShell toolbar", () => {
+  it("opens the filter panel temporarily and hides it when another diff opens", async () => {
+    patchNavigation({
+      selection: { kind: "commit", commitId: COMMIT.id, filePath: "a.txt" },
+      sidebarPinned: false,
+    });
+    useWorkspace
+      .getState()
+      .changeReferenceFilters("/tmp/repo", ["refs/heads/old"]);
+    renderShell();
+
+    const sidebar = await screen.findByLabelText("Ramas y etiquetas");
+    expect(sidebar.hasAttribute("hidden")).toBe(true);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Filtros (1)" }),
+    );
+    expect(sidebar.hasAttribute("hidden")).toBe(false);
+    expect(activeNavigation().sidebarPinned).toBe(false);
+
+    act(() => {
+      useWorkspace.getState().navigate("/tmp/repo", selectFile("b.txt"));
+    });
+    expect(sidebar.hasAttribute("hidden")).toBe(true);
+    expect(activeNavigation().sidebarPinned).toBe(false);
+  });
+
   it("shows the empty state until a repository is open", async () => {
     resetWorkspace();
     renderShell();
@@ -390,14 +434,18 @@ describe("AppShell toolbar", () => {
     });
   });
 
-  it("clears an orphaned reveal selection after history is exhausted", async () => {
+  it("keeps an orphaned reveal selected for inspection after history is exhausted", async () => {
     navigationActions().revealCommit("missing-commit");
     renderShell();
 
     await waitFor(() => {
       expect(activeNavigation().revealCommitId).toBeNull();
     });
-    expect(activeNavigation().selection).toEqual({ kind: "history" });
+    expect(activeNavigation().selection).toEqual({
+      kind: "commit",
+      commitId: "missing-commit",
+      filePath: null,
+    });
   });
 
   it("still opens when the command-line lookup fails", async () => {

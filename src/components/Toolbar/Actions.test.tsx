@@ -330,6 +330,7 @@ describe("Actions", () => {
       [
         ["history", "/tmp/repo"],
         ["refs", "/tmp/repo"],
+        ["repository-worktrees", "/tmp/repo"],
         ["worktree", "/tmp/repo"],
         ["worktree-file-diff", "/tmp/repo"],
         ["worktree-fingerprint", "/tmp/repo"],

@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Linked worktree inventory** — read shared Git metadata for worktree roots, HEAD and lock state, with refresh notifications from the active repository.
+- **Reference filters** — filter the complete commit history by selected branches, tags and HEAD, with per-worktree saved selections and stable pagination scopes.
+- **Worktree panel** — inspect and open linked worktrees, identify occupied branches, and group contiguous repository tabs without changing their global order.
+- **Reference sidebar** — search and organize branches and tags with virtual folders, bulk selection, undo and a temporary diff-panel shortcut.
+- **Shared graph preferences** — share branch colors and the visual main branch across validated linked worktrees while migrating existing preferences atomically.
 
 ## [0.4.0] — 2026-10-19
 

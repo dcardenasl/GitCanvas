@@ -8,6 +8,8 @@ const limits = {
   max_recents: 3,
   max_graph_projects: 200,
   max_graph_references: 10000,
+  max_reference_filter_worktrees: 200,
+  max_excluded_references: 20001,
 };
 
 describe("recentsAfterVisit", () => {

@@ -82,7 +82,7 @@ describe("layoutHistory", () => {
   }
 
   function page(commits: CommitInfo[], next: string | null): HistoryPage {
-    return { commits, next_cursor: next, roots: [] };
+    return { commits, next_cursor: next, roots: [], references: [] };
   }
 
   const first = () =>

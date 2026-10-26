@@ -13,6 +13,8 @@ export const TEST_LIMITS = {
   max_recents: 20,
   max_graph_projects: 200,
   max_graph_references: 10000,
+  max_reference_filter_worktrees: 200,
+  max_excluded_references: 20001,
 } as const;
 
 /** The project tests open when they do not care which one it is. */
@@ -34,6 +36,9 @@ export function resetWorkspace(): void {
     favorites: [],
     recents: [],
     graphPreferences: [],
+    referenceFilters: [],
+    referenceFilterUndo: {},
+    referenceSearches: {},
     storageError: null,
   });
 }
