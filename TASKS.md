@@ -6,24 +6,27 @@
 > [tres funcionalidades](docs/plan/2026-10-08-plan-tres-funcionalidades.md) y el
 > [plan general](docs/plans/2026-09-08-plan-de-implementacion.md).
 
-**Estado al 2026-10-19:** v0.3.1 publicada. H2, I18N y workspace están
-implementados. El alcance de v0.4 está implementado en commits locales de dev;
-GRF-5 conserva las puertas externas/manuales pendientes. La estrategia aprobada prioriza líneas/colores del gráfico en v0.4,
-seguida de panel, filtros y reconocimiento/navegación de worktrees en v0.5. Commits se desplaza al final de la secuencia,
-objetivo v0.11. Ver el [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md),
-que prevalece sobre asignaciones de versiones de planes anteriores.
+**Estado al 2026-10-26:** v0.4.0 tiene tag y commit de release. H2, I18N y workspace
+están implementados. La evidencia local de v0.4 está en
+[`docs/verification/v0.4.md`](docs/verification/v0.4.md); sus verificaciones
+externas/manuales sin evidencia siguen abiertas y no se consideran cerradas por la
+release. La siguiente entrega funcional es v0.5: panel, filtros y navegación de
+worktrees. La creación de commits permanece al final de la secuencia, objetivo v0.11.
+El [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md) prevalece sobre
+asignaciones de versiones de planes anteriores.
 
-**Estado de trabajo:** rama `dev`, commits locales sin push. Se preservan las carpetas
-de evidencia/media sin seguimiento. Inspeccionar estado e historial al retomar.
-La versión de la aplicación no se cambia hasta su release.
+**Estado de trabajo:** rama `dev`, sincronizada con `origin/dev` al registrar este
+estado. Se preservan `docs/audits/evidence/` y `docs/media/`, que están sin seguimiento;
+no agregarlas a commits de documentación. Inspeccionar estado e historial al retomar.
+La versión de la aplicación no se cambia hasta preparar un release autorizado.
 
 ## Siguiente paso
 
-Completar las puertas externas/manuales de GRF-5. El código de v0.4 y su verificación
-local están implementados; consultar [evidencia](docs/verification/v0.4.md).
-WS-17 es seguimiento histórico: v0.3.0/v0.3.1 y su CI ya se publicaron; los recorridos
-manuales sin evidencia permanecen pendientes. No repetir esa publicación ni atribuir
-la matriz antigua a esta revisión. No se ha autorizado push, PR o publicación de v0.4.
+Comenzar **WT-1** de v0.5 según el
+[plan de implementación](docs/plan/2026-10-26-v0.5-implementacion.md#wt-1--identidad-inventario-y-actualizacion).
+Las puertas manuales de GRF-5 que carecen de evidencia se mantienen como seguimiento
+separado; consultar [verificación v0.4](docs/verification/v0.4.md). La release v0.4.0
+ya existe: no repetirla ni atribuir sus resultados a recorridos no comprobados.
 
 ## Cola de trabajo
 
@@ -60,31 +63,29 @@ Tipos, lint, formato, auditorías y build de producción macOS aprobados; firma 
 verificada. GRF-5 permanece abierta por Linux/Windows, lector de pantalla real y
 recorridos manuales sin evidencia. Detalles y límites en la verificación de v0.4.
 
-### v0.5 — Worktrees: reconocimiento y navegación
+### v0.5 — Panel, filtros y worktrees
 
-Ampliación aprobada el 2026-10-19; pendiente de implementación. Contrato completo en
-[Worktrees — ampliación aprobada](docs/plan/2026-10-19-roadmap-de-versiones.md#worktrees--ampliación-aprobada-el-2026-10-19).
-Se integra en la entrega del panel y filtros, sin adelantar escrituras Git.
+Plan detallado: [implementación v0.5](docs/plan/2026-10-26-v0.5-implementacion.md).
+El [roadmap](docs/plan/2026-10-19-roadmap-de-versiones.md) y la
+[especificación del panel D01–D50](docs/plan/2026-10-18-panel-izquierdo-ui-ux.md)
+definen el alcance funcional. Leer también [ADR 0006](docs/adr/0006-workspace.md),
+[ADR 0007](docs/adr/0007-stable-branch-graph.md), `CONTEXT.md`, `ARCHITECTURE.md` y
+`CLAUDE.md` antes de cada tarea. Las referencias concretas y criterios por tarea están
+en la sección enlazada del plan. Sin creación/retirada de worktrees, commits, resolución
+de conflictos Git, autores ni releases; el checkout explícito existente se conserva.
 
-- [ ] **WT-1 — Identidad y descubrimiento.** Relacionar worktrees por directorio Git
-      común canónico; distinguir clones independientes, ubicaciones ausentes y HEAD
-      detached. Descubrir una ruta no la autoriza para operaciones.
-- [ ] **WT-2 — Preferencias compartidas.** Migrar colores y principal visual al alcance
-      del repositorio común, conservando datos y resolviendo conflictos explícitamente.
-      Las secuencias actuales por raíz no son comparables entre worktrees. Registrar
-      ADR y pruebas; conservar navegación y filtros independientes por worktree.
-- [ ] **WT-3 — Panel y pestañas.** Sección Worktrees, nombre/rama/ubicación, distintivos
-      de ramas ocupadas, agrupación visual de pestañas y abrir/activar sin duplicados.
-      Ofrecer abrir el worktree que ocupa una rama; mantener un nodo por commit y
-      cambios locales claramente ligados al worktree activo.
-- [ ] **WT-4 — Verificación integrada.** Varios worktrees, clones independientes,
-      cambios externos, migración con conflictos, reinicio y navegación aislada;
-      accesibilidad, idiomas y temas. Sin sondeo de proyectos inactivos ni ampliación
-      silenciosa de autorizaciones o límites de caché.
+- [ ] **WT-1 — Identidad, inventario y actualización.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#wt-1--identidad-inventario-y-actualizacion). Inventario por directorio Git común; estados detached/ausente/bloqueado; watcher, activación y actualización explícita, sin sondeo inactivo. Descubrir una ruta no autoriza Git.
+- [ ] **WT-2 — Preferencias compartidas y migración.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#wt-2--preferencias-compartidas-y-migracion). Migración workspace 2→3 por grupo validado; principal prevalece y activo es fallback; reemplazo atómico, sin duplicados legacy tras éxito; filtros durables por worktree.
+- [ ] **FLT-1 — Filtrado del historial completo.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#flt-1--filtrado-del-historial-completo). Resolver ramas, tags y HEAD en Rust; scope/cursor inmutables; paginación >500, commits compartidos únicos y detalles fuera de alcance conservados con aviso.
+- [ ] **FLT-2 — Estado, persistencia y deshacer.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#flt-2--estado-persistencia-y-deshacer). Filtros por worktree, nuevas refs activas, acciones Solo esta/Mostrar todo/Restablecer/localizar y undo de 50 pasos por worktree y sesión.
+- [ ] **SID-1 — Organización e interacción del panel.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#sid-1--organizacion-e-interaccion-del-panel). Búsqueda de sesión, secciones, carpetas virtuales, contadores, casillas tri-state, acciones masivas accesibles e i18n.
+- [ ] **WT-3 — Panel de worktrees, pestañas y checkout.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#wt-3--panel-de-worktrees-pestanas-y-checkout). Abrir/activar sin duplicar, marcar rama ocupada, grupos contiguos sin cambiar orden global y estado ligado al worktree activo.
+- [ ] **SID-2 — Indicador de filtros en el diff.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#sid-2--indicador-de-filtros-en-el-diff). Apertura temporal del panel sin perder diff/posición ni cambiar el pin explícito.
+- [ ] **V05-VERIFY — Verificación y cierre documental.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#v05-verify--verificacion-y-documentacion-de-cierre). Rust, frontend, migración, E2E nativo macOS/Linux/Windows, accesibilidad, temas, idiomas y evidencia manual sin atribuciones no demostradas.
 
-Crear o retirar worktrees queda para una entrega posterior sin versión asignada,
-con protección de cambios locales y planificación de concurrencia/recuperación.
-El comportamiento vigente de v0.4 sigue siendo preferencias por raíz independiente.
+Crear o retirar worktrees sigue reservado para una entrega futura sin versión asignada;
+preparación por líneas, amend y commits permanecen después de v0.10/v0.11 según el
+roadmap.
 
 ### Entregas posteriores
 
