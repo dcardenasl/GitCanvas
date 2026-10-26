@@ -20,6 +20,7 @@ fn request(limit: u16) -> HistoryRequest {
         limit,
         cursor: None,
         roots: None,
+        references: None,
     }
 }
 
@@ -42,13 +43,17 @@ fn linear_history_has_metadata_and_exact_page_boundaries() {
     assert_eq!(first.commits[1].message, "middle\n\nbody");
     assert_eq!(first.commits[1].author_email, "test@example.com");
     assert_eq!(first.commits[1].parents, vec![root.to_string()]);
-    assert_eq!(first.next_cursor, Some(middle.to_string()));
+    assert!(first
+        .next_cursor
+        .as_deref()
+        .is_some_and(|cursor| cursor.ends_with(&middle.to_string())));
     let last = get_commits(
         &active,
         &HistoryRequest {
             limit: 2,
             cursor: first.next_cursor,
             roots: Some(first.roots),
+            references: Some(first.references),
         },
     )
     .unwrap();
@@ -103,6 +108,7 @@ fn merge_octopus_and_diverged_branches_keep_topological_order_across_pages() {
             limit: 1,
             cursor: page.next_cursor,
             roots: Some(page.roots),
+            references: Some(page.references),
         };
     }
     assert_eq!(paginated, ids);
@@ -139,6 +145,7 @@ fn frozen_roots_survive_ref_moves_without_missing_or_duplicating_commits() {
             limit: 1,
             cursor: first.next_cursor,
             roots: Some(first.roots),
+            references: Some(first.references),
         },
     )
     .unwrap();
@@ -162,7 +169,8 @@ fn empty_repository_invalid_requests_and_unreachable_cursor() {
         &HistoryRequest {
             limit: 1,
             cursor: Some("bad".into()),
-            roots: None
+            roots: None,
+            references: None
         }
     )
     .is_err());
@@ -171,8 +179,9 @@ fn empty_repository_invalid_requests_and_unreachable_cursor() {
             &active,
             &HistoryRequest {
                 limit: 1,
-                cursor: Some("0".repeat(40)),
-                roots: Some(vec![])
+                cursor: Some(format!("{}:{}", "0".repeat(64), "0".repeat(40))),
+                roots: Some(vec![]),
+                references: Some(vec![])
             }
         ),
         Err(AppError::StaleCursor(_))
@@ -195,6 +204,7 @@ fn maximum_page_size_is_enforced_at_exact_boundary() {
             limit: 500,
             cursor: first.next_cursor,
             roots: Some(first.roots),
+            references: Some(first.references),
         },
     )
     .unwrap();
@@ -220,6 +230,159 @@ fn tags_to_blobs_do_not_break_history() {
 }
 
 #[test]
+fn walks_only_selected_full_reference_names_and_deduplicates_shared_commits() {
+    let fixture = Fixture::new();
+    let base = fixture.commit("refs/heads/main", "base", &[], 1);
+    let main = fixture.commit("refs/heads/main", "main", &[base], 2);
+    let side = fixture.commit("refs/heads/side", "side", &[base], 3);
+    fixture.repo.set_head("refs/heads/main").unwrap();
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+
+    let page = get_commits(
+        &active,
+        &HistoryRequest {
+            limit: 500,
+            cursor: None,
+            roots: None,
+            references: Some(vec!["refs/heads/main".into()]),
+        },
+    )
+    .unwrap();
+    let ids: Vec<_> = page
+        .commits
+        .iter()
+        .map(|commit| commit.id.as_str())
+        .collect();
+    assert!(ids.contains(&main.to_string().as_str()));
+    assert!(!ids.contains(&side.to_string().as_str()));
+    assert!(ids.contains(&base.to_string().as_str()));
+    assert_eq!(page.references, vec!["refs/heads/main"]);
+
+    let shared = get_commits(
+        &active,
+        &HistoryRequest {
+            limit: 500,
+            cursor: None,
+            roots: None,
+            references: Some(vec!["refs/heads/main".into(), "refs/heads/side".into()]),
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        shared
+            .commits
+            .iter()
+            .filter(|commit| commit.id == base.to_string())
+            .count(),
+        1
+    );
+    assert_eq!(shared.commits.len(), 3);
+
+    let all_off = get_commits(
+        &active,
+        &HistoryRequest {
+            limit: 500,
+            cursor: None,
+            roots: None,
+            references: Some(vec![]),
+        },
+    )
+    .unwrap();
+    assert!(all_off.commits.is_empty());
+}
+
+#[test]
+fn rejects_a_cursor_reused_with_a_different_reference_scope() {
+    let fixture = Fixture::new();
+    let base = fixture.commit("refs/heads/main", "base", &[], 1);
+    fixture.commit("refs/heads/main", "main", &[base], 2);
+    fixture.commit("refs/heads/side", "side", &[base], 3);
+    fixture.repo.set_head("refs/heads/main").unwrap();
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let first = get_commits(
+        &active,
+        &HistoryRequest {
+            limit: 1,
+            cursor: None,
+            roots: None,
+            references: Some(vec!["refs/heads/main".into()]),
+        },
+    )
+    .unwrap();
+    let error = get_commits(
+        &active,
+        &HistoryRequest {
+            limit: 1,
+            cursor: first.next_cursor,
+            roots: Some(first.roots),
+            references: Some(vec!["refs/heads/side".into()]),
+        },
+    )
+    .unwrap_err();
+    assert!(matches!(error, AppError::StaleCursor(_)));
+}
+
+#[test]
+fn resolves_head_independently_and_peels_annotated_tag_roots() {
+    let fixture = Fixture::new();
+    let base = fixture.commit("refs/heads/main", "base", &[], 1);
+    let main = fixture.commit("refs/heads/main", "main", &[base], 2);
+    let side = fixture.commit("refs/heads/side", "side", &[base], 3);
+    let signature = git2::Signature::now("Test", "test@example.com").unwrap();
+    let side_commit = fixture.repo.find_commit(side).unwrap();
+    fixture
+        .repo
+        .tag(
+            "v-side",
+            side_commit.as_object(),
+            &signature,
+            "side release",
+            false,
+        )
+        .unwrap();
+    fixture.repo.set_head_detached(side).unwrap();
+    let detached = fixture.commit("HEAD", "detached", &[side], 4);
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+
+    let head = get_commits(
+        &active,
+        &HistoryRequest {
+            limit: 500,
+            cursor: None,
+            roots: None,
+            references: Some(vec!["HEAD".into()]),
+        },
+    )
+    .unwrap();
+    let head_ids: Vec<_> = head
+        .commits
+        .iter()
+        .map(|commit| commit.id.as_str())
+        .collect();
+    assert!(head_ids.contains(&detached.to_string().as_str()));
+    assert!(!head_ids.contains(&main.to_string().as_str()));
+
+    let tag = get_commits(
+        &active,
+        &HistoryRequest {
+            limit: 500,
+            cursor: None,
+            roots: None,
+            references: Some(vec!["refs/tags/v-side".into()]),
+        },
+    )
+    .unwrap();
+    let tag_ids: Vec<_> = tag
+        .commits
+        .iter()
+        .map(|commit| commit.id.as_str())
+        .collect();
+    assert!(tag_ids.contains(&side.to_string().as_str()));
+    assert!(tag_ids.contains(&base.to_string().as_str()));
+    assert!(!tag_ids.contains(&main.to_string().as_str()));
+}
+
+#[test]
 fn cached_walk_matches_uncached_pages_and_ref_updates() {
     let fixture = Fixture::new();
     let root = fixture.commit("HEAD", "root", &[], 1);
@@ -232,6 +395,7 @@ fn cached_walk_matches_uncached_pages_and_ref_updates() {
         limit: 500,
         cursor: first.next_cursor,
         roots: Some(first.roots),
+        references: Some(first.references),
     };
     let actual = reader.get_commits(&active, &next).unwrap();
     let expected = get_commits(&active, &next).unwrap();
@@ -266,6 +430,7 @@ fn page_through(
                     limit,
                     cursor: Some(cursor),
                     roots: Some(page.roots),
+                    references: Some(page.references),
                 };
             }
             None => return ids,
@@ -308,13 +473,31 @@ fn every_way_of_reading_history_yields_the_same_order() {
 fn a_continuation_cannot_carry_an_unbounded_number_of_roots() {
     let fixture = Fixture::new();
     fixture.commit("HEAD", "root", &[], 1);
+    fixture.commit(
+        "HEAD",
+        "child",
+        &[fixture.repo.head().unwrap().target().unwrap()],
+        2,
+    );
     let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
-    let error = get_commits(
+    let first = get_commits(
         &active,
         &HistoryRequest {
             limit: 1,
             cursor: None,
+            roots: None,
+            references: Some(vec!["HEAD".into()]),
+        },
+    )
+    .unwrap();
+    let cursor = first.next_cursor.expect("two commits require continuation");
+    let error = get_commits(
+        &active,
+        &HistoryRequest {
+            limit: 1,
+            cursor: Some(cursor),
             roots: Some(vec!["a".repeat(40); 10_001]),
+            references: Some(vec![]),
         },
     )
     .unwrap_err();

@@ -40,6 +40,8 @@ pub struct TagInfo {
     pub commit_id: Option<String>,
     /// Whether the tag points to an annotated tag object.
     pub is_annotated: bool,
+    /// Commit timestamp of the peeled destination; this is not the tag creation time.
+    pub commit_time: Option<String>,
 }
 
 fn read_branches(repo: &Repository) -> Result<Vec<BranchInfo>, AppError> {
@@ -108,11 +110,19 @@ fn read_tags(repo: &Repository) -> Result<Vec<TagInfo>, AppError> {
             Err(error) if error.code() == ErrorCode::InvalidSpec => None,
             Err(error) => return Err(error.into()),
         };
+        let commit_time = commit_id
+            .as_deref()
+            .map(git2::Oid::from_str)
+            .transpose()?
+            .map(|id| repo.find_commit(id))
+            .transpose()?
+            .map(|commit| commit.time().seconds().to_string());
         tags.push(TagInfo {
             name: name.into(),
             target: target.to_string(),
             commit_id,
             is_annotated: repo.find_object(target, None)?.kind() == Some(git2::ObjectType::Tag),
+            commit_time,
         });
     }
     tags.sort_by(|a, b| a.name.cmp(&b.name));

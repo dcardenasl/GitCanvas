@@ -99,6 +99,7 @@ fn resolves_lightweight_annotated_nested_and_non_commit_tags() {
     let nested = tags.iter().find(|tag| tag.name == "nested").unwrap();
     assert!(nested.is_annotated);
     assert_eq!(nested.commit_id, Some(root.to_string()));
+    assert_eq!(nested.commit_time.as_deref(), Some("1"));
     let light = tags.iter().find(|tag| tag.name == "release/light").unwrap();
     assert!(!light.is_annotated);
     assert_eq!(light.target, root.to_string());

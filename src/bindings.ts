@@ -445,10 +445,19 @@ export type GraphColor =
 /**  Stone palette pair. */
 "stone";
 
+/**  Persistence scope for graph appearance, independent of filter state. */
+export type GraphPreferenceScope =
+/**  Legacy or local appearance attached to one worktree root. */
+"worktree" |
+/**  Shared appearance attached to a canonical Git common directory. */
+"repository";
+
 /**  Graph preferences belong to a canonical worktree, not its open tab. */
 export type GraphPreferences = {
-	/**  Canonical project root; does not authorize repository access. */
+	/**  Canonical worktree root or common Git directory; does not authorize access. */
 	path: string,
+	/**  Whether this record belongs to one worktree or its linked repository group. */
+	scope: GraphPreferenceScope,
 	/**  Explicit principal; absent means local automatic detection. */
 	principal: string | null,
 	/**  Monotonic explicit color edit sequence. */
@@ -465,9 +474,11 @@ export type HistoryPage = {
 	next_cursor: string | null,
 	/**  Roots required to resume the history walk. */
 	roots: string[],
+	/**  Full reference names resolved for this immutable walk. */
+	references: string[],
 };
 
-/**  Request for a page. Continuations carry the prior page's immutable walk roots. */
+/**  Request for a page. Continuations carry the prior page's immutable scope. */
 export type HistoryRequest = {
 	/**  Maximum number of commits requested for this page. */
 	limit: number,
@@ -475,6 +486,8 @@ export type HistoryRequest = {
 	cursor: string | null,
 	/**  Walk roots to use when resuming a paged history traversal. */
 	roots: string[] | null,
+	/**  Full reference names selected for the walk; `None` selects every branch, tag and HEAD. */
+	references: string[] | null,
 };
 
 /**  What loading produced. */
@@ -582,6 +595,14 @@ export type ReferenceColor = {
 	color: GraphColor,
 	/**  Last explicit edit, zero for automatic assignments. */
 	edited: number,
+};
+
+/**  Durable branch/tag exclusions for one canonical worktree root. */
+export type ReferenceFilterPreferences = {
+	/**  Canonical worktree root; never used as authorization. */
+	path: string,
+	/**  Full reference names excluded from the history walk; absent/new refs stay active. */
+	excluded: string[],
 };
 
 export type RepositoryChangedEvent = {
@@ -699,6 +720,8 @@ export type TagInfo = {
 	commit_id: string | null,
 	/**  Whether the tag points to an annotated tag object. */
 	is_annotated: boolean,
+	/**  Commit timestamp of the peeled destination; this is not the tag creation time. */
+	commit_time: string | null,
 };
 
 export type WatchRequest = {
@@ -718,6 +741,8 @@ export type Workspace = {
 	recents: string[],
 	/**  Graph preferences survive closing their project. */
 	graph_preferences: GraphPreferences[],
+	/**  History filter state remains isolated by worktree across restarts. */
+	reference_filters: ReferenceFilterPreferences[],
 };
 
 /**
@@ -736,6 +761,10 @@ export type WorkspaceLimits = {
 	max_graph_projects: number,
 	/**  Maximum reference preferences per project. */
 	max_graph_references: number,
+	/**  Maximum worktrees retaining reference filters. */
+	max_reference_filter_worktrees: number,
+	/**  Maximum reference exclusions per worktree. */
+	max_excluded_references: number,
 };
 
 /**  A stored workspace that was set aside rather than loaded. */
