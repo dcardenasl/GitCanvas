@@ -22,7 +22,7 @@ describe("commit tree browsing", () => {
   });
 
   it("shows unchanged files and opens their content from the commit tree", async () => {
-    const checkbox = await browser.$('input[type="checkbox"]');
+    const checkbox = await browser.$(".file-tree__all-files input");
     await checkbox.click();
 
     await browser.waitUntil(

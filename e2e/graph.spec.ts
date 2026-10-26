@@ -19,7 +19,7 @@ describe("stable branch graph preferences", () => {
       });
     });
     await $('[aria-label="Acciones de main"]').click();
-    await $('[role="menuitem"]').click();
+    await $('[role="menuitem"]*=Cambiar color de rama').click();
     await $(
       '//div[contains(@class,"sidebar__palette")]//button[normalize-space(.)="Azul"]',
     ).click();
@@ -42,10 +42,11 @@ describe("stable branch graph preferences", () => {
         workspace: Workspace;
       };
       return (
-        stored.version === 2 &&
+        stored.version === 3 &&
         stored.workspace.graph_preferences.some(
           (p) =>
-            p.path === e2eRepositoryRoot &&
+            p.scope === "repository" &&
+            p.path === path.join(e2eRepositoryRoot, ".git") &&
             p.principal === "refs/heads/main" &&
             p.colors.some(
               (c) => c.reference === "refs/heads/main" && c.edited > 0,

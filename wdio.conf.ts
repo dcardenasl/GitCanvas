@@ -195,6 +195,8 @@ function createFixtureRepository(
 
     git("checkout", "main");
     git("merge", "--no-ff", "side", "-m", "merge side into main");
+    git("tag", "-a", "side-snapshot", "side", "-m", "side snapshot");
+    fs.writeFileSync(path.join(repository, "local-only.txt"), "working copy\n");
 
     return { repository: fs.realpathSync(repository), token };
   } catch (error) {
@@ -248,6 +250,26 @@ if (ownedFixture !== null) {
   process.env[FIXTURE_TOKEN_ENV] = ownedFixture.token;
 }
 export const e2eRepository = fixture;
+
+// The default history fixture also has one real linked worktree. Create it only
+// in the launcher process and only for a repository this run owns; a supplied
+// repository is never modified. Its deterministic sibling path is unique to
+// the UUID-scoped fixture and is removed alongside that fixture below.
+const linkedFixtureWorktree =
+  fixtureKind === "history" && ownedFixture !== null
+    ? `${ownedFixture.repository}-linked`
+    : null;
+if (
+  linkedFixtureWorktree !== null &&
+  inheritedFixture === null &&
+  process.env.WDIO_WORKER_ID === undefined
+) {
+  execFileSync(
+    "git",
+    ["-C", fixture, "worktree", "add", linkedFixtureWorktree, "side"],
+    { stdio: "pipe" },
+  );
+}
 
 // A second owned repository is handed to the worker through the same validated
 // ownership protocol. Both repositories and the data directory are disposable.
@@ -500,6 +522,31 @@ export const config: WebdriverIO.Config = {
 
   onComplete() {
     // Only remove what this file created; never a repository someone passed in.
+    if (linkedFixtureWorktree !== null && ownedFixture !== null) {
+      const current = validatedOwnedFixture(
+        ownedFixture.repository,
+        ownedFixture.token,
+      );
+      if (current?.repository === ownedFixture.repository) {
+        try {
+          execFileSync(
+            "git",
+            [
+              "-C",
+              current.repository,
+              "worktree",
+              "remove",
+              "--force",
+              linkedFixtureWorktree,
+            ],
+            { stdio: "pipe" },
+          );
+        } catch {
+          // Removing the owned fixture below also removes its worktree files.
+        }
+        fs.rmSync(linkedFixtureWorktree, { recursive: true, force: true });
+      }
+    }
     if (ownedFixture !== null) removeOwnedFixture(ownedFixture);
     if (secondFixture !== null) removeOwnedFixture(secondFixture);
     fs.rmSync(e2eDataDir, { recursive: true, force: true });

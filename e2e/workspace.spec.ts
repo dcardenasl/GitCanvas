@@ -17,14 +17,11 @@ const beta = path.basename(e2eSecondRepository);
 
 async function resizeWorkspace() {
   await browser.setWindowSize(940, 600);
-  // Resize events run before animation-frame callbacks. Wait for the next paint
-  // before opening a menu that deliberately closes if its anchor moves.
+  // Resizing fires before layout settles. Wait through the next event-loop turn
+  // before opening a menu that deliberately closes if its anchor moves; WebKit
+  // may suspend animation frames while a native window is being resized.
   await browser.executeAsync((done) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        done(null);
-      });
-    });
+    window.setTimeout(() => done(null), 50);
   });
 }
 
