@@ -23,7 +23,6 @@ export const createStorageSlice: StateCreator<
       referenceFilters: workspace.reference_filters,
       referenceTreePreferences: workspace.reference_tree_preferences,
       referenceFilterUndo: {},
-      referenceSearches: {},
     });
   },
 

@@ -109,7 +109,10 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
     ]);
   };
   const search = useWorkspace((state) =>
-    path === null ? "" : (state.referenceSearches[path] ?? ""),
+    path === null
+      ? ""
+      : (state.referenceFilters.find((entry) => entry.path === path)?.search ??
+        ""),
   );
   const setReferenceSearch = useWorkspace((state) => state.setReferenceSearch);
   const [worktreeError, setWorktreeError] = useState<Error | null>(null);

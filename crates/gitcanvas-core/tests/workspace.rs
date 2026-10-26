@@ -315,7 +315,7 @@ fn a_newer_schema_version_is_set_aside_and_reported_as_such() {
     let directory = tempfile::tempdir().unwrap();
     write_raw(
         directory.path(),
-        r#"{"version": 5, "workspace": {"anything": true}}"#,
+        r#"{"version": 6, "workspace": {"anything": true}}"#,
     );
 
     let recovery = store(directory.path())
@@ -368,7 +368,7 @@ fn well_formed_data_that_breaks_a_workspace_rule_is_corrupt() {
     let mut duplicate = workspace(&["a"]);
     duplicate.tabs.push(tab("a"));
     // Written by hand, bypassing `save`, the way an edit or another tool would.
-    let json = serde_json::json!({ "version": 4, "workspace": duplicate });
+    let json = serde_json::json!({ "version": 5, "workspace": duplicate });
     write_raw(directory.path(), &json.to_string());
 
     let recovery = store(directory.path()).load().unwrap().recovery.unwrap();
@@ -475,7 +475,7 @@ fn version_one_migrates_without_losing_workspace_data() {
     store(dir.path()).save(1, &loaded.workspace).unwrap();
     let written: serde_json::Value =
         serde_json::from_slice(&fs::read(dir.path().join(FILE_NAME)).unwrap()).unwrap();
-    assert_eq!(written["version"], 4);
+    assert_eq!(written["version"], 5);
 }
 
 #[test]
@@ -517,7 +517,7 @@ fn version_two_migrates_graph_preferences_to_worktree_scope() {
     store(directory.path()).save(1, &loaded.workspace).unwrap();
     let written: serde_json::Value =
         serde_json::from_slice(&fs::read(directory.path().join(FILE_NAME)).unwrap()).unwrap();
-    assert_eq!(written["version"], 4);
+    assert_eq!(written["version"], 5);
     assert_eq!(
         written["workspace"]["graph_preferences"]
             .as_array()
@@ -545,7 +545,40 @@ fn version_three_migrates_without_reference_tree_preferences() {
     store(directory.path()).save(1, &loaded.workspace).unwrap();
     let written: serde_json::Value =
         serde_json::from_slice(&fs::read(directory.path().join(FILE_NAME)).unwrap()).unwrap();
-    assert_eq!(written["version"], 4);
+    assert_eq!(written["version"], 5);
+}
+
+#[test]
+fn version_four_migrates_reference_search_preferences() {
+    use gitcanvas_core::workspace::ReferenceFilterPreferences;
+
+    let directory = tempfile::tempdir().unwrap();
+    let mut old_workspace = workspace(&["migration"]);
+    old_workspace
+        .reference_filters
+        .push(ReferenceFilterPreferences {
+            path: project("closed"),
+            excluded: vec!["refs/heads/side".into()],
+            search: String::new(),
+        });
+    let mut value = serde_json::to_value(old_workspace).unwrap();
+    value["reference_filters"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("search");
+    write_raw(
+        directory.path(),
+        &serde_json::json!({ "version": 4, "workspace": value }).to_string(),
+    );
+
+    let loaded = store(directory.path()).load().unwrap();
+    assert!(loaded.recovery.is_none());
+    assert_eq!(loaded.workspace.reference_filters[0].search, "");
+    store(directory.path()).save(1, &loaded.workspace).unwrap();
+    let written: serde_json::Value =
+        serde_json::from_slice(&fs::read(directory.path().join(FILE_NAME)).unwrap()).unwrap();
+    assert_eq!(written["version"], 5);
+    assert_eq!(written["workspace"]["reference_filters"][0]["search"], "");
 }
 
 #[test]
@@ -592,5 +625,26 @@ fn reference_tree_preferences_are_bounded_unique_and_worktree_scoped() {
     data.reference_tree_preferences[0].collapsed[1] = "".into();
     assert!(data.validate().is_err());
     data.reference_tree_preferences[0].collapsed = vec!["group:remote".into(); 2];
+    assert!(data.validate().is_err());
+}
+
+#[test]
+fn reference_filter_searches_are_bounded_and_round_trip() {
+    use gitcanvas_core::workspace::{ReferenceFilterPreferences, MAX_REFERENCE_SEARCH_BYTES};
+
+    let mut data = Workspace::default();
+    data.reference_filters.push(ReferenceFilterPreferences {
+        path: project("search"),
+        excluded: vec!["refs/heads/side".into()],
+        search: "feature/login".into(),
+    });
+    data.validate().unwrap();
+    let serialized = serde_json::to_value(&data).unwrap();
+    assert_eq!(
+        serde_json::from_value::<Workspace>(serialized).unwrap(),
+        data
+    );
+
+    data.reference_filters[0].search = "x".repeat(MAX_REFERENCE_SEARCH_BYTES + 1);
     assert!(data.validate().is_err());
 }

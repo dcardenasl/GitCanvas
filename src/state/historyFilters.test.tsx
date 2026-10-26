@@ -88,6 +88,7 @@ beforeEach(() => {
   useWorkspace.getState().setReferenceFilters({
     path: "/repo",
     excluded: ["refs/heads/side", "refs/tags/v1"],
+    search: "",
   });
 });
 

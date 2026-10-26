@@ -176,7 +176,6 @@ export interface ReferenceFilterSlice {
   readonly referenceFilterUndo: Readonly<
     Record<string, readonly (readonly string[])[]>
   >;
-  readonly referenceSearches: Readonly<Record<string, string>>;
   setReferenceFilters: (preferences: ReferenceFilterPreferences) => void;
   changeReferenceFilters: (path: string, excluded: readonly string[]) => void;
   undoReferenceFilters: (path: string) => void;

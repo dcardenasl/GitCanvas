@@ -69,6 +69,17 @@ describe("durable workspace", () => {
     ).toMatchObject({ kind: "commit", commit_id: "c".repeat(40) });
   });
 
+  it("persists reference searches as part of the workspace preferences", async () => {
+    const writer = start();
+    openTestProject();
+    useWorkspace.getState().setReferenceSearch("/tmp/repo", "feature/login");
+    await writer.flush();
+
+    expect(
+      saveWorkspace.mock.lastCall?.[0].workspace.reference_filters,
+    ).toEqual([{ path: "/tmp/repo", excluded: [], search: "feature/login" }]);
+  });
+
   it("flush drains changes received during a write with one request in flight", async () => {
     let finish: (() => void) | undefined;
     saveWorkspace.mockImplementationOnce(

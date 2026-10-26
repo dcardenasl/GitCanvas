@@ -603,6 +603,8 @@ export type ReferenceFilterPreferences = {
 	path: string,
 	/**  Full reference names excluded from the history walk; absent/new refs stay active. */
 	excluded: string[],
+	/**  Last reference search, restored independently for each worktree. */
+	search: string,
 };
 
 /**  Collapsed reference groups and folders for one canonical worktree root. */
@@ -775,6 +777,8 @@ export type WorkspaceLimits = {
 	max_reference_filter_worktrees: number,
 	/**  Maximum reference exclusions per worktree. */
 	max_excluded_references: number,
+	/**  Maximum UTF-8 bytes in a saved reference search. */
+	max_reference_search_bytes: number,
 	/**  Maximum worktrees retaining reference-tree preferences. */
 	max_reference_tree_worktrees: number,
 	/**  Maximum collapsed reference nodes per worktree. */

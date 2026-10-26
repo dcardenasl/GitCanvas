@@ -140,6 +140,8 @@ pub struct ReferenceFilterPreferences {
     pub path: String,
     /// Full reference names excluded from the history walk; absent/new refs stay active.
     pub excluded: Vec<String>,
+    /// Last reference search, restored independently for each worktree.
+    pub search: String,
 }
 
 /// Collapsed reference groups and folders for one canonical worktree root.
@@ -160,6 +162,8 @@ pub const MAX_GRAPH_REFERENCES: usize = 10_000;
 pub const MAX_REFERENCE_FILTER_WORKTREES: usize = 200;
 /// Maximum known reference exclusions per worktree.
 pub const MAX_EXCLUDED_REFERENCES: usize = 20_001;
+/// Maximum UTF-8 bytes in a saved reference search.
+pub const MAX_REFERENCE_SEARCH_BYTES: usize = 4_096;
 /// Maximum worktrees retaining reference-tree preferences.
 pub const MAX_REFERENCE_TREE_WORKTREES: usize = 200;
 /// Maximum collapsed reference groups and folders remembered per worktree.
@@ -204,6 +208,8 @@ pub struct WorkspaceLimits {
     pub max_reference_filter_worktrees: u32,
     /// Maximum reference exclusions per worktree.
     pub max_excluded_references: u32,
+    /// Maximum UTF-8 bytes in a saved reference search.
+    pub max_reference_search_bytes: u32,
     /// Maximum worktrees retaining reference-tree preferences.
     pub max_reference_tree_worktrees: u32,
     /// Maximum collapsed reference nodes per worktree.
@@ -223,6 +229,7 @@ impl WorkspaceLimits {
             max_graph_references: as_u32(MAX_GRAPH_REFERENCES),
             max_reference_filter_worktrees: as_u32(MAX_REFERENCE_FILTER_WORKTREES),
             max_excluded_references: as_u32(MAX_EXCLUDED_REFERENCES),
+            max_reference_search_bytes: as_u32(MAX_REFERENCE_SEARCH_BYTES),
             max_reference_tree_worktrees: as_u32(MAX_REFERENCE_TREE_WORKTREES),
             max_collapsed_reference_folders: as_u32(MAX_COLLAPSED_REFERENCE_FOLDERS),
         }
@@ -389,6 +396,9 @@ impl Workspace {
                 return Err(invalid(
                     "duplicate filter worktree or too many excluded references",
                 ));
+            }
+            if filters.search.len() > MAX_REFERENCE_SEARCH_BYTES || filters.search.contains('\0') {
+                return Err(invalid("invalid or oversized reference search"));
             }
             let mut names = BTreeSet::new();
             for reference in &filters.excluded {

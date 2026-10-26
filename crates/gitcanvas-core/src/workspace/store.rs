@@ -28,7 +28,7 @@ use crate::error::AppError;
 /// Name of the workspace file inside the data directory.
 pub const FILE_NAME: &str = "workspace.json";
 /// Schema version this build reads and writes.
-pub const SCHEMA_VERSION: u32 = 4;
+pub const SCHEMA_VERSION: u32 = 5;
 /// Largest workspace file read or written, in bytes.
 pub const MAX_FILE_BYTES: u64 = 4 * 1024 * 1024;
 /// Quarantined files kept; older ones are removed when a newer one is made.
@@ -102,6 +102,37 @@ fn loaded(workspace: Workspace, recovery: Option<WorkspaceRecovery>) -> LoadedWo
     }
 }
 
+/// Adds the v5 search field to filter records written by earlier schemas.
+fn migrate_reference_filter_searches(
+    workspace: &mut serde_json::Map<String, serde_json::Value>,
+) -> Result<(), (RecoveryKind, String)> {
+    let filters = workspace
+        .get_mut("reference_filters")
+        .and_then(serde_json::Value::as_array_mut)
+        .ok_or_else(|| {
+            (
+                RecoveryKind::Corrupt,
+                "missing or invalid reference filters".to_owned(),
+            )
+        })?;
+    for filter in filters {
+        let record = filter.as_object_mut().ok_or_else(|| {
+            (
+                RecoveryKind::Corrupt,
+                "invalid reference filter record".to_owned(),
+            )
+        })?;
+        if record.contains_key("search") {
+            return Err((
+                RecoveryKind::Corrupt,
+                "unexpected reference filter search in an older schema".to_owned(),
+            ));
+        }
+        record.insert("search".into(), serde_json::json!(""));
+    }
+    Ok(())
+}
+
 /// Reads the file, refusing to buffer more than the bound.
 fn read_contents(path: &Path) -> Result<Contents, AppError> {
     let file = match File::open(path) {
@@ -169,6 +200,16 @@ fn parse(bytes: &[u8]) -> Result<Workspace, (RecoveryKind, String)> {
             .and_then(serde_json::Value::as_object_mut)
             .ok_or_else(|| corrupt(&"missing version 3 workspace"))?;
         workspace.insert("reference_tree_preferences".into(), serde_json::json!([]));
+        migrate_reference_filter_searches(workspace)?;
+        if let Some(object) = value.as_object_mut() {
+            object.insert("version".into(), serde_json::json!(SCHEMA_VERSION));
+        }
+    } else if version == Some(4) {
+        let workspace = value
+            .get_mut("workspace")
+            .and_then(serde_json::Value::as_object_mut)
+            .ok_or_else(|| corrupt(&"missing version 4 workspace"))?;
+        migrate_reference_filter_searches(workspace)?;
         if let Some(object) = value.as_object_mut() {
             object.insert("version".into(), serde_json::json!(SCHEMA_VERSION));
         }
