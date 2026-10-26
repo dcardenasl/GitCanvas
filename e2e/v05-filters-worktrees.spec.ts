@@ -3,6 +3,90 @@ import { e2eRepositoryRoot } from "../wdio.conf";
 import { waitForHistory } from "./history";
 
 describe("v0.5 reference filters and linked worktrees", () => {
+  it("keeps the reference and worktree controls translated at minimum size", async () => {
+    await waitForHistory(3);
+    await browser.setWindowSize(940, 600);
+    await browser.executeAsync((done) => {
+      window.setTimeout(() => done(null), 50);
+    });
+    const previousPreferences = await browser.execute(() => {
+      const theme = document.querySelector<HTMLSelectElement>(
+        ".theme-selector__select",
+      );
+      const language = document.querySelector<HTMLSelectElement>(
+        ".language-selector__select",
+      );
+      if (theme === null || language === null)
+        throw new Error("Preference selectors are missing");
+      return { theme: theme.value, language: language.value };
+    });
+
+    const setPreferences = async (theme: string, language: string) => {
+      await $(".preferences-menu__toggle").click();
+      await browser.execute(
+        (nextTheme, nextLanguage) => {
+          const preferences: readonly (readonly [string, string])[] = [
+            [".theme-selector__select", nextTheme],
+            [".language-selector__select", nextLanguage],
+          ];
+          for (const [selector, value] of preferences) {
+            const select = document.querySelector<HTMLSelectElement>(selector);
+            if (select === null)
+              throw new Error(`Preference selector missing: ${selector}`);
+            select.value = value;
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        },
+        theme,
+        language,
+      );
+      await $(".preferences-menu__toggle").click();
+    };
+
+    try {
+      await setPreferences("light", "es");
+      await expect($('[aria-label="Ramas y etiquetas"]')).toBeDisplayed();
+      await expect(
+        $('input[placeholder="Buscar ramas y etiquetas"]'),
+      ).toBeDisplayed();
+      await expect($('[aria-label="Worktrees vinculados"]')).toBeDisplayed();
+      await expect($('[aria-label="Ramas y etiquetas"]')).toHaveText(
+        expect.stringContaining("Incluir HEAD"),
+      );
+      const spanish = await browser.execute(() => ({
+        language: document.documentElement.lang,
+        theme: document.documentElement.dataset.theme,
+      }));
+      expect(spanish).toEqual({ language: "es", theme: "light" });
+
+      await setPreferences("dark", "en");
+      await expect($('[aria-label="Branches and tags"]')).toBeDisplayed();
+      await expect(
+        $('input[placeholder="Search branches and tags"]'),
+      ).toBeDisplayed();
+      await expect($('[aria-label="Linked worktrees"]')).toBeDisplayed();
+      await expect($('[aria-label="Branches and tags"]')).toHaveText(
+        expect.stringContaining("Include HEAD"),
+      );
+      const english = await browser.execute(() => ({
+        language: document.documentElement.lang,
+        theme: document.documentElement.dataset.theme,
+      }));
+      expect(english).toEqual({ language: "en", theme: "dark" });
+
+      const viewport = await browser.execute(() => ({
+        width: window.innerWidth,
+        overflow: document.documentElement.scrollWidth > window.innerWidth,
+      }));
+      expect(viewport).toEqual({ width: 940, overflow: false });
+    } finally {
+      await setPreferences(
+        previousPreferences.theme,
+        previousPreferences.language,
+      );
+    }
+  });
+
   it("walks only the selected refs and preserves an excluded commit detail", async () => {
     await waitForHistory(3);
 
