@@ -96,7 +96,12 @@ keyring = { version = "3", features = [
 ] }
 tauri-plugin-dialog = "2"
 tauri-plugin-process = "2"
-tauri-plugin-updater = "2"
+# v2 updater artifacts do not need the legacy Tauri v1 ZIP support, which pulls
+# in the vulnerable `zip` crate. Keep TLS and system proxy support enabled.
+tauri-plugin-updater = { version = "2", default-features = false, features = [
+    "rustls-tls",
+    "system-proxy",
+] }
 
 # Embedded WebDriver, for the end-to-end suite only. Behind the `e2e` feature so
 # the shipped binary never carries a WebDriver server: a released application
