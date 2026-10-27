@@ -223,6 +223,10 @@ describe("v0.5 reference filters and linked worktrees", () => {
     await browser.waitUntil(async () => await $(".file-diff").isDisplayed(), {
       timeoutMsg: "the selected commit file diff never opened",
     });
+    await browser.waitUntil(
+      async () => await $(".file-diff .diff-viewer").isDisplayed(),
+      { timeoutMsg: "the selected commit file diff never finished loading" },
+    );
 
     const diffBefore = await $(".file-diff").getText();
     const indicator = await $('button[title^="Filtros ("]');
