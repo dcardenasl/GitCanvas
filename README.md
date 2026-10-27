@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="GitCanvas 0.4: changing a branch color, choosing the visual main branch and opening the +N reference menu" width="860">
+  <img src="docs/assets/demo.gif" alt="GitCanvas 0.5: searching and filtering the branch tree with linked worktrees beside the commit graph" width="860">
 </p>
 
 GitCanvas does one thing: it lets you **see the shape of a repository's history**.
@@ -30,7 +30,27 @@ GitCanvas is the opposite trade: small, fast, free, and focused on reading histo
   <img src="docs/assets/screenshot.jpg" alt="GitCanvas showing the branch graph with a color per branch, a selected merge commit and its details" width="860">
 </p>
 
-## What's new in 0.4
+## What's new in 0.5
+
+The sidebar is now a reference explorer for repositories with many branches, tags and linked
+worktrees. Search the tree, fold groups and folders, and use the eye controls to choose which
+references shape the commit history. Those choices, along with the tree's expanded state, are
+saved per worktree and restored when you return.
+
+- **Reference filters.** Search branches and tags, include or hide a single reference or an
+  entire group, and restore the complete history with one action. The current `HEAD` can be
+  included independently.
+- **Linked worktrees.** See worktrees attached to the repository, refresh their status, and open
+  one in its existing project tab. A compact badge identifies branches already checked out in
+  another worktree.
+- **Signed in-app updates.** Preferences shows the exact installed version, checks GitHub Releases
+  for a signed update, and installs it with a restart. Network errors remain visible and can be
+  retried.
+
+The [0.5 user guide](docs/v0.5.0.md) explains these controls and what their saved settings affect.
+See the [changelog](CHANGELOG.md) for the complete release notes.
+
+## Branch identity (introduced in 0.4)
 
 The graph gets an identity: every branch keeps its color and its lane, and you decide how it looks.
 
