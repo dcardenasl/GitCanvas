@@ -46,7 +46,8 @@
     "refresh": "Actualizar worktrees",
     "refreshShort": "Actualizar",
     "openOccupied": "Abrir el worktree que usa esta rama",
-    "openElsewhere": "Abierta en otro worktree",
+    "openElsewhere": "Worktree",
+    "openElsewhereTooltip": "Abierta en otro worktree: {{root}}",
     "locked": "Bloqueado: {{reason}}",
     "availability": {
       "available": "Disponible",

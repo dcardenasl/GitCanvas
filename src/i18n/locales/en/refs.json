@@ -46,7 +46,8 @@
     "refresh": "Refresh worktrees",
     "refreshShort": "Refresh",
     "openOccupied": "Open the worktree using this branch",
-    "openElsewhere": "Open in another worktree",
+    "openElsewhere": "Worktree",
+    "openElsewhereTooltip": "Open in another worktree: {{root}}",
     "locked": "Locked: {{reason}}",
     "availability": {
       "available": "Available",

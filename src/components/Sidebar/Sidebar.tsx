@@ -410,9 +410,10 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
             <span className="sidebar__count">
               {graph.worktrees.data.worktrees.length}
             </span>
+            <span className="sidebar__actions-spacer" aria-hidden="true" />
             <button
               type="button"
-              className="sidebar__icon-btn"
+              className="sidebar__icon-btn sidebar__actions"
               aria-label={t("worktrees.refresh")}
               title={t("worktrees.refresh")}
               disabled={graph.worktrees.isFetching}
@@ -479,6 +480,10 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
                       </span>
                     )}
                   </button>
+                  <span
+                    className="sidebar__actions-spacer"
+                    aria-hidden="true"
+                  />
                 </li>
               ))}
             </ul>

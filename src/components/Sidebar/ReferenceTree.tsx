@@ -131,7 +131,12 @@ function RefLeafRow({
           </span>
         )}
         {entry.occupiedWorktree !== undefined && (
-          <span className="sidebar__badge" title={entry.occupiedWorktree.root}>
+          <span
+            className="sidebar__badge sidebar__badge--worktree"
+            title={t("worktrees.openElsewhereTooltip", {
+              root: entry.occupiedWorktree.root,
+            })}
+          >
             {t("worktrees.openElsewhere")}
           </span>
         )}
@@ -144,7 +149,7 @@ function RefLeafRow({
           onToggle(entry.referenceId, !isIncluded);
         }}
       />
-      {onMenu !== undefined && (
+      {onMenu !== undefined ? (
         <button
           type="button"
           className="sidebar__actions"
@@ -157,6 +162,8 @@ function RefLeafRow({
         >
           <span className="sidebar__dots" aria-hidden="true" />
         </button>
+      ) : (
+        <span className="sidebar__actions-spacer" aria-hidden="true" />
       )}
     </li>
   );
@@ -266,6 +273,7 @@ function RefFolderRow({
           title={folderTooltip}
           onToggle={toggleFolder}
         />
+        <span className="sidebar__actions-spacer" aria-hidden="true" />
       </div>
       {isExpanded && (
         <>
@@ -429,6 +437,7 @@ export function RefGroup({
           title={groupTooltip}
           onToggle={toggleGroup}
         />
+        <span className="sidebar__actions-spacer" aria-hidden="true" />
       </div>
       {!sectionCollapsed && (
         <div className="sidebar__group-content">
