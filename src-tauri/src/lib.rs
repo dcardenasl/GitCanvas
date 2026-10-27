@@ -322,6 +322,7 @@ mod tests {
             })
             .collect::<std::collections::BTreeSet<_>>();
         let expected = [
+            "core:app:allow-version",
             "core:event:default",
             "dialog:allow-open",
             "core:window:allow-destroy",

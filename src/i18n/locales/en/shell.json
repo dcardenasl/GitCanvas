@@ -60,14 +60,20 @@
     "writing": "Writing to the repository"
   },
   "updates": {
-    "available": "Version {{version}} is available",
+    "available": "New version available: {{version}}",
     "check": "Check for updates",
     "checking": "Checking for updates…",
-    "current": "GitCanvas is up to date.",
-    "error": "Could not check for or install the update.",
-    "install": "Install and restart",
+    "checkError": "Could not get the latest version information. Try again later.",
+    "current": "You have the latest version ({{version}}).",
+    "downloadInstall": "Download and install",
+    "installError": "The update could not be installed. Check again and try once more.",
+    "installedVersion": "Installed version",
     "installing": "Downloading and installing…{{progress}}",
-    "retry": "Retry"
+    "restartNote": "GitCanvas will restart when the update is complete.",
+    "retry": "Check again",
+    "title": "Updates",
+    "versionLoading": "Loading…",
+    "versionUnavailable": "Unavailable"
   },
   "theme": {
     "aria": "Application theme",

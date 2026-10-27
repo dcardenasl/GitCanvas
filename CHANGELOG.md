@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Update settings** — show the installed version and clarify update status and recovery actions.
 - **Feature loading** — load the GitHub picker and file diff viewer only when those views are opened, keeping their code out of the initial application bundle.
 
 ## [0.4.0] — 2026-10-19

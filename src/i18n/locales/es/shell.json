@@ -60,14 +60,20 @@
     "writing": "Escribiendo en el repositorio"
   },
   "updates": {
-    "available": "Disponible la versión {{version}}",
+    "available": "Hay una nueva versión: {{version}}",
     "check": "Buscar actualizaciones",
     "checking": "Buscando actualizaciones…",
-    "current": "GitCanvas está actualizado.",
-    "error": "No se pudo comprobar o instalar la actualización.",
-    "install": "Instalar y reiniciar",
+    "checkError": "No se pudo consultar la información de la última versión. Inténtalo de nuevo más tarde.",
+    "current": "Tienes la versión más reciente ({{version}}).",
+    "downloadInstall": "Descargar e instalar",
+    "installError": "No se pudo instalar la actualización. Vuelve a comprobarlo e inténtalo de nuevo.",
+    "installedVersion": "Versión instalada",
     "installing": "Descargando e instalando…{{progress}}",
-    "retry": "Reintentar"
+    "restartNote": "GitCanvas se reiniciará al terminar.",
+    "retry": "Volver a comprobar",
+    "title": "Actualizaciones",
+    "versionLoading": "Cargando…",
+    "versionUnavailable": "No disponible"
   },
   "theme": {
     "aria": "Tema de la aplicación",
