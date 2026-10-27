@@ -85,7 +85,7 @@ describe("v0.5 reference filters and linked worktrees", () => {
 
     const merge = await $('[role="option"]*=merge side into main');
     await merge.click();
-    await $(".sidebar__filters input[type='checkbox']").click();
+    await $(".sidebar__head-label input[type='checkbox']").click();
     await $('[aria-label="Alternar todas las referencias de Local"]').click();
     await $(
       '[aria-label="Alternar todas las referencias de Etiquetas"]',
@@ -116,7 +116,7 @@ describe("v0.5 reference filters and linked worktrees", () => {
       $('[aria-label="Detalle del commit"] [role="status"]'),
     ).not.toBeDisplayed();
 
-    await $(".sidebar__filters input[type='checkbox']").click();
+    await $(".sidebar__head-label input[type='checkbox']").click();
     await $('[aria-label="Alternar todas las referencias de Local"]').click();
     await $(
       '[aria-label="Alternar todas las referencias de Etiquetas"]',

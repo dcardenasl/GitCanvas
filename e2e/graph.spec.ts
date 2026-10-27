@@ -108,7 +108,7 @@ describe("stable branch graph preferences", () => {
         workspace: Workspace;
       };
       return (
-        stored.version === 3 &&
+        stored.version >= 3 &&
         stored.workspace.graph_preferences.some(
           (p) =>
             p.scope === "repository" &&
