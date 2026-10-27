@@ -67,11 +67,11 @@ describe("v0.5 reference filters and linked worktrees", () => {
       }));
       expect(english).toEqual({ language: "en", theme: "dark" });
 
-      const viewport = await browser.execute(() => ({
-        width: window.innerWidth,
-        overflow: document.documentElement.scrollWidth > window.innerWidth,
-      }));
-      expect(viewport).toEqual({ width: 940, overflow: false });
+      const viewportOverflows = await browser.execute(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      );
+      // Native window decorations make the WebView's inner width platform-dependent.
+      expect(viewportOverflows).toBe(false);
     } finally {
       await setPreferences(
         previousPreferences.theme,
@@ -173,18 +173,40 @@ describe("v0.5 reference filters and linked worktrees", () => {
     );
     await expect($$("[data-repository-group]")).toBeElementsArrayOfSize(2);
 
-    await clickAndConfirm(
-      `.sidebar__worktree[title="${e2eRepositoryRoot}"]`,
-      async () => {
-        await browser.waitUntil(() =>
-          browser.execute((root) => {
-            const active = document.querySelector<HTMLButtonElement>(
-              '[role="tab"][aria-selected="true"]:not([data-home])',
-            );
-            return active?.title === root;
-          }, e2eRepositoryRoot),
+    const normalizePath = (value: string) =>
+      value
+        .replace(/^\\\\\?\\/, "")
+        .replaceAll("\\", "/")
+        .replace(/\/+$/, "");
+    const expectedRoot = normalizePath(e2eRepositoryRoot);
+    const worktreeButtons = await $$(".sidebar__worktree");
+    let repositoryWorktreeIndex = -1;
+    let index = 0;
+    for await (const button of worktreeButtons) {
+      const root = normalizePath((await button.getAttribute("title")) ?? "");
+      if (root === expectedRoot) {
+        repositoryWorktreeIndex = index;
+        break;
+      }
+      index += 1;
+    }
+    const repositoryWorktree = worktreeButtons[repositoryWorktreeIndex];
+    if (repositoryWorktreeIndex < 0 || repositoryWorktree === undefined) {
+      throw new Error("The repository worktree is missing from the sidebar");
+    }
+    await repositoryWorktree.click();
+    await browser.waitUntil(() =>
+      browser.execute((root) => {
+        const normalize = (value: string) =>
+          value
+            .replace(/^\\\\\?\\/, "")
+            .replaceAll("\\", "/")
+            .replace(/\/+$/, "");
+        const active = document.querySelector<HTMLButtonElement>(
+          '[role="tab"][aria-selected="true"]:not([data-home])',
         );
-      },
+        return active !== null && normalize(active.title) === root;
+      }, expectedRoot),
     );
     await expect($$('[role="tab"]:not([data-home])')).toBeElementsArrayOfSize(
       2,
