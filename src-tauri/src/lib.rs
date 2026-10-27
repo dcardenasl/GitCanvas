@@ -149,6 +149,78 @@ fn report_early_startup_error(message: &str) {
     eprintln!("{message}");
 }
 
+fn setup_app(
+    app: &mut tauri::App<tauri::Wry>,
+    builder: &tauri_specta::Builder<tauri::Wry>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use tauri::Manager;
+    let data_dir = data_dir::resolve(
+        std::env::var_os(data_dir::DATA_DIR_ENV),
+        app.path().app_data_dir()?,
+    )?;
+    let guard = logging::initialize(&data_dir.join("logs"))?;
+    app.manage(guard);
+
+    // Resolved once, here, where the concrete handle exists. The commands
+    // themselves stay free of `AppHandle`, which lets the typed builder collect
+    // them without a runtime parameter.
+    app.manage(commands::github::CacheRoot(data_dir.join("clones")));
+    app.manage(std::sync::Arc::new(
+        gitcanvas_core::workspace::store::WorkspaceStore::new(data_dir),
+    ));
+
+    let restart_handle = app.handle().clone();
+    app.manage(commands::lifecycle::RestartApplication(
+        std::sync::Arc::new(move || restart_handle.restart()),
+    ));
+    let handle = app.handle().clone();
+    app.manage(commands::watch::ActiveWatch::default());
+
+    let watch_handle = app.handle().clone();
+    app.manage(commands::watch::ChangeNotifier(std::sync::Arc::new(
+        move |event: commands::watch::RepositoryChangedEvent| {
+            use tauri_specta::Event as _;
+            let _ = event.emit(&watch_handle);
+        },
+    )));
+
+    app.manage(commands::github::ProgressEmitter(std::sync::Arc::new(
+        move |event: commands::github::CloneProgressEvent| {
+            use tauri_specta::Event as _;
+            // Best-effort: a dropped progress frame must never fail a clone
+            // that is otherwise succeeding.
+            let _ = event.emit(&handle);
+        },
+    )));
+
+    // The menu bar exists only on macOS. Elsewhere the applier accepts the
+    // labels and does nothing, so the interface asks the same way everywhere.
+    #[cfg(target_os = "macos")]
+    {
+        use tauri_specta::Event as _;
+        let name = app.package_info().name.clone();
+        app.set_menu(menu::to_native(app, &menu::initial_spec(&name))?)?;
+        let applier_handle = app.handle().clone();
+        app.manage(commands::menu::MenuApplier(std::sync::Arc::new(
+            move |labels| install_menu(&applier_handle, &labels),
+        )));
+        app.on_menu_event(|app, event| {
+            if let Some(action) = menu::action_for(event.id().as_ref()) {
+                let _ = commands::menu::MenuActionEvent { action }.emit(app);
+            }
+        });
+    }
+    #[cfg(not(target_os = "macos"))]
+    app.manage(commands::menu::MenuApplier(std::sync::Arc::new(|_| Ok(()))));
+
+    tracing::info!(version = env!("CARGO_PKG_VERSION"), "GitCanvas started");
+
+    // Paid here, on the main thread, while nobody is waiting for it.
+    warmup::open_panel();
+    builder.mount_events(app);
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 /// Starts the desktop application and exits if its native runtime cannot start.
 pub fn run() {
@@ -205,75 +277,7 @@ pub fn run() {
         .manage(std::sync::Arc::new(lifecycle::ShutdownGate::default()))
         .on_window_event(lifecycle::on_window_event)
         .invoke_handler(builder.invoke_handler())
-        .setup(move |app| {
-            use tauri::Manager;
-            let data_dir = data_dir::resolve(
-                std::env::var_os(data_dir::DATA_DIR_ENV),
-                app.path().app_data_dir()?,
-            )?;
-            let guard = logging::initialize(&data_dir.join("logs"))?;
-            app.manage(guard);
-
-            // Resolved once, here, where the concrete handle exists. The
-            // commands themselves stay free of `AppHandle`, which is what lets
-            // the typed builder collect them without a runtime parameter.
-            app.manage(commands::github::CacheRoot(data_dir.join("clones")));
-            app.manage(std::sync::Arc::new(
-                gitcanvas_core::workspace::store::WorkspaceStore::new(data_dir),
-            ));
-
-            let restart_handle = app.handle().clone();
-            app.manage(commands::lifecycle::RestartApplication(
-                std::sync::Arc::new(move || restart_handle.restart()),
-            ));
-            let handle = app.handle().clone();
-            app.manage(commands::watch::ActiveWatch::default());
-
-            let watch_handle = app.handle().clone();
-            app.manage(commands::watch::ChangeNotifier(std::sync::Arc::new(
-                move |event: commands::watch::RepositoryChangedEvent| {
-                    use tauri_specta::Event as _;
-                    let _ = event.emit(&watch_handle);
-                },
-            )));
-
-            app.manage(commands::github::ProgressEmitter(std::sync::Arc::new(
-                move |event: commands::github::CloneProgressEvent| {
-                    use tauri_specta::Event as _;
-                    // Best-effort: a dropped progress frame must never fail a
-                    // clone that is otherwise succeeding.
-                    let _ = event.emit(&handle);
-                },
-            )));
-
-            // The menu bar exists only on macOS. Elsewhere the applier accepts
-            // the labels and does nothing, so the interface asks the same way
-            // on every platform.
-            #[cfg(target_os = "macos")]
-            {
-                use tauri_specta::Event as _;
-                let name = app.package_info().name.clone();
-                app.set_menu(menu::to_native(app, &menu::initial_spec(&name))?)?;
-                let applier_handle = app.handle().clone();
-                app.manage(commands::menu::MenuApplier(std::sync::Arc::new(
-                    move |labels| install_menu(&applier_handle, &labels),
-                )));
-                app.on_menu_event(|app, event| {
-                    if let Some(action) = menu::action_for(event.id().as_ref()) {
-                        let _ = commands::menu::MenuActionEvent { action }.emit(app);
-                    }
-                });
-            }
-            #[cfg(not(target_os = "macos"))]
-            app.manage(commands::menu::MenuApplier(std::sync::Arc::new(|_| Ok(()))));
-
-            tracing::info!(version = env!("CARGO_PKG_VERSION"), "GitCanvas started");
-
-            // Paid here, on the main thread, while nobody is waiting for it.
-            warmup::open_panel();
-            builder.mount_events(app);
-            Ok(())
-        })
+        .setup(move |app| setup_app(app, &builder))
         .build(app_context())
         .map(|app| {
             app.run(lifecycle::on_run_event);

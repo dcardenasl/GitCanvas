@@ -622,7 +622,7 @@ fn reference_tree_preferences_are_bounded_unique_and_worktree_scoped() {
     store(directory.path()).save(1, &data).unwrap();
     assert_eq!(store(directory.path()).load().unwrap().workspace, data);
 
-    data.reference_tree_preferences[0].collapsed[1] = "".into();
+    data.reference_tree_preferences[0].collapsed[1] = String::new();
     assert!(data.validate().is_err());
     data.reference_tree_preferences[0].collapsed = vec!["group:remote".into(); 2];
     assert!(data.validate().is_err());

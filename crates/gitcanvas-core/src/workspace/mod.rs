@@ -351,6 +351,12 @@ impl Workspace {
         }
         check_project_list("the favorites", &self.favorites, MAX_FAVORITES)?;
         check_project_list("the recents", &self.recents, MAX_RECENTS)?;
+        self.validate_graph_preferences()?;
+        self.validate_reference_filters()?;
+        self.validate_reference_tree_preferences()
+    }
+
+    fn validate_graph_preferences(&self) -> Result<(), AppError> {
         if self.graph_preferences.len() > MAX_GRAPH_PROJECTS {
             return Err(invalid("too many graph projects"));
         }
@@ -384,6 +390,10 @@ impl Workspace {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn validate_reference_filters(&self) -> Result<(), AppError> {
         if self.reference_filters.len() > MAX_REFERENCE_FILTER_WORKTREES {
             return Err(invalid("too many worktrees with reference filters"));
         }
@@ -415,6 +425,10 @@ impl Workspace {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn validate_reference_tree_preferences(&self) -> Result<(), AppError> {
         if self.reference_tree_preferences.len() > MAX_REFERENCE_TREE_WORKTREES {
             return Err(invalid(
                 "too many worktrees with reference-tree preferences",
