@@ -44,6 +44,19 @@ jobs:
           fi
           python scripts/validate-release.py "${RELEASE_TAG}"
 
+      # Check the release-only signing secret once on Ubuntu, before creating
+      # a draft. Keeping this out of the platform matrix avoids shell-specific
+      # failures on Windows runners.
+      - name: Verify the updater signing key is configured
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [[ -z "${TAURI_SIGNING_PRIVATE_KEY//[[:space:]]/}" ]]; then
+            echo "::error::Configure the TAURI_SIGNING_PRIVATE_KEY repository secret before creating a release."
+            exit 1
+          fi
+
   create-release:
     needs: validate-release
     permissions:
@@ -174,15 +187,6 @@ jobs:
             rpm
 
       - run: npm ci
-
-      - name: Verify the updater signing key is configured
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-        run: |
-          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
-            echo "::error::Configure the TAURI_SIGNING_PRIVATE_KEY repository secret before creating a release."
-            exit 1
-          fi
 
       - name: Build and attach the installer
         uses: tauri-apps/tauri-action@v1
