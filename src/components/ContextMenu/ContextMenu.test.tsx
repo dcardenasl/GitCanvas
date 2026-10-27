@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { fireEvent, cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  cleanup,
+  render,
+  screen,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -17,6 +23,16 @@ function renderMenu(
 ) {
   render(<ContextMenu x={100} y={100} onClose={onClose} items={items} />);
   return { onClose, onSelect };
+}
+
+async function waitForMenuSetup(): Promise<void> {
+  await act(async () => {
+    await new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => {
+        resolve();
+      });
+    });
+  });
 }
 
 describe("ContextMenu", () => {
@@ -37,7 +53,7 @@ describe("ContextMenu", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("updates its close callback without reinstalling the event handlers", () => {
+  it("updates its close callback without reinstalling the event handlers", async () => {
     const oldClose = vi.fn();
     const currentClose = vi.fn();
     const { rerender } = render(
@@ -57,6 +73,7 @@ describe("ContextMenu", () => {
       />,
     );
 
+    await waitForMenuSetup();
     window.dispatchEvent(new Event("scroll"));
 
     expect(oldClose).not.toHaveBeenCalled();
@@ -102,10 +119,15 @@ describe("ContextMenu", () => {
     expect(document.activeElement).toBe(opener);
   });
 
-  it("closes when the list scrolls out from under it", () => {
+  it("ignores opening focus scroll and closes when the list scrolls later", async () => {
     // A menu anchored to a point while the rows move is pointing at the wrong
     // commit by the time it is used.
     const { onClose } = renderMenu();
+
+    fireEvent.scroll(window);
+    expect(onClose).not.toHaveBeenCalled();
+
+    await waitForMenuSetup();
     window.dispatchEvent(new Event("scroll"));
     expect(onClose).toHaveBeenCalled();
   });
@@ -148,6 +170,7 @@ describe("ContextMenu", () => {
       onSelect: vi.fn(),
     }));
     render(<ContextMenu x={99999} y={99999} items={items} onClose={onClose} />);
+    await waitForMenuSetup();
     const menu = screen.getByRole("menu");
     expect(Number.parseInt(menu.style.top, 10)).toBe(8);
     expect(Number.parseInt(menu.style.left, 10) + 240).toBeLessThanOrEqual(

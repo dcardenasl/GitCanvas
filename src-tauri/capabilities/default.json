@@ -4,8 +4,11 @@
   "description": "Capability for the main window",
   "windows": ["main"],
   "permissions": [
+    "core:app:allow-version",
     "core:event:default",
     "dialog:allow-open",
-    "core:window:allow-destroy"
+    "core:window:allow-destroy",
+    "process:allow-restart",
+    "updater:default"
   ]
 }

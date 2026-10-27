@@ -20,6 +20,9 @@ export const createStorageSlice: StateCreator<
       favorites: workspace.favorites,
       recents: workspace.recents,
       graphPreferences: workspace.graph_preferences,
+      referenceFilters: workspace.reference_filters,
+      referenceTreePreferences: workspace.reference_tree_preferences,
+      referenceFilterUndo: {},
     });
   },
 

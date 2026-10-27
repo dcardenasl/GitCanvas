@@ -8,6 +8,7 @@ use std::{
 
 use git2::{ErrorCode, Oid, Repository, Sort};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use specta::Type;
 
 use crate::{
@@ -40,7 +41,7 @@ pub struct CommitInfo {
     pub commit_time: String,
 }
 
-/// Request for a page. Continuations carry the prior page's immutable walk roots.
+/// Request for a page. Continuations carry the prior page's immutable scope.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct HistoryRequest {
     /// Maximum number of commits requested for this page.
@@ -49,6 +50,8 @@ pub struct HistoryRequest {
     pub cursor: Option<String>,
     /// Walk roots to use when resuming a paged history traversal.
     pub roots: Option<Vec<String>>,
+    /// Full reference names selected for the walk; `None` selects every branch, tag and HEAD.
+    pub references: Option<Vec<String>>,
 }
 
 /// A bounded page and the information needed to resume its exact traversal.
@@ -60,6 +63,8 @@ pub struct HistoryPage {
     pub next_cursor: Option<String>,
     /// Roots required to resume the history walk.
     pub roots: Vec<String>,
+    /// Full reference names resolved for this immutable walk.
+    pub references: Vec<String>,
 }
 
 /// Commit IDs retained across all cached walks: 2,000,000 IDs, about 40 MB.
@@ -75,6 +80,9 @@ const MAX_CACHED_SNAPSHOTS: usize = 8;
 /// Walk roots a continuation may carry. Roots are branches, tags and HEAD, so
 /// this is far above any real repository while still bounding a hostile request.
 const MAX_WALK_ROOTS: usize = 10_000;
+/// Maximum refs exposed by the repository snapshot plus the independent HEAD filter.
+const MAX_SELECTED_REFERENCES: usize = 20_001;
+const MAX_REFERENCE_SCOPE_BYTES: usize = 2 * 1024 * 1024;
 
 type WalkIds = Arc<[Oid]>;
 
@@ -201,25 +209,40 @@ fn read_page(
     reader: Option<&HistoryReader>,
 ) -> Result<HistoryPage, AppError> {
     validate_page_size(usize::from(request.limit), usize::from(MAX_PAGE_SIZE))?;
-    if request.cursor.is_some() && request.roots.is_none() {
-        return Err(AppError::InvalidInput(
-            "A cursor requires its original walk roots".into(),
-        ));
-    }
     let repo = active.open()?;
-    let roots = match &request.roots {
-        Some(roots) => {
+    let parsed_cursor = request.cursor.as_deref().map(parse_cursor).transpose()?;
+    let (roots, references) = match (&parsed_cursor, &request.roots, &request.references) {
+        (Some((cursor_scope, _)), Some(roots), Some(references)) => {
             if roots.len() > MAX_WALK_ROOTS {
                 return Err(AppError::InvalidInput("Too many history roots".into()));
             }
-            roots
+            let roots = roots
                 .iter()
                 .map(|id| parse_commit_id(id))
-                .collect::<Result<Vec<_>, _>>()?
+                .collect::<Result<Vec<_>, _>>()?;
+            let references = normalize_references(references.clone())?;
+            let scope = scope_id(&references, &roots)?;
+            if cursor_scope != &scope {
+                return Err(AppError::StaleCursor(
+                    "History cursor belongs to a different reference scope; refresh the history"
+                        .into(),
+                ));
+            }
+            (roots, references)
         }
-        None => history_roots(&repo)?,
+        (None, None, _) => resolve_history_scope(&repo, request.references.as_deref())?,
+        (Some(_), _, _) => {
+            return Err(AppError::InvalidInput(
+                "A history cursor requires its original roots and references".into(),
+            ))
+        }
+        (None, Some(_), _) => {
+            return Err(AppError::InvalidInput(
+                "Frozen history roots may only be used with a continuation cursor".into(),
+            ))
+        }
     };
-    let cursor = request.cursor.as_deref().map(parse_commit_id).transpose()?;
+    let cursor = parsed_cursor.map(|(_, id)| id);
     let cached = reader
         .map(|reader| reader.find(active, &roots))
         .transpose()?
@@ -229,6 +252,7 @@ fn read_page(
             &repo,
             ids.iter().copied().map(Ok),
             &roots,
+            &references,
             cursor,
             request.limit,
         );
@@ -254,6 +278,7 @@ fn read_page(
                 &repo,
                 ids.iter().copied().map(Ok),
                 &roots,
+                &references,
                 cursor,
                 request.limit,
             );
@@ -263,17 +288,19 @@ fn read_page(
             &repo,
             prefix.into_iter().map(Ok).chain(walk),
             &roots,
+            &references,
             cursor,
             request.limit,
         );
     }
-    page_from_walk(&repo, walk, &roots, cursor, request.limit)
+    page_from_walk(&repo, walk, &roots, &references, cursor, request.limit)
 }
 
 fn page_from_walk(
     repo: &Repository,
     walk: impl Iterator<Item = Result<Oid, git2::Error>>,
     roots: &[Oid],
+    references: &[String],
     cursor: Option<Oid>,
     limit: u16,
 ) -> Result<HistoryPage, AppError> {
@@ -297,8 +324,11 @@ fn page_from_walk(
             "Cursor is not reachable from the supplied history roots".into(),
         ));
     }
+    let scope = scope_id(references, roots)?;
     let next_cursor = if more {
-        commits.last().map(|commit| commit.id.clone())
+        commits
+            .last()
+            .map(|commit| format!("{scope}:{}", commit.id))
     } else {
         None
     };
@@ -306,32 +336,139 @@ fn page_from_walk(
         commits,
         next_cursor,
         roots: roots.iter().map(ToString::to_string).collect(),
+        references: references.to_vec(),
     })
 }
 
-fn history_roots(repo: &Repository) -> Result<Vec<Oid>, AppError> {
-    let mut roots = BTreeSet::new();
-    match repo.head() {
-        Ok(head) => {
-            roots.insert(head.peel_to_commit()?.id());
-        }
-        Err(error) if matches!(error.code(), ErrorCode::UnbornBranch | ErrorCode::NotFound) => {}
-        Err(error) => return Err(error.into()),
+fn parse_cursor(cursor: &str) -> Result<(String, Oid), AppError> {
+    let Some((scope, id)) = cursor.split_once(':') else {
+        return Err(AppError::InvalidInput("Invalid history cursor".into()));
+    };
+    if scope.len() != 64 || !scope.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(AppError::InvalidInput(
+            "Invalid history cursor scope".into(),
+        ));
     }
-    for reference in repo.references()? {
-        let reference = reference?;
-        if reference.is_branch() || reference.is_remote() || reference.is_tag() {
-            match reference.peel_to_commit() {
-                Ok(commit) => {
-                    roots.insert(commit.id());
-                }
-                // Tags may legally point at trees or blobs. They have no history.
-                Err(error) if reference.is_tag() && error.code() == ErrorCode::InvalidSpec => {}
-                Err(error) => return Err(error.into()),
+    Ok((scope.to_ascii_lowercase(), parse_commit_id(id)?))
+}
+
+fn scope_id(references: &[String], roots: &[Oid]) -> Result<String, AppError> {
+    let roots: Vec<String> = roots.iter().map(ToString::to_string).collect();
+    let encoded = serde_json::to_vec(&(references, roots))
+        .map_err(|error| AppError::Internal(format!("could not encode history scope: {error}")))?;
+    Ok(format!("{:x}", Sha256::digest(encoded)))
+}
+
+fn normalize_references(mut references: Vec<String>) -> Result<Vec<String>, AppError> {
+    if references.len() > MAX_SELECTED_REFERENCES {
+        return Err(AppError::InvalidInput(
+            "Too many selected references".into(),
+        ));
+    }
+    let total_bytes = references.iter().try_fold(0usize, |total, reference| {
+        total.checked_add(reference.len())
+    });
+    if total_bytes.is_none_or(|total| total > MAX_REFERENCE_SCOPE_BYTES) {
+        return Err(AppError::InvalidInput(
+            "Selected reference names exceed the history scope limit".into(),
+        ));
+    }
+    for reference in &references {
+        if reference != "HEAD"
+            && (!git2::Reference::is_valid_name(reference)
+                || !(reference.starts_with("refs/heads/")
+                    || reference.starts_with("refs/remotes/")
+                    || reference.starts_with("refs/tags/")))
+        {
+            return Err(AppError::InvalidInput(
+                "Invalid full reference name in history scope".into(),
+            ));
+        }
+    }
+    references.sort();
+    if references.windows(2).any(|pair| {
+        pair.first()
+            .zip(pair.get(1))
+            .is_some_and(|(left, right)| left == right)
+    }) {
+        return Err(AppError::InvalidInput(
+            "Duplicate reference in history scope".into(),
+        ));
+    }
+    Ok(references)
+}
+
+fn resolve_history_scope(
+    repo: &Repository,
+    selected: Option<&[String]>,
+) -> Result<(Vec<Oid>, Vec<String>), AppError> {
+    for _ in 0..3 {
+        let before = resolve_history_scope_once(repo, selected)?;
+        if before == resolve_history_scope_once(repo, selected)? {
+            return Ok(before);
+        }
+    }
+    Err(AppError::Conflict(
+        "references changed while resolving the history scope; refresh and retry".into(),
+    ))
+}
+
+fn resolve_history_scope_once(
+    repo: &Repository,
+    selected: Option<&[String]>,
+) -> Result<(Vec<Oid>, Vec<String>), AppError> {
+    let references = if let Some(names) = selected {
+        normalize_references(names.to_vec())?
+    } else {
+        let mut names = vec!["HEAD".to_owned()];
+        for reference in repo.references()? {
+            let reference = reference?;
+            if reference.is_branch() || reference.is_remote() || reference.is_tag() {
+                let name = reference.name()?;
+                names.push(name.to_owned());
             }
         }
+        normalize_references(names)?
+    };
+    let mut roots = BTreeSet::new();
+    for name in &references {
+        if name == "HEAD" {
+            match repo.head() {
+                Ok(head) => {
+                    roots.insert(head.peel_to_commit()?.id());
+                }
+                Err(error)
+                    if matches!(error.code(), ErrorCode::UnbornBranch | ErrorCode::NotFound) => {}
+                Err(error) => return Err(error.into()),
+            }
+            continue;
+        }
+        let reference = repo.find_reference(name).map_err(|error| {
+            if error.code() == ErrorCode::NotFound {
+                AppError::StaleCursor(format!(
+                    "Selected reference {name} disappeared; refresh history"
+                ))
+            } else {
+                AppError::from(error)
+            }
+        })?;
+        match reference.peel_to_commit() {
+            Ok(commit) => {
+                roots.insert(commit.id());
+            }
+            Err(error)
+                if error.code() == ErrorCode::NotFound
+                    && (reference.is_branch() || reference.is_remote()) => {}
+            Err(error) if error.code() == ErrorCode::InvalidSpec && reference.is_tag() => {}
+            Err(error) => return Err(error.into()),
+        }
     }
-    Ok(roots.into_iter().collect())
+    if roots.len() > MAX_WALK_ROOTS {
+        return Err(AppError::ResourceLimitExceeded(
+            "too many history roots".into(),
+        ));
+    }
+    Ok((roots.into_iter().collect(), references))
 }
 
 pub(crate) fn commit_info(commit: &git2::Commit<'_>) -> CommitInfo {

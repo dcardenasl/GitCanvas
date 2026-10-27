@@ -46,6 +46,8 @@ fn workspace(names: &[&str]) -> Workspace {
         favorites: Vec::new(),
         recents: Vec::new(),
         graph_preferences: Vec::new(),
+        reference_filters: Vec::new(),
+        reference_tree_preferences: Vec::new(),
     }
 }
 
@@ -313,7 +315,7 @@ fn a_newer_schema_version_is_set_aside_and_reported_as_such() {
     let directory = tempfile::tempdir().unwrap();
     write_raw(
         directory.path(),
-        r#"{"version": 3, "workspace": {"anything": true}}"#,
+        r#"{"version": 6, "workspace": {"anything": true}}"#,
     );
 
     let recovery = store(directory.path())
@@ -366,7 +368,7 @@ fn well_formed_data_that_breaks_a_workspace_rule_is_corrupt() {
     let mut duplicate = workspace(&["a"]);
     duplicate.tabs.push(tab("a"));
     // Written by hand, bypassing `save`, the way an edit or another tool would.
-    let json = serde_json::json!({ "version": 2, "workspace": duplicate });
+    let json = serde_json::json!({ "version": 5, "workspace": duplicate });
     write_raw(directory.path(), &json.to_string());
 
     let recovery = store(directory.path()).load().unwrap().recovery.unwrap();
@@ -473,15 +475,121 @@ fn version_one_migrates_without_losing_workspace_data() {
     store(dir.path()).save(1, &loaded.workspace).unwrap();
     let written: serde_json::Value =
         serde_json::from_slice(&fs::read(dir.path().join(FILE_NAME)).unwrap()).unwrap();
-    assert_eq!(written["version"], 2);
+    assert_eq!(written["version"], 5);
+}
+
+#[test]
+fn version_two_migrates_graph_preferences_to_worktree_scope() {
+    use gitcanvas_core::workspace::{
+        GraphColor, GraphPreferenceScope, GraphPreferences, ReferenceColor,
+    };
+    let directory = tempfile::tempdir().unwrap();
+    let mut old_workspace = workspace(&["legacy"]);
+    old_workspace.graph_preferences.push(GraphPreferences {
+        path: project("legacy"),
+        scope: GraphPreferenceScope::Worktree,
+        principal: Some("refs/heads/main".into()),
+        revision: 1,
+        colors: vec![ReferenceColor {
+            reference: "refs/heads/main".into(),
+            color: GraphColor::Blue,
+            edited: 1,
+        }],
+    });
+    let mut value = serde_json::to_value(old_workspace.clone()).unwrap();
+    value.as_object_mut().unwrap().remove("reference_filters");
+    value["graph_preferences"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("scope");
+    write_raw(
+        directory.path(),
+        &serde_json::json!({ "version": 2, "workspace": value }).to_string(),
+    );
+
+    let loaded = store(directory.path()).load().unwrap();
+    assert!(loaded.recovery.is_none());
+    assert_eq!(
+        loaded.workspace.graph_preferences[0].scope,
+        GraphPreferenceScope::Worktree
+    );
+    assert_eq!(loaded.workspace.reference_filters, Vec::new());
+    store(directory.path()).save(1, &loaded.workspace).unwrap();
+    let written: serde_json::Value =
+        serde_json::from_slice(&fs::read(directory.path().join(FILE_NAME)).unwrap()).unwrap();
+    assert_eq!(written["version"], 5);
+    assert_eq!(
+        written["workspace"]["graph_preferences"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn version_three_migrates_without_reference_tree_preferences() {
+    let directory = tempfile::tempdir().unwrap();
+    let mut old = serde_json::to_value(workspace(&["migration"])).unwrap();
+    old.as_object_mut()
+        .unwrap()
+        .remove("reference_tree_preferences");
+    write_raw(
+        directory.path(),
+        &serde_json::json!({ "version": 3, "workspace": old }).to_string(),
+    );
+
+    let loaded = store(directory.path()).load().unwrap();
+    assert!(loaded.recovery.is_none());
+    assert_eq!(loaded.workspace, workspace(&["migration"]));
+    store(directory.path()).save(1, &loaded.workspace).unwrap();
+    let written: serde_json::Value =
+        serde_json::from_slice(&fs::read(directory.path().join(FILE_NAME)).unwrap()).unwrap();
+    assert_eq!(written["version"], 5);
+}
+
+#[test]
+fn version_four_migrates_reference_search_preferences() {
+    use gitcanvas_core::workspace::ReferenceFilterPreferences;
+
+    let directory = tempfile::tempdir().unwrap();
+    let mut old_workspace = workspace(&["migration"]);
+    old_workspace
+        .reference_filters
+        .push(ReferenceFilterPreferences {
+            path: project("closed"),
+            excluded: vec!["refs/heads/side".into()],
+            search: String::new(),
+        });
+    let mut value = serde_json::to_value(old_workspace).unwrap();
+    value["reference_filters"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("search");
+    write_raw(
+        directory.path(),
+        &serde_json::json!({ "version": 4, "workspace": value }).to_string(),
+    );
+
+    let loaded = store(directory.path()).load().unwrap();
+    assert!(loaded.recovery.is_none());
+    assert_eq!(loaded.workspace.reference_filters[0].search, "");
+    store(directory.path()).save(1, &loaded.workspace).unwrap();
+    let written: serde_json::Value =
+        serde_json::from_slice(&fs::read(directory.path().join(FILE_NAME)).unwrap()).unwrap();
+    assert_eq!(written["version"], 5);
+    assert_eq!(written["workspace"]["reference_filters"][0]["search"], "");
 }
 
 #[test]
 fn graph_preferences_validate_identity_and_edit_sequence() {
-    use gitcanvas_core::workspace::{GraphColor, GraphPreferences, ReferenceColor};
+    use gitcanvas_core::workspace::{
+        GraphColor, GraphPreferenceScope, GraphPreferences, ReferenceColor,
+    };
     let mut data = Workspace::default();
     data.graph_preferences.push(GraphPreferences {
         path: project("closed"),
+        scope: GraphPreferenceScope::Worktree,
         principal: Some("refs/heads/main".into()),
         revision: 1,
         colors: vec![ReferenceColor {
@@ -497,5 +605,46 @@ fn graph_preferences_validate_identity_and_edit_sequence() {
     assert!(data.validate().is_err());
     data.graph_preferences[0].colors[0].edited = 1;
     data.graph_preferences[0].colors[0].reference = "../../escape".into();
+    assert!(data.validate().is_err());
+}
+
+#[test]
+fn reference_tree_preferences_are_bounded_unique_and_worktree_scoped() {
+    use gitcanvas_core::workspace::ReferenceTreePreferences;
+
+    let mut data = Workspace::default();
+    data.reference_tree_preferences
+        .push(ReferenceTreePreferences {
+            path: project("closed"),
+            collapsed: vec!["group:remote".into(), "folder:remote:origin/feature".into()],
+        });
+    let directory = tempfile::tempdir().unwrap();
+    store(directory.path()).save(1, &data).unwrap();
+    assert_eq!(store(directory.path()).load().unwrap().workspace, data);
+
+    data.reference_tree_preferences[0].collapsed[1] = String::new();
+    assert!(data.validate().is_err());
+    data.reference_tree_preferences[0].collapsed = vec!["group:remote".into(); 2];
+    assert!(data.validate().is_err());
+}
+
+#[test]
+fn reference_filter_searches_are_bounded_and_round_trip() {
+    use gitcanvas_core::workspace::{ReferenceFilterPreferences, MAX_REFERENCE_SEARCH_BYTES};
+
+    let mut data = Workspace::default();
+    data.reference_filters.push(ReferenceFilterPreferences {
+        path: project("search"),
+        excluded: vec!["refs/heads/side".into()],
+        search: "feature/login".into(),
+    });
+    data.validate().unwrap();
+    let serialized = serde_json::to_value(&data).unwrap();
+    assert_eq!(
+        serde_json::from_value::<Workspace>(serialized).unwrap(),
+        data
+    );
+
+    data.reference_filters[0].search = "x".repeat(MAX_REFERENCE_SEARCH_BYTES + 1);
     assert!(data.validate().is_err());
 }

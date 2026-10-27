@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { safeStorage } from "../lib/safeStorage";
 
 /** Panel width limits, in pixels. */
-export const SIDEBAR = { min: 160, max: 420, initial: 220 } as const;
+export const SIDEBAR = { min: 160, max: 420, initial: 250 } as const;
 /** Minimum, maximum, and initial widths of the inspector panel, in pixels. */
 export const INSPECTOR = { min: 240, max: 620, initial: 310 } as const;
 

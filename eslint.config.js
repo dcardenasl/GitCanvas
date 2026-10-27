@@ -168,7 +168,7 @@ export default tseslint.config(
    * layer, while retaining no-floating-promises with that project's types.
    */
   {
-    files: ["e2e/**/*.spec.ts", "e2e/history.ts", "wdio.conf.ts"],
+    files: ["e2e/**/*.ts", "wdio.conf.ts"],
     languageOptions: {
       globals: globals.node,
       parserOptions: {

@@ -39,6 +39,8 @@ export interface Navigation {
   readonly historyAnchor: string | null;
   /** Whether the branch list stays open while a file is being read. */
   readonly sidebarPinned: boolean;
+  /** Temporary visibility that belongs only to the currently open file. */
+  readonly sidebarTemporaryOpen: boolean;
 }
 
 /** A project that has just been opened: history, nothing pending. */
@@ -51,6 +53,7 @@ export const EMPTY_NAVIGATION: Navigation = {
   showAllCommitFiles: false,
   historyAnchor: null,
   sidebarPinned: false,
+  sidebarTemporaryOpen: false,
 };
 
 /** A change to a project's navigation. Returns the same value when nothing changes. */
@@ -65,6 +68,7 @@ export function selectCommit(id: string | null): Transition {
         ...navigation,
         selection: { kind: "history" },
         expandedFilePath: null,
+        sidebarTemporaryOpen: false,
       };
     }
     if (selection.kind === "commit" && selection.commitId === id) {
@@ -74,6 +78,7 @@ export function selectCommit(id: string | null): Transition {
       ...navigation,
       selection: { kind: "commit", commitId: id, filePath: null },
       expandedFilePath: null,
+      sidebarTemporaryOpen: false,
     };
   };
 }
@@ -96,11 +101,13 @@ export function selectFile(
               filePath: null,
             },
             expandedFilePath: null,
+            sidebarTemporaryOpen: false,
           }
         : {
             ...navigation,
             selection: { kind: "history" },
             expandedFilePath: null,
+            sidebarTemporaryOpen: false,
           };
     }
 
@@ -110,6 +117,7 @@ export function selectFile(
           ...navigation,
           selection: { kind: "history" },
           expandedFilePath: null,
+          sidebarTemporaryOpen: false,
         };
       }
       return {
@@ -121,6 +129,7 @@ export function selectFile(
           ...(mode === "snapshot" ? { fileMode: "snapshot" as const } : {}),
         },
         expandedFilePath: null,
+        sidebarTemporaryOpen: false,
       };
     }
 
@@ -128,6 +137,7 @@ export function selectFile(
       ...navigation,
       selection: { kind: "worktree", side: source, filePath: path },
       expandedFilePath: null,
+      sidebarTemporaryOpen: false,
     };
   };
 }
@@ -144,6 +154,7 @@ export function revealCommit(id: string): Transition {
     selection: { kind: "commit", commitId: id, filePath: null },
     expandedFilePath: null,
     revealCommitId: id,
+    sidebarTemporaryOpen: false,
   });
 }
 
@@ -153,17 +164,13 @@ export const clearReveal: Transition = (navigation) =>
     ? navigation
     : { ...navigation, revealCommitId: null };
 
-/** Clears a reveal request and returns to history if its commit is still selected. */
+/** Clears a reveal request but keeps the selected commit inspectable outside the filtered walk. */
 export const clearOrphanedReveal: Transition = (navigation) => {
-  const { revealCommitId, selection } = navigation;
+  const { revealCommitId } = navigation;
   if (revealCommitId === null) return navigation;
   return {
     ...navigation,
     revealCommitId: null,
-    selection:
-      selection.kind === "commit" && selection.commitId === revealCommitId
-        ? { kind: "history" }
-        : selection,
   };
 };
 
@@ -211,6 +218,14 @@ export function setSidebarPinned(pinned: boolean): Transition {
     navigation.sidebarPinned === pinned
       ? navigation
       : { ...navigation, sidebarPinned: pinned };
+}
+
+/** Shows or hides the panel temporarily while the current file is open. */
+export function setSidebarTemporaryOpen(open: boolean): Transition {
+  return (navigation) =>
+    navigation.sidebarTemporaryOpen === open
+      ? navigation
+      : { ...navigation, sidebarTemporaryOpen: open };
 }
 
 /**

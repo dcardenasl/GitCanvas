@@ -86,9 +86,15 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
     };
 
     window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("scroll", closeOnAnchorMove, true);
     window.addEventListener("resize", closeOnAnchorMove);
+    // Opening the menu can scroll its anchor while WebKitGTK moves focus to
+    // the first item. Arm scroll dismissal after the initial focus/layout frame
+    // so that browser-generated opening scroll cannot immediately close it.
+    const scrollFrame = window.requestAnimationFrame(() => {
+      window.addEventListener("scroll", closeOnAnchorMove, true);
+    });
     return () => {
+      window.cancelAnimationFrame(scrollFrame);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("scroll", closeOnAnchorMove, true);
       window.removeEventListener("resize", closeOnAnchorMove);

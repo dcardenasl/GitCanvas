@@ -10,6 +10,7 @@ const mockIpc = createIpcMocks([
   "getCommits",
   "getWorktreeSnapshot",
   "getRepositoryRefs",
+  "getRepositoryWorktrees",
 ] as const);
 const { getCommits, getWorktreeSnapshot } = mockIpc;
 
@@ -46,6 +47,7 @@ function mergePage(): HistoryPage {
     ],
     next_cursor: null,
     roots: [],
+    references: [],
   };
 }
 
@@ -99,6 +101,20 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("HistoryView", () => {
+  it("starts history from full reference names and carries the frozen scope", async () => {
+    getCommits.mockResolvedValue(mergePage());
+    renderView();
+
+    await waitFor(() => {
+      expect(getCommits).toHaveBeenCalledWith("/tmp/repo", {
+        limit: 500,
+        cursor: null,
+        roots: null,
+        references: ["HEAD"],
+      });
+    });
+  });
+
   it("draws a node for every commit and the merge as a curve", async () => {
     getCommits.mockResolvedValue(mergePage());
 
@@ -140,6 +156,7 @@ describe("HistoryView", () => {
       commits: [],
       next_cursor: null,
       roots: [],
+      references: [],
     });
 
     renderView();
@@ -199,18 +216,19 @@ it("releases obsolete frozen walks when reference roots change", async () => {
   await waitFor(() => {
     expect(container.querySelectorAll("circle")).toHaveLength(4);
   });
-  expect(client.getQueryData(["history", "/tmp/repo", []])).toBeDefined();
+  const oldHistoryKey = ["history", "/tmp/repo", ["HEAD"], ["HEAD\u0000"]];
+  expect(client.getQueryData(oldHistoryKey)).toBeDefined();
   act(() => {
     client.setQueryData(["refs", "/tmp/repo"], {
       branches: [],
       tags: [],
-      head: null,
+      head: "next",
       head_reference: null,
       roots: ["next"],
     });
   });
   await waitFor(() => {
-    expect(client.getQueryData(["history", "/tmp/repo", []])).toBeUndefined();
+    expect(client.getQueryData(oldHistoryKey)).toBeUndefined();
   });
   await waitFor(() => {
     expect(container.querySelectorAll("circle")).toHaveLength(4);

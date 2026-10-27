@@ -28,9 +28,13 @@ const { openTestProject, resetWorkspace, activeRoot } =
   await import("../../test/workspace");
 
 /** Wires the bar to a folder opener the way the shell does. */
-function Harness() {
+function Harness({
+  roots = new Set<string>(),
+}: {
+  readonly roots?: ReadonlySet<string>;
+}) {
   const folder = useOpenFolder();
-  return <TabBar folder={folder} />;
+  return <TabBar folder={folder} repositoryRoots={roots} />;
 }
 
 const ALPHA = { path: "/work/alpha", name: "alpha" };
@@ -73,6 +77,34 @@ function tab(name: string): HTMLElement {
 }
 
 describe("TabBar", () => {
+  it("marks contiguous linked-worktree tabs without changing their order", () => {
+    const store = useWorkspace.getState();
+    store.openProject(ALPHA);
+    store.openProject(BETA);
+    store.openProject({ path: "/work/gamma", name: "gamma" });
+    render(<Harness roots={new Set([ALPHA.path, BETA.path])} />);
+    const tabs = projectTabs();
+    expect(tabs.map((tab) => tab.title)).toEqual([
+      ALPHA.path,
+      BETA.path,
+      "/work/gamma",
+    ]);
+    expect(
+      tabs[0]?.parentElement?.classList.contains(
+        "tab-bar__tab--repository-group",
+      ),
+    ).toBe(true);
+    expect(
+      tabs[1]?.parentElement?.classList.contains(
+        "tab-bar__tab--repository-group",
+      ),
+    ).toBe(true);
+    expect(
+      tabs[2]?.parentElement?.classList.contains(
+        "tab-bar__tab--repository-group",
+      ),
+    ).toBe(false);
+  });
   it("shows a tab per open project and marks the active one", () => {
     openTestProject(ALPHA);
     openTestProject(BETA);

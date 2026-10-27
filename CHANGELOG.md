@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-26
+
+### Fixed
+
+- **Context menus** — keep menus open when focusing their first item scrolls the underlying view on WebKitGTK.
+- **Update checks** — report a network or release-service failure accurately and keep the retry action available instead of claiming the installed version is current.
+
+### Added
+
+- **App updates** — check GitHub releases for signed updates and install them with a restart from Preferences.
+- **Linked worktree inventory** — read shared Git metadata for worktree roots, HEAD and lock state, with refresh notifications from the active repository.
+- **Reference filters** — filter the complete commit history by selected branches, tags and HEAD, with per-worktree saved selections, search terms and stable pagination scopes.
+- **Reference explorer** — browse nested branches and tags, toggle their history visibility with eye controls, fold groups, and use contextual help; remember folded groups and folders per worktree across restarts.
+- **Worktree panel** — inspect and open linked worktrees, identify occupied branches, and group contiguous repository tabs without changing their global order.
+- **Reference sidebar** — search and organize branches and tags with virtual folders, bulk selection, undo and a temporary diff-panel shortcut.
+- **Shared graph preferences** — share branch colors and the visual main branch across validated linked worktrees while migrating existing preferences atomically.
+
+### Changed
+
+- **Update settings** — show the installed version and clarify update status and recovery actions.
+- **Reference sidebar** — align visibility and action controls in stable columns and use a compact worktree badge with the full path available on hover.
+- **Feature loading** — load the GitHub picker and file diff viewer only when those views are opened, keeping their code out of the initial application bundle.
+
 ## [0.4.0] — 2026-10-19
 
 ### Fixed

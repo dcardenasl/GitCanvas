@@ -5,6 +5,7 @@ import type { GraphColor, RepositoryRefsSnapshot } from "../bindings";
 import { getRepositoryRefs } from "../lib/ipc";
 import { useWorkspace } from "./workspace";
 import { queryKeys } from "./queryKeys";
+import { useRepositoryWorktrees } from "./repositoryWorktrees";
 
 /** A ref that can be shown as a badge on the commit it points at. */
 export interface RefBadge {
@@ -82,8 +83,16 @@ export function useRefsByCommit(
 ): ReadonlyMap<string, readonly RefBadge[]> {
   const branches = useBranches(path);
   const tags = useTags(path);
-  const saved = useWorkspace((state) =>
-    state.graphPreferences.find((p) => p.path === path),
+  const worktrees = useRepositoryWorktrees(path);
+  const saved = useWorkspace(
+    (state) =>
+      state.graphPreferences.find(
+        (p) =>
+          p.scope === "repository" && p.path === worktrees.data?.repository_id,
+      ) ??
+      state.graphPreferences.find(
+        (p) => p.scope === "worktree" && p.path === path,
+      ),
   );
 
   return useMemo(() => {

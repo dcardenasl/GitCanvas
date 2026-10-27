@@ -52,8 +52,18 @@ const MAIN = snapshot([branch("main", "a".repeat(40))]);
 const MOVED = snapshot([branch("main", "b".repeat(40))]);
 
 function page(): InfiniteData<HistoryPage> {
-  const first: HistoryPage = { commits: [], next_cursor: "c1", roots: [] };
-  const second: HistoryPage = { commits: [], next_cursor: null, roots: [] };
+  const first: HistoryPage = {
+    commits: [],
+    next_cursor: "c1",
+    roots: [],
+    references: [],
+  };
+  const second: HistoryPage = {
+    commits: [],
+    next_cursor: null,
+    roots: [],
+    references: [],
+  };
   return { pages: [first, second], pageParams: [null, "c1"] };
 }
 

@@ -33,3 +33,4 @@ pub mod retry;
 pub mod watch;
 pub mod workspace;
 pub mod worktree;
+pub mod worktrees;

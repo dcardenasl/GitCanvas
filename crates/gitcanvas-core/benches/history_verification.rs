@@ -39,6 +39,7 @@ fn matches_git_log_for_reference_repository() {
             limit: 50,
             cursor: None,
             roots: None,
+            references: None,
         },
     )
     .unwrap();
@@ -98,6 +99,7 @@ fn report_history_latency_for_ten_thousand_commits() {
                 limit: 500,
                 cursor: None,
                 roots: None,
+                references: None,
             };
             let page = if storage.ends_with("cached") {
                 reader.get_commits(&active, &request)

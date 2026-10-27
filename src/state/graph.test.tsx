@@ -11,7 +11,10 @@ import { resetWorkspace } from "../test/workspace";
 import { useWorkspace } from "./workspace";
 import { useGraphModel } from "./graph";
 
-vi.mock("../lib/ipc", () => ({ getRepositoryRefs: vi.fn() }));
+vi.mock("../lib/ipc", () => ({
+  getRepositoryRefs: vi.fn(),
+  getRepositoryWorktrees: vi.fn(),
+}));
 const reference = "refs/heads/main";
 const snapshot: RepositoryRefsSnapshot = {
   branches: [
@@ -33,6 +36,7 @@ const snapshot: RepositoryRefsSnapshot = {
 };
 const preferences = (path: string, revision = 0): GraphPreferences => ({
   path,
+  scope: "worktree",
   revision,
   principal: null,
   colors: [

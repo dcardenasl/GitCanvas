@@ -73,7 +73,7 @@ pub struct TabRecord {
 }
 
 /// Named palette identity, independent of theme and lane position.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Type)]
 #[serde(rename_all = "snake_case")]
 pub enum GraphColor {
     /// Amber palette pair.
@@ -106,12 +106,24 @@ pub struct ReferenceColor {
     pub edited: u32,
 }
 
+/// Persistence scope for graph appearance, independent of filter state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum GraphPreferenceScope {
+    /// Legacy or local appearance attached to one worktree root.
+    Worktree,
+    /// Shared appearance attached to a canonical Git common directory.
+    Repository,
+}
+
 /// Graph preferences belong to a canonical worktree, not its open tab.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(deny_unknown_fields)]
 pub struct GraphPreferences {
-    /// Canonical project root; does not authorize repository access.
+    /// Canonical worktree root or common Git directory; does not authorize access.
     pub path: String,
+    /// Whether this record belongs to one worktree or its linked repository group.
+    pub scope: GraphPreferenceScope,
     /// Explicit principal; absent means local automatic detection.
     pub principal: Option<String>,
     /// Monotonic explicit color edit sequence.
@@ -120,10 +132,42 @@ pub struct GraphPreferences {
     pub colors: Vec<ReferenceColor>,
 }
 
+/// Durable branch/tag exclusions for one canonical worktree root.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(deny_unknown_fields)]
+pub struct ReferenceFilterPreferences {
+    /// Canonical worktree root; never used as authorization.
+    pub path: String,
+    /// Full reference names excluded from the history walk; absent/new refs stay active.
+    pub excluded: Vec<String>,
+    /// Last reference search, restored independently for each worktree.
+    pub search: String,
+}
+
+/// Collapsed reference groups and folders for one canonical worktree root.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(deny_unknown_fields)]
+pub struct ReferenceTreePreferences {
+    /// Canonical worktree root; never used as authorization.
+    pub path: String,
+    /// Stable group and folder keys that should remain collapsed.
+    pub collapsed: Vec<String>,
+}
+
 /// Maximum projects retaining graph preferences independently of tabs.
 pub const MAX_GRAPH_PROJECTS: usize = 200;
 /// Maximum remembered references per project.
 pub const MAX_GRAPH_REFERENCES: usize = 10_000;
+/// Maximum worktrees with saved filter preferences.
+pub const MAX_REFERENCE_FILTER_WORKTREES: usize = 200;
+/// Maximum known reference exclusions per worktree.
+pub const MAX_EXCLUDED_REFERENCES: usize = 20_001;
+/// Maximum UTF-8 bytes in a saved reference search.
+pub const MAX_REFERENCE_SEARCH_BYTES: usize = 4_096;
+/// Maximum worktrees retaining reference-tree preferences.
+pub const MAX_REFERENCE_TREE_WORKTREES: usize = 200;
+/// Maximum collapsed reference groups and folders remembered per worktree.
+pub const MAX_COLLAPSED_REFERENCE_FOLDERS: usize = 500;
 
 /// Everything the application remembers between runs about its projects.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -139,6 +183,10 @@ pub struct Workspace {
     pub recents: Vec<String>,
     /// Graph preferences survive closing their project.
     pub graph_preferences: Vec<GraphPreferences>,
+    /// History filter state remains isolated by worktree across restarts.
+    pub reference_filters: Vec<ReferenceFilterPreferences>,
+    /// Reference tree expansion state remains isolated by worktree across restarts.
+    pub reference_tree_preferences: Vec<ReferenceTreePreferences>,
 }
 
 /// The bounds the workspace is held to, sent to the interface so it never keeps
@@ -156,6 +204,16 @@ pub struct WorkspaceLimits {
     pub max_graph_projects: u32,
     /// Maximum reference preferences per project.
     pub max_graph_references: u32,
+    /// Maximum worktrees retaining reference filters.
+    pub max_reference_filter_worktrees: u32,
+    /// Maximum reference exclusions per worktree.
+    pub max_excluded_references: u32,
+    /// Maximum UTF-8 bytes in a saved reference search.
+    pub max_reference_search_bytes: u32,
+    /// Maximum worktrees retaining reference-tree preferences.
+    pub max_reference_tree_worktrees: u32,
+    /// Maximum collapsed reference nodes per worktree.
+    pub max_collapsed_reference_folders: u32,
 }
 
 impl WorkspaceLimits {
@@ -169,6 +227,11 @@ impl WorkspaceLimits {
             max_recents: as_u32(MAX_RECENTS),
             max_graph_projects: as_u32(MAX_GRAPH_PROJECTS),
             max_graph_references: as_u32(MAX_GRAPH_REFERENCES),
+            max_reference_filter_worktrees: as_u32(MAX_REFERENCE_FILTER_WORKTREES),
+            max_excluded_references: as_u32(MAX_EXCLUDED_REFERENCES),
+            max_reference_search_bytes: as_u32(MAX_REFERENCE_SEARCH_BYTES),
+            max_reference_tree_worktrees: as_u32(MAX_REFERENCE_TREE_WORKTREES),
+            max_collapsed_reference_folders: as_u32(MAX_COLLAPSED_REFERENCE_FOLDERS),
         }
     }
 }
@@ -288,13 +351,21 @@ impl Workspace {
         }
         check_project_list("the favorites", &self.favorites, MAX_FAVORITES)?;
         check_project_list("the recents", &self.recents, MAX_RECENTS)?;
+        self.validate_graph_preferences()?;
+        self.validate_reference_filters()?;
+        self.validate_reference_tree_preferences()
+    }
+
+    fn validate_graph_preferences(&self) -> Result<(), AppError> {
         if self.graph_preferences.len() > MAX_GRAPH_PROJECTS {
             return Err(invalid("too many graph projects"));
         }
         let mut roots = BTreeSet::new();
         for preferences in &self.graph_preferences {
             check_project_path("graph preferences", &preferences.path)?;
-            if !roots.insert(&preferences.path) || preferences.colors.len() > MAX_GRAPH_REFERENCES {
+            if !roots.insert((preferences.scope, preferences.path.as_str()))
+                || preferences.colors.len() > MAX_GRAPH_REFERENCES
+            {
                 return Err(invalid(
                     "duplicate graph project or too many reference colors",
                 ));
@@ -316,6 +387,71 @@ impl Workspace {
                 check_ref(&color.reference)?;
                 if !references.insert(&color.reference) || color.edited > preferences.revision {
                     return Err(invalid("duplicate color or invalid edit sequence"));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_reference_filters(&self) -> Result<(), AppError> {
+        if self.reference_filters.len() > MAX_REFERENCE_FILTER_WORKTREES {
+            return Err(invalid("too many worktrees with reference filters"));
+        }
+        let mut filter_roots = BTreeSet::new();
+        for filters in &self.reference_filters {
+            check_project_path("reference filters", &filters.path)?;
+            if !filter_roots.insert(filters.path.as_str())
+                || filters.excluded.len() > MAX_EXCLUDED_REFERENCES
+            {
+                return Err(invalid(
+                    "duplicate filter worktree or too many excluded references",
+                ));
+            }
+            if filters.search.len() > MAX_REFERENCE_SEARCH_BYTES || filters.search.contains('\0') {
+                return Err(invalid("invalid or oversized reference search"));
+            }
+            let mut names = BTreeSet::new();
+            for reference in &filters.excluded {
+                let accepted = reference == "HEAD"
+                    || (git2::Reference::is_valid_name(reference)
+                        && (reference.starts_with("refs/heads/")
+                            || reference.starts_with("refs/remotes/")
+                            || reference.starts_with("refs/tags/")));
+                if reference.len() > MAX_PATH_BYTES
+                    || !accepted
+                    || !names.insert(reference.as_str())
+                {
+                    return Err(invalid("invalid or duplicate excluded reference"));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_reference_tree_preferences(&self) -> Result<(), AppError> {
+        if self.reference_tree_preferences.len() > MAX_REFERENCE_TREE_WORKTREES {
+            return Err(invalid(
+                "too many worktrees with reference-tree preferences",
+            ));
+        }
+        let mut tree_roots = BTreeSet::new();
+        for preferences in &self.reference_tree_preferences {
+            check_project_path("reference-tree preferences", &preferences.path)?;
+            if !tree_roots.insert(preferences.path.as_str())
+                || preferences.collapsed.len() > MAX_COLLAPSED_REFERENCE_FOLDERS
+            {
+                return Err(invalid(
+                    "duplicate reference-tree worktree or too many collapsed nodes",
+                ));
+            }
+            let mut keys = BTreeSet::new();
+            for key in &preferences.collapsed {
+                if key.is_empty()
+                    || key.len() > MAX_PATH_BYTES
+                    || key.contains('\0')
+                    || !keys.insert(key.as_str())
+                {
+                    return Err(invalid("invalid or duplicate collapsed reference node"));
                 }
             }
         }

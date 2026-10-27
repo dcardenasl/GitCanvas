@@ -78,6 +78,7 @@ export function reconcileColors(
   }
   return {
     path,
+    scope: "worktree",
     principal: saved?.principal ?? null,
     revision: saved?.revision ?? 0,
     colors: [...records.values()].sort((a, b) =>

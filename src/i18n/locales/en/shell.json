@@ -48,6 +48,7 @@
       "copyPath": "Copy path"
     },
     "home": "Home",
+    "sameRepository": "Adjacent worktree from the same repository",
     "label": "Open projects",
     "menu": {
       "cloneGitHub": "Clone from GitHub…",
@@ -58,6 +59,22 @@
     "unreachable": "Could not be opened",
     "writing": "Writing to the repository"
   },
+  "updates": {
+    "available": "New version available: {{version}}",
+    "check": "Check for updates",
+    "checking": "Checking for updates…",
+    "checkError": "Could not get the latest version information. Try again later.",
+    "current": "You have the latest version ({{version}}).",
+    "downloadInstall": "Download and install",
+    "installError": "The update could not be installed. Check again and try once more.",
+    "installedVersion": "Installed version",
+    "installing": "Downloading and installing…{{progress}}",
+    "restartNote": "GitCanvas will restart when the update is complete.",
+    "retry": "Check again",
+    "title": "Updates",
+    "versionLoading": "Loading…",
+    "versionUnavailable": "Unavailable"
+  },
   "theme": {
     "aria": "Application theme",
     "dark": "Dark",
@@ -67,6 +84,7 @@
   },
   "title": "{{name}} — GitCanvas",
   "toolbar": {
+    "filterIndicator": "Filters ({{count}})",
     "branches": "Branches",
     "branchesHint": "Show the branches while reading a file",
     "menuFailed": "Could not set the menu bar",

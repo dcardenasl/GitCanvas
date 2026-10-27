@@ -129,7 +129,9 @@ jobs:
 
       # --- The bundle ---
       - name: Build the application bundle
-        run: npm run tauri build -- --ci
+        # A signed updater artifact requires the release-only private key.
+        # Bundle the app for quality/E2E checks without producing that artifact.
+        run: npm run tauri build -- --ci --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
       # --- End to end ---
       #

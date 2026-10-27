@@ -1,5 +1,7 @@
 import type {
   GraphPreferences,
+  ReferenceFilterPreferences,
+  ReferenceTreePreferences,
   SavedSelection,
   TabRecord,
   Workspace,
@@ -75,6 +77,8 @@ export function workspaceRecord(state: {
   readonly favorites: readonly string[];
   readonly recents: readonly string[];
   readonly graphPreferences: readonly GraphPreferences[];
+  readonly referenceFilters: readonly ReferenceFilterPreferences[];
+  readonly referenceTreePreferences: readonly ReferenceTreePreferences[];
 }): Workspace {
   return {
     tabs: state.tabs.map(({ repository, navigation }) => ({
@@ -87,5 +91,7 @@ export function workspaceRecord(state: {
     favorites: [...state.favorites],
     recents: [...state.recents],
     graph_preferences: [...state.graphPreferences],
+    reference_filters: [...state.referenceFilters],
+    reference_tree_preferences: [...state.referenceTreePreferences],
   };
 }

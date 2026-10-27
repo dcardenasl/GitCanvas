@@ -12,13 +12,21 @@ import type {
 
 /** Canonical cache identities for every React Query resource in the app. */
 export const queryKeys = {
-  history: (repositoryPath: string | null, roots?: readonly string[]) =>
-    roots === undefined
+  history: (
+    repositoryPath: string | null,
+    references?: readonly string[],
+    snapshotRoots?: readonly string[],
+  ) =>
+    references === undefined
       ? (["history", repositoryPath] as const)
-      : (["history", repositoryPath, roots] as const),
+      : snapshotRoots === undefined
+        ? (["history", repositoryPath, references] as const)
+        : (["history", repositoryPath, references, snapshotRoots] as const),
   commit: (repositoryPath: string | null, commitId: string | null) =>
     ["commit", repositoryPath, commitId] as const,
   refs: (repositoryPath: string | null) => ["refs", repositoryPath] as const,
+  repositoryWorktrees: (repositoryPath: string | null) =>
+    ["repository-worktrees", repositoryPath] as const,
   worktree: (
     repositoryPath: string | null,
     request?: WorktreeSnapshotRequest,
@@ -75,6 +83,7 @@ function liveKeys(repositoryPath: string, scope: LiveQueryScope): QueryKey[] {
   const metadata: QueryKey[] = [
     queryKeys.history(repositoryPath),
     queryKeys.refs(repositoryPath),
+    queryKeys.repositoryWorktrees(repositoryPath),
   ];
   const worktree: QueryKey[] = [
     queryKeys.worktree(repositoryPath),

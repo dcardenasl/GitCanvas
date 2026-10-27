@@ -23,6 +23,7 @@ use super::{
 pub enum RepositoryChangedKind {
     Metadata,
     Worktree,
+    Worktrees,
     Degraded { message: String },
 }
 
@@ -123,6 +124,9 @@ pub async fn watch_repository(
                     }
                     watch::WatchEvent::Changed(watch::ChangeScope::Worktree) => {
                         RepositoryChangedKind::Worktree
+                    }
+                    watch::WatchEvent::Changed(watch::ChangeScope::Worktrees) => {
+                        RepositoryChangedKind::Worktrees
                     }
                     watch::WatchEvent::Degraded(message) => {
                         RepositoryChangedKind::Degraded { message }

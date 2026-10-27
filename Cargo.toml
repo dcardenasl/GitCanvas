@@ -13,7 +13,7 @@ resolver = "2"
 members = ["src-tauri", "crates/gitcanvas-core"]
 
 [workspace.package]
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 rust-version = "1.98"
 authors = ["David Cardenas Lorca"]
@@ -56,6 +56,7 @@ disallowed_methods = "deny"
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+sha2 = "0.10"
 
 # Type contracts. Rust is the single source of truth for every type that
 # crosses the IPC boundary; `src/bindings.ts` is generated from these and CI
@@ -94,11 +95,18 @@ keyring = { version = "3", features = [
     "sync-secret-service",
 ] }
 tauri-plugin-dialog = "2"
+tauri-plugin-process = "2"
+# v2 updater artifacts do not need the legacy Tauri v1 ZIP support, which pulls
+# in the vulnerable `zip` crate. Keep TLS and system proxy support enabled.
+tauri-plugin-updater = { version = "2", default-features = false, features = [
+    "rustls-tls",
+    "system-proxy",
+] }
 
 # Embedded WebDriver, for the end-to-end suite only. Behind the `e2e` feature so
 # the shipped binary never carries a WebDriver server: a released application
 # that can be driven remotely is a liability, not a feature.
-tauri-plugin-wdio-webdriver = "1.4"
+tauri-plugin-wdio-webdriver = "1.5"
 
 # AppKit, only to pre-initialise the folder panel on macOS. The bindings used
 # are safe functions, so the workspace's `unsafe_code = "forbid"` still holds.
