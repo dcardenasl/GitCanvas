@@ -87,6 +87,7 @@ it("installs the signed update and restarts after download", async () => {
 
 it("shows a recoverable error and allows another check", async () => {
   updater.check.mockRejectedValueOnce(new Error("offline"));
+  updater.check.mockResolvedValueOnce(null);
   render(<UpdateControl />);
 
   await userEvent.click(
@@ -98,11 +99,13 @@ it("shows a recoverable error and allows another check", async () => {
       "No se pudo consultar la información de la última versión. Inténtalo de nuevo más tarde.",
     ),
   ).toBeInstanceOf(HTMLElement);
+  await userEvent.click(
+    screen.getByRole("button", { name: "Volver a comprobar" }),
+  );
   expect(
-    screen
-      .getByRole("button", { name: "Volver a comprobar" })
-      .hasAttribute("disabled"),
-  ).toBe(false);
+    await screen.findByText("Tienes la versión más reciente (0.5.0)."),
+  ).toBeInstanceOf(HTMLElement);
+  expect(updater.check).toHaveBeenCalledTimes(2);
 });
 
 it("shows the installed version even before checking for updates", async () => {

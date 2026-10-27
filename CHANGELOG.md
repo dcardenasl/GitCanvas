@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Context menus** — keep menus open when focusing their first item scrolls the underlying view on WebKitGTK.
+- **Update checks** — report a network or release-service failure accurately and keep the retry action available instead of claiming the installed version is current.
 
 ### Added
 
