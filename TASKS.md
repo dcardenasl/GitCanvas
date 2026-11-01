@@ -6,29 +6,29 @@
 > [tres funcionalidades](docs/plan/2026-10-08-plan-tres-funcionalidades.md) y el
 > [plan general](docs/plans/2026-09-08-plan-de-implementacion.md).
 
-**Estado al 2026-10-26:** v0.4.0 tiene tag y commit de release. H2, I18N y workspace
-están implementados. La evidencia local de v0.4 está en
-[`docs/verification/v0.4.md`](docs/verification/v0.4.md); sus verificaciones
-externas/manuales sin evidencia siguen abiertas y no se consideran cerradas por la
-release. La siguiente entrega funcional es v0.5: panel, filtros y navegación de
-worktrees. La creación de commits permanece al final de la secuencia, objetivo v0.11.
-El [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md) prevalece sobre
-asignaciones de versiones de planes anteriores.
+**Estado al 2026-11-01:** v0.5.0 está publicada: tag `v0.5.0` sobre `main` (2026-10-27) y
+release de GitHub publicada el 2026-10-27. `dev` coincide con `origin/dev` e incluye
+después de ese tag solo dos cambios del flujo de release (`4bd10ac`, `af87682`).
+Las verificaciones externas/manuales sin evidencia de v0.4 y v0.5 siguen abiertas y no
+se consideran cerradas por las releases: GRF-5 y V05-VERIFY (Windows nativo y lector de
+pantalla real), además de WS-17 histórica. Evidencia local en
+[`docs/verification/v0.4.md`](docs/verification/v0.4.md) y
+[`docs/verification/v0.5.md`](docs/verification/v0.5.md). La siguiente entrega funcional
+es **v0.6: historial por archivo**. La creación de commits permanece al final de la
+secuencia, objetivo v0.11. El [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md)
+prevalece sobre asignaciones de versiones de planes anteriores.
 
-**Estado de trabajo:** rama `dev`. La implementación v0.5 está integrada localmente;
-los commits de esta entrega quedan en `dev` sin push. Se preservan `docs/audits/evidence/`
-y `docs/media/`, que están sin seguimiento;
-no agregarlas a commits de documentación. Inspeccionar estado e historial al retomar.
-La versión de los manifiestos se prepara como 0.5.0 para el build local de prueba; no
-crear tag ni publicar un release sin completar las puertas pendientes y autorización.
+**Estado de trabajo:** rama `dev`, sincronizada con `origin/dev`. Se preservan
+`docs/audits/evidence/`, `docs/media/` y `tools/demo/record-v05*`, que están sin
+seguimiento; no agregarlas a commits. Inspeccionar estado e historial al retomar. Los
+manifiestos están en 0.5.0; no cambiar versión, crear tag ni publicar sin autorización.
 
 ## Siguiente paso
 
-Completar **V05-VERIFY** de v0.5 según el
-[plan de implementación](docs/plan/2026-10-26-v0.5-implementacion.md#v05-verify--verificacion-y-documentacion-de-cierre).
-Las puertas manuales de GRF-5 que carecen de evidencia se mantienen como seguimiento
-separado; consultar [verificación v0.4](docs/verification/v0.4.md). La release v0.4.0
-ya existe: no repetirla ni atribuir sus resultados a recorridos no comprobados.
+Ejecutar la primera tarea sin marcar de [v0.6](#v06--historial-por-archivo): **FH-0**
+(contrato técnico, ADR 0008 y plan de implementación). Los gates de v0.4/v0.5 sin
+evidencia son seguimiento independiente: no bloquean v0.6 ni se atribuyen a recorridos no
+comprobados.
 
 ## Cola de trabajo
 
@@ -83,15 +83,38 @@ de conflictos Git, autores ni releases; el checkout explícito existente se cons
 - [x] **SID-1 — Organización e interacción del panel.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#sid-1--organizacion-e-interaccion-del-panel), [especificación D01–D50](docs/plan/2026-10-18-panel-izquierdo-ui-ux.md), [`CONTEXT.md`](CONTEXT.md), [`CLAUDE.md`](CLAUDE.md). Búsqueda de sesión, secciones, carpetas virtuales, contadores, tri-state, acciones limitadas a coincidencias e inglés/español.
 - [x] **WT-3 — Panel de worktrees, pestañas y checkout.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#wt-3--panel-de-worktrees-pestanas-y-checkout), [ADR 0006](docs/adr/0006-workspace.md), [`CONTEXT.md`](CONTEXT.md). Apertura validada y sin duplicar, estado de ramas ocupadas, grupos contiguos sin alterar el orden global, checkout explícito separado.
 - [x] **SID-2 — Indicador de filtros en el diff.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#sid-2--indicador-de-filtros-en-el-diff), [especificación D01–D50](docs/plan/2026-10-18-panel-izquierdo-ui-ux.md). Apertura temporal sin perder diff/posición ni alterar fijación; prueba AppShell incluida.
-- [ ] **V05-VERIFY — Verificación y cierre documental.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#v05-verify--verificacion-y-documentacion-de-cierre), [evidencia v0.5](docs/verification/v0.5.md), [verificación v0.4](docs/verification/v0.4.md), [`CLAUDE.md`](CLAUDE.md). macOS desbloqueado: ocho specs E2E nativos pasaron, incluido `workspace`; el spec v0.5 tiene cuatro recorridos. Tema claro/oscuro, inglés/español, ventana 940×600 e indicador del diff están verificados. La suite frontend macOS pasó 831 pruebas en 87 archivos. Linux arm64: tipos, lint, 830 pruebas frontend, formato/Clippy/tests Rust y build pasaron; tras corregir el cierre prematuro del menú por el scroll de foco inicial, pasaron los ocho specs E2E (20 recorridos). El teardown de WDIO dejó advertencias sin afectar el resultado de la suite. Se autorizaron y retiraron imágenes Docker recuperables sin tocar contenedores ni volúmenes. Windows: con `cargo-xwin` y LLVM se aprobaron el check MSVC, Clippy estricto de todos los targets/features, la compilación de tests con `--no-run` y el enlace release del binario E2E; falta ejecutar en Windows nativo. El build local 0.5.0 se instaló y abrió en este Mac; la app muestra el panel de referencias y worktrees y su diálogo Acerca de informa `0.5.0`. El árbol AX expuso los controles v0.5; VoiceOver + panel de subtítulos se activaron durante el último intento y luego se restauraron apagados, pero CUA no expuso el texto hablado ni permite certificar anuncios/foco. Pendiente: E2E Windows nativo y comprobación con lector de pantalla real; no se declaran verificados.
+- [ ] **V05-VERIFY — Verificación y cierre documental (seguimiento de gates externos).** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#v05-verify--verificacion-y-documentacion-de-cierre), [evidencia v0.5](docs/verification/v0.5.md), [verificación v0.4](docs/verification/v0.4.md), [`CLAUDE.md`](CLAUDE.md). v0.5.0 ya está publicada. Verificado localmente: macOS (831 pruebas frontend, ocho specs E2E nativos), Linux arm64 (830 pruebas frontend, ocho specs/20 recorridos E2E, Rust, Clippy y build), compilación cruzada MSVC (check, Clippy estricto, tests `--no-run` y enlace release), temas, idiomas, 940×600 e indicador del diff. **Pendiente, sin evidencia:** E2E en Windows nativo y prueba con lector de pantalla real; los intentos con VoiceOver solo confirmaron árbol de accesibilidad y foco de teclado, no anuncios. No se declaran verificados.
 
 Crear o retirar worktrees sigue reservado para una entrega futura sin versión asignada;
 preparación por líneas, amend y commits permanecen después de v0.10/v0.11 según el
 roadmap.
 
+### v0.6 — Historial por archivo
+
+Estrategia aprobada el 2026-11-01 sobre el [roadmap](docs/plan/2026-10-19-roadmap-de-versiones.md#dependencias-y-criterios-de-versiones-posteriores).
+Decisiones: seguir renombrados por similitud de `git2` (umbral predeterminado de Git, 50%)
+con límites y corte explícitos; acción «Historial del archivo» en inspector y lista de
+archivos que abre una vista dedicada en la pestaña, sin modificar filtros del gráfico y con
+aviso si el commit queda fuera del alcance actual; merges con la semántica de
+`git log -- <ruta>` (simplificación por defecto); rutas eliminadas consultables. Sin blame,
+comparación de commits ni escrituras Git. Leer [ADR 0002](docs/adr/0002-local-file-safety-and-resource-budgets.md),
+[ADR 0006](docs/adr/0006-workspace.md), [ADR 0007](docs/adr/0007-stable-branch-graph.md),
+`CONTEXT.md`, `ARCHITECTURE.md` y `CLAUDE.md` antes de cada tarea. FH-0 crea el plan
+detallado y enlaza aquí sus secciones por tarea.
+
+- [x] **REC-1 — Reconciliar el estado de v0.5 con la release publicada.** Cabecera, siguiente paso, V05-VERIFY, verificación y plan de v0.5, SNAPSHOT y CLAUDE.md. Gates sin evidencia conservados como seguimiento. → `docs: reconcile v0.5 release status and pending verification gates`
+- [ ] **FH-0 — Contrato técnico y plan.** Plan `docs/plan/` de v0.6, ADR 0008 (semántica de merges, renombrados, límites, cursor inmutable por instantánea) y fixtures de referencia. → `docs(file-history): define the per-file history contract in adr 0008`
+- [ ] **FH-1 — Motor: historial por ruta.** Recorrido con pathspec, paginación, cursor ligado a (ruta, instantánea) y límites con motivo explícito; reutiliza `history.rs`/`pagination.rs`. → `feat(core): walk the history of a single path with bounded work`
+- [ ] **FH-2 — Renombrados.** `find_similar` al aparecer la ruta como añadida, `path_at_commit` por fila, corte explícito por presupuesto. → `feat(core): follow renames within explicit similarity and budget limits`
+- [ ] **FH-3 — IPC y autorización.** Comandos Specta con validación de ruta relativa y autorización por repositorio; bindings sin deriva. → `feat(ipc): expose per-file history through authorized commands`
+- [ ] **FH-4 — Estado frontend.** Navegación por pestaña, consultas por repositorio+ruta, persistencia mínima y liberación en cierre/LRU. → `feat(file-history): keep per-tab file history state and queries`
+- [ ] **FH-5 — Vista y puntos de entrada.** Inspector y lista de archivos, lista de commits, diff/contenido histórico y avisos de límites y de alcance. → `feat(file-history): add the file history view and entry points`
+- [ ] **FH-6 — Accesibilidad, i18n y E2E.** Teclado/ARIA, inglés/español, ambos temas, 940×600 y recorrido nativo. → `test(e2e): cover file history across themes and languages`
+- [ ] **FH-7 — Verificación y documentación.** Evidencia, CHANGELOG en `Unreleased`, ARCHITECTURE, CONTEXT, PRODUCT, DESIGN y README. → `docs(file-history): record verification and update product docs`
+
 ### Entregas posteriores
 
-v0.5 panel/filtros y navegación de worktrees → v0.6 historial por archivo → v0.7 contribuyentes/releases →
+v0.5 panel/filtros y worktrees (publicada) → v0.6 historial por archivo → v0.7 contribuyentes/releases →
 v0.8 proveedores → v0.9 crear/conectar repositorios → v0.10 gestión de ramas →
 v0.11 preparar/crear commits. Objetivos de planificación, sin fechas ni bumps.
 Desglosar cada entrega al prepararla siguiendo el roadmap y los acuerdos existentes.

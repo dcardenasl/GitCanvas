@@ -12,8 +12,9 @@ el render SVG. El graph es el núcleo de valor: todo lo demás está subordinado
 ## Cómo retomar en frío
 
 1. Leer [`TASKS.md`](TASKS.md) → primera tarea sin marcar de la cola vigente.
-   El [roadmap de versiones](docs/plan/2026-10-19-roadmap-de-versiones.md) prioriza
-   gráfico/colores v0.4 y panel/filtros v0.5; commits al final (objetivo v0.11).
+   El [roadmap de versiones](docs/plan/2026-10-19-roadmap-de-versiones.md) fija la
+   secuencia: v0.4 y v0.5 publicadas, v0.6 historial por archivo en curso; commits al
+   final (objetivo v0.11).
 2. Leer la sección de esa fase en
    [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
    Trae las decisiones técnicas ya cerradas: no las vuelvas a abrir.
