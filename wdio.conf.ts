@@ -120,7 +120,12 @@ function removeOwnedFixture(fixture: OwnedFixture): void {
 
 /** Build a temporary fixture before the app starts, then remove it on failure. */
 function createFixtureRepository(
-  kind: "history" | "local-changes" | "workspace" | "graph-performance",
+  kind:
+    | "history"
+    | "local-changes"
+    | "workspace"
+    | "graph-performance"
+    | "file-history",
 ): OwnedFixture {
   const repository = fs.mkdtempSync(path.join(os.tmpdir(), "gitcanvas-e2e-"));
   const token = randomUUID();
@@ -154,6 +159,42 @@ function createFixtureRepository(
         input: stream.join(""),
         stdio: ["pipe", "pipe", "pipe"],
       });
+      return { repository: fs.realpathSync(repository), token };
+    }
+
+    if (kind === "file-history") {
+      // One commit per history shape the per-file view must show: a plain
+      // modification (main), a branch that changed the same file, a merge
+      // that resolves their conflict (so it differs from both parents), a
+      // rename with identical content (exact), and a deletion at HEAD.
+      fs.writeFileSync(path.join(repository, "notes.txt"), "base\n");
+      fs.writeFileSync(path.join(repository, "old.txt"), "shared body\n");
+      git("add", "notes.txt", "old.txt");
+      git("commit", "-m", "base commit");
+
+      git("checkout", "-b", "side");
+      fs.writeFileSync(path.join(repository, "notes.txt"), "base\nside\n");
+      git("commit", "-am", "side change to notes");
+
+      git("checkout", "main");
+      fs.writeFileSync(path.join(repository, "notes.txt"), "base\nmain\n");
+      git("commit", "-am", "main change to notes");
+
+      // The merge conflicts on notes.txt by design; resolving it is the point.
+      try {
+        git("merge", "--no-ff", "side", "-m", "merge side into main");
+      } catch {
+        // Expected: the conflict is resolved below.
+      }
+      fs.writeFileSync(path.join(repository, "notes.txt"), "resolved\n");
+      git("add", "notes.txt");
+      git("commit", "-m", "resolve notes conflict");
+
+      git("mv", "old.txt", "renamed.txt");
+      git("commit", "-m", "rename old.txt to renamed.txt");
+
+      git("rm", "notes.txt");
+      git("commit", "-m", "delete notes.txt");
       return { repository: fs.realpathSync(repository), token };
     }
 
@@ -217,7 +258,8 @@ if (
   fixtureKind !== "history" &&
   fixtureKind !== "local-changes" &&
   fixtureKind !== "workspace" &&
-  fixtureKind !== "graph-performance"
+  fixtureKind !== "graph-performance" &&
+  fixtureKind !== "file-history"
 ) {
   throw new Error(`Unsupported E2E fixture kind: ${fixtureKind}`);
 }

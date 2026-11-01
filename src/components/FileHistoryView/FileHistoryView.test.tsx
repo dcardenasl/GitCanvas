@@ -218,6 +218,31 @@ describe("file history view", () => {
     ).toBeNull();
   });
 
+  it("moves focus between commits with the arrow, Home and End keys", async () => {
+    getFileHistory.mockResolvedValue(
+      fileHistoryPage(
+        [fileHistoryRow("b"), fileHistoryRow("c"), fileHistoryRow("d")],
+        null,
+      ),
+    );
+    openHistory();
+    renderView(graph(["b", "c", "d"]));
+
+    const list = await screen.findByRole("list", {
+      name: "Commits que cambiaron src/app.ts",
+    });
+    const rows = within(list).getAllByRole("button", { pressed: false });
+    rows[0]?.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(document.activeElement?.textContent).toContain("change c");
+    await userEvent.keyboard("{End}");
+    expect(document.activeElement?.textContent).toContain("change d");
+    await userEvent.keyboard("{ArrowDown}");
+    expect(document.activeElement?.textContent).toContain("change d");
+    await userEvent.keyboard("{Home}");
+    expect(document.activeElement?.textContent).toContain("change b");
+  });
+
   it("goes back to the graph with a single action", async () => {
     getFileHistory.mockResolvedValue(
       fileHistoryPage([fileHistoryRow("b")], null),

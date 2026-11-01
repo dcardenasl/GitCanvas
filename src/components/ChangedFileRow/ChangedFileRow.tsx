@@ -97,6 +97,7 @@ export function ChangedFileRow({
         <button
           type="button"
           className="file-row__history"
+          aria-label={t("fileHistory:openFor", { path })}
           disabled={history.unavailable !== null}
           title={
             history.unavailable === null

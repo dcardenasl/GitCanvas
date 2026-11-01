@@ -1,5 +1,12 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import type { FileHistoryRow } from "../../bindings";
@@ -20,12 +27,45 @@ import "./FileHistoryView.css";
 
 /** Height of one commit row; the list is virtualized with this fixed size. */
 const ROW_HEIGHT = 48;
+/** Rows moved by Page Up and Page Down. */
+const PAGE_ROWS = 10;
 
 const CHANGE_MARK: Record<FileHistoryRow["change"], string> = {
   added: "A",
   modified: "M",
   deleted: "D",
 };
+
+/**
+ * The row that a navigation key moves to from `index`, or `null` for other keys.
+ * Movement stops at the first and last rows rather than wrapping.
+ */
+function keyTarget(key: string, index: number, last: number): number | null {
+  switch (key) {
+    case "ArrowDown":
+      return Math.min(index + 1, last);
+    case "ArrowUp":
+      return Math.max(index - 1, 0);
+    case "PageDown":
+      return Math.min(index + PAGE_ROWS, last);
+    case "PageUp":
+      return Math.max(index - PAGE_ROWS, 0);
+    case "Home":
+      return 0;
+    case "End":
+      return last;
+    default:
+      return null;
+  }
+}
+
+/** The row index of the element that holds focus, when it is a history row. */
+function rowIndexOf(target: EventTarget): number | null {
+  if (!(target instanceof HTMLElement)) return null;
+  const value =
+    target.closest<HTMLElement>("[data-row-index]")?.dataset.rowIndex;
+  return value === undefined ? null : Number(value);
+}
 
 /**
  * The history of one file, which takes the place of the graph while it is open.
@@ -55,6 +95,29 @@ export function FileHistoryView({
     estimateSize: () => ROW_HEIGHT,
     overscan: 8,
   });
+
+  // Keyboard focus moves one row at a time. The row it moves to may not be drawn
+  // yet, so the request waits until the virtualizer has rendered that row.
+  const [focusRequest, setFocusRequest] = useState<number | null>(null);
+  const virtualRows = virtualizer.getVirtualItems();
+  useEffect(() => {
+    if (focusRequest === null) return;
+    const row = scrollRef.current?.querySelector<HTMLButtonElement>(
+      `[data-row-index="${String(focusRequest)}"]`,
+    );
+    if (row === null || row === undefined) return;
+    row.focus();
+    setFocusRequest(null);
+  }, [focusRequest, virtualRows]);
+  const onListKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const index = rowIndexOf(event.target);
+    if (index === null) return;
+    const target = keyTarget(event.key, index, file.rows.length - 1);
+    if (target === null) return;
+    event.preventDefault();
+    virtualizer.scrollToIndex(target);
+    setFocusRequest(target);
+  };
 
   // A view that started from HEAD is stale once HEAD moves away from its start.
   const followsHead = view?.followsHead ?? false;
@@ -188,13 +251,17 @@ export function FileHistoryView({
       ) : file.rows.length === 0 && file.error === null ? (
         <p className="state">{t("empty")}</p>
       ) : (
-        <div ref={scrollRef} className="file-history__list">
+        <div
+          ref={scrollRef}
+          className="file-history__list"
+          onKeyDown={onListKeyDown}
+        >
           <ul
             className="file-history__rows"
             aria-label={t("list", { path: view.path })}
             style={{ height: virtualizer.getTotalSize() }}
           >
-            {virtualizer.getVirtualItems().map((item) => {
+            {virtualRows.map((item) => {
               const row = file.rows[item.index];
               if (row === undefined) return null;
               const notes = rowNotes(row);
@@ -209,6 +276,7 @@ export function FileHistoryView({
                 >
                   <button
                     type="button"
+                    data-row-index={item.index}
                     className={
                       selectedId === row.commit.id
                         ? "file-history__row file-history__row--selected"

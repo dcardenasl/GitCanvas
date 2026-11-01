@@ -16,6 +16,7 @@
   "localChanges": "Local changes",
   "merge": "Merge: compared with its first parent",
   "open": "History",
+  "openFor": "History of {{path}}",
   "outsideScope": "This commit is outside the current graph scope, so it cannot be shown in the graph.",
   "refresh": "Refresh",
   "renamedFrom": "Renamed from {{path}}",

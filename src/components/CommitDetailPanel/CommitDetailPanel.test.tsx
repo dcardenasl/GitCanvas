@@ -125,7 +125,10 @@ describe("CommitDetailPanel", () => {
       name: "Archivos modificados",
     });
     await userEvent.click(
-      within(list).getByRole("button", { name: /app\.ts/ }),
+      within(list).getByRole("button", {
+        name: (name) =>
+          name.includes("app.ts") && !name.startsWith("Historial"),
+      }),
     );
 
     expect(activeNavigation().selection).toEqual({
@@ -161,7 +164,10 @@ describe("CommitDetailPanel", () => {
     const list = await screen.findByRole("list", {
       name: "Archivos modificados",
     });
-    const row = within(list).getByRole("button", { name: /index\.ts/ });
+    const row = within(list).getByRole("button", {
+      name: (name) =>
+        name.includes("index.ts") && !name.startsWith("Historial"),
+    });
     const text = row.textContent;
 
     expect(text.indexOf("index.ts")).toBeLessThan(
@@ -327,7 +333,7 @@ it("opens the file's history from this commit, not from HEAD", async () => {
     name: "Archivos modificados",
   });
   await userEvent.click(
-    within(list).getByRole("button", { name: "Historial" }),
+    within(list).getByRole("button", { name: "Historial de src/app.ts" }),
   );
 
   expect(activeNavigation().fileHistory).toEqual({
