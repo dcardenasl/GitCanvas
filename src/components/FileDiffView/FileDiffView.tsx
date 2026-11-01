@@ -90,6 +90,9 @@ export function FileDiffView(props: FileDiffViewProps) {
     ? worktreeFileDiff.data?.file
     : commitDiff.data?.files.find((entry) => entry.path === path);
   const deleted = file?.change === "Deleted";
+  // A commit that deleted a file has no content of its own. Its previous version
+  // is the file at the first parent, which the whole-file view shows instead.
+  const previousCommitId = deleted ? (props.commit?.parents[0] ?? null) : null;
 
   useEffect(() => {
     if (
@@ -114,7 +117,7 @@ export function FileDiffView(props: FileDiffViewProps) {
     ),
     enabled:
       mode === "file" &&
-      !deleted &&
+      (!deleted || previousCommitId !== null) &&
       (!isWorktree || localRevision !== undefined),
     queryFn: () => {
       if (isWorktree) {
@@ -126,7 +129,7 @@ export function FileDiffView(props: FileDiffViewProps) {
         });
       }
       return getFileContent(repositoryPath, {
-        commit_id: props.commit.id,
+        commit_id: previousCommitId ?? props.commit.id,
         path,
         expand: expanded,
       });
@@ -205,7 +208,7 @@ export function FileDiffView(props: FileDiffViewProps) {
         </div>
 
         <div className="file-diff__controls">
-          {!deleted && !isSnapshot && (
+          {!isSnapshot && (deleted ? previousCommitId !== null : true) && (
             <div
               className="segmented"
               role="group"
@@ -229,7 +232,7 @@ export function FileDiffView(props: FileDiffViewProps) {
                   setMode("file");
                 }}
               >
-                {t("diff.modeWhole")}
+                {deleted ? t("diff.modeBeforeDeletion") : t("diff.modeWhole")}
               </button>
             </div>
           )}
@@ -298,6 +301,11 @@ export function FileDiffView(props: FileDiffViewProps) {
           </>
         ) : (
           <>
+            {deleted && previousCommitId !== null && (
+              <p className="diff-viewer__notice">
+                {t("diff.beforeDeletion", { id: shortId(previousCommitId) })}
+              </p>
+            )}
             {whole.isPending && (
               <p className="state file-diff__state">{t("diff.readingFile")}</p>
             )}

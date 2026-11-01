@@ -30,6 +30,8 @@
     "loadWhole": "View whole file",
     "localStaged": "local changes · staged",
     "localUnstaged": "local changes · unstaged",
+    "beforeDeletion": "Version before the deletion, at {{id}}.",
+    "modeBeforeDeletion": "Before deletion",
     "modeChanges": "Changes",
     "modeLabel": "What to show of the file",
     "modeWhole": "Whole file",

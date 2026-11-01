@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **File history** — open the commit history of a file from the commit inspector or the local changes list, follow it through renames, and jump to any listed commit in the graph. Keyboard arrows, Home, End and Page keys move between commits.
+- **Deleted files** — a commit that deleted a file can show the version before the deletion, read from its parent, in the file view.
 
 ## [0.5.0] — 2026-10-26
 

@@ -32,6 +32,8 @@
     "loadWhole": "Ver archivo completo",
     "localStaged": "cambios locales · preparado",
     "localUnstaged": "cambios locales · sin preparar",
+    "beforeDeletion": "Versión anterior al borrado, en {{id}}.",
+    "modeBeforeDeletion": "Antes del borrado",
     "modeChanges": "Cambios",
     "modeLabel": "Qué mostrar del archivo",
     "modeWhole": "Archivo completo",

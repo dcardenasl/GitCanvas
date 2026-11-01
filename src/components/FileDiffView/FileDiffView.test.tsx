@@ -315,16 +315,22 @@ describe("FileDiffView", () => {
     });
   });
 
-  it("does not offer the whole file for one the commit deleted", async () => {
+  it("shows the version before the deletion, read at the commit's first parent", async () => {
     getCommitDiff.mockResolvedValue(diff([file({ change: "Deleted" })]));
+    getFileContent.mockResolvedValue(content());
     renderView();
-    await findLine("const b = 3;");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Antes del borrado" }),
+    );
 
-    // There is nothing to read: offering it and then failing is worse than not
-    // offering it.
+    await findLine("const b = 3;");
+    expect(getFileContent.mock.calls.at(-1)?.[1]).toMatchObject({
+      commit_id: COMMIT.parents[0],
+      path: "src/app.ts",
+    });
     expect(
-      screen.queryByRole("button", { name: "Archivo completo" }),
-    ).toBeNull();
+      screen.getByText(`Versión anterior al borrado, en ${"b".repeat(7)}.`),
+    ).toBeTruthy();
   });
 
   it("loads a large file only when asked", async () => {
