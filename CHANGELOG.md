@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-11-01
+
 ### Added
 
 - **File history** — open the commit history of a file from the commit inspector or the local changes list, follow it through renames, and jump to any listed commit in the graph. Keyboard arrows, Home, End and Page keys move between commits.

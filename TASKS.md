@@ -13,15 +13,16 @@ Las verificaciones externas/manuales sin evidencia de v0.4 y v0.5 siguen abierta
 se consideran cerradas por las releases: GRF-5 y V05-VERIFY (Windows nativo y lector de
 pantalla real), además de WS-17 histórica. Evidencia local en
 [`docs/verification/v0.4.md`](docs/verification/v0.4.md) y
-[`docs/verification/v0.5.md`](docs/verification/v0.5.md). La siguiente entrega funcional
-es **v0.6: historial por archivo**. La creación de commits permanece al final de la
+[`docs/verification/v0.5.md`](docs/verification/v0.5.md). **v0.6: historial por archivo**
+está implementada y verificada en `dev` ([evidencia](docs/verification/v0.6.md)); su release
+0.6.0 espera la aprobación de David para abrir el PR a `main`. La creación de commits permanece al final de la
 secuencia, objetivo v0.11. El [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md)
 prevalece sobre asignaciones de versiones de planes anteriores.
 
 **Estado de trabajo:** rama `dev`, sincronizada con `origin/dev`. Se preservan
 `docs/audits/evidence/`, `docs/media/` y `tools/demo/record-v05*`, que están sin
 seguimiento; no agregarlas a commits. Inspeccionar estado e historial al retomar. Los
-manifiestos están en 0.5.0; no cambiar versión, crear tag ni publicar sin autorización.
+manifiestos están en 0.6.0 desde el commit de release; no crear tag ni publicar sin autorización.
 
 ## Siguiente paso
 
