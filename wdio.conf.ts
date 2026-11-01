@@ -591,6 +591,13 @@ export const config: WebdriverIO.Config = {
     }
     if (ownedFixture !== null) removeOwnedFixture(ownedFixture);
     if (secondFixture !== null) removeOwnedFixture(secondFixture);
-    fs.rmSync(e2eDataDir, { recursive: true, force: true });
+    // The application may still be flushing its data as WebDriver closes it, so
+    // a first removal can meet a non-empty directory. Retry rather than fail the run.
+    fs.rmSync(e2eDataDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 200,
+    });
   },
 };
