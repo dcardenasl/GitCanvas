@@ -82,6 +82,28 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
     [PATH, { commit_id: "a", file_path: null, expand_path: null }],
   ],
   [
+    "getFileHistory",
+    () =>
+      ipc.getFileHistory(PATH, {
+        path: "f.txt",
+        start: "a",
+        limit: 50,
+        cursor: null,
+        focus_commit: null,
+      }),
+    "getFileHistory",
+    [
+      PATH,
+      {
+        path: "f.txt",
+        start: "a",
+        limit: 50,
+        cursor: null,
+        focus_commit: null,
+      },
+    ],
+  ],
+  [
     "getCommitTreePage",
     () =>
       ipc.getCommitTreePage(PATH, {

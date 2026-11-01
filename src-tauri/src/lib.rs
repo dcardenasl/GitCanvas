@@ -63,6 +63,7 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::lifecycle::acknowledge_shutdown,
             commands::repository::get_commits,
             commands::repository::get_commit,
+            commands::repository::get_file_history,
             commands::repository::get_repository_refs,
             commands::repository::get_repository_worktrees,
             commands::diff::get_commit_diff,
@@ -272,6 +273,11 @@ pub fn run() {
         .manage(std::sync::Arc::new(
             gitcanvas_core::history::HistoryReader::default(),
         ))
+        .manage(commands::repository::FileHistoryCache(std::sync::Arc::new(
+            gitcanvas_core::history::HistoryReader::with_budget(
+                gitcanvas_core::file_history::FILE_HISTORY_CACHED_COMMITS,
+            ),
+        )))
         .manage(commands::repo_access::AllowedRepos::default())
         .manage(commands::open_repos::OpenRepos::default())
         .manage(std::sync::Arc::new(lifecycle::ShutdownGate::default()))

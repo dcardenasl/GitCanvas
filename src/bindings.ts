@@ -47,6 +47,8 @@ export const commands = {
 	getCommits: (path: string, request: HistoryRequest) => typedError<HistoryPage, AppError>(__TAURI_INVOKE("get_commits", { path, request })),
 	/**  Reads a selected commit by full id, independently of the loaded history pages. */
 	getCommit: (path: string, commitId: string) => typedError<CommitInfo, AppError>(__TAURI_INVOKE("get_commit", { path, commitId })),
+	/**  Reads one bounded page of a file's history, following renames from a start commit. */
+	getFileHistory: (path: string, request: FileHistoryRequest) => typedError<FileHistoryPage, AppError>(__TAURI_INVOKE("get_file_history", { path, request })),
 	/**  Reads one coherent generation of branches, tags, HEAD and history roots. */
 	getRepositoryRefs: (path: string) => typedError<RepositoryRefsSnapshot, AppError>(__TAURI_INVOKE("get_repository_refs", { path })),
 	/**  Reads linked-worktree metadata from the authorized active repository. */
@@ -398,6 +400,80 @@ export type FileDiffSummary = {
 	omitted: DiffOmission | null,
 };
 
+/**  Bounds the engine enforces, published so the interface never copies them. */
+export type FileHistoryLimits = {
+	/**  Largest accepted page size. */
+	max_page_size: number,
+	/**  Commits examined per request. */
+	max_examined: number,
+	/**  Followed commits that may be pending at once. */
+	max_frontier: number,
+	/**  Renames followed per query. */
+	max_renames: number,
+	/**  Changed files per commit above which rename detection is skipped. */
+	max_rename_search_deltas: number,
+};
+
+/**  One page of a file's history. */
+export type FileHistoryPage = {
+	/**  Changing commits in history order. */
+	rows: FileHistoryRow[],
+	/**  Cursor for the next page, present when more rows may follow. */
+	next_cursor: string | null,
+	/**  Set when the page ended early because of a bound. */
+	truncation: Truncation | null,
+	/**  Set when a `focus_commit` was requested. */
+	focus: FocusOutcome | null,
+	/**  Full id of the commit the history starts from. */
+	start: string,
+	/**  Whether the repository is shallow: the oldest row is not necessarily where the file began. */
+	shallow: boolean,
+	/**  Bounds in force for this response. */
+	limits: FileHistoryLimits,
+};
+
+/**  A request for one page of the history of one path. */
+export type FileHistoryRequest = {
+	/**  Repository-relative path of a file at the start commit, exactly as Git stores it. */
+	path: string,
+	/**  Full id of the commit the history starts from, normally the checked-out HEAD. */
+	start: string,
+	/**  Maximum rows requested for this page. */
+	limit: number,
+	/**  Cursor from the preceding page of this same path and start commit. */
+	cursor: string | null,
+	/**  Commit to locate. The page containing it is returned; only valid without a cursor. */
+	focus_commit: string | null,
+};
+
+/**  One commit that changed the path. */
+export type FileHistoryRow = {
+	/**  Commit metadata, the same shape the graph uses. */
+	commit: CommitInfo,
+	/**  Change relative to the first parent, for merges too. */
+	change: PathChange,
+	/**  Whether the commit has more than one parent. */
+	is_merge: boolean,
+	/**  The path's name at this commit. */
+	path_at_commit: string,
+	/**  The previous name, when this commit renamed the path into `path_at_commit`. */
+	renamed_from: string | null,
+	/**
+	 *  Set when the lineage could not be followed past this commit:
+	 *  `RenameLimit` or `RenameSearchSkipped`.
+	 */
+	lineage: Truncation | null,
+};
+
+/**  Outcome of a `focus_commit` lookup. */
+export type FocusOutcome =
+/**  The commit is listed; the returned page contains it. */
+"found" |
+/**  The history ended without listing the commit under simplification. */
+"not_shown" |
+/**  The commit budget ran out before it was reached; the list starts at the top. */
+"outside_budget";
+
 /**  The authenticated account. */
 export type GitHubAccount = {
 	/**  GitHub account login. */
@@ -545,6 +621,15 @@ export type OpenRepositoriesRequest = {
 	/**  Working-tree roots of the open tabs, in any form that resolves to them. */
 	paths: string[],
 };
+
+/**  How a commit changed the path, compared with its first parent. */
+export type PathChange =
+/**  The path did not exist in the first parent. */
+"added" |
+/**  The path exists in both, with a different blob or file mode. */
+"modified" |
+/**  The path existed in the first parent and is absent here. */
+"deleted";
 
 /**  The outcome of a pull attempt. */
 export type PullOutcome =
@@ -733,6 +818,20 @@ export type TagInfo = {
 	/**  Commit timestamp of the peeled destination; this is not the tag creation time. */
 	commit_time: string | null,
 };
+
+/**
+ *  Why history stopped short. Page-level values end a page; row-level values
+ *  mark a commit where a rename could not be followed.
+ */
+export type Truncation =
+/**  The request examined its commit budget; the cursor resumes the search. */
+"work_limit" |
+/**  Too many followed commits are pending; the search cannot be resumed. */
+"frontier_limit" |
+/**  The rename budget was spent; the lineage ends at this commit. */
+"rename_limit" |
+/**  The commit changes too many files to search for renames; the lineage may be incomplete. */
+"rename_search_skipped";
 
 export type WatchRequest = {
 	path: string,
