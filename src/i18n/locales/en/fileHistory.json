@@ -15,6 +15,7 @@
   "loading": "Loading file history…",
   "localChanges": "Local changes",
   "merge": "Merge: compared with its first parent",
+  "moreFor": "More actions for {{path}}",
   "open": "History",
   "openFor": "History of {{path}}",
   "outsideScope": "This commit is outside the current graph scope, so it cannot be shown in the graph.",

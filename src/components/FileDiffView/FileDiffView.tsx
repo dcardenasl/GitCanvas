@@ -10,6 +10,8 @@ import type {
 import { errorKind } from "../../lib/errors";
 import { getFileContent, getWorktreeFileContent } from "../../lib/ipc";
 import { useCommitDiff } from "../../state/diff";
+import { fileHistoryUnavailable } from "../../state/fileHistory";
+import { useRepositoryRefs } from "../../state/refs";
 import { useNavigation, useNavigationActions } from "../../state/workspace";
 import { useWorktreeFileDiff, useWorktreeSnapshot } from "../../state/worktree";
 import { queryKeys } from "../../state/queryKeys";
@@ -42,10 +44,10 @@ type Mode = "diff" | "file";
 
 /** One commit or one local file, with an impossible-to-confuse source. */
 export function FileDiffView(props: FileDiffViewProps) {
-  const { t } = useTranslation(["files", "common"]);
+  const { t } = useTranslation(["files", "common", "fileHistory"]);
   const { repositoryPath, path } = props;
 
-  const { selectFile, expandFile } = useNavigationActions();
+  const { selectFile, expandFile, openFileHistory } = useNavigationActions();
   const expandPath = useNavigation((navigation) => navigation.expandedFilePath);
   const [wrap, setWrap] = useState(true);
   const [choice, setChoice] = useState<{
@@ -55,6 +57,10 @@ export function FileDiffView(props: FileDiffViewProps) {
 
   const isWorktree = props.worktree !== undefined;
   const isSnapshot = !isWorktree && props.snapshot === true;
+  // A file's history starts where this diff reads: its commit, or HEAD for local changes.
+  const head = useRepositoryRefs(isWorktree ? repositoryPath : null).data?.head;
+  const historyStart = isWorktree ? (head ?? null) : props.commit.id;
+  const historyUnavailable = fileHistoryUnavailable(path, historyStart);
   const sourceKey = isWorktree
     ? props.worktree.side
     : `commit-${props.commit.id}`;
@@ -249,6 +255,26 @@ export function FileDiffView(props: FileDiffViewProps) {
           >
             {t("diff.wrap")}
           </button>
+
+          {!isSnapshot && (
+            <button
+              type="button"
+              className="button file-diff__history"
+              disabled={historyUnavailable !== null}
+              title={
+                historyUnavailable === null
+                  ? t("fileHistory:open")
+                  : t(`fileHistory:unavailable.${historyUnavailable}`)
+              }
+              onClick={() => {
+                if (historyStart !== null) {
+                  openFileHistory(path, historyStart, isWorktree);
+                }
+              }}
+            >
+              {t("fileHistory:open")}
+            </button>
+          )}
 
           {file !== undefined && mode === "diff" && (
             <span className="file-diff__stat">

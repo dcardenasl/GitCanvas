@@ -315,6 +315,21 @@ describe("FileDiffView", () => {
     });
   });
 
+  it("opens the file's history from its diff, starting at this commit", async () => {
+    getCommitDiff.mockResolvedValue(diff([file()]));
+    renderView();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Historial" }),
+    );
+
+    expect(activeNavigation().fileHistory).toMatchObject({
+      path: "src/app.ts",
+      startCommitId: COMMIT.id,
+      followsHead: false,
+    });
+  });
+
   it("shows the version before the deletion, read at the commit's first parent", async () => {
     getCommitDiff.mockResolvedValue(diff([file({ change: "Deleted" })]));
     getFileContent.mockResolvedValue(content());

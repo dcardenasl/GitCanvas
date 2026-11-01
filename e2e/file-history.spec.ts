@@ -26,14 +26,17 @@ async function openFileHistory(summary: string, file: string): Promise<void> {
     await browser.$(VIEW).waitForExist({ reverse: true, timeout: 20_000 });
   }
   await (await commitRow(summary)).click();
-  const action = await browser.$(
-    `//*[@aria-label="Detalle del commit"]//button[@aria-label="Historial de ${file}"]`,
+  const more = await browser.$(
+    `//*[@aria-label="Detalle del commit"]//button[@aria-label="Más acciones de ${file}"]`,
   );
-  await action.waitForDisplayed({
+  await more.waitForDisplayed({
     timeout: 20_000,
-    timeoutMsg: `the history action for ${file} never appeared`,
+    timeoutMsg: `the actions for ${file} never appeared`,
   });
-  await action.click();
+  await more.click();
+  await (
+    await browser.$('//*[@role="menuitem"][normalize-space()="Historial"]')
+  ).click();
   await browser
     .$(`${VIEW}[@aria-label="Historial de ${file}"]`)
     .waitForDisplayed({

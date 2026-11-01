@@ -110,7 +110,7 @@ describe("WorkingTreeDetailPanel", () => {
     await userEvent.click(
       within(list).getByRole("button", {
         name: (name) =>
-          name.includes("app.ts") && !name.startsWith("Historial"),
+          name.includes("app.ts") && !name.startsWith("Más acciones"),
       }),
     );
 
@@ -291,8 +291,9 @@ describe("WorkingTreeDetailPanel file history", () => {
       name: "Archivos sin preparar",
     });
     await userEvent.click(
-      within(list).getByRole("button", { name: "Historial de src/app.ts" }),
+      within(list).getByRole("button", { name: "Más acciones de src/app.ts" }),
     );
+    await userEvent.click(screen.getByRole("menuitem", { name: "Historial" }));
 
     expect(activeNavigation().fileHistory).toEqual({
       path: "src/app.ts",
@@ -312,7 +313,7 @@ describe("WorkingTreeDetailPanel file history", () => {
       name: "Archivos sin preparar",
     });
     const action = within(list).getByRole("button", {
-      name: "Historial de src/app.ts",
+      name: "Más acciones de src/app.ts",
     });
     expect((action as HTMLButtonElement).disabled).toBe(true);
     expect(activeNavigation().fileHistory).toBeNull();

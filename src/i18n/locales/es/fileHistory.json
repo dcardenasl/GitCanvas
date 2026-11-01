@@ -15,6 +15,7 @@
   "loading": "Cargando el historial del archivo…",
   "localChanges": "Cambios locales",
   "merge": "Fusión: comparada con su primer padre",
+  "moreFor": "Más acciones de {{path}}",
   "open": "Historial",
   "openFor": "Historial de {{path}}",
   "outsideScope": "Este commit está fuera del alcance actual del gráfico, así que no se puede mostrar allí.",
