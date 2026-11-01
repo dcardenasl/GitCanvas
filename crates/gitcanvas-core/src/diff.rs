@@ -181,7 +181,7 @@ pub fn get_commit_diff(active: &ActiveRepo, request: &DiffRequest) -> Result<Com
 
     // Rename detection runs on the diff rather than during generation so a
     // pure rename reads as one entry instead of an unrelated add and delete.
-    diff.find_similar(None)?;
+    find_renames(&mut diff)?;
 
     let totals = diff.stats()?;
     let files = collect_files(
@@ -387,6 +387,14 @@ fn collect_file_stats(diff: &git2::Diff<'_>) -> Result<HashMap<String, FileDiffS
     })?;
 
     Ok(stats)
+}
+
+/// Pairs deleted and added files that are similar enough to be renames. Commit
+/// diffs and per-file history share this detection so both report the same renames.
+pub(crate) fn find_renames(diff: &mut git2::Diff<'_>) -> Result<(), git2::Error> {
+    let mut options = git2::DiffFindOptions::new();
+    options.renames(true);
+    diff.find_similar(Some(&mut options))
 }
 
 #[cfg(test)]
