@@ -1,4 +1,5 @@
-/* The commit list sits in the sidebar column, so it fills that column's height. */
+/* The commit list sits in the sidebar column and follows the sidebar's own
+   surface, padding and header rhythm. */
 .file-history {
   display: flex;
   flex-direction: column;
@@ -6,6 +7,8 @@
   min-block-size: 0;
   min-inline-size: 0;
   overflow: hidden;
+  padding-block-start: 12px;
+  background: var(--surface-sidebar);
 }
 
 /* The centre column: the file's change in the picked commit. */
@@ -19,20 +22,62 @@
 
 .file-history__header {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding-block: var(--space-2);
-  padding-inline: var(--space-3);
+  flex-direction: column;
+  gap: 8px;
+  margin-block-end: 8px;
+  padding-block: 4px 10px;
+  padding-inline: 6px;
   border-block-end: 1px solid var(--border);
 }
 
+.file-history__nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-inline-size: 0;
+}
+
+.file-history__back,
+.file-history__local {
+  flex-shrink: 0;
+  padding-block: 2px;
+  padding-inline: 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: var(--font-size-small-wide);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.file-history__back:hover,
+.file-history__local:hover {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.file-history__back:focus-visible,
+.file-history__local:focus-visible,
+.file-history__row:focus-visible,
+.file-history__more:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.file-history__local {
+  margin-inline-start: auto;
+  color: var(--ink-faint);
+}
+
 .file-history__path {
-  flex: 1 1 auto;
   min-inline-size: 0;
   margin: 0;
   overflow: hidden;
+  color: var(--ink);
   font-family: var(--font-mono);
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-small-wide);
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -41,13 +86,14 @@
 .file-history__notice {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 8px;
   margin: 0;
-  padding-block: var(--space-2);
-  padding-inline: var(--space-3);
+  padding-block: 6px;
+  padding-inline: 8px;
+  border-radius: var(--radius-md);
+  background: var(--surface-toolbar);
   color: var(--ink-muted);
   font-size: var(--font-size-small);
-  border-block-end: 1px solid var(--border);
 }
 
 .file-history__list {
@@ -68,25 +114,28 @@
   position: absolute;
   inset-block-start: 0;
   inset-inline: 0;
+  padding-inline: 4px;
 }
 
+/* A commit reads in two lines: the summary, then who and when, with the
+   notes as quiet chips. The change mark sits beside both. */
 .file-history__row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-areas:
     "mark summary"
-    "mark meta"
-    "mark note";
+    "mark meta";
   align-items: center;
-  column-gap: var(--space-3);
+  column-gap: 8px;
+  row-gap: 2px;
   block-size: 100%;
   inline-size: 100%;
-  padding-block: var(--space-2);
-  padding-inline: var(--space-3);
+  padding-block: 5px;
+  padding-inline: 6px;
   border: 0;
-  border-block-end: 1px solid var(--divider);
-  background: transparent;
-  color: var(--ink);
+  border-radius: var(--radius-md);
+  background: none;
+  color: inherit;
   font: inherit;
   text-align: start;
   cursor: pointer;
@@ -100,18 +149,18 @@
   background: var(--surface-selected);
 }
 
-.file-history__mark {
+.file-history__row > .change-mark {
   grid-area: mark;
-  inline-size: 1.25rem;
-  color: var(--ink-muted);
-  font-family: var(--font-mono);
-  text-align: center;
+  align-self: start;
+  margin-block-start: 2px;
 }
 
 .file-history__summary {
   grid-area: summary;
   min-inline-size: 0;
   overflow: hidden;
+  color: var(--ink);
+  font-size: var(--font-size-ui);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -119,19 +168,53 @@
 .file-history__meta {
   grid-area: meta;
   display: flex;
-  gap: var(--space-2);
+  align-items: center;
+  gap: 6px;
+  min-inline-size: 0;
+  overflow: hidden;
   color: var(--ink-faint);
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-caption-wide);
+  white-space: nowrap;
 }
 
+.file-history__avatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  inline-size: 16px;
+  block-size: 16px;
+  border-radius: 50%;
+  background: var(--control);
+  color: var(--ink-muted);
+  font-size: var(--font-size-micro);
+  font-weight: 700;
+}
+
+.file-history__author {
+  min-inline-size: 0;
+  overflow: hidden;
+  color: var(--ink-muted);
+  text-overflow: ellipsis;
+}
+
+.file-history__date,
 .file-history__id {
+  flex-shrink: 0;
   font-family: var(--font-mono);
 }
 
-.file-history__note {
-  grid-area: note;
-  color: var(--ink-muted);
+.file-history__date {
   font-size: var(--font-size-small);
+}
+
+.file-history__chip {
+  flex-shrink: 0;
+  padding-inline: 5px;
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  color: var(--ink-muted);
+  font-size: var(--font-size-caption);
 }
 
 .file-history__more {

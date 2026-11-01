@@ -9,6 +9,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import type { FileHistoryRow } from "../../bindings";
+import { ROW_HEIGHT } from "../../lib/historyGeometry";
 import { useFileHistory } from "../../state/fileHistory";
 import { useRepositoryRefs } from "../../state/refs";
 import {
@@ -17,21 +18,18 @@ import {
   useNavigationActions,
 } from "../../state/workspace";
 import { useWorktreeSnapshot } from "../../state/worktree";
+import { ChangeMark } from "../ChangeMark";
+import {
+  authorInitials,
+  formatCommitTime,
+  shortId,
+} from "../CommitTable/format";
 import { ErrorMessage } from "../ErrorMessage";
-import { shortId } from "../CommitTable/format";
 
 import "./FileHistoryView.css";
 
-/** Height of one commit row; the list is virtualized with this fixed size. */
-const ROW_HEIGHT = 64;
 /** Rows moved by Page Up and Page Down. */
 const PAGE_ROWS = 10;
-
-const CHANGE_MARK: Record<FileHistoryRow["change"], string> = {
-  added: "A",
-  modified: "M",
-  deleted: "D",
-};
 
 /**
  * The row that a navigation key moves to from `index`, or `null` for other keys.
@@ -190,31 +188,33 @@ export function FileHistorySidebar() {
       aria-label={t("title", { path: view.path })}
     >
       <header className="file-history__header">
-        <button
-          type="button"
-          className="button"
-          title={t("backHint")}
-          onClick={() => {
-            actions.closeFileHistory();
-          }}
-        >
-          {t("back")}
-        </button>
-        <h2 className="file-history__path" title={view.path}>
-          {view.path}
-        </h2>
-        {localSide !== null && (
+        <div className="file-history__nav">
           <button
             type="button"
-            className="button"
+            className="file-history__back"
+            title={t("backHint")}
             onClick={() => {
               actions.closeFileHistory();
-              actions.selectFile(view.path, localSide);
             }}
           >
-            {t("localChanges")}
+            {t("back")}
           </button>
-        )}
+          {localSide !== null && (
+            <button
+              type="button"
+              className="file-history__local"
+              onClick={() => {
+                actions.closeFileHistory();
+                actions.selectFile(view.path, localSide);
+              }}
+            >
+              {t("localChanges")}
+            </button>
+          )}
+        </div>
+        <p className="file-history__path" title={view.path}>
+          {view.path}
+        </p>
       </header>
 
       {view.stale && head !== null && (
@@ -298,29 +298,32 @@ export function FileHistorySidebar() {
                       actions.selectFileHistoryRow(row.commit.id);
                     }}
                   >
-                    <span
-                      className={`file-history__mark file-history__mark--${row.change}`}
-                      aria-label={t(`change.${row.change}`)}
-                      title={t(`change.${row.change}`)}
-                    >
-                      {CHANGE_MARK[row.change]}
-                    </span>
+                    <ChangeMark
+                      kind={row.change}
+                      label={t(`change.${row.change}`)}
+                    />
                     <span className="file-history__summary">
                       {row.commit.summary}
                     </span>
                     <span className="file-history__meta">
-                      <span className="file-history__id">
-                        {shortId(row.commit.id)}
+                      <span className="file-history__avatar" aria-hidden="true">
+                        {authorInitials(row.commit.author_name)}
                       </span>
                       <span className="file-history__author">
                         {row.commit.author_name}
                       </span>
-                    </span>
-                    {rowNotes(row).map((note) => (
-                      <span key={note} className="file-history__note">
-                        {note}
+                      <time className="file-history__date">
+                        {formatCommitTime(row.commit.commit_time)}
+                      </time>
+                      <span className="file-history__id">
+                        {shortId(row.commit.id)}
                       </span>
-                    ))}
+                      {rowNotes(row).map((note) => (
+                        <span key={note} className="file-history__chip">
+                          {note}
+                        </span>
+                      ))}
+                    </span>
                   </button>
                 </li>
               );
