@@ -246,49 +246,6 @@
   outline-offset: -2px;
 }
 
-.file-row__mark {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 15px;
-  height: 15px;
-  border-radius: 3px;
-  background: var(--control);
-  color: var(--ink-faint);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 700;
-}
-
-.file-row__mark--added {
-  background: var(--success-surface);
-  color: var(--success);
-}
-
-.file-row__mark--unchanged {
-  border-radius: 50%;
-  background: transparent;
-  color: var(--ink-faint);
-  font-size: 14px;
-}
-
-.file-row__mark--deleted {
-  background: var(--danger-surface);
-  color: var(--danger);
-}
-
-.file-row__mark--modified {
-  background: var(--modified-ref-surface);
-  color: var(--accent);
-}
-
-.file-row__mark--renamed,
-.file-row__mark--copied {
-  background: var(--local-ref-surface);
-  color: var(--local-ref);
-}
-
 /* The file name leads and the directory follows as dimmed context, so the
    thing being looked for is always at the same place and fully readable. */
 .file-row__path {

@@ -4,17 +4,18 @@ import { useTranslation } from "react-i18next";
 import type { FileChange } from "../../bindings";
 import type { ChangedFile } from "../../lib/changedFiles";
 import type { FileHistoryUnavailable } from "../../state/fileHistory";
+import { ChangeMark, type ChangeKind } from "../ChangeMark";
 import { ContextMenu } from "../ContextMenu";
 import { DiffStat } from "../DiffStat/DiffStat";
 
-const CHANGE_MARK: Record<FileChange, string> = {
-  Added: "A",
-  Modified: "M",
-  Deleted: "D",
-  Renamed: "R",
-  Copied: "C",
-  TypeChanged: "T",
-  Other: "?",
+const CHANGE_KIND: Record<FileChange, ChangeKind> = {
+  Added: "added",
+  Modified: "modified",
+  Deleted: "deleted",
+  Renamed: "renamed",
+  Copied: "copied",
+  TypeChanged: "typechanged",
+  Other: "other",
 };
 
 /** The row's action that opens the file's history, and why it cannot be used now. */
@@ -62,21 +63,12 @@ export function ChangedFileRow({
         onClick={onOpen}
       >
         {file === null ? (
-          <span
-            className="file-row__mark file-row__mark--unchanged"
-            title={t("change.unchanged")}
-            aria-label={t("change.unchanged")}
-          >
-            ·
-          </span>
+          <ChangeMark kind="unchanged" label={t("change.unchanged")} />
         ) : (
-          <span
-            className={`file-row__mark file-row__mark--${file.change.toLowerCase()}`}
-            title={t(`change.${file.change}`)}
-            aria-label={t(`change.${file.change}`)}
-          >
-            {CHANGE_MARK[file.change]}
-          </span>
+          <ChangeMark
+            kind={CHANGE_KIND[file.change]}
+            label={t(`change.${file.change}`)}
+          />
         )}
         <span className="file-row__path" title={path}>
           <span className="file-row__name">{fileName(path)}</span>

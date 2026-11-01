@@ -1,0 +1,42 @@
+.change-mark {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  background: var(--control);
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.change-mark--added {
+  background: var(--success-surface);
+  color: var(--success);
+}
+
+.change-mark--unchanged {
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 14px;
+}
+
+.change-mark--deleted {
+  background: var(--danger-surface);
+  color: var(--danger);
+}
+
+.change-mark--modified {
+  background: var(--modified-ref-surface);
+  color: var(--accent);
+}
+
+.change-mark--renamed,
+.change-mark--copied {
+  background: var(--local-ref-surface);
+  color: var(--local-ref);
+}
