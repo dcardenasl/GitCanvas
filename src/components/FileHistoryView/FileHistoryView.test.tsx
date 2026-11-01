@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -28,7 +28,7 @@ const {
 
 vi.mock("../../lib/ipc", () => mockIpc);
 
-const { FileHistoryView } = await import("./FileHistoryView");
+const { FileHistoryDiff, FileHistorySidebar } = await import("./index");
 const { resetWorkspace, openTestProject, patchNavigation, activeNavigation } =
   await import("../../test/workspace");
 
@@ -113,8 +113,14 @@ function openHistory(
   });
 }
 
+/** The commit list and the diff centre, side by side as the shell lays them out. */
 function renderView(history: HistoryData) {
-  return renderWithQueryClient(<FileHistoryView history={history} />);
+  return renderWithQueryClient(
+    <>
+      <FileHistorySidebar />
+      <FileHistoryDiff history={history} />
+    </>,
+  );
 }
 
 afterEach(cleanup);
@@ -161,8 +167,7 @@ describe("file history view", () => {
     const list = await screen.findByRole("list", {
       name: "Commits que cambiaron src/app.ts",
     });
-    const rows = within(list).getAllByRole("button", { pressed: false });
-    expect(rows).toHaveLength(2);
+    expect(list.querySelectorAll(".file-history__row")).toHaveLength(2);
     expect(screen.getByText("Renombrado desde src/old.ts")).toBeTruthy();
     expect(
       screen.getByText("Fusión: comparada con su primer padre"),
@@ -187,10 +192,10 @@ describe("file history view", () => {
     expect(activeNavigation().fileHistory?.selectedCommitId).toBe(
       "b".repeat(40),
     );
-    expect(container.querySelector(".file-history__detail")).not.toBeNull();
+    expect(container.querySelector(".file-history-diff")).not.toBeNull();
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Mostrar en el gráfico" }),
+      await screen.findByRole("button", { name: "Mostrar en el gráfico" }),
     );
     expect(activeNavigation().fileHistory).toBeNull();
     expect(activeNavigation().selection).toEqual({
@@ -231,7 +236,7 @@ describe("file history view", () => {
     const list = await screen.findByRole("list", {
       name: "Commits que cambiaron src/app.ts",
     });
-    const rows = within(list).getAllByRole("button", { pressed: false });
+    const rows = list.querySelectorAll<HTMLButtonElement>(".file-history__row");
     rows[0]?.focus();
     await userEvent.keyboard("{ArrowDown}");
     expect(document.activeElement?.textContent).toContain("change c");
@@ -241,6 +246,30 @@ describe("file history view", () => {
     expect(document.activeElement?.textContent).toContain("change d");
     await userEvent.keyboard("{Home}");
     expect(document.activeElement?.textContent).toContain("change b");
+  });
+
+  it("shows the newest commit's change when nothing is picked", async () => {
+    getFileHistory.mockResolvedValue(
+      fileHistoryPage([fileHistoryRow("b"), fileHistoryRow("c")], null),
+    );
+    openHistory();
+    const { container } = renderView(graph(["b", "c"]));
+
+    await screen.findByRole("button", { name: /change b/ });
+    expect(container.querySelector(".file-history-diff")).not.toBeNull();
+    expect(activeNavigation().fileHistory?.selectedCommitId).toBeNull();
+  });
+
+  it("closes the history with Escape, and leaves an open menu to close first", async () => {
+    getFileHistory.mockResolvedValue(
+      fileHistoryPage([fileHistoryRow("b")], null),
+    );
+    openHistory();
+    renderView(graph(["b"]));
+    await screen.findByRole("button", { name: /change b/ });
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(activeNavigation().fileHistory).toBeNull();
   });
 
   it("goes back to the graph with a single action", async () => {

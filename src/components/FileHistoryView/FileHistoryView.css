@@ -1,4 +1,15 @@
+/* The commit list sits in the sidebar column, so it fills that column's height. */
 .file-history {
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  min-block-size: 0;
+  min-inline-size: 0;
+  overflow: hidden;
+}
+
+/* The centre column: the file's change in the picked commit. */
+.file-history-diff {
   display: flex;
   flex-direction: column;
   block-size: 100%;
@@ -41,7 +52,7 @@
 
 .file-history__list {
   position: relative;
-  flex: 1 1 40%;
+  flex: 1 1 0;
   min-block-size: 0;
   overflow-y: auto;
 }
@@ -61,10 +72,11 @@
 
 .file-history__row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   grid-template-areas:
-    "mark summary meta"
-    "mark note note";
+    "mark summary"
+    "mark meta"
+    "mark note";
   align-items: center;
   column-gap: var(--space-3);
   block-size: 100%;
@@ -125,12 +137,4 @@
 .file-history__more {
   margin-block: var(--space-3);
   margin-inline: var(--space-3);
-}
-
-.file-history__detail {
-  display: flex;
-  flex: 1 1 60%;
-  flex-direction: column;
-  min-block-size: 0;
-  border-block-start: 1px solid var(--border);
 }

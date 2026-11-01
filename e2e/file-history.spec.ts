@@ -6,7 +6,8 @@ import { browser, expect } from "@wdio/globals";
 import { clickAndConfirm, setReactSelectValue } from "./interactions";
 import { waitForHistory } from "./history";
 
-const VIEW = '//section[contains(@class, "file-history")]';
+// The commit list is the sidebar column; the diff of the picked commit is the centre.
+const VIEW = '//aside[@class="file-history"]';
 const DETAIL = '[aria-label="Detalle del commit"]';
 
 /** The graph row whose summary contains `summary`. Rows are announced as options. */
@@ -128,8 +129,8 @@ describe("file history", () => {
       await openFileHistory("delete notes.txt", "notes.txt");
 
       const fits = await browser.execute(() => {
-        const view = document.querySelector<HTMLElement>(".file-history");
-        return view !== null && view.scrollWidth <= view.clientWidth;
+        const root = document.documentElement;
+        return root.scrollWidth <= root.clientWidth;
       });
       expect(fits).toBe(true);
       await browser.saveScreenshot(

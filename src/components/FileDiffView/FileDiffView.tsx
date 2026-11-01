@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import type {
@@ -25,6 +25,13 @@ import "./FileDiffView.css";
 interface SharedProps {
   readonly repositoryPath: string;
   readonly path: string;
+  /**
+   * Rendered inside another view that owns navigation, such as a file's history:
+   * this view then has no back action and leaves Escape to its owner.
+   */
+  readonly embedded?: boolean | undefined;
+  /** Extra actions shown with the view controls, supplied by the owning view. */
+  readonly actions?: ReactNode | undefined;
 }
 
 /** Source-specific inputs for a commit or local worktree file view. */
@@ -46,6 +53,7 @@ type Mode = "diff" | "file";
 export function FileDiffView(props: FileDiffViewProps) {
   const { t } = useTranslation(["files", "common", "fileHistory"]);
   const { repositoryPath, path } = props;
+  const embedded = props.embedded === true;
 
   const { selectFile, expandFile, openFileHistory } = useNavigationActions();
   const expandPath = useNavigation((navigation) => navigation.expandedFilePath);
@@ -160,6 +168,7 @@ export function FileDiffView(props: FileDiffViewProps) {
   }, [diff.error, whole.error, isWorktree, refetchLocalSnapshot]);
 
   useEffect(() => {
+    if (embedded) return;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") selectFile(null);
     }
@@ -167,7 +176,7 @@ export function FileDiffView(props: FileDiffViewProps) {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [selectFile]);
+  }, [embedded, selectFile]);
 
   const wholeText = whole.data?.text ?? null;
   const wholeLines = useMemo(
@@ -185,16 +194,18 @@ export function FileDiffView(props: FileDiffViewProps) {
       aria-label={t(isSnapshot ? "diff.fileAt" : "diff.changes", { path })}
     >
       <header className="file-diff__head">
-        <button
-          type="button"
-          className="file-diff__back"
-          title={t("diff.backHint")}
-          onClick={() => {
-            selectFile(null);
-          }}
-        >
-          {t("diff.back")}
-        </button>
+        {!embedded && (
+          <button
+            type="button"
+            className="file-diff__back"
+            title={t("diff.backHint")}
+            onClick={() => {
+              selectFile(null);
+            }}
+          >
+            {t("diff.back")}
+          </button>
+        )}
 
         <div className="file-diff__title">
           <span className="file-diff__path" title={path}>
@@ -256,7 +267,7 @@ export function FileDiffView(props: FileDiffViewProps) {
             {t("diff.wrap")}
           </button>
 
-          {!isSnapshot && (
+          {!isSnapshot && !embedded && (
             <button
               type="button"
               className="button file-diff__history"
@@ -275,6 +286,8 @@ export function FileDiffView(props: FileDiffViewProps) {
               {t("fileHistory:open")}
             </button>
           )}
+
+          {props.actions}
 
           {file !== undefined && mode === "diff" && (
             <span className="file-diff__stat">

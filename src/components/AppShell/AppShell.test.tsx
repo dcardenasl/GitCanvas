@@ -282,7 +282,7 @@ describe("AppShell file history", () => {
     renderShell();
 
     expect(
-      await screen.findByRole("region", { name: "Historial de a.txt" }),
+      await screen.findByRole("complementary", { name: "Historial de a.txt" }),
     ).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Volver al gráfico" }),

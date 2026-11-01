@@ -1,6 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
-  Suspense,
   useEffect,
   useMemo,
   useRef,
@@ -11,7 +10,6 @@ import { useTranslation } from "react-i18next";
 
 import type { FileHistoryRow } from "../../bindings";
 import { useFileHistory } from "../../state/fileHistory";
-import type { HistoryData } from "../../state/history";
 import { useRepositoryRefs } from "../../state/refs";
 import {
   useActiveRepository,
@@ -19,14 +17,13 @@ import {
   useNavigationActions,
 } from "../../state/workspace";
 import { useWorktreeSnapshot } from "../../state/worktree";
-import { shortId } from "../CommitTable/format";
 import { ErrorMessage } from "../ErrorMessage";
-import { LazyFileDiffView } from "../FileDiffView/lazy";
+import { shortId } from "../CommitTable/format";
 
 import "./FileHistoryView.css";
 
 /** Height of one commit row; the list is virtualized with this fixed size. */
-const ROW_HEIGHT = 48;
+const ROW_HEIGHT = 64;
 /** Rows moved by Page Up and Page Down. */
 const PAGE_ROWS = 10;
 
@@ -68,16 +65,11 @@ function rowIndexOf(target: EventTarget): number | null {
 }
 
 /**
- * The history of one file, which takes the place of the graph while it is open.
- *
- * Every row is a commit that changed the file. A picked row shows that commit's
- * change to the file, through the same diff view a commit's files use.
+ * The commits that changed the open file, listed where the branch list usually
+ * is. Moving through the list selects a commit, and the centre shows that
+ * commit's change to the file.
  */
-export function FileHistoryView({
-  history,
-}: {
-  readonly history: HistoryData;
-}) {
+export function FileHistorySidebar() {
   const { t } = useTranslation(["fileHistory", "common"]);
   const root = useActiveRepository()?.path ?? null;
   const view = useNavigation((navigation) => navigation.fileHistory);
@@ -96,8 +88,8 @@ export function FileHistoryView({
     overscan: 8,
   });
 
-  // Keyboard focus moves one row at a time. The row it moves to may not be drawn
-  // yet, so the request waits until the virtualizer has rendered that row.
+  // Focus moves one row at a time. The row it moves to may not be drawn yet, so
+  // the request waits until the virtualizer has rendered that row.
   const [focusRequest, setFocusRequest] = useState<number | null>(null);
   const virtualRows = virtualizer.getVirtualItems();
   useEffect(() => {
@@ -109,13 +101,18 @@ export function FileHistoryView({
     row.focus();
     setFocusRequest(null);
   }, [focusRequest, virtualRows]);
+
+  // Moving the focus also selects the commit, so the centre follows the keyboard.
   const onListKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const index = rowIndexOf(event.target);
     if (index === null) return;
     const target = keyTarget(event.key, index, file.rows.length - 1);
     if (target === null) return;
+    const row = file.rows[target];
+    if (row === undefined) return;
     event.preventDefault();
     virtualizer.scrollToIndex(target);
+    actions.selectFileHistoryRow(row.commit.id);
     setFocusRequest(target);
   };
 
@@ -142,7 +139,33 @@ export function FileHistoryView({
     if (complete) actions.retainFileHistorySelection(listed);
   }, [actions, complete, listed]);
 
+  // Escape returns to the graph. An open menu closes first, because it also listens.
+  const open = view !== null;
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      if (document.querySelector('[role="menu"]') !== null) return;
+      actions.closeFileHistory();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [actions, open]);
+
   if (root === null || view === null) return null;
+
+  // The centre shows the picked commit, or the newest one when nothing is picked.
+  const shownId = view.selectedCommitId ?? file.rows[0]?.commit.id ?? null;
+  const localSide =
+    localFiles === undefined
+      ? null
+      : localFiles.unstaged.files.some((entry) => entry.path === view.path)
+        ? "unstaged"
+        : localFiles.staged.files.some((entry) => entry.path === view.path)
+          ? "staged"
+          : null;
 
   /** What a row says beyond its summary: a rename, a merge, or a lineage that stopped. */
   const rowNotes = (row: FileHistoryRow): string[] => {
@@ -161,21 +184,8 @@ export function FileHistoryView({
     return notes;
   };
 
-  const selectedId = view.selectedCommitId;
-  const picked = file.rows.find((row) => row.commit.id === selectedId) ?? null;
-  const inGraph =
-    picked !== null && history.commitIndexById.has(picked.commit.id);
-  const localSide =
-    localFiles === undefined
-      ? null
-      : localFiles.unstaged.files.some((entry) => entry.path === view.path)
-        ? "unstaged"
-        : localFiles.staged.files.some((entry) => entry.path === view.path)
-          ? "staged"
-          : null;
-
   return (
-    <section
+    <aside
       className="file-history"
       aria-label={t("title", { path: view.path })}
     >
@@ -183,6 +193,7 @@ export function FileHistoryView({
         <button
           type="button"
           className="button"
+          title={t("backHint")}
           onClick={() => {
             actions.closeFileHistory();
           }}
@@ -264,7 +275,7 @@ export function FileHistoryView({
             {virtualRows.map((item) => {
               const row = file.rows[item.index];
               if (row === undefined) return null;
-              const notes = rowNotes(row);
+              const selected = shownId === row.commit.id;
               return (
                 <li
                   key={row.commit.id}
@@ -278,11 +289,11 @@ export function FileHistoryView({
                     type="button"
                     data-row-index={item.index}
                     className={
-                      selectedId === row.commit.id
+                      selected
                         ? "file-history__row file-history__row--selected"
                         : "file-history__row"
                     }
-                    aria-pressed={selectedId === row.commit.id}
+                    aria-pressed={selected}
                     onClick={() => {
                       actions.selectFileHistoryRow(row.commit.id);
                     }}
@@ -305,7 +316,7 @@ export function FileHistoryView({
                         {row.commit.author_name}
                       </span>
                     </span>
-                    {notes.map((note) => (
+                    {rowNotes(row).map((note) => (
                       <span key={note} className="file-history__note">
                         {note}
                       </span>
@@ -327,40 +338,6 @@ export function FileHistoryView({
           )}
         </div>
       )}
-
-      {picked !== null && (
-        <div className="file-history__detail">
-          {inGraph ? (
-            <button
-              type="button"
-              className="button"
-              onClick={() => {
-                actions.closeFileHistory();
-                actions.revealCommit(picked.commit.id);
-              }}
-            >
-              {t("showInGraph")}
-            </button>
-          ) : (
-            <p className="file-history__notice" role="note">
-              {t("outsideScope")}
-            </p>
-          )}
-          <Suspense
-            fallback={
-              <p className="state" role="status">
-                {t("loading")}
-              </p>
-            }
-          >
-            <LazyFileDiffView
-              repositoryPath={root}
-              commit={picked.commit}
-              path={picked.path_at_commit}
-            />
-          </Suspense>
-        </div>
-      )}
-    </section>
+    </aside>
   );
 }

@@ -9,7 +9,7 @@ import { BrandLogo } from "../BrandLogo/BrandLogo";
 import { CommitDetailPanel } from "../CommitDetailPanel";
 import { CommitSearch } from "../CommitSearch";
 import { ErrorMessage } from "../ErrorMessage";
-import { FileHistoryView } from "../FileHistoryView";
+import { FileHistoryDiff, FileHistorySidebar } from "../FileHistoryView";
 import { LazyFileDiffView } from "../FileDiffView/lazy";
 import { ProjectLibrary } from "../ProjectLibrary/ProjectLibrary";
 import { PreferencesMenu } from "../PreferencesMenu";
@@ -189,8 +189,13 @@ export function AppShell() {
   const readingWorktreeFile =
     worktreeFile !== null && worktreeFile.filePath !== null;
   const readingFile = readingCommitFile || readingWorktreeFile;
+  // A file's history keeps the commit list where the branches are; reading a
+  // file would otherwise fold that list away.
   const collapseSidebar =
-    readingFile && !sidebarPinned && !sidebarTemporaryOpen;
+    readingFile &&
+    !sidebarPinned &&
+    !sidebarTemporaryOpen &&
+    fileHistory === null;
 
   return (
     <div className="app-shell">
@@ -270,24 +275,27 @@ export function AppShell() {
               </button>
             </div>
           )}
-          {project !== null && readingFile && excludedReferences.length > 0 && (
-            <button
-              type="button"
-              className="button"
-              aria-expanded={sidebarTemporaryOpen || sidebarPinned}
-              title={t("toolbar.filterIndicator", {
-                count: excludedReferences.length,
-              })}
-              onClick={() => {
-                setSidebarTemporaryOpen(!sidebarTemporaryOpen);
-              }}
-            >
-              {t("toolbar.filterIndicator", {
-                count: excludedReferences.length,
-              })}
-            </button>
-          )}
-          {project !== null && readingFile && (
+          {project !== null &&
+            readingFile &&
+            fileHistory === null &&
+            excludedReferences.length > 0 && (
+              <button
+                type="button"
+                className="button"
+                aria-expanded={sidebarTemporaryOpen || sidebarPinned}
+                title={t("toolbar.filterIndicator", {
+                  count: excludedReferences.length,
+                })}
+                onClick={() => {
+                  setSidebarTemporaryOpen(!sidebarTemporaryOpen);
+                }}
+              >
+                {t("toolbar.filterIndicator", {
+                  count: excludedReferences.length,
+                })}
+              </button>
+            )}
+          {project !== null && readingFile && fileHistory === null && (
             <button
               type="button"
               className="button"
@@ -387,7 +395,14 @@ export function AppShell() {
             } as React.CSSProperties
           }
         >
-          <Sidebar hidden={collapseSidebar} onCheckout={gitActions.checkout} />
+          {fileHistory !== null ? (
+            <FileHistorySidebar />
+          ) : (
+            <Sidebar
+              hidden={collapseSidebar}
+              onCheckout={gitActions.checkout}
+            />
+          )}
           <Resizer
             label={t("resizer.sidebar")}
             width={layout.sidebar}
@@ -407,7 +422,7 @@ export function AppShell() {
               }
             >
               {fileHistory !== null ? (
-                <FileHistoryView history={history} />
+                <FileHistoryDiff history={history} />
               ) : selected !== null && selectedFilePath !== null ? (
                 <LazyFileDiffView
                   repositoryPath={project.path}

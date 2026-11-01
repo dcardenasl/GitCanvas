@@ -75,12 +75,14 @@ how to register a language.
 
 ## File history (v0.6 in dev)
 
-The file's history takes the graph's place, with a single action to return to it. Each
-row shows the commit, its author, and what happened to the file: a rename names its
-previous path, a merge says it is compared with its first parent, and a lineage that
-stopped at the rename budget says so on that row. Picking a row shows that commit's change
-in the diff view. Keyboard focus moves between rows with the arrow, Page, Home and End keys.
+Opening a file's history keeps the commit list in the sidebar, where the branch list is,
+and puts the file's change in the picked commit in the centre, against its first parent.
+The right inspector keeps showing that commit. Moving through the list with the keyboard
+selects the commit and updates the centre at once. A rename names the previous path on its
+row, a merge says it is compared with its first parent, and a lineage that stopped at the
+rename budget says so on that row. Escape returns to the graph unless a menu is open.
 Each history action is labelled with its file, so a screen reader can tell the rows apart.
+The sidebar does not fold away while a file's history is open.
 
 ## Platform behavior
 

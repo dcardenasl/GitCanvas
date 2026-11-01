@@ -6,7 +6,8 @@
 
 .file-diff__head {
   display: flex;
-  gap: var(--space-6);
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
   align-items: center;
   padding: 8px 14px;
   border-bottom: 1px solid var(--border);
@@ -33,6 +34,16 @@
 .file-diff__back:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
+}
+
+/* View settings and actions wrap as one block at the end of the header,
+   instead of stacking into the title's column when the centre is narrow. */
+.file-diff__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: auto;
 }
 
 .file-diff__title {
@@ -107,10 +118,16 @@
   font-weight: 600;
 }
 
+/* A setting, not an action: no border, no weight; a pressed setting only tints. */
+.file-diff__toggle {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-muted);
+}
+
 .file-diff__toggle[aria-pressed="true"] {
   background: var(--surface-selected);
   color: var(--ink);
-  font-weight: 600;
 }
 
 /* Full width means the diff no longer needs its own scroller for ordinary
