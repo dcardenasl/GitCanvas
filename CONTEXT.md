@@ -76,6 +76,14 @@ Schema 2 migrates schema 1 and retains graph preferences per canonical worktree 
 its tab closes. Automatic reconciliation cannot overwrite a later explicit edit.
 See ADR 0007 and docs/verification/v0.4.md for evidence and external gates.
 
+## File history (v0.6 in dev)
+
+A file's history is a view of one repository path from one start commit, opened from the
+commit inspector (start = that commit) or from the local changes list (start = HEAD). It
+replaces the graph while it is open and is kept only for the session, never written to
+disk. Its query is immutable per start commit, so a refresh from a moved HEAD is a new
+query. Opening it never changes the graph's reference filters.
+
 ## Session entry points
 
 Read `TASKS.md` for the next open task and its acceptance evidence. Read the referenced

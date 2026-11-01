@@ -73,6 +73,15 @@ colored only for the registered languages and within the size budgets; everythin
 plain text and equally complete. See [ADR 0005](docs/adr/0005-syntax-highlighting.md) for
 how to register a language.
 
+## File history (v0.6 in dev)
+
+The file's history takes the graph's place, with a single action to return to it. Each
+row shows the commit, its author, and what happened to the file: a rename names its
+previous path, a merge says it is compared with its first parent, and a lineage that
+stopped at the rename budget says so on that row. Picking a row shows that commit's change
+in the diff view. Keyboard focus moves between rows with the arrow, Page, Home and End keys.
+Each history action is labelled with its file, so a screen reader can tell the rows apart.
+
 ## Platform behavior
 
 The product is a desktop Tauri application for macOS, Linux, and Windows. The layout is

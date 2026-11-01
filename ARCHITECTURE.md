@@ -138,6 +138,18 @@ Every list is bounded and resumable:
 On the frontend, `layoutHistory` extends the graph page by page and keeps the
 rows of every page it already laid out.
 
+### Per-file history
+
+`file_history.rs` answers one query, the commits that changed one path from a start
+commit, and applies `git log -- <path>` simplification with rename following. The
+walk is the same one the graph uses (`history::with_walk`), so there is one traversal.
+Each request examines at most 20,000 commits and returns a stateless cursor: the last
+commit examined, the followed commits not yet reached with the name each is tracked
+under, and the renames followed so far. A frontier past 256 entries ends the query
+rather than growing without bound. File history keeps its own cache partition of
+500,000 ids; the graph's budget never changes because of it. The start commit is always
+a full id, and the path is validated under ADR 0002. See ADR 0008.
+
 ## Workspace and persistence
 
 `state/workspace.ts` composes the workspace store from focused slices in

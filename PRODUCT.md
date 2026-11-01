@@ -25,7 +25,9 @@ lazy session restoration, favorites, recent projects, GitHub cloning, guarded ch
 and authenticated push. Git data comes from local repositories and full clones; shallow
 clones are not used. Credentials stay in Rust and the OS keychain. The product is
 read-mostly, not strictly read-only: explicit checkout, pull and push mutate Git state;
-inspection does not stage, unstage, commit or delete user files.
+inspection does not stage, unstage, commit or delete user files. Per-file history (v0.6 in
+dev) is read-only inspection of one path: it follows renames and shows the change in each
+commit.
 
 ## Brand Commitments
 

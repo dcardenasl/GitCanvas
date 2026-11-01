@@ -25,8 +25,7 @@ manifiestos están en 0.5.0; no cambiar versión, crear tag ni publicar sin auto
 
 ## Siguiente paso
 
-Ejecutar la primera tarea sin marcar de [v0.6](#v06--historial-por-archivo): **FH-7**
-(verificación y documentación; ver el [plan](docs/plan/2026-11-01-v0.6-implementacion.md#fh-7--verificacion-y-documentacion)). Los gates de v0.4/v0.5 sin
+v0.6 está implementada y verificada en `dev` ([evidencia](docs/verification/v0.6.md)). Falta el release 0.6.0: confirmar la versión con David, renombrar `Unreleased` y abrir el PR `dev → main`; no se hace tag ni release sin su aprobación.. Los gates de v0.4/v0.5 sin
 evidencia son seguimiento independiente: no bloquean v0.6 ni se atribuyen a recorridos no
 comprobados.
 
@@ -123,7 +122,9 @@ comparación de commits ni escrituras Git. Leer [ADR 0002](docs/adr/0002-local-f
       *Evidencia:* prueba de teclado en componente y 884 pruebas de frontend, `tsc`, ESLint y Prettier aprobados. Spec nativo ejecutado en macOS (WebKit, build `e2e` de release): 5 de 5 pasan, incluidos renombrado, borrado con fusión, navegación por teclado, salto al gráfico y desbordamiento en 940×600 en claro y en oscuro. Capturas de ambos temas revisadas.
       *Sin verificar:* el spec nativo corre en español; el inglés queda cubierto por el catálogo y la prueba de literales, no por recorrido nativo. Lector de pantalla real (VoiceOver no anunció la lista en esta sesión) y ejecución nativa en Windows quedan como límites declarados para FH-7.
       → `test(e2e): cover file history across themes and languages`
-- [ ] **FH-7 — Verificación y documentación.** [Plan](docs/plan/2026-11-01-v0.6-implementacion.md#fh-7--verificacion-y-documentacion), [ADR 0008](docs/adr/0008-per-file-history.md). `docs/verification/v0.6.md`, CHANGELOG en `Unreleased`, ARCHITECTURE, CONTEXT, PRODUCT, DESIGN y README. → `docs(file-history): record verification and update product docs`
+- [x] **FH-7 — Verificación y documentación.** [Plan](docs/plan/2026-11-01-v0.6-implementacion.md#fh-7--verificacion-y-documentacion), [ADR 0008](docs/adr/0008-per-file-history.md). `docs/verification/v0.6.md`, CHANGELOG en `Unreleased`, ARCHITECTURE, CONTEXT, PRODUCT, DESIGN y README. *Decisiones al implementar:* la evidencia y sus límites viven en `docs/verification/v0.6.md`. Los documentos de producto se actualizan en lo que cambia: CHANGELOG (`Unreleased`), ARCHITECTURE (historial por archivo y caché propia), CONTEXT (vista y alcance), PRODUCT (capacidad de solo lectura), DESIGN (vista, teclado y etiquetas) y README (límites conocidos). La versión de los manifiestos sigue en 0.5.0 hasta el release.
+      *Evidencia:* suites de Rust (263), frontend (884), lint, tipos y formato aprobados; `cargo deny` aprobado tras el bump de `libz-sys` (commit aparte); `npm audit --omit=dev` sin vulnerabilidades; build de producción macOS arm64 con firma local válida. E2E nativo completo en macOS (WebKit): 9 specs y 25 pruebas pasando, incluido `file-history`. Límites declarados: lector de pantalla real, Windows nativo, inglés en el recorrido nativo, repositorios superficiales y empaquetados reales, y firma del updater (solo en CI).
+      → `docs(file-history): record verification and update product docs`
 
 ### Entregas posteriores
 
