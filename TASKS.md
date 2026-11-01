@@ -25,8 +25,8 @@ manifiestos están en 0.5.0; no cambiar versión, crear tag ni publicar sin auto
 
 ## Siguiente paso
 
-Ejecutar la primera tarea sin marcar de [v0.6](#v06--historial-por-archivo): **FH-0**
-(contrato técnico, ADR 0008 y plan de implementación). Los gates de v0.4/v0.5 sin
+Ejecutar la primera tarea sin marcar de [v0.6](#v06--historial-por-archivo): **FH-1**
+(motor de historial por ruta; ver el [plan](docs/plan/2026-11-01-v0.6-implementacion.md#fh-1--motor-historial-por-ruta)). Los gates de v0.4/v0.5 sin
 evidencia son seguimiento independiente: no bloquean v0.6 ni se atribuyen a recorridos no
 comprobados.
 
@@ -92,25 +92,25 @@ roadmap.
 ### v0.6 — Historial por archivo
 
 Estrategia aprobada el 2026-11-01 sobre el [roadmap](docs/plan/2026-10-19-roadmap-de-versiones.md#dependencias-y-criterios-de-versiones-posteriores).
-Decisiones: seguir renombrados por similitud de `git2` (umbral predeterminado de Git, 50%)
+Decisiones (la vista no se persiste entre reinicios): seguir renombrados por similitud de `git2` (umbral predeterminado de Git, 50%)
 con límites y corte explícitos; acción «Historial del archivo» en inspector y lista de
 archivos que abre una vista dedicada en la pestaña, sin modificar filtros del gráfico y con
 aviso si el commit queda fuera del alcance actual; merges con la semántica de
 `git log -- <ruta>` (simplificación por defecto); rutas eliminadas consultables. Sin blame,
 comparación de commits ni escrituras Git. Leer [ADR 0002](docs/adr/0002-local-file-safety-and-resource-budgets.md),
 [ADR 0006](docs/adr/0006-workspace.md), [ADR 0007](docs/adr/0007-stable-branch-graph.md),
-`CONTEXT.md`, `ARCHITECTURE.md` y `CLAUDE.md` antes de cada tarea. FH-0 crea el plan
-detallado y enlaza aquí sus secciones por tarea.
+`CONTEXT.md`, `ARCHITECTURE.md` y `CLAUDE.md` antes de cada tarea. Plan detallado:
+[implementación v0.6](docs/plan/2026-11-01-v0.6-implementacion.md); contrato técnico en [ADR 0008](docs/adr/0008-per-file-history.md).
 
 - [x] **REC-1 — Reconciliar el estado de v0.5 con la release publicada.** Cabecera, siguiente paso, V05-VERIFY, verificación y plan de v0.5, SNAPSHOT y CLAUDE.md. Gates sin evidencia conservados como seguimiento. → `docs: reconcile v0.5 release status and pending verification gates`
-- [ ] **FH-0 — Contrato técnico y plan.** Plan `docs/plan/` de v0.6, ADR 0008 (semántica de merges, renombrados, límites, cursor inmutable por instantánea) y fixtures de referencia. → `docs(file-history): define the per-file history contract in adr 0008`
-- [ ] **FH-1 — Motor: historial por ruta.** Recorrido con pathspec, paginación, cursor ligado a (ruta, instantánea) y límites con motivo explícito; reutiliza `history.rs`/`pagination.rs`. → `feat(core): walk the history of a single path with bounded work`
-- [ ] **FH-2 — Renombrados.** `find_similar` al aparecer la ruta como añadida, `path_at_commit` por fila, corte explícito por presupuesto. → `feat(core): follow renames within explicit similarity and budget limits`
-- [ ] **FH-3 — IPC y autorización.** Comandos Specta con validación de ruta relativa y autorización por repositorio; bindings sin deriva. → `feat(ipc): expose per-file history through authorized commands`
-- [ ] **FH-4 — Estado frontend.** Navegación por pestaña, consultas por repositorio+ruta, persistencia mínima y liberación en cierre/LRU. → `feat(file-history): keep per-tab file history state and queries`
-- [ ] **FH-5 — Vista y puntos de entrada.** Inspector y lista de archivos, lista de commits, diff/contenido histórico y avisos de límites y de alcance. → `feat(file-history): add the file history view and entry points`
-- [ ] **FH-6 — Accesibilidad, i18n y E2E.** Teclado/ARIA, inglés/español, ambos temas, 940×600 y recorrido nativo. → `test(e2e): cover file history across themes and languages`
-- [ ] **FH-7 — Verificación y documentación.** Evidencia, CHANGELOG en `Unreleased`, ARCHITECTURE, CONTEXT, PRODUCT, DESIGN y README. → `docs(file-history): record verification and update product docs`
+- [x] **FH-0 — Contrato técnico y plan.** [Plan](docs/plan/2026-11-01-v0.6-implementacion.md#fh-0--contrato-tecnico-y-plan), [ADR 0008](docs/adr/0008-per-file-history.md). Plan de v0.6, ADR 0008 (simplificación, renombrados, límites explícitos, cursor sin estado) y matriz de casos de referencia; los fixtures ejecutables se crean con cada tarea de motor. → `docs(file-history): define the per-file history contract in adr 0008`
+- [ ] **FH-1 — Motor: historial por ruta.** [Plan](docs/plan/2026-11-01-v0.6-implementacion.md#fh-1--motor-historial-por-ruta), [ADR 0008](docs/adr/0008-per-file-history.md). Extrae el generador de ids de `history.rs` sin cambiar el grafo; módulo `file_history.rs` con simplificación, cursor sin estado y límites con motivo explícito. Aceptación: matriz sin renombrados y fixture de 10.000 commits. → `feat(core): walk the history of a single path with bounded work`
+- [ ] **FH-2 — Renombrados.** [Plan](docs/plan/2026-11-01-v0.6-implementacion.md#fh-2--renombrados), [ADR 0008](docs/adr/0008-per-file-history.md). `find_similar` al aparecer la ruta como añadida, `path_at_commit`/`renamed_from` por fila, configuración compartida con `diff.rs`, topes y cortes explícitos. → `feat(core): follow renames within explicit similarity and budget limits`
+- [ ] **FH-3 — IPC y autorización.** [Plan](docs/plan/2026-11-01-v0.6-implementacion.md#fh-3--ipc-y-autorizacion), [ADR 0008](docs/adr/0008-per-file-history.md). `get_file_history` con autorización canónica, wrapper en `lib/ipc`, invariantes de comandos y bindings sin deriva. → `feat(ipc): expose per-file history through authorized commands`
+- [ ] **FH-4 — Estado frontend.** [Plan](docs/plan/2026-11-01-v0.6-implementacion.md#fh-4--estado-frontend), [ADR 0008](docs/adr/0008-per-file-history.md). Vista en `Navigation` (sin persistir), consultas por repositorio, ruta y commit de inicio, liberación en cierre/LRU y aislamiento entre pestañas. → `feat(file-history): keep per-tab file history state and queries`
+- [ ] **FH-5 — Vista y puntos de entrada.** [Plan](docs/plan/2026-11-01-v0.6-implementacion.md#fh-5--vista-y-puntos-de-entrada), [ADR 0008](docs/adr/0008-per-file-history.md). Inspector y cambios locales, lista virtual de commits, diff/contenido con `FileDiffView`, avisos de límites, de alcance y de merge. → `feat(file-history): add the file history view and entry points`
+- [ ] **FH-6 — Accesibilidad, i18n y E2E.** [Plan](docs/plan/2026-11-01-v0.6-implementacion.md#fh-6--accesibilidad-i18n-y-e2e), [ADR 0008](docs/adr/0008-per-file-history.md). Teclado/ARIA, inglés/español, ambos temas, 940×600 y spec nativo con modificación, renombrado, borrado y merge. → `test(e2e): cover file history across themes and languages`
+- [ ] **FH-7 — Verificación y documentación.** [Plan](docs/plan/2026-11-01-v0.6-implementacion.md#fh-7--verificacion-y-documentacion), [ADR 0008](docs/adr/0008-per-file-history.md). `docs/verification/v0.6.md`, CHANGELOG en `Unreleased`, ARCHITECTURE, CONTEXT, PRODUCT, DESIGN y README. → `docs(file-history): record verification and update product docs`
 
 ### Entregas posteriores
 

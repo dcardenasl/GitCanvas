@@ -10,7 +10,7 @@
 | Implementado | Historial/gráfico, diffs, cambios locales, idiomas, workspace, favoritos, restauración, GitHub clone y checkout/pull/push protegidos |
 | Estrategia aprobada | Gráfico y panel primero; creación de commits al final |
 | Próxima entrega | v0.6 historial por archivo (sin implementar) |
-| Siguiente tarea | FH-0: contrato técnico, ADR 0008 y plan de v0.6 |
+| Siguiente tarea | FH-1: motor de historial por ruta ([plan v0.6](plan/2026-11-01-v0.6-implementacion.md)) |
 | Pendiente sin evidencia | GRF-5 (v0.4) y V05-VERIFY: Windows nativo y lector de pantalla real; ver [v0.4](verification/v0.4.md) y [v0.5](verification/v0.5.md) |
 | Fuentes | [TASKS.md](../TASKS.md) y [roadmap vigente](plan/2026-10-19-roadmap-de-versiones.md) |
 
