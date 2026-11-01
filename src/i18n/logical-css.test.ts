@@ -15,6 +15,7 @@ const LOGICAL_ONLY = [
   "components/WorkspaceGate/WorkspaceGate.css",
   "components/ProjectLibrary/ProjectLibrary.css",
   "components/FavoriteToggle/FavoriteToggle.css",
+  "components/FileHistoryView/FileHistoryView.css",
 ];
 
 const PHYSICAL =

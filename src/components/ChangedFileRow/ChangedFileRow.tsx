@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 
 import type { FileChange } from "../../bindings";
 import type { ChangedFile } from "../../lib/changedFiles";
+import type { FileHistoryUnavailable } from "../../state/fileHistory";
 import { DiffStat } from "../DiffStat/DiffStat";
 
 const CHANGE_MARK: Record<FileChange, string> = {
@@ -14,12 +15,19 @@ const CHANGE_MARK: Record<FileChange, string> = {
   Other: "?",
 };
 
+/** The row's action that opens the file's history, and why it cannot be used now. */
+export interface FileRowHistory {
+  readonly unavailable: FileHistoryUnavailable | null;
+  readonly onOpen: () => void;
+}
+
 interface ChangedFileRowProps {
   readonly file: ChangedFile | null;
   readonly path: string;
   readonly selected: boolean;
   readonly onOpen: () => void;
   readonly showDirectory?: boolean;
+  readonly history?: FileRowHistory | undefined;
 }
 
 function fileName(path: string): string {
@@ -38,11 +46,12 @@ export function ChangedFileRow({
   selected,
   onOpen,
   showDirectory = true,
+  history,
 }: ChangedFileRowProps) {
-  const { t } = useTranslation("files");
+  const { t } = useTranslation(["files", "fileHistory"]);
 
   return (
-    <li>
+    <li className={history === undefined ? undefined : "file-row-item"}>
       <button
         type="button"
         className={selected ? "file-row file-row--selected" : "file-row"}
@@ -84,6 +93,21 @@ export function ChangedFileRow({
           )}
         </span>
       </button>
+      {history !== undefined && (
+        <button
+          type="button"
+          className="file-row__history"
+          disabled={history.unavailable !== null}
+          title={
+            history.unavailable === null
+              ? t("fileHistory:open")
+              : t(`fileHistory:unavailable.${history.unavailable}`)
+          }
+          onClick={history.onOpen}
+        >
+          {t("fileHistory:open")}
+        </button>
+      )}
     </li>
   );
 }

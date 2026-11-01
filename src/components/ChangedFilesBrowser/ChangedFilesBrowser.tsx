@@ -2,11 +2,15 @@ import { Fragment, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ChangedFile } from "../../lib/changedFiles";
+import { fileHistoryUnavailable } from "../../state/fileHistory";
 import type { FileSource } from "../../state/navigation";
 import { useFileListPreferences } from "../../state/fileListPreferences";
 import { useNavigation, useNavigationActions } from "../../state/workspace";
 import { CommitTreeBrowser } from "./CommitTreeBrowser";
-import { ChangedFileRow } from "../ChangedFileRow/ChangedFileRow";
+import {
+  ChangedFileRow,
+  type FileRowHistory,
+} from "../ChangedFileRow/ChangedFileRow";
 import { FolderIcon } from "../FolderIcon/FolderIcon";
 import { buildFileTree, type FileTreeEntry } from "./tree";
 
@@ -23,6 +27,29 @@ export interface ChangedFilesGroup {
   readonly footer?: ReactNode;
 }
 
+/**
+ * Where a file's history starts when its action is used: the commit the list
+ * belongs to, or HEAD for local changes. `null` means the repository has no commits.
+ */
+export interface ChangedFilesHistory {
+  readonly start: string | null;
+  readonly open: (path: string) => void;
+}
+
+/** The history action of one row, or nothing when the list has no history source. */
+function rowHistory(
+  history: ChangedFilesHistory | undefined,
+  path: string,
+): FileRowHistory | undefined {
+  if (history === undefined) return undefined;
+  return {
+    unavailable: fileHistoryUnavailable(path, history.start),
+    onOpen: () => {
+      history.open(path);
+    },
+  };
+}
+
 /** Inputs for rendering and navigating one or more changed-file groups. */
 export interface ChangedFilesBrowserProps {
   readonly groups: readonly ChangedFilesGroup[];
@@ -37,6 +64,7 @@ export interface ChangedFilesBrowserProps {
     readonly repositoryPath: string;
     readonly commitId: string;
   };
+  readonly history?: ChangedFilesHistory | undefined;
 }
 
 /** Shared path/tree navigation for committed and local changed files. */
@@ -46,6 +74,7 @@ export function ChangedFilesBrowser({
   selectedFileSource,
   onOpen,
   allCommitFiles,
+  history,
 }: ChangedFilesBrowserProps) {
   const { t } = useTranslation("files");
   const view = useFileListPreferences((state) => state.view);
@@ -168,6 +197,7 @@ export function ChangedFilesBrowser({
                     onOpen={() => {
                       onOpen(file.path, group.source);
                     }}
+                    history={rowHistory(history, file.path)}
                   />
                 ))}
               </ul>
@@ -181,6 +211,7 @@ export function ChangedFilesBrowser({
                   source={group.source}
                   onOpen={onOpen}
                   onToggleDirectory={toggleFolder}
+                  history={history}
                 />
               </ul>
             );
@@ -219,6 +250,7 @@ interface TreeEntriesProps {
   readonly source: FileSource;
   readonly onOpen: (path: string, source: FileSource) => void;
   readonly onToggleDirectory: (path: string) => void;
+  readonly history?: ChangedFilesHistory | undefined;
 }
 
 function TreeEntries({
@@ -229,6 +261,7 @@ function TreeEntries({
   source,
   onOpen,
   onToggleDirectory,
+  history,
 }: TreeEntriesProps) {
   const { t } = useTranslation("files");
 
@@ -247,6 +280,7 @@ function TreeEntries({
             onOpen(entry.file.path, source);
           }}
           showDirectory={false}
+          history={rowHistory(history, entry.file.path)}
         />
       );
     }
@@ -286,6 +320,7 @@ function TreeEntries({
               source={source}
               onOpen={onOpen}
               onToggleDirectory={onToggleDirectory}
+              history={history}
             />
           </ul>
         )}

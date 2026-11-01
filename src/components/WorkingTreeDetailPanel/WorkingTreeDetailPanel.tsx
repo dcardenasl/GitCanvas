@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
+import { useRepositoryRefs } from "../../state/refs";
 import { selectedFileSource } from "../../state/navigation";
 import { useNavigation, useNavigationActions } from "../../state/workspace";
 import { useWorktreeFiles, type LocalSide } from "../../state/worktree";
@@ -24,7 +25,9 @@ export function WorkingTreeDetailPanel({
 }: WorkingTreeDetailPanelProps) {
   const { t } = useTranslation(["files", "common"]);
 
-  const { selectFile } = useNavigationActions();
+  const { selectFile, openFileHistory } = useNavigationActions();
+  // Local changes are read against HEAD, which is also the history's start.
+  const head = useRepositoryRefs(repositoryPath).data?.head ?? null;
   const selection = useNavigation((navigation) => navigation.selection);
   const {
     snapshot: local,
@@ -98,6 +101,12 @@ export function WorkingTreeDetailPanel({
           selectedFileSource={fileSource}
           onOpen={(path, source) => {
             selectFile(path, source);
+          }}
+          history={{
+            start: head,
+            open: (path) => {
+              if (head !== null) openFileHistory(path, head, true);
+            },
           }}
         />
       )}

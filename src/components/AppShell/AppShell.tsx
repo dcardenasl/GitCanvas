@@ -9,6 +9,8 @@ import { BrandLogo } from "../BrandLogo/BrandLogo";
 import { CommitDetailPanel } from "../CommitDetailPanel";
 import { CommitSearch } from "../CommitSearch";
 import { ErrorMessage } from "../ErrorMessage";
+import { FileHistoryView } from "../FileHistoryView";
+import { LazyFileDiffView } from "../FileDiffView/lazy";
 import { ProjectLibrary } from "../ProjectLibrary/ProjectLibrary";
 import { PreferencesMenu } from "../PreferencesMenu";
 import { Resizer } from "../Resizer";
@@ -49,10 +51,6 @@ import { useOpenFolder } from "./useOpenFolder";
 import "./AppShell.css";
 
 const NO_EXCLUSIONS: readonly string[] = [];
-const FileDiffView = lazy(async () => {
-  const module = await import("../FileDiffView/FileDiffView");
-  return { default: module.FileDiffView };
-});
 const GitHubPicker = lazy(async () => {
   const module = await import("../GitHubPicker/GitHubPicker");
   return { default: module.GitHubPicker };
@@ -82,6 +80,7 @@ export function AppShell() {
   const selectedCommitId = useNavigation(getSelectedCommitId);
   const history = useHistory(readableRoot);
   const selectedFilePath = useNavigation(getSelectedFilePath);
+  const fileHistory = useNavigation((navigation) => navigation.fileHistory);
   const showGitHub = useWorkspace((state) => state.githubOpen);
   const setShowGitHub = useWorkspace((state) => state.setGitHubOpen);
   const layout = useLayout();
@@ -407,8 +406,10 @@ export function AppShell() {
                 </p>
               }
             >
-              {selected !== null && selectedFilePath !== null ? (
-                <FileDiffView
+              {fileHistory !== null ? (
+                <FileHistoryView history={history} />
+              ) : selected !== null && selectedFilePath !== null ? (
+                <LazyFileDiffView
                   repositoryPath={project.path}
                   commit={selected}
                   path={selectedFilePath}
@@ -418,7 +419,7 @@ export function AppShell() {
                   }
                 />
               ) : worktreeFile !== null && worktreeFile.filePath !== null ? (
-                <FileDiffView
+                <LazyFileDiffView
                   repositoryPath={project.path}
                   path={worktreeFile.filePath}
                   worktree={{ side: worktreeFile.side }}

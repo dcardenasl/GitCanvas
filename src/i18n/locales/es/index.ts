@@ -1,6 +1,7 @@
 import common from "./common.json";
 import errors from "./errors.json";
 import files from "./files.json";
+import fileHistory from "./fileHistory.json";
 import git from "./git.json";
 import github from "./github.json";
 import history from "./history.json";
@@ -12,6 +13,7 @@ import shell from "./shell.json";
 export const es = {
   common,
   errors,
+  fileHistory,
   files,
   git,
   github,

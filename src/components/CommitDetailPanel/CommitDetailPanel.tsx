@@ -47,7 +47,7 @@ export function CommitDetailPanel({
     selection.kind === "commit" ? selection.filePath : null;
   const fileSource = selectedFileSource(selection);
 
-  const { selectFile } = useNavigationActions();
+  const { selectFile, openFileHistory } = useNavigationActions();
   const diff = useCommitDiff(repositoryPath, commit.id);
   const changedGroups = useMemo<ChangedFilesGroup[]>(
     () =>
@@ -144,6 +144,12 @@ export function CommitDetailPanel({
         selectedFileSource={fileSource}
         onOpen={(path, source, snapshot) => {
           selectFile(path, source, snapshot ? "snapshot" : "diff");
+        }}
+        history={{
+          start: commit.id,
+          open: (path) => {
+            openFileHistory(path, commit.id, false);
+          },
         }}
       />
     </aside>

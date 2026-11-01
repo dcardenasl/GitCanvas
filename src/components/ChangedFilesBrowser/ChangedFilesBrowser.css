@@ -240,7 +240,8 @@
   background: var(--surface-selected);
 }
 
-.file-row:focus-visible {
+.file-row:focus-visible,
+.file-row__history:focus-visible {
   outline: var(--focus-ring);
   outline-offset: -2px;
 }
@@ -328,4 +329,30 @@
 
 .file-row__omitted {
   color: var(--ink-faint);
+}
+
+.file-row-item {
+  display: flex;
+  align-items: center;
+}
+
+.file-row-item > .file-row {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.file-row__history {
+  flex: none;
+  padding-block: 0;
+  padding-inline: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: var(--font-size-small);
+  cursor: pointer;
+}
+
+.file-row__history:disabled {
+  color: var(--ink-faint);
+  cursor: default;
 }

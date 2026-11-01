@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 
-import type { FileHistoryPage, FileHistoryRow, Truncation } from "../bindings";
+import type { FileHistoryRow, Truncation } from "../bindings";
 import { getFileHistory } from "../lib/ipc";
 import type { FileHistoryView } from "./navigation";
 import { queryKeys } from "./queryKeys";
@@ -20,9 +21,27 @@ export interface FileHistoryData {
   /** Whether the repository is shallow, so the oldest row may not be where the file began. */
   readonly shallow: boolean;
   readonly fetchNextPage: () => void;
+  readonly retry: () => void;
 }
 
-const NO_ROWS: readonly FileHistoryRow[] = [];
+/** Why a file's history cannot be opened from a start commit, or `null` when it can. */
+export type FileHistoryUnavailable = "noCommits" | "notUtf8";
+
+/**
+ * Whether the history of `path` can be opened from `startCommitId`.
+ *
+ * A repository without commits has no start to walk from. A path that the
+ * interface received with U+FFFD replacements was not valid UTF-8 in Git, so its
+ * exact name cannot be sent back to the engine.
+ */
+export function fileHistoryUnavailable(
+  path: string,
+  startCommitId: string | null,
+): FileHistoryUnavailable | null {
+  if (startCommitId === null) return "noCommits";
+  if (path.includes("\uFFFD")) return "notUtf8";
+  return null;
+}
 
 /**
  * Loads the history of `view.path` from `view.startCommitId`, one page at a time.
@@ -59,18 +78,25 @@ export function useFileHistory(
     staleTime: Number.POSITIVE_INFINITY,
   });
 
-  const pages: readonly FileHistoryPage[] = query.data?.pages ?? [];
-  const last = pages[pages.length - 1];
+  const pages = query.data?.pages;
+  const rows = useMemo(
+    () => (pages ?? []).flatMap((page) => page.rows),
+    [pages],
+  );
+  const last = pages?.at(-1);
   return {
-    rows: pages.length === 0 ? NO_ROWS : pages.flatMap((page) => page.rows),
+    rows,
     hasNextPage: query.hasNextPage,
     isFetchingNextPage: query.isFetchingNextPage,
     isLoading: query.isPending && query.fetchStatus !== "idle",
     error: query.error,
     truncation: last?.truncation ?? null,
-    shallow: pages[0]?.shallow ?? false,
+    shallow: pages?.[0]?.shallow ?? false,
     fetchNextPage: () => {
       void query.fetchNextPage();
+    },
+    retry: () => {
+      void query.refetch();
     },
   };
 }

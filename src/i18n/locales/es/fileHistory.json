@@ -1,0 +1,34 @@
+{
+  "back": "Volver al gráfico",
+  "change": {
+    "added": "Añadido",
+    "modified": "Modificado",
+    "deleted": "Eliminado"
+  },
+  "empty": "Ningún commit cambió este archivo.",
+  "list": "Commits que cambiaron {{path}}",
+  "lineage": {
+    "rename_limit": "El seguimiento de renombrados se detuvo aquí: se alcanzó el límite de renombrados.",
+    "rename_search_skipped": "Búsqueda de renombrados omitida: este commit cambia demasiados archivos."
+  },
+  "loadMore": "Cargar más",
+  "loading": "Cargando el historial del archivo…",
+  "localChanges": "Cambios locales",
+  "merge": "Fusión: comparada con su primer padre",
+  "open": "Historial",
+  "outsideScope": "Este commit está fuera del alcance actual del gráfico, así que no se puede mostrar allí.",
+  "refresh": "Actualizar",
+  "renamedFrom": "Renombrado desde {{path}}",
+  "shallow": "Repositorio superficial: el historial puede no llegar a donde empezó el archivo.",
+  "showInGraph": "Mostrar en el gráfico",
+  "stale": "HEAD cambió desde que se abrió este historial.",
+  "title": "Historial de {{path}}",
+  "truncation": {
+    "frontier_limit": "El historial está incompleto: hay demasiadas ramas pendientes para continuar desde aquí.",
+    "work_limit": "El historial se detuvo al alcanzar un límite de trabajo. Carga más para continuar."
+  },
+  "unavailable": {
+    "noCommits": "El repositorio todavía no tiene commits.",
+    "notUtf8": "Esta ruta no es UTF-8 válido, así que su historial no se puede abrir."
+  }
+}

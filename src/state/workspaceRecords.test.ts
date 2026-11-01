@@ -15,6 +15,7 @@ const VIEW: FileHistoryView = {
   startCommitId: "a".repeat(40),
   selectedCommitId: "b".repeat(40),
   stale: true,
+  followsHead: true,
 };
 
 it("never writes an open file history to the saved workspace", () => {

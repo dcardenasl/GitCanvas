@@ -28,6 +28,8 @@ export interface FileHistoryView {
   readonly selectedCommitId: string | null;
   /** Set when HEAD or a reference moved after the view started, offering a refresh. */
   readonly stale: boolean;
+  /** Whether the view started from HEAD, so a moved HEAD makes it stale. */
+  readonly followsHead: boolean;
 }
 
 /**
@@ -246,14 +248,22 @@ export function setSidebarTemporaryOpen(open: boolean): Transition {
       : { ...navigation, sidebarTemporaryOpen: open };
 }
 
-/** Opens a file's history from a start commit. Reopening the same view changes nothing. */
+/**
+ * Opens a file's history from a start commit. Reopening the same view changes
+ * nothing; `followsHead` says whether the start is the checked-out HEAD.
+ */
 export function openFileHistory(
   path: string,
   startCommitId: string,
+  followsHead: boolean,
 ): Transition {
   return (navigation) => {
     const current = navigation.fileHistory;
-    if (current?.path === path && current.startCommitId === startCommitId) {
+    if (
+      current?.path === path &&
+      current.startCommitId === startCommitId &&
+      current.followsHead === followsHead
+    ) {
       return navigation;
     }
     return {
@@ -263,6 +273,7 @@ export function openFileHistory(
         startCommitId,
         selectedCommitId: null,
         stale: false,
+        followsHead,
       },
     };
   };

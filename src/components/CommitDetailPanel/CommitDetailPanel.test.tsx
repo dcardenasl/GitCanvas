@@ -111,7 +111,7 @@ describe("CommitDetailPanel", () => {
       name: "Archivos modificados",
     });
     expect(list).toBeInstanceOf(HTMLElement);
-    expect(within(list).getAllByRole("button")).toHaveLength(2);
+    expect(within(list).getAllByRole("listitem")).toHaveLength(2);
 
     // The panel is navigation now; the patch belongs to the centre view.
     expect(screen.queryByText("+b")).toBeNull();
@@ -124,7 +124,9 @@ describe("CommitDetailPanel", () => {
     const list = await screen.findByRole("list", {
       name: "Archivos modificados",
     });
-    await userEvent.click(within(list).getByRole("button"));
+    await userEvent.click(
+      within(list).getByRole("button", { name: /app\.ts/ }),
+    );
 
     expect(activeNavigation().selection).toEqual({
       kind: "commit",
@@ -159,7 +161,7 @@ describe("CommitDetailPanel", () => {
     const list = await screen.findByRole("list", {
       name: "Archivos modificados",
     });
-    const row = within(list).getByRole("button");
+    const row = within(list).getByRole("button", { name: /index\.ts/ });
     const text = row.textContent;
 
     expect(text.indexOf("index.ts")).toBeLessThan(
@@ -314,5 +316,25 @@ describe("CommitDetailPanel", () => {
     renderPanel();
 
     expect(await screen.findByRole("alert")).toBeInstanceOf(HTMLElement);
+  });
+});
+
+it("opens the file's history from this commit, not from HEAD", async () => {
+  getCommitDiff.mockResolvedValue(diff({ files: [file()] }));
+  renderPanel();
+
+  const list = await screen.findByRole("list", {
+    name: "Archivos modificados",
+  });
+  await userEvent.click(
+    within(list).getByRole("button", { name: "Historial" }),
+  );
+
+  expect(activeNavigation().fileHistory).toEqual({
+    path: "src/app.ts",
+    startCommitId: COMMIT.id,
+    selectedCommitId: null,
+    stale: false,
+    followsHead: false,
   });
 });

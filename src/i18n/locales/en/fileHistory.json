@@ -1,0 +1,34 @@
+{
+  "back": "Back to graph",
+  "change": {
+    "added": "Added",
+    "modified": "Modified",
+    "deleted": "Deleted"
+  },
+  "empty": "No commit changed this file.",
+  "list": "Commits that changed {{path}}",
+  "lineage": {
+    "rename_limit": "Rename tracking stopped here: the rename limit was reached.",
+    "rename_search_skipped": "Rename search skipped: this commit changes too many files."
+  },
+  "loadMore": "Load more",
+  "loading": "Loading file history…",
+  "localChanges": "Local changes",
+  "merge": "Merge: compared with its first parent",
+  "open": "History",
+  "outsideScope": "This commit is outside the current graph scope, so it cannot be shown in the graph.",
+  "refresh": "Refresh",
+  "renamedFrom": "Renamed from {{path}}",
+  "shallow": "Shallow repository: the history may not reach where the file began.",
+  "showInGraph": "Show in graph",
+  "stale": "HEAD moved since this history was opened.",
+  "title": "History of {{path}}",
+  "truncation": {
+    "frontier_limit": "The history is incomplete: too many branches are pending to continue from here.",
+    "work_limit": "The history stopped at a work limit. Load more to continue."
+  },
+  "unavailable": {
+    "noCommits": "The repository has no commits yet.",
+    "notUtf8": "This path is not valid UTF-8, so its history cannot be opened."
+  }
+}

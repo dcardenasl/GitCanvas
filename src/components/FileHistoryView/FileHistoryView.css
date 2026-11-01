@@ -1,0 +1,136 @@
+.file-history {
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  min-block-size: 0;
+  min-inline-size: 0;
+}
+
+.file-history__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  border-block-end: 1px solid var(--border);
+}
+
+.file-history__path {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-history__notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  color: var(--ink-muted);
+  font-size: var(--font-size-small);
+  border-block-end: 1px solid var(--border);
+}
+
+.file-history__list {
+  position: relative;
+  flex: 1 1 40%;
+  min-block-size: 0;
+  overflow-y: auto;
+}
+
+.file-history__rows {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.file-history__item {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+}
+
+.file-history__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "mark summary meta"
+    "mark note note";
+  align-items: center;
+  column-gap: var(--space-3);
+  block-size: 100%;
+  inline-size: 100%;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  border: 0;
+  border-block-end: 1px solid var(--divider);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.file-history__row:hover {
+  background: var(--surface-hover);
+}
+
+.file-history__row--selected {
+  background: var(--surface-selected);
+}
+
+.file-history__mark {
+  grid-area: mark;
+  inline-size: 1.25rem;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  text-align: center;
+}
+
+.file-history__summary {
+  grid-area: summary;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-history__meta {
+  grid-area: meta;
+  display: flex;
+  gap: var(--space-2);
+  color: var(--ink-faint);
+  font-size: var(--font-size-small);
+}
+
+.file-history__id {
+  font-family: var(--font-mono);
+}
+
+.file-history__note {
+  grid-area: note;
+  color: var(--ink-muted);
+  font-size: var(--font-size-small);
+}
+
+.file-history__more {
+  margin-block: var(--space-3);
+  margin-inline: var(--space-3);
+}
+
+.file-history__detail {
+  display: flex;
+  flex: 1 1 60%;
+  flex-direction: column;
+  min-block-size: 0;
+  border-block-start: 1px solid var(--border);
+}
