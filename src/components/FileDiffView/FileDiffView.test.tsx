@@ -212,7 +212,7 @@ describe("FileDiffView", () => {
     renderView();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "← Volver al graph" }),
+      await screen.findByRole("button", { name: "← Volver al gráfico" }),
     );
 
     expect(activeNavigation().selection).toMatchObject({ filePath: null });

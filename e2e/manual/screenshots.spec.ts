@@ -81,7 +81,7 @@ describe("GitCanvas against its own history", () => {
   });
 
   it("captures the panels after being resized", async () => {
-    const back = await $("button=← Volver al graph");
+    const back = await $("button=← Volver al gráfico");
     if (await back.isExisting()) {
       await back.click();
       await browser.waitUntil(

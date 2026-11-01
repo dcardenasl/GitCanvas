@@ -182,6 +182,7 @@ export function FileDiffView(props: FileDiffViewProps) {
         <button
           type="button"
           className="file-diff__back"
+          title={t("diff.backHint")}
           onClick={() => {
             selectFile(null);
           }}

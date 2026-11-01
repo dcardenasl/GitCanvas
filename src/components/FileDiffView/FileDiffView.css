@@ -76,10 +76,40 @@
   font-size: var(--font-size-ui);
 }
 
-.file-diff__toggle[aria-pressed="true"] {
-  border-color: var(--accent);
+/* Both view settings share one pressed style: a neutral surface, never the
+   accent, which the interface reserves for actions that change Git state. */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.segmented__option {
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  border: 0;
+  border-inline-start: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: var(--font-size-small);
+  cursor: pointer;
+}
+
+.segmented__option:first-child {
+  border-inline-start: 0;
+}
+
+.segmented__option[aria-pressed="true"] {
   background: var(--surface-selected);
-  color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.file-diff__toggle[aria-pressed="true"] {
+  background: var(--surface-selected);
+  color: var(--ink);
   font-weight: 600;
 }
 
