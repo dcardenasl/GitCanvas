@@ -16,6 +16,21 @@ export type Selection =
   | { kind: "worktree"; side: "staged" | "unstaged"; filePath: string | null };
 
 /**
+ * A file's history opened from one commit. It replaces the graph while it is
+ * open and is kept only for this session, never written to disk.
+ */
+export interface FileHistoryView {
+  /** Repository-relative path whose history is listed. */
+  readonly path: string;
+  /** Full id of the commit the history starts from. Each start is an immutable query. */
+  readonly startCommitId: string;
+  /** Row the user picked; kept across a refresh while the commit is still listed. */
+  readonly selectedCommitId: string | null;
+  /** Set when HEAD or a reference moved after the view started, offering a refresh. */
+  readonly stale: boolean;
+}
+
+/**
  * Where one project's view was left: what is selected and what is pending.
  *
  * Plain data with pure transitions, so every project's navigation is a value
@@ -41,6 +56,8 @@ export interface Navigation {
   readonly sidebarPinned: boolean;
   /** Temporary visibility that belongs only to the currently open file. */
   readonly sidebarTemporaryOpen: boolean;
+  /** The file history replacing the graph, or `null` while the graph is shown. */
+  readonly fileHistory: FileHistoryView | null;
 }
 
 /** A project that has just been opened: history, nothing pending. */
@@ -54,6 +71,7 @@ export const EMPTY_NAVIGATION: Navigation = {
   historyAnchor: null,
   sidebarPinned: false,
   sidebarTemporaryOpen: false,
+  fileHistory: null,
 };
 
 /** A change to a project's navigation. Returns the same value when nothing changes. */
@@ -226,6 +244,87 @@ export function setSidebarTemporaryOpen(open: boolean): Transition {
     navigation.sidebarTemporaryOpen === open
       ? navigation
       : { ...navigation, sidebarTemporaryOpen: open };
+}
+
+/** Opens a file's history from a start commit. Reopening the same view changes nothing. */
+export function openFileHistory(
+  path: string,
+  startCommitId: string,
+): Transition {
+  return (navigation) => {
+    const current = navigation.fileHistory;
+    if (current?.path === path && current.startCommitId === startCommitId) {
+      return navigation;
+    }
+    return {
+      ...navigation,
+      fileHistory: {
+        path,
+        startCommitId,
+        selectedCommitId: null,
+        stale: false,
+      },
+    };
+  };
+}
+
+/** Closes the file history and shows the graph again. */
+export const closeFileHistory: Transition = (navigation) =>
+  navigation.fileHistory === null
+    ? navigation
+    : { ...navigation, fileHistory: null };
+
+/** Picks a row of the open file history, or clears the pick with `null`. */
+export function selectFileHistoryRow(commitId: string | null): Transition {
+  return (navigation) => {
+    const view = navigation.fileHistory;
+    if (view === null || view.selectedCommitId === commitId) return navigation;
+    return {
+      ...navigation,
+      fileHistory: { ...view, selectedCommitId: commitId },
+    };
+  };
+}
+
+/** Records whether HEAD or a reference moved since the open file history started. */
+export function setFileHistoryStale(stale: boolean): Transition {
+  return (navigation) => {
+    const view = navigation.fileHistory;
+    if (view === null || view.stale === stale) return navigation;
+    return { ...navigation, fileHistory: { ...view, stale } };
+  };
+}
+
+/**
+ * Restarts the open file history from a new start commit, keeping its path and
+ * its pick. Call [`retainFileHistorySelection`] once the new history is loaded,
+ * because only then is it known whether the pick is still listed.
+ */
+export function refreshFileHistory(startCommitId: string): Transition {
+  return (navigation) => {
+    const view = navigation.fileHistory;
+    if (view === null) return navigation;
+    return {
+      ...navigation,
+      fileHistory: { ...view, startCommitId, stale: false },
+    };
+  };
+}
+
+/**
+ * Drops the picked row when the loaded history no longer lists it. Call it only
+ * after every page is loaded, since a pick on a page not yet loaded would be lost.
+ */
+export function retainFileHistorySelection(
+  listedCommitIds: ReadonlySet<string>,
+): Transition {
+  return (navigation) => {
+    const view = navigation.fileHistory;
+    if (!view?.selectedCommitId || listedCommitIds.has(view.selectedCommitId)) {
+      return navigation;
+    }
+    return { ...navigation, fileHistory: { ...view, selectedCommitId: null } };
+  };
 }
 
 /**
