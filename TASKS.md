@@ -92,7 +92,7 @@ roadmap.
 ### v0.6 — Historial por archivo
 
 Estrategia aprobada el 2026-11-01 sobre el [roadmap](docs/plan/2026-10-19-roadmap-de-versiones.md#dependencias-y-criterios-de-versiones-posteriores).
-Decisiones (la vista no se persiste entre reinicios): seguir renombrados por similitud de `git2` (umbral predeterminado de Git, 50%)
+Decisiones (inicio en HEAD con `focus_commit`, vista que reemplaza el gráfico, aviso «Actualizar», caché propia, rutas UTF-8 exactas, aviso en repos superficiales y criterios de rendimiento medibles: ver plan, decisiones 5–13; la vista no se persiste entre reinicios): seguir renombrados por similitud de `git2` (umbral predeterminado de Git, 50%)
 con límites y corte explícitos; acción «Historial del archivo» en inspector y lista de
 archivos que abre una vista dedicada en la pestaña, sin modificar filtros del gráfico y con
 aviso si el commit queda fuera del alcance actual; merges con la semántica de
