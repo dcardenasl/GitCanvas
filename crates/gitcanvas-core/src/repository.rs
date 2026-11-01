@@ -1,6 +1,6 @@
 //! Validated repository identity; live libgit2 handles never become shared state.
 
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use git2::{Oid, Repository, RepositoryOpenFlags};
 use serde::Serialize;
@@ -23,6 +23,24 @@ pub struct RepositoryInfo {
     pub path: String,
     /// Repository directory name for display.
     pub name: String,
+}
+
+/// Validates a caller-supplied repository-relative path (ADR 0002): no absolute
+/// prefix, root, `..`, or `.git` component.
+pub(crate) fn validate_relative_path(path: &str) -> Result<PathBuf, AppError> {
+    let candidate = Path::new(path);
+    if path.is_empty() || candidate.is_absolute() {
+        return Err(AppError::PathOutsideRepository(path.to_owned()));
+    }
+    if candidate.components().any(|component| {
+        matches!(
+            component,
+            Component::ParentDir | Component::RootDir | Component::Prefix(_)
+        ) || matches!(component, Component::Normal(name) if name == ".git")
+    }) {
+        return Err(AppError::PathOutsideRepository(path.to_owned()));
+    }
+    Ok(candidate.to_path_buf())
 }
 
 /// Parses a commit id received across the IPC boundary.

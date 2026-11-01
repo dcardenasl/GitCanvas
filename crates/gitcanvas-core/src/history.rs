@@ -243,57 +243,63 @@ fn read_page(
         }
     };
     let cursor = parsed_cursor.map(|(_, id)| id);
-    let cached = reader
-        .map(|reader| reader.find(active, &roots))
-        .transpose()?
-        .flatten();
-    if let Some(ids) = cached {
-        return page_from_walk(
-            &repo,
-            ids.iter().copied().map(Ok),
-            &roots,
-            &references,
-            cursor,
-            request.limit,
-        );
-    }
+    with_walk(active, &repo, &roots, reader, |walk| {
+        page_from_walk(&repo, walk, &roots, &references, cursor, request.limit)
+    })
+}
+
+/// The one topological producer of commit ids. Every history query (the graph
+/// and per-file history) walks through [`with_walk`], so the order and the
+/// frozen-root semantics are defined once.
+pub(crate) fn topological_walk<'repo>(
+    repo: &'repo Repository,
+    roots: &[Oid],
+) -> Result<git2::Revwalk<'repo>, AppError> {
     let mut walk = repo.revwalk()?;
     walk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME)?;
-    for root in &roots {
+    for root in roots {
         walk.push(*root).map_err(|_| {
             AppError::StaleCursor(
                 "A history root is no longer available; refresh the repository".into(),
             )
         })?;
     }
-    if let Some(reader) = reader {
-        let prefix = walk
-            .by_ref()
-            .take(reader.max_commits.saturating_add(1))
-            .collect::<Result<Vec<_>, _>>()?;
-        if prefix.len() <= reader.max_commits {
-            let ids: WalkIds = prefix.into();
-            reader.insert(active, &roots, Arc::clone(&ids))?;
-            return page_from_walk(
-                &repo,
-                ids.iter().copied().map(Ok),
-                &roots,
-                &references,
-                cursor,
-                request.limit,
-            );
-        }
-        // Huge walks remain bounded: retain no snapshot, and stream the rest.
-        return page_from_walk(
-            &repo,
-            prefix.into_iter().map(Ok).chain(walk),
-            &roots,
-            &references,
-            cursor,
-            request.limit,
-        );
+    Ok(walk)
+}
+
+/// Runs `consume` over the ids reachable from `roots`, in walk order.
+///
+/// A cached snapshot is replayed when `reader` holds one. A walk that fits the
+/// reader's budget is cached for later queries; a larger one streams and is never
+/// retained, so it cannot evict anything.
+pub(crate) fn with_walk<T>(
+    active: &ActiveRepo,
+    repo: &Repository,
+    roots: &[Oid],
+    reader: Option<&HistoryReader>,
+    consume: impl FnOnce(&mut dyn Iterator<Item = Result<Oid, git2::Error>>) -> Result<T, AppError>,
+) -> Result<T, AppError> {
+    let cached = reader
+        .map(|reader| reader.find(active, roots))
+        .transpose()?
+        .flatten();
+    if let Some(ids) = cached {
+        return consume(&mut ids.iter().copied().map(Ok::<Oid, git2::Error>));
     }
-    page_from_walk(&repo, walk, &roots, &references, cursor, request.limit)
+    let mut walk = topological_walk(repo, roots)?;
+    let Some(reader) = reader else {
+        return consume(&mut walk);
+    };
+    let prefix = walk
+        .by_ref()
+        .take(reader.max_commits.saturating_add(1))
+        .collect::<Result<Vec<_>, _>>()?;
+    if prefix.len() <= reader.max_commits {
+        let ids: WalkIds = prefix.into();
+        reader.insert(active, roots, Arc::clone(&ids))?;
+        return consume(&mut ids.iter().copied().map(Ok::<Oid, git2::Error>));
+    }
+    consume(&mut prefix.into_iter().map(Ok).chain(walk))
 }
 
 fn page_from_walk(

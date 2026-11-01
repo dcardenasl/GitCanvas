@@ -63,7 +63,7 @@ to the UI through the response, never copied:
 | Limit | Value | Effect when reached |
 |---|---|---|
 | Page size | 1–200 | `InvalidInput` outside the range |
-| Followed commits examined per request | 20,000 | Page ends early with `Truncation::WorkLimit` and a cursor that resumes |
+| Commits examined per request | 20,000 | Page ends early with `Truncation::WorkLimit` and a cursor that resumes |
 | Renames followed per query | 32 | Lineage ends; `Truncation::RenameLimit` at that commit |
 | Diff size for rename search | 2,000 deltas | Search skipped; `Truncation::RenameSearchSkipped` at that commit |
 | Frontier size carried in a cursor | 256 entries / 1 MiB | Search ends with `Truncation::FrontierLimit`, no cursor |

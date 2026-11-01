@@ -24,6 +24,7 @@ pub mod blob;
 pub mod commit_tree;
 pub mod diff;
 pub mod error;
+pub mod file_history;
 pub mod github;
 pub mod history;
 mod pagination;
