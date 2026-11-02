@@ -18,6 +18,7 @@
     "unchanged": "Unchanged in this commit"
   },
   "diff": {
+    "backHint": "Leave (Esc)",
     "back": "← Back to graph",
     "binaryFile_one": "Binary file of {{count}} byte. There is no text to show.",
     "binaryFile_other": "Binary file of {{count, number}} bytes. There is no text to show.",
@@ -30,6 +31,8 @@
     "loadWhole": "View whole file",
     "localStaged": "local changes · staged",
     "localUnstaged": "local changes · unstaged",
+    "beforeDeletion": "Version before the deletion, at {{id}}.",
+    "modeBeforeDeletion": "Before deletion",
     "modeChanges": "Changes",
     "modeLabel": "What to show of the file",
     "modeWhole": "Whole file",

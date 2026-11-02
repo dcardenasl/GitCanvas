@@ -3,8 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   clearOrphanedReveal,
   clearReveal,
+  closeFileHistory,
   EMPTY_NAVIGATION,
   expandFile,
+  openFileHistory,
+  refreshFileHistory,
+  retainFileHistorySelection,
+  selectFileHistoryRow,
+  setFileHistoryStale,
   revealCommit,
   selectCommit,
   selectedCommitId,
@@ -251,5 +257,101 @@ describe("navigation selectors", () => {
     const local = after(selectCommit(COMMIT), selectFile("b.ts", "unstaged"));
     expect(selectedCommitId(local)).toBeNull();
     expect(selectedFileSource(local.selection)).toBe("unstaged");
+  });
+});
+
+describe("file history view", () => {
+  const START = "c".repeat(40);
+  const NEW_START = "d".repeat(40);
+
+  it("opens a view with nothing picked and no pending refresh", () => {
+    const navigation = after(openFileHistory("src/app.ts", START, false));
+    expect(navigation.fileHistory).toEqual({
+      path: "src/app.ts",
+      startCommitId: START,
+      selectedCommitId: null,
+      stale: false,
+      followsHead: false,
+    });
+  });
+
+  it("treats a view that starts from HEAD as a different view", () => {
+    const opened = after(openFileHistory("src/app.ts", START, false));
+    const fromHead = openFileHistory("src/app.ts", START, true)(opened);
+    expect(fromHead.fileHistory?.followsHead).toBe(true);
+  });
+
+  it("returns the same navigation when the same view is reopened", () => {
+    const opened = after(openFileHistory("src/app.ts", START, false));
+    expect(openFileHistory("src/app.ts", START, false)(opened)).toBe(opened);
+  });
+
+  it("keeps the view while the commit selection changes around it", () => {
+    const navigation = after(
+      openFileHistory("src/app.ts", START, false),
+      selectCommit(COMMIT),
+      selectFileHistoryRow(COMMIT),
+    );
+    expect(navigation.fileHistory?.selectedCommitId).toBe(COMMIT);
+    expect(navigation.selection).toEqual({
+      kind: "commit",
+      commitId: COMMIT,
+      filePath: null,
+    });
+  });
+
+  it("picks and clears a row without touching the rest of the view", () => {
+    const opened = after(openFileHistory("src/app.ts", START, false));
+    const picked = selectFileHistoryRow(OTHER)(opened);
+    expect(picked.fileHistory?.selectedCommitId).toBe(OTHER);
+    expect(selectFileHistoryRow(null)(picked).fileHistory).toEqual(
+      opened.fileHistory,
+    );
+    expect(selectFileHistoryRow(null)(opened)).toBe(opened);
+  });
+
+  it("marks the view stale only while it is open", () => {
+    const opened = after(openFileHistory("src/app.ts", START, false));
+    const stale = setFileHistoryStale(true)(opened);
+    expect(stale.fileHistory?.stale).toBe(true);
+    expect(setFileHistoryStale(true)(stale)).toBe(stale);
+    expect(setFileHistoryStale(true)(EMPTY_NAVIGATION)).toBe(EMPTY_NAVIGATION);
+  });
+
+  it("refreshes from a new start, clears the stale notice and keeps the path and pick", () => {
+    const refreshed = after(
+      openFileHistory("src/app.ts", START, false),
+      selectFileHistoryRow(OTHER),
+      setFileHistoryStale(true),
+      refreshFileHistory(NEW_START),
+    );
+    expect(refreshed.fileHistory).toEqual({
+      path: "src/app.ts",
+      startCommitId: NEW_START,
+      selectedCommitId: OTHER,
+      stale: false,
+      followsHead: false,
+    });
+  });
+
+  it("drops the pick only once the loaded history no longer lists it", () => {
+    const picked = after(
+      openFileHistory("src/app.ts", START, false),
+      selectFileHistoryRow(OTHER),
+    );
+    expect(retainFileHistorySelection(new Set([OTHER]))(picked)).toBe(picked);
+    const dropped = retainFileHistorySelection(new Set([COMMIT]))(picked);
+    expect(dropped.fileHistory?.selectedCommitId).toBeNull();
+  });
+
+  it("closes back to the graph and keeps the other navigation intact", () => {
+    const navigation = after(
+      revealCommit(COMMIT),
+      openFileHistory("src/app.ts", START, false),
+      closeFileHistory,
+    );
+    expect(navigation.fileHistory).toBeNull();
+    expect(navigation.revealCommitId).toBe(COMMIT);
+    expect(closeFileHistory(navigation)).toBe(navigation);
   });
 });

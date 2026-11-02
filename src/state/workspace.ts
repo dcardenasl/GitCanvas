@@ -11,6 +11,12 @@ import {
   clearReveal,
   EMPTY_NAVIGATION,
   expandFile,
+  closeFileHistory,
+  openFileHistory,
+  refreshFileHistory,
+  retainFileHistorySelection,
+  selectFileHistoryRow,
+  setFileHistoryStale,
   revealCommit,
   selectCommit,
   selectFile,
@@ -102,6 +108,18 @@ export interface NavigationActions {
   readonly setHistoryAnchor: (commitId: string | null) => void;
   readonly setSidebarPinned: (pinned: boolean) => void;
   readonly setSidebarTemporaryOpen: (open: boolean) => void;
+  readonly openFileHistory: (
+    path: string,
+    startCommitId: string,
+    followsHead: boolean,
+  ) => void;
+  readonly closeFileHistory: () => void;
+  readonly selectFileHistoryRow: (commitId: string | null) => void;
+  readonly setFileHistoryStale: (stale: boolean) => void;
+  readonly refreshFileHistory: (startCommitId: string) => void;
+  readonly retainFileHistorySelection: (
+    listedCommitIds: ReadonlySet<string>,
+  ) => void;
 }
 
 /**
@@ -154,6 +172,24 @@ export function navigationActionsFor(root: string | null): NavigationActions {
     },
     setSidebarTemporaryOpen: (open) => {
       apply(setSidebarTemporaryOpen(open));
+    },
+    openFileHistory: (path, startCommitId, followsHead) => {
+      apply(openFileHistory(path, startCommitId, followsHead));
+    },
+    closeFileHistory: () => {
+      apply(closeFileHistory);
+    },
+    selectFileHistoryRow: (commitId) => {
+      apply(selectFileHistoryRow(commitId));
+    },
+    setFileHistoryStale: (stale) => {
+      apply(setFileHistoryStale(stale));
+    },
+    refreshFileHistory: (startCommitId) => {
+      apply(refreshFileHistory(startCommitId));
+    },
+    retainFileHistorySelection: (listedCommitIds) => {
+      apply(retainFileHistorySelection(listedCommitIds));
     },
   };
 }

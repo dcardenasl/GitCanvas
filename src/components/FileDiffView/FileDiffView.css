@@ -6,7 +6,8 @@
 
 .file-diff__head {
   display: flex;
-  gap: var(--space-6);
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
   align-items: center;
   padding: 8px 14px;
   border-bottom: 1px solid var(--border);
@@ -33,6 +34,16 @@
 .file-diff__back:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
+}
+
+/* View settings and actions wrap as one block at the end of the header,
+   instead of stacking into the title's column when the centre is narrow. */
+.file-diff__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: auto;
 }
 
 .file-diff__title {
@@ -76,11 +87,47 @@
   font-size: var(--font-size-ui);
 }
 
-.file-diff__toggle[aria-pressed="true"] {
-  border-color: var(--accent);
+/* Both view settings share one pressed style: a neutral surface, never the
+   accent, which the interface reserves for actions that change Git state. */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.segmented__option {
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  border: 0;
+  border-inline-start: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: var(--font-size-small);
+  cursor: pointer;
+}
+
+.segmented__option:first-child {
+  border-inline-start: 0;
+}
+
+.segmented__option[aria-pressed="true"] {
   background: var(--surface-selected);
-  color: var(--accent);
+  color: var(--ink);
   font-weight: 600;
+}
+
+/* A setting, not an action: no border, no weight; a pressed setting only tints. */
+.file-diff__toggle {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-muted);
+}
+
+.file-diff__toggle[aria-pressed="true"] {
+  background: var(--surface-selected);
+  color: var(--ink);
 }
 
 /* Full width means the diff no longer needs its own scroller for ordinary

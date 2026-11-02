@@ -22,7 +22,7 @@ use crate::{
     diff::{self, FileDiff, FileDiffSummary},
     error::AppError,
     pagination::resolve_page_size,
-    repository::ActiveRepo,
+    repository::{validate_relative_path, ActiveRepo},
 };
 
 /// Maximum number of file summaries returned in one page.
@@ -571,22 +571,6 @@ fn same_file_identity(_file: &File, _path: &Path, opened: &Metadata, current: &M
         && current.is_file()
         && opened.len() == current.len()
         && opened.modified().ok() == current.modified().ok()
-}
-
-fn validate_relative_path(path: &str) -> Result<PathBuf, AppError> {
-    let candidate = Path::new(path);
-    if path.is_empty() || candidate.is_absolute() {
-        return Err(AppError::PathOutsideRepository(path.to_owned()));
-    }
-    if candidate.components().any(|component| {
-        matches!(
-            component,
-            Component::ParentDir | Component::RootDir | Component::Prefix(_)
-        ) || matches!(component, Component::Normal(name) if name == ".git")
-    }) {
-        return Err(AppError::PathOutsideRepository(path.to_owned()));
-    }
-    Ok(candidate.to_path_buf())
 }
 
 fn revision(repo: &Repository, index: &Index) -> Result<String, AppError> {

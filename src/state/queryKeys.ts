@@ -66,6 +66,12 @@ export const queryKeys = {
       expanded,
       localRevision,
     ] as const,
+  /** Keyed by repository first, so closing or evicting a project releases it like every other entry. */
+  fileHistory: (
+    repositoryPath: string | null,
+    filePath: string | null,
+    startCommitId: string | null,
+  ) => ["file-history", repositoryPath, filePath, startCommitId] as const,
   commitTree: (
     repositoryPath: string,
     commitId: string,

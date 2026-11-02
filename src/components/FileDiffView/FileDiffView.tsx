@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import type {
@@ -10,6 +10,8 @@ import type {
 import { errorKind } from "../../lib/errors";
 import { getFileContent, getWorktreeFileContent } from "../../lib/ipc";
 import { useCommitDiff } from "../../state/diff";
+import { fileHistoryUnavailable } from "../../state/fileHistory";
+import { useRepositoryRefs } from "../../state/refs";
 import { useNavigation, useNavigationActions } from "../../state/workspace";
 import { useWorktreeFileDiff, useWorktreeSnapshot } from "../../state/worktree";
 import { queryKeys } from "../../state/queryKeys";
@@ -23,6 +25,13 @@ import "./FileDiffView.css";
 interface SharedProps {
   readonly repositoryPath: string;
   readonly path: string;
+  /**
+   * Rendered inside another view that owns navigation, such as a file's history:
+   * this view then has no back action and leaves Escape to its owner.
+   */
+  readonly embedded?: boolean | undefined;
+  /** Extra actions shown with the view controls, supplied by the owning view. */
+  readonly actions?: ReactNode | undefined;
 }
 
 /** Source-specific inputs for a commit or local worktree file view. */
@@ -42,10 +51,11 @@ type Mode = "diff" | "file";
 
 /** One commit or one local file, with an impossible-to-confuse source. */
 export function FileDiffView(props: FileDiffViewProps) {
-  const { t } = useTranslation(["files", "common"]);
+  const { t } = useTranslation(["files", "common", "fileHistory"]);
   const { repositoryPath, path } = props;
+  const embedded = props.embedded === true;
 
-  const { selectFile, expandFile } = useNavigationActions();
+  const { selectFile, expandFile, openFileHistory } = useNavigationActions();
   const expandPath = useNavigation((navigation) => navigation.expandedFilePath);
   const [wrap, setWrap] = useState(true);
   const [choice, setChoice] = useState<{
@@ -55,6 +65,10 @@ export function FileDiffView(props: FileDiffViewProps) {
 
   const isWorktree = props.worktree !== undefined;
   const isSnapshot = !isWorktree && props.snapshot === true;
+  // A file's history starts where this diff reads: its commit, or HEAD for local changes.
+  const head = useRepositoryRefs(isWorktree ? repositoryPath : null).data?.head;
+  const historyStart = isWorktree ? (head ?? null) : props.commit.id;
+  const historyUnavailable = fileHistoryUnavailable(path, historyStart);
   const sourceKey = isWorktree
     ? props.worktree.side
     : `commit-${props.commit.id}`;
@@ -90,6 +104,9 @@ export function FileDiffView(props: FileDiffViewProps) {
     ? worktreeFileDiff.data?.file
     : commitDiff.data?.files.find((entry) => entry.path === path);
   const deleted = file?.change === "Deleted";
+  // A commit that deleted a file has no content of its own. Its previous version
+  // is the file at the first parent, which the whole-file view shows instead.
+  const previousCommitId = deleted ? (props.commit?.parents[0] ?? null) : null;
 
   useEffect(() => {
     if (
@@ -114,7 +131,7 @@ export function FileDiffView(props: FileDiffViewProps) {
     ),
     enabled:
       mode === "file" &&
-      !deleted &&
+      (!deleted || previousCommitId !== null) &&
       (!isWorktree || localRevision !== undefined),
     queryFn: () => {
       if (isWorktree) {
@@ -126,7 +143,7 @@ export function FileDiffView(props: FileDiffViewProps) {
         });
       }
       return getFileContent(repositoryPath, {
-        commit_id: props.commit.id,
+        commit_id: previousCommitId ?? props.commit.id,
         path,
         expand: expanded,
       });
@@ -151,6 +168,7 @@ export function FileDiffView(props: FileDiffViewProps) {
   }, [diff.error, whole.error, isWorktree, refetchLocalSnapshot]);
 
   useEffect(() => {
+    if (embedded) return;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") selectFile(null);
     }
@@ -158,7 +176,7 @@ export function FileDiffView(props: FileDiffViewProps) {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [selectFile]);
+  }, [embedded, selectFile]);
 
   const wholeText = whole.data?.text ?? null;
   const wholeLines = useMemo(
@@ -176,15 +194,18 @@ export function FileDiffView(props: FileDiffViewProps) {
       aria-label={t(isSnapshot ? "diff.fileAt" : "diff.changes", { path })}
     >
       <header className="file-diff__head">
-        <button
-          type="button"
-          className="file-diff__back"
-          onClick={() => {
-            selectFile(null);
-          }}
-        >
-          {t("diff.back")}
-        </button>
+        {!embedded && (
+          <button
+            type="button"
+            className="file-diff__back"
+            title={t("diff.backHint")}
+            onClick={() => {
+              selectFile(null);
+            }}
+          >
+            {t("diff.back")}
+          </button>
+        )}
 
         <div className="file-diff__title">
           <span className="file-diff__path" title={path}>
@@ -205,7 +226,7 @@ export function FileDiffView(props: FileDiffViewProps) {
         </div>
 
         <div className="file-diff__controls">
-          {!deleted && !isSnapshot && (
+          {!isSnapshot && (deleted ? previousCommitId !== null : true) && (
             <div
               className="segmented"
               role="group"
@@ -229,7 +250,7 @@ export function FileDiffView(props: FileDiffViewProps) {
                   setMode("file");
                 }}
               >
-                {t("diff.modeWhole")}
+                {deleted ? t("diff.modeBeforeDeletion") : t("diff.modeWhole")}
               </button>
             </div>
           )}
@@ -245,6 +266,28 @@ export function FileDiffView(props: FileDiffViewProps) {
           >
             {t("diff.wrap")}
           </button>
+
+          {!isSnapshot && !embedded && (
+            <button
+              type="button"
+              className="button file-diff__history"
+              disabled={historyUnavailable !== null}
+              title={
+                historyUnavailable === null
+                  ? t("fileHistory:open")
+                  : t(`fileHistory:unavailable.${historyUnavailable}`)
+              }
+              onClick={() => {
+                if (historyStart !== null) {
+                  openFileHistory(path, historyStart, isWorktree);
+                }
+              }}
+            >
+              {t("fileHistory:open")}
+            </button>
+          )}
+
+          {props.actions}
 
           {file !== undefined && mode === "diff" && (
             <span className="file-diff__stat">
@@ -298,6 +341,11 @@ export function FileDiffView(props: FileDiffViewProps) {
           </>
         ) : (
           <>
+            {deleted && previousCommitId !== null && (
+              <p className="diff-viewer__notice">
+                {t("diff.beforeDeletion", { id: shortId(previousCommitId) })}
+              </p>
+            )}
             {whole.isPending && (
               <p className="state file-diff__state">{t("diff.readingFile")}</p>
             )}

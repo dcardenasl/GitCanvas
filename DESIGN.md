@@ -73,6 +73,17 @@ colored only for the registered languages and within the size budgets; everythin
 plain text and equally complete. See [ADR 0005](docs/adr/0005-syntax-highlighting.md) for
 how to register a language.
 
+## File history (v0.6 in dev)
+
+Opening a file's history keeps the commit list in the sidebar, where the branch list is,
+and puts the file's change in the picked commit in the centre, against its first parent.
+The right inspector keeps showing that commit. Moving through the list with the keyboard
+selects the commit and updates the centre at once. A rename names the previous path on its
+row, a merge says it is compared with its first parent, and a lineage that stopped at the
+rename budget says so on that row. Escape returns to the graph unless a menu is open.
+Each history action is labelled with its file, so a screen reader can tell the rows apart.
+The sidebar does not fold away while a file's history is open.
+
 ## Platform behavior
 
 The product is a desktop Tauri application for macOS, Linux, and Windows. The layout is

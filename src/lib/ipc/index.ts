@@ -6,6 +6,7 @@ import type {
   DiffRequest,
   CommitTreeRequest,
   FileContentRequest,
+  FileHistoryRequest,
   HistoryRequest,
   OpenRepositoriesRequest,
   WorktreeFileDiffRequest,
@@ -76,6 +77,9 @@ export const getStartupRepository = () =>
 /** Reads the next bounded history page from its original snapshot. */
 export const getCommits = (path: string, request: HistoryRequest) =>
   result(commands.getCommits(path, request));
+/** Reads one bounded page of a file's history, following renames from a start commit. */
+export const getFileHistory = (path: string, request: FileHistoryRequest) =>
+  result(commands.getFileHistory(path, request));
 /** Reads immutable metadata for one full commit id without paging history. */
 export const getCommit = (path: string, commitId: string) =>
   result(commands.getCommit(path, commitId));

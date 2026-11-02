@@ -10,8 +10,11 @@ import type {
 } from "../../bindings";
 import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
 
-const mockIpc = createIpcMocks(["getWorktreeSnapshot"] as const);
-const { getWorktreeSnapshot } = mockIpc;
+const mockIpc = createIpcMocks([
+  "getWorktreeSnapshot",
+  "getRepositoryRefs",
+] as const);
+const { getWorktreeSnapshot, getRepositoryRefs } = mockIpc;
 
 vi.mock("../../lib/ipc", () => mockIpc);
 
@@ -104,7 +107,12 @@ describe("WorkingTreeDetailPanel", () => {
     const list = await screen.findByRole("list", {
       name: "Archivos preparados",
     });
-    await userEvent.click(within(list).getByRole("button"));
+    await userEvent.click(
+      within(list).getByRole("button", {
+        name: (name) =>
+          name.includes("app.ts") && !name.startsWith("Más acciones"),
+      }),
+    );
 
     expect(activeNavigation().selection).toEqual({
       kind: "worktree",
@@ -264,5 +272,50 @@ describe("WorkingTreeDetailPanel", () => {
         "changed since this page was loaded",
       );
     });
+  });
+});
+
+describe("WorkingTreeDetailPanel file history", () => {
+  const HEAD = "f".repeat(40);
+
+  function refs(head: string | null) {
+    return { branches: [], tags: [], head, head_reference: null, roots: [] };
+  }
+
+  it("opens a local file's history from HEAD", async () => {
+    getRepositoryRefs.mockResolvedValue(refs(HEAD));
+    getWorktreeSnapshot.mockResolvedValue(local([], [file()]));
+    renderPanel();
+
+    const list = await screen.findByRole("list", {
+      name: "Archivos sin preparar",
+    });
+    await userEvent.click(
+      within(list).getByRole("button", { name: "Más acciones de src/app.ts" }),
+    );
+    await userEvent.click(screen.getByRole("menuitem", { name: "Historial" }));
+
+    expect(activeNavigation().fileHistory).toEqual({
+      path: "src/app.ts",
+      startCommitId: HEAD,
+      selectedCommitId: null,
+      stale: false,
+      followsHead: true,
+    });
+  });
+
+  it("disables the history action in a repository without commits", async () => {
+    getRepositoryRefs.mockResolvedValue(refs(null));
+    getWorktreeSnapshot.mockResolvedValue(local([], [file()]));
+    renderPanel();
+
+    const list = await screen.findByRole("list", {
+      name: "Archivos sin preparar",
+    });
+    const action = within(list).getByRole("button", {
+      name: "Más acciones de src/app.ts",
+    });
+    expect((action as HTMLButtonElement).disabled).toBe(true);
+    expect(activeNavigation().fileHistory).toBeNull();
   });
 });

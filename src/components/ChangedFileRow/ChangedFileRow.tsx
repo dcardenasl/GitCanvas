@@ -1,18 +1,28 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { FileChange } from "../../bindings";
 import type { ChangedFile } from "../../lib/changedFiles";
+import type { FileHistoryUnavailable } from "../../state/fileHistory";
+import { ChangeMark, type ChangeKind } from "../ChangeMark";
+import { ContextMenu } from "../ContextMenu";
 import { DiffStat } from "../DiffStat/DiffStat";
 
-const CHANGE_MARK: Record<FileChange, string> = {
-  Added: "A",
-  Modified: "M",
-  Deleted: "D",
-  Renamed: "R",
-  Copied: "C",
-  TypeChanged: "T",
-  Other: "?",
+const CHANGE_KIND: Record<FileChange, ChangeKind> = {
+  Added: "added",
+  Modified: "modified",
+  Deleted: "deleted",
+  Renamed: "renamed",
+  Copied: "copied",
+  TypeChanged: "typechanged",
+  Other: "other",
 };
+
+/** The row's action that opens the file's history, and why it cannot be used now. */
+export interface FileRowHistory {
+  readonly unavailable: FileHistoryUnavailable | null;
+  readonly onOpen: () => void;
+}
 
 interface ChangedFileRowProps {
   readonly file: ChangedFile | null;
@@ -20,6 +30,7 @@ interface ChangedFileRowProps {
   readonly selected: boolean;
   readonly onOpen: () => void;
   readonly showDirectory?: boolean;
+  readonly history?: FileRowHistory | undefined;
 }
 
 function fileName(path: string): string {
@@ -38,11 +49,13 @@ export function ChangedFileRow({
   selected,
   onOpen,
   showDirectory = true,
+  history,
 }: ChangedFileRowProps) {
-  const { t } = useTranslation("files");
+  const { t } = useTranslation(["files", "fileHistory"]);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
 
   return (
-    <li>
+    <li className={history === undefined ? undefined : "file-row-item"}>
       <button
         type="button"
         className={selected ? "file-row file-row--selected" : "file-row"}
@@ -50,21 +63,12 @@ export function ChangedFileRow({
         onClick={onOpen}
       >
         {file === null ? (
-          <span
-            className="file-row__mark file-row__mark--unchanged"
-            title={t("change.unchanged")}
-            aria-label={t("change.unchanged")}
-          >
-            ·
-          </span>
+          <ChangeMark kind="unchanged" label={t("change.unchanged")} />
         ) : (
-          <span
-            className={`file-row__mark file-row__mark--${file.change.toLowerCase()}`}
-            title={t(`change.${file.change}`)}
-            aria-label={t(`change.${file.change}`)}
-          >
-            {CHANGE_MARK[file.change]}
-          </span>
+          <ChangeMark
+            kind={CHANGE_KIND[file.change]}
+            label={t(`change.${file.change}`)}
+          />
         )}
         <span className="file-row__path" title={path}>
           <span className="file-row__name">{fileName(path)}</span>
@@ -84,6 +88,47 @@ export function ChangedFileRow({
           )}
         </span>
       </button>
+      {history !== undefined && (
+        <button
+          type="button"
+          className="file-row__more"
+          aria-label={t("fileHistory:moreFor", { path })}
+          aria-haspopup="menu"
+          aria-expanded={menu !== null}
+          disabled={history.unavailable !== null}
+          title={
+            history.unavailable === null
+              ? undefined
+              : t(`fileHistory:unavailable.${history.unavailable}`)
+          }
+          onClick={(event) => {
+            const bounds = event.currentTarget.getBoundingClientRect();
+            setMenu({ x: bounds.left, y: bounds.bottom });
+          }}
+        >
+          <span className="file-row__dot" aria-hidden="true" />
+          <span className="file-row__dot" aria-hidden="true" />
+          <span className="file-row__dot" aria-hidden="true" />
+        </button>
+      )}
+      {history !== undefined && menu !== null && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          items={[
+            {
+              label: t("fileHistory:open"),
+              onSelect: () => {
+                setMenu(null);
+                history.onOpen();
+              },
+            },
+          ]}
+          onClose={() => {
+            setMenu(null);
+          }}
+        />
+      )}
     </li>
   );
 }

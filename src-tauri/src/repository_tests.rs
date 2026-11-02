@@ -12,6 +12,11 @@ pub(super) fn test_webview() -> tauri::WebviewWindow<MockRuntime> {
         .manage(std::sync::Arc::new(
             gitcanvas_core::history::HistoryReader::default(),
         ))
+        .manage(crate::commands::repository::FileHistoryCache(
+            std::sync::Arc::new(gitcanvas_core::history::HistoryReader::with_budget(
+                gitcanvas_core::file_history::FILE_HISTORY_CACHED_COMMITS,
+            )),
+        ))
         .manage(crate::commands::repo_access::AllowedRepos::default())
         .manage(crate::commands::open_repos::OpenRepos::default())
         .manage(std::sync::Arc::new(
@@ -108,6 +113,39 @@ fn repository_history_and_refs_round_trip_with_real_payloads() {
     let tags = invoke(&webview, "get_repository_refs", json!({"path": path})).unwrap();
     assert_eq!(tags["tags"][0]["name"], "v1");
     assert_eq!(tags["tags"][0]["commit_id"], id.to_string());
+}
+
+#[test]
+fn file_history_is_authorized_before_it_reads_anything() {
+    let dir = tempfile::tempdir().unwrap();
+    let repo = git2::Repository::init(dir.path()).unwrap();
+    let signature = git2::Signature::now("Test", "test@example.com").unwrap();
+    std::fs::write(dir.path().join("f.txt"), "hello\n").unwrap();
+    let mut index = repo.index().unwrap();
+    index.add_path(std::path::Path::new("f.txt")).unwrap();
+    let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
+    let id = repo
+        .commit(Some("HEAD"), &signature, &signature, "initial", &tree, &[])
+        .unwrap();
+    let webview = test_webview();
+    let path = dir.path().to_str().unwrap();
+    let request = json!({
+        "path": path,
+        "request": {
+            "path": "f.txt",
+            "start": id.to_string(),
+            "limit": 10,
+            "cursor": null,
+            "focus_commit": null
+        }
+    });
+    let denied = invoke(&webview, "get_file_history", request.clone()).unwrap_err();
+    assert_eq!(denied["kind"], "InvalidRepository");
+    invoke(&webview, "open_repository", json!({"path": path})).unwrap();
+    let page = invoke(&webview, "get_file_history", request).unwrap();
+    assert_eq!(page["rows"][0]["commit"]["id"], id.to_string());
+    assert_eq!(page["rows"][0]["path_at_commit"], "f.txt");
+    assert_eq!(page["limits"]["max_renames"], 32);
 }
 
 #[test]

@@ -87,3 +87,38 @@ it("LRU eviction retains the small refs and fingerprint but closing removes thos
   cache.retain(client, roots.slice(1), "/repo/5");
   for (const key of light) expect(client.getQueryData(key)).toBeUndefined();
 });
+
+it("releases a file history with its project, and only with that project", () => {
+  const client = createTestQueryClient();
+  const cache = new ProjectCache();
+  const start = "e".repeat(40);
+  cache.retain(client, ["/repo/a", "/repo/b"], "/repo/a");
+  client.setQueryData(queryKeys.fileHistory("/repo/a", "f", start), { a: 1 });
+  client.setQueryData(queryKeys.fileHistory("/repo/b", "f", start), { b: 1 });
+  cache.retain(client, ["/repo/b"], "/repo/b");
+  expect(
+    client.getQueryData(queryKeys.fileHistory("/repo/a", "f", start)),
+  ).toBeUndefined();
+  expect(
+    client.getQueryData(queryKeys.fileHistory("/repo/b", "f", start)),
+  ).toEqual({ b: 1 });
+});
+
+it("evicts the heavy file history of the least recent inactive project", () => {
+  const client = createTestQueryClient();
+  const cache = new ProjectCache();
+  const start = "e".repeat(40);
+  const roots = Array.from({ length: 7 }, (_, i) => `/repo/${String(i)}`);
+  for (let i = 0; i < roots.length; i += 1) {
+    const root = roots[i];
+    if (root === undefined) throw new Error("Missing root");
+    client.setQueryData(queryKeys.fileHistory(root, "f", start), { i });
+    cache.retain(client, roots.slice(0, i + 1), root);
+  }
+  expect(
+    client.getQueryData(queryKeys.fileHistory("/repo/0", "f", start)),
+  ).toBeUndefined();
+  expect(
+    client.getQueryData(queryKeys.fileHistory("/repo/1", "f", start)),
+  ).toBeDefined();
+});

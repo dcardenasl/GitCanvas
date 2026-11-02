@@ -1,16 +1,17 @@
 # GitCanvas — snapshot
 
-> Actualizado: 2026-10-19 · Ficha completa: [ASSET.md](ASSET.md)
+> Actualizado: 2026-11-01 · Ficha completa: [ASSET.md](ASSET.md)
 
 ## Retomar
 
 | Campo | Estado |
 |---|---|
-| Release | [v0.3.1 publicada](https://github.com/dcardenasl/GitCanvas/releases/tag/v0.3.1); quality y publicación completadas correctamente |
+| Release | [v0.5.0 publicada](https://github.com/dcardenasl/GitCanvas/releases/tag/v0.5.0) el 2026-10-27 |
 | Implementado | Historial/gráfico, diffs, cambios locales, idiomas, workspace, favoritos, restauración, GitHub clone y checkout/pull/push protegidos |
 | Estrategia aprobada | Gráfico y panel primero; creación de commits al final |
-| Próxima entrega | v0.4 implementada en dev; verificación externa pendiente |
-| Siguiente tarea | GRF-5: completar matriz externa y comprobaciones manuales; ver evidencia v0.4 |
+| Próxima entrega | v0.6 historial por archivo (sin implementar) |
+| Siguiente tarea | FH-1: motor de historial por ruta ([plan v0.6](plan/2026-11-01-v0.6-implementacion.md)) |
+| Pendiente sin evidencia | GRF-5 (v0.4) y V05-VERIFY: Windows nativo y lector de pantalla real; ver [v0.4](verification/v0.4.md) y [v0.5](verification/v0.5.md) |
 | Fuentes | [TASKS.md](../TASKS.md) y [roadmap vigente](plan/2026-10-19-roadmap-de-versiones.md) |
 
 La secuencia objetivo es v0.4 gráfico/colores, v0.5 panel/filtros, v0.6 historial por
@@ -19,13 +20,11 @@ v0.10 gestión de ramas y v0.11 preparar/crear commits. Sin fechas ni bumps apli
 
 ## Estado del trabajo en curso
 
-La implementación de v0.4 está en commits locales: snapshot de referencias,
-upstreams, persistencia de colores/principal por worktree, líneas incrementales,
-controles y pruebas. La parte restante de D01–D50 sigue en las versiones del roadmap.
-Ver [evidencia y pendientes](verification/v0.4.md). v0.3.1 sigue publicada; no se
-hicieron push, PR, cambios de versión ni publicación para esta implementación.
-WS-17 conserva comprobaciones manuales históricas sin evidencia; la matriz anterior
-no acredita la revisión nueva de dev.
+v0.4 (gráfico y colores) y v0.5 (panel, filtros y worktrees) están publicadas; la parte
+restante de D01–D50 sigue en las versiones del roadmap. Sus comprobaciones externas y
+manuales sin evidencia permanecen abiertas: no las acreditan las releases. WS-17 conserva
+sus comprobaciones históricas sin evidencia. Ver [v0.4](verification/v0.4.md) y
+[v0.5](verification/v0.5.md).
 
 La inspección no prepara archivos ni crea commits. Checkout, pull fast-forward y push
 son operaciones explícitas; pull no crea merges y push nunca fuerza.

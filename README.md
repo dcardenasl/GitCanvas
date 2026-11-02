@@ -185,6 +185,8 @@ Documented on purpose rather than discovered later:
   subsequent pages reuse a bounded SHA cache. Git reads run off the UI thread.
 - Graph layout is optimised for the common case, not for histories with a very large
   number of simultaneously active branches.
+- File history follows renames by similarity (50%) and does not follow copies. Merges are
+  compared with their first parent only, and a file's history does not show blame.
 - The installers are unsigned (see above) and the interface is available in English and Spanish only.
 
 ## Build from source

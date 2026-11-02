@@ -18,7 +18,8 @@
     "unchanged": "Sin cambios en este commit"
   },
   "diff": {
-    "back": "← Volver al graph",
+    "backHint": "Salir (Esc)",
+    "back": "← Volver al gráfico",
     "binaryFile_many": "Archivo binario de {{count, number}} bytes. No hay texto que mostrar.",
     "binaryFile_one": "Archivo binario de {{count}} byte. No hay texto que mostrar.",
     "binaryFile_other": "Archivo binario de {{count, number}} bytes. No hay texto que mostrar.",
@@ -32,6 +33,8 @@
     "loadWhole": "Ver archivo completo",
     "localStaged": "cambios locales · preparado",
     "localUnstaged": "cambios locales · sin preparar",
+    "beforeDeletion": "Versión anterior al borrado, en {{id}}.",
+    "modeBeforeDeletion": "Antes del borrado",
     "modeChanges": "Cambios",
     "modeLabel": "Qué mostrar del archivo",
     "modeWhole": "Archivo completo",

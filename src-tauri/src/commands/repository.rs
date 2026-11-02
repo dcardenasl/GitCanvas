@@ -4,6 +4,7 @@
 
 use gitcanvas_core::{
     error::AppError,
+    file_history::{self, FileHistoryPage, FileHistoryRequest},
     github::cache,
     history::{self, CommitInfo, HistoryPage, HistoryReader, HistoryRequest},
     refs::{self, RepositoryRefsSnapshot},
@@ -70,6 +71,29 @@ pub async fn get_commit(
     read("get_commit", move || {
         with_repo(&allowed, &path, |active| {
             history::get_commit(active, &commit_id)
+        })
+    })
+    .await
+}
+
+/// Cache partition for per-file history. It is its own reader, so its budget
+/// never evicts or is evicted by the graph's snapshots.
+pub struct FileHistoryCache(pub std::sync::Arc<HistoryReader>);
+
+/// Reads one bounded page of a file's history, following renames from a start commit.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_file_history(
+    path: String,
+    request: FileHistoryRequest,
+    cache: tauri::State<'_, FileHistoryCache>,
+    allowed: tauri::State<'_, AllowedRepos>,
+) -> Result<FileHistoryPage, AppError> {
+    let reader = std::sync::Arc::clone(&cache.0);
+    let allowed = allowed.inner().clone();
+    read("get_file_history", move || {
+        with_repo(&allowed, &path, |active| {
+            file_history::get_file_history(active, Some(&reader), &request)
         })
     })
     .await

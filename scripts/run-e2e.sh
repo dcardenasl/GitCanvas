@@ -26,6 +26,10 @@ for spec in e2e/*.spec.ts; do
         if ! GITCANVAS_E2E_FIXTURE_KIND=graph-performance npx wdio run ./wdio.conf.ts --spec "${spec}"; then
             status=1
         fi
+    elif [[ "${spec}" == "e2e/file-history.spec.ts" ]]; then
+        if ! GITCANVAS_E2E_FIXTURE_KIND=file-history npx wdio run ./wdio.conf.ts --spec "${spec}"; then
+            status=1
+        fi
     elif [[ "${spec}" == "e2e/workspace.spec.ts" ]]; then
         if ! GITCANVAS_E2E_FIXTURE_KIND=workspace npx wdio run ./wdio.conf.ts --spec "${spec}"; then
             status=1

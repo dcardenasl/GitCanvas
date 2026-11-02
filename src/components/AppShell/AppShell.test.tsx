@@ -7,13 +7,16 @@ import type {
   BranchInfo,
   CommitDiff,
   CommitInfo,
+  FileHistoryPage,
   HistoryPage,
 } from "../../bindings";
+import { fileHistoryPage, fileHistoryRow } from "../../test/fileHistory";
 import { renderWithQueryClient } from "../../test/test-utils";
 
 const getCommits = vi.fn<() => Promise<HistoryPage>>();
 const getCommit = vi.fn<() => Promise<CommitInfo>>();
 const getCommitDiff = vi.fn<() => Promise<CommitDiff>>();
+const getFileHistory = vi.fn<() => Promise<FileHistoryPage>>();
 const getBranches = vi.fn<() => Promise<BranchInfo[]>>();
 const getStartupRepository =
   vi.fn<() => Promise<{ path: string; name: string } | null>>();
@@ -40,6 +43,7 @@ vi.mock("../../lib/ipc", () => ({
   getCommits: () => getCommits(),
   getCommit: () => getCommit(),
   getCommitDiff: () => getCommitDiff(),
+  getFileHistory: () => getFileHistory(),
   getWorktreeSnapshot: () =>
     Promise.resolve({
       revision: "revision",
@@ -258,6 +262,31 @@ describe("AppShell layout", () => {
     const body = gridForHistory();
     expect(body.style.getPropertyValue("--sidebar-width")).toBe("0px");
     expect(body.style.getPropertyValue("--sidebar-divider")).toBe("0px");
+  });
+});
+
+describe("AppShell file history", () => {
+  it("shows a file's history in place of the graph while it is open", async () => {
+    getFileHistory.mockResolvedValue(
+      fileHistoryPage([fileHistoryRow("b")], null),
+    );
+    patchNavigation({
+      fileHistory: {
+        path: "a.txt",
+        startCommitId: COMMIT.id,
+        selectedCommitId: null,
+        stale: false,
+        followsHead: false,
+      },
+    });
+    renderShell();
+
+    expect(
+      await screen.findByRole("complementary", { name: "Historial de a.txt" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Volver al gráfico" }),
+    ).toBeTruthy();
   });
 });
 

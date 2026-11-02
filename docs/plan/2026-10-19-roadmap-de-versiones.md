@@ -89,8 +89,9 @@ independiente del futuro alcance y de la posición del carril.
   historia compartida. Migrar preferencias y mantener proyectos inactivos sin sondeo.
 - **v0.6:** consulta explícita por archivo, con paginación y trabajo acotado. Puede
   encontrar commits fuera del alcance actual del gráfico; indicar contexto sin
-  modificar silenciosamente filtros. Concretar semántica de renombrados y merges
-  al preparar su plan técnico, sin prometer seguimiento infalible.
+  modificar silenciosamente filtros. Semántica de renombrados y merges concretada en
+  [ADR 0008](../adr/0008-per-file-history.md) y el
+  [plan técnico](2026-11-01-v0.6-implementacion.md), sin prometer seguimiento infalible.
 - **v0.7:** catálogo completo/progresivo de autores independiente de páginas y
   filtros, sin fusionar personas por nombre. Atenuar conserva nodos/conexiones.
   Releases y tags comparten visibilidad; fuente GitHub identificada y caché separada.

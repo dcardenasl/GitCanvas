@@ -212,7 +212,7 @@ describe("FileDiffView", () => {
     renderView();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "← Volver al graph" }),
+      await screen.findByRole("button", { name: "← Volver al gráfico" }),
     );
 
     expect(activeNavigation().selection).toMatchObject({ filePath: null });
@@ -315,16 +315,37 @@ describe("FileDiffView", () => {
     });
   });
 
-  it("does not offer the whole file for one the commit deleted", async () => {
-    getCommitDiff.mockResolvedValue(diff([file({ change: "Deleted" })]));
+  it("opens the file's history from its diff, starting at this commit", async () => {
+    getCommitDiff.mockResolvedValue(diff([file()]));
     renderView();
-    await findLine("const b = 3;");
 
-    // There is nothing to read: offering it and then failing is worse than not
-    // offering it.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Historial" }),
+    );
+
+    expect(activeNavigation().fileHistory).toMatchObject({
+      path: "src/app.ts",
+      startCommitId: COMMIT.id,
+      followsHead: false,
+    });
+  });
+
+  it("shows the version before the deletion, read at the commit's first parent", async () => {
+    getCommitDiff.mockResolvedValue(diff([file({ change: "Deleted" })]));
+    getFileContent.mockResolvedValue(content());
+    renderView();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Antes del borrado" }),
+    );
+
+    await findLine("const b = 3;");
+    expect(getFileContent.mock.calls.at(-1)?.[1]).toMatchObject({
+      commit_id: COMMIT.parents[0],
+      path: "src/app.ts",
+    });
     expect(
-      screen.queryByRole("button", { name: "Archivo completo" }),
-    ).toBeNull();
+      screen.getByText(`Versión anterior al borrado, en ${"b".repeat(7)}.`),
+    ).toBeTruthy();
   });
 
   it("loads a large file only when asked", async () => {

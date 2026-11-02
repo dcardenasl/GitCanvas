@@ -240,52 +240,10 @@
   background: var(--surface-selected);
 }
 
-.file-row:focus-visible {
+.file-row:focus-visible,
+.file-row__more:focus-visible {
   outline: var(--focus-ring);
   outline-offset: -2px;
-}
-
-.file-row__mark {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 15px;
-  height: 15px;
-  border-radius: 3px;
-  background: var(--control);
-  color: var(--ink-faint);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 700;
-}
-
-.file-row__mark--added {
-  background: var(--success-surface);
-  color: var(--success);
-}
-
-.file-row__mark--unchanged {
-  border-radius: 50%;
-  background: transparent;
-  color: var(--ink-faint);
-  font-size: 14px;
-}
-
-.file-row__mark--deleted {
-  background: var(--danger-surface);
-  color: var(--danger);
-}
-
-.file-row__mark--modified {
-  background: var(--modified-ref-surface);
-  color: var(--accent);
-}
-
-.file-row__mark--renamed,
-.file-row__mark--copied {
-  background: var(--local-ref-surface);
-  color: var(--local-ref);
 }
 
 /* The file name leads and the directory follows as dimmed context, so the
@@ -328,4 +286,44 @@
 
 .file-row__omitted {
   color: var(--ink-faint);
+}
+
+.file-row-item {
+  display: flex;
+  align-items: center;
+}
+
+.file-row-item > .file-row {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.file-row__more {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.file-row__more:hover,
+.file-row__more[aria-expanded="true"] {
+  background: var(--surface-hover);
+}
+
+.file-row__more:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.file-row__dot {
+  inline-size: 3px;
+  block-size: 3px;
+  border-radius: 50%;
+  background: var(--ink-muted);
 }
