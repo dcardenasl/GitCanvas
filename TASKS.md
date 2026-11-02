@@ -16,7 +16,7 @@ pantalla real), además de WS-17 histórica. Evidencia local en
 [`docs/verification/v0.5.md`](docs/verification/v0.5.md). **v0.6: historial por archivo**
 está implementada y verificada en `dev` ([evidencia](docs/verification/v0.6.md)); su release
 0.6.0 espera la aprobación de David para abrir el PR a `main`. La creación de commits permanece al final de la
-secuencia, objetivo v0.11. El [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md)
+secuencia, objetivo v0.12. El [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md)
 prevalece sobre asignaciones de versiones de planes anteriores.
 
 **Estado de trabajo:** rama `dev`, sincronizada con `origin/dev`. Se preservan
@@ -86,7 +86,7 @@ de conflictos Git, autores ni releases; el checkout explícito existente se cons
 - [ ] **V05-VERIFY — Verificación y cierre documental (seguimiento de gates externos).** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#v05-verify--verificacion-y-documentacion-de-cierre), [evidencia v0.5](docs/verification/v0.5.md), [verificación v0.4](docs/verification/v0.4.md), [`CLAUDE.md`](CLAUDE.md). v0.5.0 ya está publicada. Verificado localmente: macOS (831 pruebas frontend, ocho specs E2E nativos), Linux arm64 (830 pruebas frontend, ocho specs/20 recorridos E2E, Rust, Clippy y build), compilación cruzada MSVC (check, Clippy estricto, tests `--no-run` y enlace release), temas, idiomas, 940×600 e indicador del diff. **Pendiente, sin evidencia:** E2E en Windows nativo y prueba con lector de pantalla real; los intentos con VoiceOver solo confirmaron árbol de accesibilidad y foco de teclado, no anuncios. No se declaran verificados.
 
 Crear o retirar worktrees sigue reservado para una entrega futura sin versión asignada;
-preparación por líneas, amend y commits permanecen después de v0.10/v0.11 según el
+preparación por líneas, amend y commits permanecen después de v0.11/v0.12 según el
 roadmap.
 
 ### v0.6 — Historial por archivo
@@ -132,9 +132,10 @@ comparación de commits ni escrituras Git. Leer [ADR 0002](docs/adr/0002-local-f
 
 ### Entregas posteriores
 
-v0.5 panel/filtros y worktrees (publicada) → v0.6 historial por archivo → v0.7 contribuyentes/releases →
-v0.8 proveedores → v0.9 crear/conectar repositorios → v0.10 gestión de ramas →
-v0.11 preparar/crear commits. Objetivos de planificación, sin fechas ni bumps.
+v0.5 panel/filtros y worktrees (publicada) → v0.6 historial por archivo → v0.7 stash de solo lectura →
+v0.8 contribuyentes/releases →
+v0.9 proveedores → v0.10 crear/conectar repositorios → v0.11 gestión de ramas →
+v0.12 preparar/crear commits. Objetivos de planificación, sin fechas ni bumps.
 Desglosar cada entrega al prepararla siguiendo el roadmap y los acuerdos existentes.
 
 ### Seguimiento histórico de v0.3

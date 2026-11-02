@@ -45,7 +45,7 @@ local está terminada; ver [evidencia](verification/v0.4.md) y [TASKS.md](../TAS
 El [roadmap aprobado](plan/2026-10-19-roadmap-de-versiones.md)
 define la secuencia: gráfico → panel/filtros → historial por archivo →
 contribuyentes/releases → proveedores → crear/conectar repositorios → gestión de
-ramas → preparar/crear commits (objetivo v0.11). Sustituye la anterior reserva de
+ramas → preparar/crear commits (objetivo v0.12). Sustituye la anterior reserva de
 commits para v0.4. Cada publicación sigue el procedimiento de CLAUDE.md.
 
 ## Registro

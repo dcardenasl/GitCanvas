@@ -27,11 +27,12 @@ alcance aquí y mantener TASKS.md como fuente de ejecución. Cada entrega debe q
 | v0.4 | Ramas visualmente claras | Continuidad, curvas, separación y cruces de líneas; colores estables por rama, coherentes entre panel y gráfico; paleta accesible en claro/oscuro; selección de color y principal visual. |
 | v0.5 | Panel izquierdo, filtros y worktrees | Reconocimiento y navegación de worktrees del mismo repositorio; búsqueda, secciones plegables, carpetas por prefijos, contadores, menús; activar/desactivar ramas y tags; Solo esta, restablecer y deshacer; persistencia por repositorio e indicador de filtros durante el diff. |
 | v0.6 | Historial por archivo | Entrada desde inspector/lista de archivos; commits que modificaron el archivo, diff y contenido histórico; seguimiento de renombrados cuando sea determinable, con límites explícitos. |
-| v0.7 | Contribuyentes y releases | Identidades con .mailmap, énfasis y navegación por autor; releases GitHub, notas, tag, adjuntos, caché sin conexión, recuperación de acceso y descargas explícitas. |
-| v0.8 | Múltiples proveedores | Separar Git local de capacidades del proveedor; GitLab como primera ampliación; cuentas/servidores y credenciales aisladas. Bitbucket, Azure DevOps y servidores propios quedan para ampliaciones según necesidad. |
-| v0.9 | Crear y conectar repositorios | Inicializar repositorios locales; crear remotos en proveedores compatibles; elegir cuenta/organización, nombre y visibilidad; conectar proyectos existentes y ofrecer primer push explícito. |
-| v0.10 | Gestión cotidiana de ramas | Crear, renombrar y eliminar ramas con protecciones; crear tags y gestionar remotos; fetch explícito y diferencias local/upstream. |
-| v0.11 | Preparar archivos y crear commits | Preparar/retirar archivos completos, título/descripción, borradores por proyecto, hooks y firma, recuperación de errores y actualización del gráfico. |
+| v0.7 | Stash de solo lectura | Listar los stashes en una sección plegable del panel izquierdo (mensaje, rama base, fecha) y ver su diff y contenido sin aplicar, descartar ni crear. Sin escrituras Git. El nodo de stash en el gráfico queda reservado. |
+| v0.8 | Contribuyentes y releases | Identidades con .mailmap, énfasis y navegación por autor; releases GitHub, notas, tag, adjuntos, caché sin conexión, recuperación de acceso y descargas explícitas. |
+| v0.9 | Múltiples proveedores | Separar Git local de capacidades del proveedor; GitLab como primera ampliación; cuentas/servidores y credenciales aisladas. Bitbucket, Azure DevOps y servidores propios quedan para ampliaciones según necesidad. |
+| v0.10 | Crear y conectar repositorios | Inicializar repositorios locales; crear remotos en proveedores compatibles; elegir cuenta/organización, nombre y visibilidad; conectar proyectos existentes y ofrecer primer push explícito. |
+| v0.11 | Gestión cotidiana de ramas | Crear, renombrar y eliminar ramas con protecciones; crear tags y gestionar remotos; fetch explícito y diferencias local/upstream. |
+| v0.12 | Preparar archivos y crear commits | Preparar/retirar archivos completos, título/descripción, borradores por proyecto, hooks y firma, recuperación de errores y actualización del gráfico. |
 
 ## Próxima entrega: v0.4
 
@@ -92,24 +93,31 @@ independiente del futuro alcance y de la posición del carril.
   modificar silenciosamente filtros. Semántica de renombrados y merges concretada en
   [ADR 0008](../adr/0008-per-file-history.md) y el
   [plan técnico](2026-11-01-v0.6-implementacion.md), sin prometer seguimiento infalible.
-- **v0.7:** catálogo completo/progresivo de autores independiente de páginas y
+- **v0.7 (stash de solo lectura):** consulta explícita de stashes en Rust, con
+  límites y paginación, y sin tocar el gráfico. Los stashes se listan con su rama
+  base y se abren en el visor de diff existente. Aplicar, descartar y crear quedan
+  fuera: son escrituras que requieren guardias y recuperación antes de exponerse. El
+  nodo de stash en el gráfico se reserva porque un stash tiene dos padres extra (WIP
+  e índice) que el layout debe tratar sin romper "un nodo por commit" ni la
+  reanudabilidad.
+- **v0.8:** catálogo completo/progresivo de autores independiente de páginas y
   filtros, sin fusionar personas por nombre. Atenuar conserva nodos/conexiones.
   Releases y tags comparten visibilidad; fuente GitHub identificada y caché separada.
   Consulta de notas no trae tags ni adjuntos. Traer tag y descargar archivo son
   acciones explícitas; destinos, progreso, cancelación y retorno tras autenticación
   conservan contexto. Aplicar las protecciones de escritura necesarias antes de
   incorporar fetch de tags, sin esperar a la entrega de commits.
-- **v0.8:** interfaz por capacidades, sin exigir que todos los proveedores permitan
+- **v0.9:** interfaz por capacidades, sin exigir que todos los proveedores permitan
   lo mismo. Mantener Git local independiente de REST del proveedor. Reutilizar la
   frontera Rust/keychain; no mezclar cuentas, servidores o cachés. El diseño debe
   permitir extensiones, sin implementar todos los proveedores en esta versión.
-- **v0.9:** creación remota depende de capacidades y permisos del proveedor. Definir
+- **v0.10:** creación remota depende de capacidades y permisos del proveedor. Definir
   recuperación ante creación remota exitosa y fallo local posterior, sin reintentos
   que dupliquen repositorios. No ejecutar primer push automáticamente.
-- **v0.10:** definir guardias y recuperación de cada operación antes de exponerla.
+- **v0.11:** definir guardias y recuperación de cada operación antes de exponerla.
   Respetar worktrees y operaciones concurrentes; borrar ramas o alterar remotos no
   se deduce de un clic de navegación. No incluir merge/rebase por inferencia.
-- **v0.11:** aplicar el contrato de commits del plan de 2026-10-08: Git del sistema,
+- **v0.12:** aplicar el contrato de commits del plan de 2026-10-08: Git del sistema,
   hooks/firma, índice completo, validación HEAD/índice, borradores y conciliación de
   resultados indeterminados. Exclusión de escrituras por directorio Git común antes
   de habilitar operaciones; adelantarla cuando una entrega anterior la requiera.
@@ -170,7 +178,9 @@ Sin versión ni implementación comprometida:
 
 - Comparar dos commits o ramas.
 - Blame por línea.
-- Stash.
+- Stash: aplicar y descartar (escrituras con guardias y recuperación); crear un
+  stash (se agrupa con la preparación de archivos de v0.12); nodo de stash en el
+  gráfico (posterior a v0.7, tras decidir su tratamiento en el layout).
 - Gestión de worktrees: creación y retirada; reconocimiento/navegación ya planificados para v0.5.
 - Acceso a pull requests/merge requests según proveedor.
 - Proveedores adicionales: Bitbucket, Azure DevOps y servidores propios.
