@@ -84,6 +84,17 @@ replaces the graph while it is open and is kept only for the session, never writ
 disk. Its query is immutable per start commit, so a refresh from a moved HEAD is a new
 query. Opening it never changes the graph's reference filters.
 
+## Planned stash inspection (v0.7; not implemented)
+
+The next delivery is read-only stash inspection. Product decisions, proposed
+contracts and task dependencies are recorded in
+[the v0.7 plan](docs/plan/2026-11-08-v0.7-implementacion.md) and
+[ADR 0009](docs/adr/0009-read-only-stash.md). Stashes will remain outside graph roots
+and filter state. Listing uses the shared repository reflog, while inspection state
+is per tab and session-only; only section folding is durable. Planned comparisons
+are net/base, saved index, saved worktree after index, and saved untracked content.
+Do not treat this section as an implemented capability or verification evidence.
+
 ## Session entry points
 
 Read `TASKS.md` for the next open task and its acceptance evidence. Read the referenced

@@ -6,31 +6,75 @@
 > [tres funcionalidades](docs/plan/2026-10-08-plan-tres-funcionalidades.md) y el
 > [plan general](docs/plans/2026-09-08-plan-de-implementacion.md).
 
-**Estado al 2026-11-01:** v0.5.0 está publicada: tag `v0.5.0` sobre `main` (2026-10-27) y
-release de GitHub publicada el 2026-10-27. `dev` coincide con `origin/dev` e incluye
-después de ese tag solo dos cambios del flujo de release (`4bd10ac`, `af87682`).
-Las verificaciones externas/manuales sin evidencia de v0.4 y v0.5 siguen abiertas y no
-se consideran cerradas por las releases: GRF-5 y V05-VERIFY (Windows nativo y lector de
-pantalla real), además de WS-17 histórica. Evidencia local en
-[`docs/verification/v0.4.md`](docs/verification/v0.4.md) y
-[`docs/verification/v0.5.md`](docs/verification/v0.5.md). **v0.6: historial por archivo**
-está implementada y verificada en `dev` ([evidencia](docs/verification/v0.6.md)); su release
-0.6.0 espera la aprobación de David para abrir el PR a `main`. La creación de commits permanece al final de la
-secuencia, objetivo v0.12. El [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md)
-prevalece sobre asignaciones de versiones de planes anteriores.
+**Estado al 2026-11-08:** v0.6 está implementada; la evidencia de su verificación y
+sus límites está en [`docs/verification/v0.6.md`](docs/verification/v0.6.md). Los
+manifiestos están en 0.6.0, existe el tag local `v0.6.0` y `main` local contiene el
+merge del PR #16. Esta revisión no verificó la publicación remota ni repitió release.
+`dev` incluye cambios posteriores de historial por archivo y el roadmap de stash.
+La próxima entrega es **v0.7 — stash de solo lectura**: decisiones de producto
+acordadas con David, plan técnico y tareas documentados; implementación pendiente.
+Crear commits permanece al final de la secuencia, objetivo v0.12. El
+[roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md) prevalece sobre
+asignaciones de versiones de planes anteriores.
 
-**Estado de trabajo:** rama `dev`, sincronizada con `origin/dev`. Se preservan
-`docs/audits/evidence/`, `docs/media/` y `tools/demo/record-v05*`, que están sin
-seguimiento; no agregarlas a commits. Inspeccionar estado e historial al retomar. Los
-manifiestos están en 0.6.0 desde el commit de release; no crear tag ni publicar sin autorización.
+Los gates históricos sin evidencia siguen abiertos: GRF-5, V05-VERIFY, WS-17 y los
+límites declarados en las verificaciones de v0.4–v0.6. La planificación de v0.7 no
+los cierra ni les atribuye pruebas nuevas.
+
+**Estado de trabajo observado:** rama `dev`, HEAD `5fb6a3b`; `origin/dev` local en
+`a1a694c`, sin consulta al servidor. No afirmar sincronización al retomar sin revisarla.
+Se preservan `docs/audits/evidence/`, `docs/media/`, `install-backups/` y
+`tools/demo/record-v05*`, sin seguimiento; no agregarlos a commits. No cambiar versiones,
+crear tags ni publicar como parte de la planificación.
 
 ## Siguiente paso
 
-v0.6 está implementada y verificada en `dev` ([evidencia](docs/verification/v0.6.md)). Falta el release 0.6.0: confirmar la versión con David, renombrar `Unreleased` y abrir el PR `dev → main`; no se hace tag ni release sin su aprobación.. Los gates de v0.4/v0.5 sin
-evidencia son seguimiento independiente: no bloquean v0.6 ni se atribuyen a recorridos no
-comprobados.
+La próxima tarea de implementación es **ST-1**, siguiendo el
+[plan v0.7](docs/plan/2026-11-08-v0.7-implementacion.md) y
+[ADR 0009](docs/adr/0009-read-only-stash.md). Esta entrevista prepara el trabajo;
+no ha iniciado la implementación. Los gates históricos continúan como seguimiento
+independiente.
 
 ## Cola de trabajo
+
+### v0.7 — Stash de solo lectura (cola vigente)
+
+Plan: [decisiones ST-D01–ST-D10, contrato, matriz y dependencias](docs/plan/2026-11-08-v0.7-implementacion.md).
+Arquitectura propuesta: [ADR 0009](docs/adr/0009-read-only-stash.md).
+Evidencia futura: [verificación v0.7](docs/verification/v0.7.md), todavía pendiente.
+
+- [x] **ST-0 — Plan y contrato.** Entrevista, decisiones, diseño técnico, límites,
+      matriz y tareas documentados. Prueba exploratoria en repositorio Git temporal;
+      no es evidencia de una funcionalidad implementada. Sin cambios en código,
+      manifiestos, release ni commits.
+- [ ] **ST-1 — Listado estable, búsqueda y paginación.** Lectura acotada del reflog
+      común, revisión/cursor, metadatos fieles, búsqueda completa y presencia por OID.
+      Pruebas diferenciales, carreras, límites y medición. Depende de ST-0.
+- [ ] **ST-2 — Comparaciones y contenido inmutable.** Todos, preparados, sin preparar
+      y no rastreados; contenido anterior/guardado, origen exacto, lectores compartidos
+      y límites. Depende de ST-1.
+- [ ] **ST-3 — IPC y observación del stash compartido.** Comandos autorizados,
+      bindings, alcance stash, reflog/ref, fingerprint y eventos combinados sin
+      invalidar el grafo por cambios exclusivos de stash. Depende de ST-1/ST-2.
+- [ ] **ST-4 — Estado por pestaña y consultas.** Navegación de sesión, selección
+      estable, búsqueda acotada, refresco/activación, eliminación externa, LRU y
+      plegado durable sin persistir inspección. Depende de ST-3.
+- [ ] **ST-5 — Sección e inspector de stash.** Listado, búsqueda, comparaciones,
+      archivos y estados claros; EN/ES; sin acciones de escritura. Depende de ST-4.
+- [ ] **ST-6 — Visor y navegación integrados.** Diff, ambos lados, cambios de modo,
+      fijado/ocultamiento, volver/Escape y conservación del gráfico. Depende de ST-5.
+- [ ] **ST-7 — Accesibilidad y verificación integrada.** Fixture E2E, cambios externos,
+      worktrees, cero escrituras por inspección, temas/idiomas/940×600 y evidencia
+      de teclado/lector por plataforma. Depende de ST-6.
+- [ ] **ST-8 — Verificación final y documentación entregada.** Suites, auditorías,
+      build y evidencia real; actualizar producto/arquitectura y CHANGELOG según
+      comportamiento implementado. Sin autorización implícita de release. Depende
+      de ST-1–ST-7.
+
+### Entregas anteriores y seguimiento
+
+Las secciones siguientes conservan evidencia y tareas históricas. La cola nueva
+es ST-1–ST-8; las verificaciones históricas sin evidencia siguen abiertas.
 
 ### v0.4 — Líneas y colores de las ramas
 

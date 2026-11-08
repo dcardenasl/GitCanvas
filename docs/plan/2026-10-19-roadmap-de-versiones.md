@@ -34,7 +34,17 @@ alcance aquí y mantener TASKS.md como fuente de ejecución. Cada entrega debe q
 | v0.11 | Gestión cotidiana de ramas | Crear, renombrar y eliminar ramas con protecciones; crear tags y gestionar remotos; fetch explícito y diferencias local/upstream. |
 | v0.12 | Preparar archivos y crear commits | Preparar/retirar archivos completos, título/descripción, borradores por proyecto, hooks y firma, recuperación de errores y actualización del gráfico. |
 
-## Próxima entrega: v0.4
+## Próxima entrega: v0.7 — stash de solo lectura
+
+Actualización de planificación: 2026-11-08. v0.6 está implementada; la próxima
+funcionalidad acordada es inspección de stash. Decisiones de la entrevista, contrato,
+límites, matriz y tareas ST-0–ST-8 en el
+[plan v0.7](2026-11-08-v0.7-implementacion.md), con
+[ADR 0009](../adr/0009-read-only-stash.md) como diseño técnico propuesto.
+Implementación y verificación de v0.7 pendientes; no implica bump ni publicación.
+Los gates históricos sin evidencia continúan abiertos en `TASKS.md`.
+
+## Entrega de referencia: v0.4 (plan histórico)
 
 ### Resultado esperado
 
@@ -97,9 +107,11 @@ independiente del futuro alcance y de la posición del carril.
   límites y paginación, y sin tocar el gráfico. Los stashes se listan con su rama
   base y se abren en el visor de diff existente. Aplicar, descartar y crear quedan
   fuera: son escrituras que requieren guardias y recuperación antes de exponerse. El
-  nodo de stash en el gráfico se reserva porque un stash tiene dos padres extra (WIP
-  e índice) que el layout debe tratar sin romper "un nodo por commit" ni la
-  reanudabilidad.
+  nodo de stash en el gráfico se reserva: el commit WIP tiene como padres la base y
+  el índice guardado, con un tercero opcional para archivos no rastreados. Su futura
+  representación debe respetar "un nodo por commit" y la reanudabilidad; v0.7 no
+  incorpora estos objetos como raíces del gráfico. Las comparaciones acordadas y la
+  lectura del reflog se concretan en el [plan v0.7](2026-11-08-v0.7-implementacion.md).
 - **v0.8:** catálogo completo/progresivo de autores independiente de páginas y
   filtros, sin fusionar personas por nombre. Atenuar conserva nodos/conexiones.
   Releases y tags comparten visibilidad; fuente GitHub identificada y caché separada.
