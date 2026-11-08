@@ -334,6 +334,8 @@ describe("Actions", () => {
         ["worktree", "/tmp/repo"],
         ["worktree-file-diff", "/tmp/repo"],
         ["worktree-fingerprint", "/tmp/repo"],
+        ["stash-list", "/tmp/repo"],
+        ["stash-fingerprint", "/tmp/repo"],
       ],
     );
   });
