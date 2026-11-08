@@ -1,3 +1,4 @@
+import { stashPage } from "../../test/stash";
 // @vitest-environment jsdom
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -13,6 +14,7 @@ import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
 const getBranches = vi.fn<() => Promise<BranchInfo[]>>();
 const getTags = vi.fn<() => Promise<TagInfo[]>>();
 const mockIpc = createIpcMocks([
+  "getStashes",
   "getRepositoryRefs",
   "getRepositoryWorktrees",
   "openRepository",
@@ -51,6 +53,7 @@ function renderSidebar(onCheckout?: (branch: string) => void) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockIpc.getStashes.mockResolvedValue(stashPage());
   mockIpc.getRepositoryRefs.mockImplementation(async () => {
     const branches = await getBranches();
     const tags = await getTags();

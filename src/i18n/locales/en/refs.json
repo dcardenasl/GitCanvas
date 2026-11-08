@@ -14,10 +14,10 @@
     "navigate": "Name: navigates to the latest commit of that reference.",
     "visibility": "Eye (👁️): includes or hides the reference in history.",
     "actions": "Menu (…): additional actions (change color, main, checkout).",
-    "commitNote": "Note on history: hiding a reference does not guarantee all its commits disappear if included by HEAD or another visible branch."
+    "commitNote": "Note on history: hiding a reference does not guarantee all its commits disappear if included by HEAD or another visible branch. Stashes are inspected independently and never change history visibility."
   },
   "search": "Filter references",
-  "searchPlaceholder": "Search branches and tags",
+  "searchPlaceholder": "Search branches, tags and stashes",
   "showAll": "Show all",
   "resetFilters": "Reset filters",
   "undo": "Undo filter change",
@@ -96,5 +96,6 @@
     "green": "Green",
     "gold": "Gold",
     "stone": "Stone"
-  }
+  },
+  "noMatchingReferences": "No matching references"
 }

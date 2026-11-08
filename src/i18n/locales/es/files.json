@@ -50,7 +50,8 @@
   },
   "omitted": {
     "binary": "binario",
-    "large": "grande"
+    "large": "grande",
+    "unavailable": "No disponibles"
   },
   "tree": {
     "allFiles": "Todos los archivos del commit",

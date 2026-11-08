@@ -77,7 +77,11 @@ export function ChangedFileRow({
           )}
         </span>
         <span className="file-row__stat">
-          {file === null ? null : file.omitted === null ? (
+          {file === null ? null : file.statsAvailable === false ? (
+            <span className="file-row__omitted">
+              {t("omitted.unavailable")}
+            </span>
+          ) : file.omitted === null ? (
             <DiffStat insertions={file.insertions} deletions={file.deletions} />
           ) : (
             <span className="file-row__omitted">

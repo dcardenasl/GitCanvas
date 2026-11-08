@@ -31,7 +31,7 @@ crear tags ni publicar como parte de la planificación.
 
 ## Siguiente paso
 
-La próxima tarea de implementación es **ST-5**, siguiendo el
+La próxima tarea de implementación es **ST-7**, siguiendo el
 [plan v0.7](docs/plan/2026-11-08-v0.7-implementacion.md) y
 [ADR 0009](docs/adr/0009-read-only-stash.md). ST-1 tiene evidencia en
 [verificación v0.7](docs/verification/v0.7.md). Los gates históricos continúan como seguimiento
@@ -74,9 +74,9 @@ planificada para las tareas siguientes. Evidencia:
 - [x] **ST-4 — Estado por pestaña y consultas.** Navegación de sesión, selección
       estable, búsqueda acotada, refresco/activación, eliminación externa, LRU y
       plegado durable sin persistir inspección. Depende de ST-3.
-- [ ] **ST-5 — Sección e inspector de stash.** Listado, búsqueda, comparaciones,
+- [x] **ST-5 — Sección e inspector de stash.** Listado, búsqueda, comparaciones,
       archivos y estados claros; EN/ES; sin acciones de escritura. Depende de ST-4.
-- [ ] **ST-6 — Visor y navegación integrados.** Diff, ambos lados, cambios de modo,
+- [x] **ST-6 — Visor y navegación integrados.** Diff, ambos lados, cambios de modo,
       fijado/ocultamiento, volver/Escape y conservación del gráfico. Depende de ST-5.
 - [ ] **ST-7 — Accesibilidad y verificación integrada.** Fixture E2E, cambios externos,
       worktrees, cero escrituras por inspección, temas/idiomas/940×600 y evidencia

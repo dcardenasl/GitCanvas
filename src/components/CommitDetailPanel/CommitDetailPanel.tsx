@@ -143,7 +143,8 @@ export function CommitDetailPanel({
         selectedFilePath={selectedFilePath}
         selectedFileSource={fileSource}
         onOpen={(path, source, snapshot) => {
-          selectFile(path, source, snapshot ? "snapshot" : "diff");
+          if (source !== "stash")
+            selectFile(path, source, snapshot ? "snapshot" : "diff");
         }}
         history={{
           start: commit.id,

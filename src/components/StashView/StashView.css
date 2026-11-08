@@ -1,0 +1,105 @@
+.stash-section {
+  border-top: 1px solid var(--border);
+}
+.stash-section__refresh {
+  background: transparent;
+  color: var(--ink-muted);
+  border: 0;
+  cursor: pointer;
+  padding: 6px;
+}
+.stash-section__entry {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 8px;
+  width: 100%;
+  border: 0;
+  border-radius: 4px;
+  padding: 9px 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+}
+.stash-section__entry:hover,
+.stash-section__entry[aria-current="true"] {
+  background: var(--surface-hover);
+}
+.stash-section__entry[aria-current="true"] {
+  box-shadow: inset 2px 0 var(--accent);
+}
+.stash-section__alias {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.stash-section__message {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stash-section__context {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  color: var(--ink-muted);
+}
+.stash-detail__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.stash-detail__readonly {
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+.stash-detail__title {
+  font-size: 16px;
+  font-family: var(--font-mono);
+}
+.stash-detail__message {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+.stash-detail__metadata {
+  display: grid;
+  gap: 4px;
+  font-size: 11px;
+}
+.stash-detail__metadata dt {
+  color: var(--ink-muted);
+}
+.stash-detail__metadata dd {
+  margin: 0 0 6px;
+  overflow-wrap: anywhere;
+}
+.stash-detail__modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 14px;
+}
+.stash-detail__hint,
+.stash-detail__notice {
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  color: var(--ink-muted);
+}
+.stash-detail__notice {
+  padding: 8px;
+  border-inline-start: 2px solid var(--accent);
+  background: var(--surface-hover);
+}
+.stash-detail__count {
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.stash-detail h3 {
+  font-size: 11px;
+  margin: 14px 0 6px;
+}

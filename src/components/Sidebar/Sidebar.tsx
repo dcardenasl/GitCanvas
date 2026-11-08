@@ -1,3 +1,4 @@
+import { StashSection } from "../StashView/StashSection";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -106,6 +107,7 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
       "group:remote",
       "group:tags",
       "section:worktrees",
+      "section:stashes",
     ]);
   };
   const search = useWorkspace((state) =>
@@ -372,7 +374,7 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
         graph.refs.data.tags.length === 0 && <p>{t("empty")}</p>}
       {isSearchEmpty && (
         <div className="sidebar__empty-search" role="status">
-          <p className="sidebar__empty-text">{t("noMatches")}</p>
+          <p className="sidebar__empty-text">{t("noMatchingReferences")}</p>
           <button
             type="button"
             className="sidebar__empty-clear-btn"
@@ -503,6 +505,14 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
           </button>
         </div>
       )}
+      <StashSection
+        root={path}
+        search={search}
+        collapsed={collapsed.has("section:stashes")}
+        onCollapse={() => {
+          toggleCollapsed("section:stashes");
+        }}
+      />
       {palette !== null && (
         <BranchColorPicker
           branch={palette.name}

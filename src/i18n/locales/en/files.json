@@ -47,7 +47,8 @@
   },
   "omitted": {
     "binary": "binary",
-    "large": "large"
+    "large": "large",
+    "unavailable": "Unavailable"
   },
   "tree": {
     "allFiles": "All files in the commit",

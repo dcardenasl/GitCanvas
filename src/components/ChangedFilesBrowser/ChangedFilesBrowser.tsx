@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import type { ChangedFile } from "../../lib/changedFiles";
 import { fileHistoryUnavailable } from "../../state/fileHistory";
-import type { FileSource } from "../../state/navigation";
+import type { FileSource as NavigationFileSource } from "../../state/navigation";
 import { useFileListPreferences } from "../../state/fileListPreferences";
 import { useNavigation, useNavigationActions } from "../../state/workspace";
 import { CommitTreeBrowser } from "./CommitTreeBrowser";
@@ -15,6 +15,9 @@ import { FolderIcon } from "../FolderIcon/FolderIcon";
 import { buildFileTree, type FileTreeEntry } from "./tree";
 
 import "./ChangedFilesBrowser.css";
+
+/** Presentation sources include immutable saved comparisons. */
+type FileSource = NavigationFileSource | "stash";
 
 /** Files and presentation labels for one section of the changed-file list. */
 export interface ChangedFilesGroup {
@@ -59,7 +62,14 @@ export interface ChangedFilesBrowserProps {
     path: string,
     source: FileSource,
     snapshot?: boolean,
+    fileKey?: string,
   ) => void;
+  /** Optional session owner, so overlays do not alter durable graph folder preferences. */
+  readonly folders?: {
+    readonly collapsed: ReadonlySet<string>;
+    readonly set: (paths: ReadonlySet<string>) => void;
+    readonly toggle: (path: string) => void;
+  };
   readonly allCommitFiles?: {
     readonly repositoryPath: string;
     readonly commitId: string;
@@ -74,6 +84,7 @@ export function ChangedFilesBrowser({
   selectedFileSource,
   onOpen,
   allCommitFiles,
+  folders,
   history,
 }: ChangedFilesBrowserProps) {
   const { t } = useTranslation("files");
@@ -84,11 +95,14 @@ export function ChangedFilesBrowser({
   const showAllCommitFiles = useNavigation(
     (navigation) => navigation.showAllCommitFiles,
   );
-  const collapsedPaths = useNavigation(
+  const navigationCollapsedPaths = useNavigation(
     (navigation) => navigation.collapsedFolders,
   );
-  const { setShowAllCommitFiles, setCollapsedFolders, toggleFolder } =
-    useNavigationActions();
+  const navigation = useNavigationActions();
+  const { setShowAllCommitFiles } = navigation;
+  const collapsedPaths = folders?.collapsed ?? navigationCollapsedPaths;
+  const setCollapsedFolders = folders?.set ?? navigation.setCollapsedFolders;
+  const toggleFolder = folders?.toggle ?? navigation.toggleFolder;
 
   const trees = useMemo(
     () => groups.map((group) => buildFileTree(group.files)),
@@ -140,7 +154,7 @@ export function ChangedFilesBrowser({
           </div>
 
           {view === "tree" &&
-            !showAllCommitFiles &&
+            !(showAllCommitFiles && allCommitFiles !== undefined) &&
             directoryPaths.length > 0 && (
               <button
                 type="button"
@@ -187,15 +201,15 @@ export function ChangedFilesBrowser({
               <ul className="file-list" aria-label={group.listLabel}>
                 {group.files.map((file) => (
                   <ChangedFileRow
-                    key={file.path}
+                    key={file.key ?? file.path}
                     file={file}
                     path={file.path}
                     selected={
-                      selectedFilePath === file.path &&
+                      selectedFilePath === (file.key ?? file.path) &&
                       selectedFileSource === group.source
                     }
                     onOpen={() => {
-                      onOpen(file.path, group.source);
+                      onOpen(file.path, group.source, undefined, file.key);
                     }}
                     history={rowHistory(history, file.path)}
                   />
@@ -248,7 +262,7 @@ interface TreeEntriesProps {
   readonly selectedFilePath: string | null;
   readonly selectedFileSource: FileSource | null;
   readonly source: FileSource;
-  readonly onOpen: (path: string, source: FileSource) => void;
+  readonly onOpen: ChangedFilesBrowserProps["onOpen"];
   readonly onToggleDirectory: (path: string) => void;
   readonly history?: ChangedFilesHistory | undefined;
 }
@@ -273,11 +287,11 @@ function TreeEntries({
           file={entry.file}
           path={entry.file.path}
           selected={
-            selectedFilePath === entry.file.path &&
+            selectedFilePath === (entry.file.key ?? entry.file.path) &&
             selectedFileSource === source
           }
           onOpen={() => {
-            onOpen(entry.file.path, source);
+            onOpen(entry.file.path, source, undefined, entry.file.key);
           }}
           showDirectory={false}
           history={rowHistory(history, entry.file.path)}

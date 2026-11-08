@@ -100,7 +100,7 @@ export function WorkingTreeDetailPanel({
           selectedFilePath={selectedFilePath}
           selectedFileSource={fileSource}
           onOpen={(path, source) => {
-            selectFile(path, source);
+            if (source !== "stash") selectFile(path, source);
           }}
           history={{
             start: head,

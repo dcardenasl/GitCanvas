@@ -14,10 +14,10 @@
     "navigate": "Nombre: navega al último commit de la referencia.",
     "visibility": "Ojo (👁️): incluye u oculta la referencia en el historial.",
     "actions": "Menú (…): opciones adicionales (cambiar color, principal, checkout).",
-    "commitNote": "Nota sobre el historial: ocultar una referencia no garantiza que desaparezcan todos sus commits si están incluidos por HEAD u otra rama visible."
+    "commitNote": "Nota sobre el historial: ocultar una referencia no garantiza que desaparezcan todos sus commits si están incluidos por HEAD u otra rama visible. Los stashes se inspeccionan por separado y nunca cambian la visibilidad del historial."
   },
   "search": "Filtrar referencias",
-  "searchPlaceholder": "Buscar ramas y etiquetas",
+  "searchPlaceholder": "Buscar ramas, etiquetas y stashes",
   "showAll": "Mostrar todo",
   "resetFilters": "Restablecer filtros",
   "undo": "Deshacer cambio de filtro",
@@ -96,5 +96,6 @@
     "green": "Verde",
     "gold": "Dorado",
     "stone": "Piedra"
-  }
+  },
+  "noMatchingReferences": "No hay referencias que coincidan"
 }
