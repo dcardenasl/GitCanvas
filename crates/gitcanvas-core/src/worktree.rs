@@ -21,6 +21,7 @@ use crate::{
     blob::{self, ContentRead, FileContentFields},
     diff::{self, FileDiff, FileDiffSummary},
     error::AppError,
+    file_identity::same_file_identity,
     pagination::resolve_page_size,
     repository::{validate_relative_path, ActiveRepo},
 };
@@ -541,36 +542,6 @@ fn verify_open_file(
         return Err(changed());
     }
     Ok(())
-}
-
-#[cfg(unix)]
-fn same_file_identity(_file: &File, _path: &Path, opened: &Metadata, current: &Metadata) -> bool {
-    use std::os::unix::fs::MetadataExt;
-
-    opened.dev() == current.dev() && opened.ino() == current.ino()
-}
-
-#[cfg(windows)]
-fn same_file_identity(file: &File, path: &Path, _opened: &Metadata, _current: &Metadata) -> bool {
-    // `MetadataExt::file_index` is still unstable, so compare handles instead.
-    let Ok(clone) = file.try_clone() else {
-        return false;
-    };
-    match (
-        same_file::Handle::from_file(clone),
-        same_file::Handle::from_path(path),
-    ) {
-        (Ok(opened), Ok(current)) => opened == current,
-        _ => false,
-    }
-}
-
-#[cfg(not(any(unix, windows)))]
-fn same_file_identity(_file: &File, _path: &Path, opened: &Metadata, current: &Metadata) -> bool {
-    opened.is_file()
-        && current.is_file()
-        && opened.len() == current.len()
-        && opened.modified().ok() == current.modified().ok()
 }
 
 fn revision(repo: &Repository, index: &Index) -> Result<String, AppError> {

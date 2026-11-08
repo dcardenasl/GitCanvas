@@ -1324,6 +1324,7 @@ dependencies = [
  "fs2",
  "git2",
  "keyring",
+ "libc",
  "notify",
  "same-file",
  "serde",
