@@ -263,13 +263,7 @@ pub fn get_worktree_file_content(
     Ok(WorktreeFileContent {
         side: request.side,
         revision: before,
-        fields: FileContentFields {
-            path: request.path.clone(),
-            lines: content.lines,
-            bytes: content.bytes,
-            omitted: content.omitted,
-            text: content.text,
-        },
+        fields: content.into_fields(request.path.clone()),
     })
 }
 
@@ -404,8 +398,7 @@ fn read_index_content(
     let entry = index
         .get_path(relative, 0)
         .ok_or_else(|| AppError::WorktreeFileUnavailable(path.to_owned()))?;
-    let blob = repo.find_blob(entry.id)?;
-    blob::read_blob_content(&blob, path, expand)
+    blob::read_blob_by_id(repo, entry.id, path, expand)
 }
 
 fn read_disk_content(
