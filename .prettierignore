@@ -1,7 +1,7 @@
 dist
 coverage
 .ua
-brag-output
+brag-output*
 target
 src-tauri/target
 src-tauri/gen
