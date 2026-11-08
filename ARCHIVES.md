@@ -3,6 +3,19 @@
 > Registro histórico de tareas completadas, movidas desde [`TASKS.md`](TASKS.md).
 > Se conserva el detalle original, incluidos los hallazgos y mensajes de commit.
 
+## v0.7 — Motor de listado de stash (ST-1)
+
+- [x] **ST-1 — Listado estable, búsqueda y paginación.** Completada el 2026-11-08.
+      Lectura acotada y de solo lectura del reflog compartido; búsqueda sobre todo
+      el snapshot, selección por OID y cursores ligados a raíz, revisión y búsqueda.
+      Módulos separados para contrato/paginación, registros y snapshot; identidad
+      de archivo compartida con cambios locales. Sin IPC ni interfaz todavía.
+      Treinta y tres pruebas nuevas; workspace: 297 aprobadas, dos benchmarks
+      omitidos por defecto. Benchmark stash ejecutado aparte en release: 22,39 ms
+      para 20.000 entradas. Clippy estricto, formato y bindings aprobados.
+      Evidencia y límites: [verificación v0.7](docs/verification/v0.7.md).
+      → `feat(core): add bounded revisioned stash listing and search` (`f2a0152`).
+
 ## ✅ Fase G — Bootstrap del repositorio (6/6)
 
 - [x] **G-1 — Inicializar el repositorio.** `git init -b main`. `main` es el punto de

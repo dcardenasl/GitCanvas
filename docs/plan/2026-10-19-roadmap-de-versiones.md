@@ -41,7 +41,8 @@ funcionalidad acordada es inspección de stash. Decisiones de la entrevista, con
 límites, matriz y tareas ST-0–ST-8 en el
 [plan v0.7](2026-11-08-v0.7-implementacion.md), con
 [ADR 0009](../adr/0009-read-only-stash.md) como diseño técnico propuesto.
-Implementación y verificación de v0.7 pendientes; no implica bump ni publicación.
+ST-1 (motor de listado) implementada y verificada el 2026-11-08; comparaciones,
+IPC e interfaz pendientes en ST-2–ST-8. No implica bump ni publicación.
 Los gates históricos sin evidencia continúan abiertos en `TASKS.md`.
 
 ## Entrega de referencia: v0.4 (plan histórico)

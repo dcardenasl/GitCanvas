@@ -2,9 +2,10 @@
 
 ## Status
 
-Proposed technical design — 2026-11-08. Product decisions ST-D01–ST-D10 were agreed
-with David. This ADR specifies their planned implementation; it does not claim that
-stash inspection exists yet. See the [implementation plan](../plan/2026-11-08-v0.7-implementacion.md)
+Accepted for stash listing (ST-1) — 2026-11-08. The comparison, observation, IPC and
+UI sections remain planned for subsequent tasks. Product decisions ST-D01–ST-D10
+were agreed with David; stash inspection is not yet exposed in the application.
+See the [implementation plan](../plan/2026-11-08-v0.7-implementacion.md)
 for the decision record, task dependencies, bounds and acceptance matrix.
 
 ## Context
@@ -125,7 +126,7 @@ keeps the graph, while changing to a comparison that excludes the open file show
 the selection prompt. These states cannot be represented by one ambiguous null path.
 Workspace serialization preserves the underlying ordinary selection and excludes
 stash state. Reuse `section:stashes` in existing collapsed-section preferences; the
-current schema already accepts that bounded key, so no schema bump is needed.
+current schema (5) already accepts that bounded key, so no schema bump is needed.
 
 Queries include root, OID, comparison, source/file key, side and expansion as
 applicable. Release data on close and under the existing active-plus-five-inactive
@@ -137,6 +138,20 @@ Late responses cannot update another root, stash or mode. Stash inspection does 
 alter graph filters, colors, principal selection or filter undo history.
 
 ## Consequences
+
+ST-1 implements listing through separate contract/pagination, borrowed-record
+decoder and stable snapshot modules. File identity checks are shared with the
+existing worktree reader. Unix nonblocking/no-follow open flags and Windows
+reparse-point handling protect the bounded reader from nonregular replacements.
+The direct Unix `libc` dependency supplies flag constants only, using its already
+locked version and no unsafe application code. Git/libgit2 are differential test
+oracles only, not production subprocesses or fallback readers.
+
+The decoder rejects malformed/unterminated records instead of skipping them. It
+preserves absent messages, signed timestamps and lossy-display status explicitly.
+Search uses trimmed, locale-independent Unicode lowercase without accent removal
+or normalization. Cursor anchors also include the original entry position, so
+identical duplicate records cannot disguise an accidentally altered position.
 
 The feature follows the current three-panel UI and reuses its rendering and bounded
 read policies. It introduces a distinct saved-data source, a reflog-specific read
