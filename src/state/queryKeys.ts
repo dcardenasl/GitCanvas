@@ -5,7 +5,6 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
-  HistoryPage,
   WorktreeFileDiffRequest,
   WorktreeSnapshotRequest,
 } from "../bindings";
@@ -25,6 +24,30 @@ export const queryKeys = {
   commit: (repositoryPath: string | null, commitId: string | null) =>
     ["commit", repositoryPath, commitId] as const,
   refs: (repositoryPath: string | null) => ["refs", repositoryPath] as const,
+  stashes: (root: string | null, search?: string, selected?: string | null) =>
+    search === undefined
+      ? (["stash-list", root] as const)
+      : (["stash-list", root, search, selected ?? null] as const),
+  stashFiles: (root: string | null, id: string | null, mode: string) =>
+    ["stash-files", root, id, mode] as const,
+  stashDiff: (
+    root: string,
+    id: string,
+    mode: string,
+    key: string,
+    expand: boolean,
+  ) => ["stash-diff", root, id, mode, key, expand] as const,
+  stashContent: (
+    root: string,
+    id: string,
+    mode: string,
+    key: string,
+    side: string,
+    expand: boolean,
+  ) => ["stash-content", root, id, mode, key, side, expand] as const,
+  stashFingerprint: (root: string | null) =>
+    ["stash-fingerprint", root] as const,
+
   repositoryWorktrees: (repositoryPath: string | null) =>
     ["repository-worktrees", repositoryPath] as const,
   worktree: (
@@ -83,7 +106,7 @@ export const queryKeys = {
   githubRepositories: () => ["github", "repositories"] as const,
 };
 
-type LiveQueryScope = "metadata" | "worktree" | "all";
+type LiveQueryScope = "metadata" | "worktree" | "stashes" | "all";
 
 function liveKeys(repositoryPath: string, scope: LiveQueryScope): QueryKey[] {
   const metadata: QueryKey[] = [
@@ -97,13 +120,41 @@ function liveKeys(repositoryPath: string, scope: LiveQueryScope): QueryKey[] {
     queryKeys.worktreeFingerprint(repositoryPath),
   ];
 
+  const stashes: QueryKey[] = [
+    queryKeys.stashes(repositoryPath),
+    queryKeys.stashFingerprint(repositoryPath),
+  ];
   switch (scope) {
+    case "stashes":
+      return stashes;
     case "metadata":
       return metadata;
     case "worktree":
       return worktree;
     case "all":
-      return [...metadata, ...worktree];
+      return [...metadata, ...worktree, ...stashes];
+  }
+}
+
+function retainFirstPage(queryClient: QueryClient, queryKey: QueryKey): void {
+  for (const [key, history] of queryClient.getQueriesData<
+    InfiniteData<unknown>
+  >({
+    queryKey,
+  })) {
+    const [firstPage] = history?.pages ?? [];
+    const [firstPageParam] = history?.pageParams ?? [];
+    if (
+      history !== undefined &&
+      firstPage !== undefined &&
+      firstPageParam !== undefined
+    ) {
+      queryClient.setQueryData<InfiniteData<unknown>>(key, {
+        ...history,
+        pages: [firstPage],
+        pageParams: [firstPageParam],
+      });
+    }
   }
 }
 
@@ -113,26 +164,10 @@ export function invalidateLive(
   repositoryPath: string,
   scope: LiveQueryScope = "all",
 ): Promise<void> {
-  if (scope !== "worktree") {
-    const historyKey = queryKeys.history(repositoryPath);
-    for (const [key, history] of queryClient.getQueriesData<
-      InfiniteData<HistoryPage>
-    >({ queryKey: historyKey })) {
-      const [firstPage] = history?.pages ?? [];
-      const [firstPageParam] = history?.pageParams ?? [];
-      if (
-        history !== undefined &&
-        firstPage !== undefined &&
-        firstPageParam !== undefined
-      ) {
-        queryClient.setQueryData<InfiniteData<HistoryPage>>(key, {
-          ...history,
-          pages: [firstPage],
-          pageParams: [firstPageParam],
-        });
-      }
-    }
-  }
+  if (scope === "metadata" || scope === "all")
+    retainFirstPage(queryClient, queryKeys.history(repositoryPath));
+  if (scope === "stashes" || scope === "all")
+    retainFirstPage(queryClient, queryKeys.stashes(repositoryPath));
 
   return Promise.all(
     liveKeys(repositoryPath, scope).map((queryKey) =>

@@ -234,6 +234,7 @@ impl<'repo> Comparison<'repo> {
         Ok((
             StashFileSummary {
                 key: self.key(index)?,
+                path_identity: hash_value(&(source.origin, diff::delta_path(&delta)))?,
                 origin: source.origin,
                 file,
                 stats_available,

@@ -10,14 +10,9 @@ import {
 } from "../test/test-utils";
 import { queryKeys } from "./queryKeys";
 
-type Handler = (event: {
-  payload: {
-    path: string;
-    generation: number;
-    kind:
-      "Metadata" | "Worktree" | "Worktrees" | { Degraded: { message: string } };
-  };
-}) => void;
+import type { RepositoryChangedEvent } from "../bindings";
+
+type Handler = (event: { payload: RepositoryChangedEvent }) => void;
 
 let handler: Handler | null = null;
 const stop = vi.fn();
@@ -175,6 +170,31 @@ describe("useLiveRepository", () => {
       path: "/tmp/repo",
       generation,
     });
+  });
+
+  it("refreshes stash subscriptions and listing without touching graph queries", async () => {
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    renderHook(() => useLiveRepository("/tmp/repo"), { wrapper });
+    await waitFor(() => {
+      expect(watchRepository).toHaveBeenCalledTimes(1);
+    });
+    const generation = (
+      watchRepository.mock.calls[0]?.[0] as { generation: number }
+    ).generation;
+    act(() =>
+      handler?.({
+        payload: { path: "/tmp/repo", generation, kind: "Stashes" },
+      }),
+    );
+    await waitFor(() => {
+      expect(watchRepository).toHaveBeenCalledTimes(2);
+    });
+    const keys = invalidate.mock.calls.map((call) => call[0]?.queryKey?.[0]);
+    expect(keys).toContain("stash-list");
+    expect(keys).toContain("stash-fingerprint");
+    expect(keys).not.toContain("history");
+    expect(keys).not.toContain("refs");
+    expect(keys).not.toContain("diff");
   });
 
   it("stops watching when the repository is closed", async () => {

@@ -24,6 +24,7 @@ pub enum RepositoryChangedKind {
     Metadata,
     Worktree,
     Worktrees,
+    Stashes,
     Degraded { message: String },
 }
 
@@ -127,6 +128,9 @@ pub async fn watch_repository(
                     }
                     watch::WatchEvent::Changed(watch::ChangeScope::Worktrees) => {
                         RepositoryChangedKind::Worktrees
+                    }
+                    watch::WatchEvent::Changed(watch::ChangeScope::Stashes) => {
+                        RepositoryChangedKind::Stashes
                     }
                     watch::WatchEvent::Degraded(message) => {
                         RepositoryChangedKind::Degraded { message }

@@ -166,6 +166,8 @@ pub struct StashInspection {
 pub struct StashFileSummary {
     /// Opaque key bound to repository, stash, mode, origin and exact delta.
     pub key: String,
+    /// Mode-independent raw path/origin identity for retaining a file across comparisons.
+    pub path_identity: String,
     /// Saved tracked or untracked origin.
     pub origin: StashFileOrigin,
     /// Shared change metadata; the list never contains patch text.

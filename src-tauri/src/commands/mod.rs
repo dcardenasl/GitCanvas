@@ -28,6 +28,8 @@ pub mod repository;
 
 pub mod runtime;
 
+pub mod stash;
+
 pub mod watch;
 
 pub mod workspace;

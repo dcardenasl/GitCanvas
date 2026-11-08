@@ -76,8 +76,8 @@ export function useLiveRepository(path: string | null): {
     const lifecycle = { cancelled: false };
     const isCancelled = () => lifecycle.cancelled;
     const generation = nextGeneration();
-    let refreshingWorktreeWatch = false;
-    const invalidate = (scope: "metadata" | "worktree") => {
+    let refreshingMetadataWatch = false;
+    const invalidate = (scope: "metadata" | "worktree" | "stashes") => {
       void invalidateLive(queryClient, path, scope);
     };
 
@@ -88,10 +88,11 @@ export function useLiveRepository(path: string | null): {
         invalidate("metadata");
       } else if (payload.kind === "Worktree") {
         invalidate("worktree");
-      } else if (payload.kind === "Worktrees") {
-        invalidate("metadata");
-        if (refreshingWorktreeWatch) return;
-        refreshingWorktreeWatch = true;
+      } else if (payload.kind === "Worktrees" || payload.kind === "Stashes") {
+        const scope = payload.kind === "Stashes" ? "stashes" : "metadata";
+        invalidate(scope);
+        if (refreshingMetadataWatch) return;
+        refreshingMetadataWatch = true;
         void (async () => {
           try {
             // New registrations need their admin directory added to the native
@@ -100,14 +101,14 @@ export function useLiveRepository(path: string | null): {
             if (isCancelled()) return;
             degradedGenerations.delete(generation);
             setOutcome({ path, status: { kind: "ready" } });
-            await invalidateLive(queryClient, path, "metadata");
+            await invalidateLive(queryClient, path, scope);
           } catch (error: unknown) {
             if (!isCancelled()) {
               degradedGenerations.add(generation);
               setOutcome({ path, status: { kind: "degraded", error } });
             }
           } finally {
-            refreshingWorktreeWatch = false;
+            refreshingMetadataWatch = false;
           }
         })();
       } else {

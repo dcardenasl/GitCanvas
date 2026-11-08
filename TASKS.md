@@ -31,7 +31,7 @@ crear tags ni publicar como parte de la planificación.
 
 ## Siguiente paso
 
-La próxima tarea de implementación es **ST-3**, siguiendo el
+La próxima tarea de implementación es **ST-4**, siguiendo el
 [plan v0.7](docs/plan/2026-11-08-v0.7-implementacion.md) y
 [ADR 0009](docs/adr/0009-read-only-stash.md). ST-1 tiene evidencia en
 [verificación v0.7](docs/verification/v0.7.md). Los gates históricos continúan como seguimiento
@@ -68,7 +68,7 @@ planificada para las tareas siguientes. Evidencia:
       omitidos por defecto. Benchmark explícito de 5.000 archivos: primera página
       154,18 ms y un parche 135,37 ms. Límites de memoria y resultados en la
       [verificación v0.7](docs/verification/v0.7.md). Sin IPC ni UI todavía.
-- [ ] **ST-3 — IPC y observación del stash compartido.** Comandos autorizados,
+- [x] **ST-3 — IPC y observación del stash compartido.** Comandos autorizados,
       bindings, alcance stash, reflog/ref, fingerprint y eventos combinados sin
       invalidar el grafo por cambios exclusivos de stash. Depende de ST-1/ST-2.
 - [ ] **ST-4 — Estado por pestaña y consultas.** Navegación de sesión, selección

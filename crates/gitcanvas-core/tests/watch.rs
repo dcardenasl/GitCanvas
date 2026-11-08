@@ -340,3 +340,51 @@ fn reports_configuration_changes_as_metadata() {
     });
     assert!(matches!(event, WatchEvent::Changed(ChangeScope::Metadata)));
 }
+
+#[test]
+fn reports_stash_log_edits_replacements_and_recreation_without_history_changes() {
+    let fixture = Fixture::new();
+    fixture.commit("refs/heads/main", "base", &[], 1000);
+    let directory = fixture.repo.commondir().join("logs/refs");
+    std::fs::create_dir_all(&directory).unwrap();
+    let path = directory.join("stash");
+    std::fs::write(&path, "initial").unwrap();
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let (tx, rx) = mpsc::channel();
+    let _watcher = watch_repository(&active, move |event| {
+        let _ = tx.send(event);
+    })
+    .unwrap();
+    wait_until_quiet(&rx);
+    let event = event_after_changing(&rx, |attempt| {
+        std::fs::write(&path, format!("edited {attempt}")).unwrap();
+    });
+    assert!(
+        matches!(event, WatchEvent::Changed(ChangeScope::Stashes)),
+        "{event:?}"
+    );
+    wait_until_quiet(&rx);
+    let event = event_after_changing(&rx, |attempt| {
+        let replacement = directory.join("stash.lock");
+        std::fs::write(&replacement, format!("replaced {attempt}")).unwrap();
+        std::fs::rename(replacement, &path).unwrap();
+    });
+    assert!(
+        matches!(event, WatchEvent::Changed(ChangeScope::Stashes)),
+        "{event:?}"
+    );
+    wait_until_quiet(&rx);
+    std::fs::remove_file(&path).unwrap();
+    assert!(matches!(
+        rx.recv_timeout(WAIT).unwrap(),
+        WatchEvent::Changed(ChangeScope::Stashes)
+    ));
+    wait_until_quiet(&rx);
+    let event = event_after_changing(&rx, |attempt| {
+        std::fs::write(&path, format!("recreated {attempt}")).unwrap();
+    });
+    assert!(
+        matches!(event, WatchEvent::Changed(ChangeScope::Stashes)),
+        "{event:?}"
+    );
+}

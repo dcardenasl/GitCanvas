@@ -9,7 +9,7 @@ use std::{
 use git2::{ErrorCode, Oid, Repository};
 use sha2::{Digest, Sha256};
 
-use super::MAX_STASH_REFLOG_BYTES;
+use super::{hash_value, StashFingerprint, MAX_STASH_REFLOG_BYTES};
 use crate::{error::AppError, file_identity::same_file_identity, repository::ActiveRepo};
 
 pub(super) struct Snapshot {
@@ -50,6 +50,41 @@ pub(super) fn read(active: &ActiveRepo) -> Result<Snapshot, AppError> {
     let common = repo.commondir().canonicalize()?;
     let path = common.join("logs").join("refs").join("stash");
     read_stable(|| attempt(&repo, &common, &path, open_log))
+}
+
+pub(super) fn fingerprint(active: &ActiveRepo) -> Result<StashFingerprint, AppError> {
+    let repo = active.open()?;
+    verify_backend(&repo)?;
+    let common = repo.commondir().canonicalize()?;
+    verify_directories(&common)?;
+    let metadata = log_metadata(&common.join("logs/refs/stash"))?;
+    let stamp = metadata
+        .as_ref()
+        .map(|metadata| {
+            let modified = format!("{:?}", metadata.modified()?);
+            #[cfg(unix)]
+            let identity = {
+                use std::os::unix::fs::MetadataExt;
+                format!(
+                    "{}:{}:{}:{}",
+                    metadata.dev(),
+                    metadata.ino(),
+                    metadata.ctime(),
+                    metadata.ctime_nsec()
+                )
+            };
+            #[cfg(not(unix))]
+            let identity = format!("{:?}", metadata.created()?);
+            Ok::<_, AppError>((metadata.len(), modified, identity))
+        })
+        .transpose()?;
+    Ok(StashFingerprint {
+        revision: hash_value(&(
+            common.as_os_str().as_encoded_bytes(),
+            tip(&repo)?.map(|id| id.to_string()),
+            stamp,
+        ))?,
+    })
 }
 
 fn read_stable(

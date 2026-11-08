@@ -139,4 +139,34 @@ describe("queryKeys and invalidateLive", () => {
     ).toBe(true);
     client.clear();
   });
+  it("refreshes only stash list snapshots and preserves immutable reads and graph pages", async () => {
+    const client = makeClient();
+    const key = queryKeys.stashes(PATH, "search", "selected");
+    const history = {
+      pages: [{ revision: "graph-one" }, { revision: "graph-two" }],
+      pageParams: [null, "next"],
+    };
+    client.setQueryData(queryKeys.history(PATH), history);
+    client.setQueryData(key, {
+      pages: [{ revision: "old" }, { revision: "old" }],
+      pageParams: [null, "old-cursor"],
+    });
+    client.setQueryData(queryKeys.stashFingerprint(PATH), {
+      revision: "fingerprint",
+    });
+    const immutable = ["stash-file", PATH, "saved-oid", "key"];
+    client.setQueryData(immutable, { preserved: true });
+    await invalidateLive(client, PATH, "stashes");
+    expect(client.getQueryData(queryKeys.history(PATH))).toBe(history);
+    expect(client.getQueryState(queryKeys.history(PATH))?.isInvalidated).toBe(
+      false,
+    );
+    expect(client.getQueryData(key)).toEqual({
+      pages: [{ revision: "old" }],
+      pageParams: [null],
+    });
+    expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(immutable)?.isInvalidated).toBe(false);
+    client.clear();
+  });
 });

@@ -188,6 +188,11 @@ fn search_covers_the_complete_snapshot_and_selection_membership_is_independent()
     assert_eq!((page.total, page.total_matches), (201, 1));
     assert_eq!(page.entries[0].index, 200);
     assert_eq!(page.selected_present, Some(true));
+    assert_eq!(page.selected_entry.as_ref().unwrap().index, 0);
+    assert_eq!(
+        page.selected_entry.as_ref().unwrap().message.as_deref(),
+        Some("WIP on main: change 200")
+    );
     let empty = list(
         &fixture,
         &StashListRequest {
@@ -211,6 +216,36 @@ fn search_covers_the_complete_snapshot_and_selection_membership_is_independent()
         .selected_present,
         Some(false)
     );
+}
+
+#[test]
+fn fingerprint_reads_no_log_content_and_changes_for_edits_with_a_stable_ref_tip() {
+    let fixture = fixture();
+    let empty = gitcanvas_core::stash::get_stash_fingerprint(
+        &ActiveRepo::validate(fixture.dir.path()).unwrap(),
+    )
+    .unwrap();
+    assert!(!log_path(&fixture).exists());
+    let id = write_log(&fixture, 3);
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let first = gitcanvas_core::stash::get_stash_fingerprint(&active).unwrap();
+    assert_ne!(first.revision, empty.revision);
+    git(&fixture, &["stash", "drop", "stash@{2}"]);
+    let second = gitcanvas_core::stash::get_stash_fingerprint(&active).unwrap();
+    assert_ne!(first.revision, second.revision);
+    assert_eq!(
+        fixture.repo.find_reference("refs/stash").unwrap().target(),
+        Some(id)
+    );
+    // Even a huge/corrupt log only needs metadata here; listing still rejects it.
+    fs::OpenOptions::new()
+        .write(true)
+        .open(log_path(&fixture))
+        .unwrap()
+        .set_len(u64::from(MAX_STASH_REFLOG_BYTES).saturating_add(1))
+        .unwrap();
+    assert!(gitcanvas_core::stash::get_stash_fingerprint(&active).is_ok());
+    assert!(list(&fixture, &StashListRequest::default()).is_err());
 }
 
 #[test]

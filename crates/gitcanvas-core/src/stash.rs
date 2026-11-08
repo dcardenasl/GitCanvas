@@ -137,6 +137,8 @@ pub struct StashPage {
     pub search: String,
     /// Whether the requested selected id is listed anywhere; `None` if not requested.
     pub selected_present: Option<bool>,
+    /// Newest alias of the selected OID across the whole snapshot, even outside search/pages.
+    pub selected_entry: Option<StashEntry>,
     /// Next page, or `None` when all matching entries have been returned.
     pub next_cursor: Option<String>,
     /// Resource limits that apply to this query.
@@ -175,7 +177,17 @@ pub fn get_stashes(active: &ActiveRepo, request: &StashListRequest) -> Result<St
     snapshot.validate_tip(records.last().map(|record| record.id))?;
     let revision = snapshot.revision();
     let scope = scope_id(&revision, &search)?;
-    let selected_present = selected.map(|id| records.iter().any(|record| record.id == id));
+    let selected_entry = selected
+        .and_then(|id| {
+            records
+                .iter()
+                .rev()
+                .enumerate()
+                .find(|(_, record)| record.id == id)
+        })
+        .map(|(index, record)| count(index).map(|index| record.entry(index)))
+        .transpose()?;
+    let selected_present = selected.map(|_| selected_entry.is_some());
     let matches: Vec<_> = records
         .iter()
         .rev()
@@ -219,6 +231,7 @@ pub fn get_stashes(active: &ActiveRepo, request: &StashListRequest) -> Result<St
         total_matches: count(matches.len())?,
         search,
         selected_present,
+        selected_entry,
         next_cursor,
         limits: StashLimits::CURRENT,
     })
@@ -319,4 +332,20 @@ impl Cursor {
 
 fn is_digest(value: &str) -> bool {
     value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+/// Cheap opaque metadata revision for active-project backup polling.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+pub struct StashFingerprint {
+    /// Ref target and reflog metadata, not a durable or cryptographic content identity.
+    pub revision: String,
+}
+
+/// Reads stash metadata without opening or allocating the reflog's contents.
+///
+/// # Errors
+/// Returns authorization-independent core repository/filesystem errors, unsupported
+/// backend errors or invalid metadata-path errors. IPC must authorize the root first.
+pub fn get_stash_fingerprint(active: &ActiveRepo) -> Result<StashFingerprint, AppError> {
+    snapshot::fingerprint(active)
 }

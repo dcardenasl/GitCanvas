@@ -272,6 +272,70 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
     "unwatchRepository",
     [3],
   ],
+  [
+    "getStashes",
+    () =>
+      ipc.getStashes(PATH, {
+        limit: null,
+        cursor: null,
+        search: null,
+        selected_stash_id: null,
+      }),
+    "getStashes",
+    [
+      PATH,
+      { limit: null, cursor: null, search: null, selected_stash_id: null },
+    ],
+  ],
+  [
+    "getStashFiles",
+    () =>
+      ipc.getStashFiles(PATH, {
+        stash_id: "a",
+        mode: "all",
+        limit: null,
+        cursor: null,
+      }),
+    "getStashFiles",
+    [PATH, { stash_id: "a", mode: "all", limit: null, cursor: null }],
+  ],
+  [
+    "getStashFileDiff",
+    () =>
+      ipc.getStashFileDiff(PATH, {
+        file: { stash_id: "a", mode: "all", file_key: "key" },
+        expand: false,
+      }),
+    "getStashFileDiff",
+    [
+      PATH,
+      { file: { stash_id: "a", mode: "all", file_key: "key" }, expand: false },
+    ],
+  ],
+  [
+    "getStashFileContent",
+    () =>
+      ipc.getStashFileContent(PATH, {
+        file: { stash_id: "a", mode: "all", file_key: "key" },
+        side: "saved",
+        expand: false,
+      }),
+    "getStashFileContent",
+    [
+      PATH,
+      {
+        file: { stash_id: "a", mode: "all", file_key: "key" },
+        side: "saved",
+        expand: false,
+      },
+    ],
+  ],
+  [
+    "getStashFingerprint",
+    () => ipc.getStashFingerprint(PATH),
+    "getStashFingerprint",
+    [PATH],
+  ],
 ];
 
 describe("the typed IPC boundary", () => {
