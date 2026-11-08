@@ -23,7 +23,7 @@ use gitcanvas_core::{
         MAX_STASH_REFLOG_BYTES, MAX_STASH_SEARCH_BYTES,
     },
 };
-use support::Fixture;
+use support::{git, Fixture};
 
 fn fixture() -> Fixture {
     let fixture = Fixture::new();
@@ -75,29 +75,6 @@ fn write_log(fixture: &Fixture, count: usize) -> Oid {
 
 fn list(fixture: &Fixture, request: &StashListRequest) -> Result<StashPage, AppError> {
     get_stashes(&ActiveRepo::validate(fixture.dir.path()).unwrap(), request)
-}
-
-#[allow(
-    clippy::disallowed_methods,
-    reason = "Git is the test oracle in disposable fixtures; production never spawns it"
-)]
-fn git(fixture: &Fixture, args: &[&str]) -> String {
-    let output = Command::new("git")
-        .args(args)
-        .current_dir(fixture.dir.path())
-        .env("GIT_CONFIG_NOSYSTEM", "1")
-        .env(
-            "GIT_CONFIG_GLOBAL",
-            if cfg!(windows) { "NUL" } else { "/dev/null" },
-        )
-        .output()
-        .unwrap();
-    assert!(
-        output.status.success(),
-        "git {args:?}: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    String::from_utf8(output.stdout).unwrap()
 }
 
 #[test]

@@ -283,8 +283,8 @@ pub(crate) fn delta_summary(delta: &git2::DiffDelta<'_>) -> FileDiffSummary {
     let old_path = delta
         .old_file()
         .path_bytes()
-        .map(|old| String::from_utf8_lossy(old).into_owned())
-        .filter(|old| *old != path);
+        .filter(|old| *old != delta_path(delta))
+        .map(|old| String::from_utf8_lossy(old).into_owned());
     FileDiffSummary {
         path,
         old_path,
@@ -309,19 +309,22 @@ fn collect_files_internal(
     };
     let mut files = Vec::new();
 
-    for index in 0..diff.deltas().len() {
+    let range = only_index.map_or(0..diff.deltas().len(), |index| {
+        index..index.saturating_add(1)
+    });
+    for index in range {
         let Some(delta) = diff.get_delta(index) else {
             continue;
         };
-        if only_index.is_some_and(|requested| requested != index) {
-            continue;
-        }
         let mut summary = delta_summary(&delta);
         let path = &summary.path;
 
         let mut requested_hunks = None;
         let stats = if let Some(file_stats) = &file_stats {
-            file_stats.get(path).copied().unwrap_or_default()
+            file_stats
+                .get(delta_path(&delta))
+                .copied()
+                .unwrap_or_default()
         } else {
             let hunks = git2::Patch::from_diff(diff, index)?;
             let (_, insertions, deletions) = hunks
@@ -349,7 +352,7 @@ fn collect_files_internal(
         let beyond_hard_limit = patch_bytes > MAX_COMMIT_DIFF_BYTES && expanded;
         let requested_patch = patch_path == Some(path.as_str());
 
-        let omitted = if binary {
+        let mut omitted = if binary {
             Some(DiffOmission::Binary)
         } else if oversized || beyond_hard_limit {
             Some(DiffOmission::TooLarge)
@@ -364,7 +367,16 @@ fn collect_files_internal(
             };
             match hunks {
                 Some(mut hunks) => {
-                    Some(String::from_utf8_lossy(hunks.to_buf()?.as_ref()).into_owned())
+                    let maximum = if expanded {
+                        MAX_EXPANDED_DIFF_BYTES
+                    } else {
+                        MAX_INITIAL_DIFF_BYTES
+                    };
+                    let text = crate::text::bounded_utf8(hunks.to_buf()?.as_ref(), maximum);
+                    if text.is_none() {
+                        omitted = Some(DiffOmission::TooLarge);
+                    }
+                    text
                 }
                 None => None,
             }
@@ -390,39 +402,25 @@ struct FileDiffStats {
     patch_bytes: usize,
 }
 
-fn collect_file_stats(diff: &git2::Diff<'_>) -> Result<HashMap<String, FileDiffStats>, AppError> {
-    let mut stats: HashMap<String, FileDiffStats> = HashMap::new();
-    for delta in diff.deltas() {
-        let path = delta
-            .new_file()
-            .path()
-            .or_else(|| delta.old_file().path())
-            .map(|path| path.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        stats.entry(path).or_default();
-    }
-
+fn collect_file_stats(diff: &git2::Diff<'_>) -> Result<HashMap<Vec<u8>, FileDiffStats>, AppError> {
+    let mut stats: HashMap<_, _> = diff
+        .deltas()
+        .map(|delta| (delta_path(&delta).to_vec(), FileDiffStats::default()))
+        .collect();
     diff.print(DiffFormat::Patch, |delta, _, line| {
-        let path = delta
-            .new_file()
-            .path()
-            .or_else(|| delta.old_file().path())
-            .map(|path| path.to_string_lossy());
-        if let Some(file_stats) = path.and_then(|path| stats.get_mut(path.as_ref())) {
+        if let Some(stats) = stats.get_mut(delta_path(&delta)) {
             match line.origin() {
-                '+' => file_stats.insertions = file_stats.insertions.saturating_add(1),
-                '-' => file_stats.deletions = file_stats.deletions.saturating_add(1),
+                '+' => stats.insertions = stats.insertions.saturating_add(1),
+                '-' => stats.deletions = stats.deletions.saturating_add(1),
                 _ => {}
             }
-            let line_bytes = line.content().len().saturating_add(1);
-            file_stats.patch_bytes = file_stats
+            stats.patch_bytes = stats
                 .patch_bytes
-                .saturating_add(line_bytes)
+                .saturating_add(line.content().len().saturating_add(1))
                 .min(MAX_COMMIT_DIFF_BYTES.saturating_add(1));
         }
         true
     })?;
-
     Ok(stats)
 }
 

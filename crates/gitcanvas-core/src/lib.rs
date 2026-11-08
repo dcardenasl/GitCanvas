@@ -33,6 +33,7 @@ pub mod refs;
 pub mod repository;
 pub mod retry;
 pub mod stash;
+mod text;
 pub mod watch;
 pub mod workspace;
 pub mod worktree;

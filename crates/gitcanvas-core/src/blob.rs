@@ -119,7 +119,19 @@ pub(crate) fn read_content(raw: &[u8], path: &str, expand: bool) -> Result<Conte
         });
     }
 
-    let text = String::from_utf8_lossy(raw).into_owned();
+    let maximum = if expand {
+        MAX_EXPANDED_CONTENT_BYTES
+    } else {
+        MAX_INITIAL_CONTENT_BYTES
+    };
+    let Some(text) = crate::text::bounded_utf8(raw, maximum) else {
+        if expand {
+            return Err(AppError::ResourceLimitExceeded(format!(
+                "Decoded text for {path} exceeds {maximum} bytes"
+            )));
+        }
+        return too_large_content(u64::try_from(byte_count).unwrap_or(u64::MAX), path, false);
+    };
     let lines = u32::try_from(text.lines().count()).unwrap_or(u32::MAX);
 
     if lines > LARGE_FILE_LINE_LIMIT && !expand {

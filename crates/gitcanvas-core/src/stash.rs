@@ -3,8 +3,19 @@
 //! The reflog index is a presentation alias, not an identity. Queries return
 //! immutable object ids and bind continuations to the complete list revision.
 
+mod comparison;
+mod inspection;
 mod reflog;
 mod snapshot;
+
+pub use inspection::{
+    get_stash_file_content, get_stash_file_diff, get_stash_files, StashComparisonMode,
+    StashContentOutcome, StashContentSide, StashContentUnavailable, StashFileContent,
+    StashFileContentRequest, StashFileDiff, StashFileDiffRequest, StashFileKind, StashFileOrigin,
+    StashFileRequest, StashFileSummary, StashFileVersion, StashFilesPage, StashFilesRequest,
+    StashInspection, StashInspectionLimits, StashInspectionNotice, StashPreviewUnavailable,
+    MAX_STASH_COMPARISON_BLOB_BYTES, MAX_STASH_FILES, STASH_FILES_PAGE_SIZE,
+};
 
 use git2::Reference;
 use serde::{Deserialize, Serialize};
@@ -16,8 +27,6 @@ use crate::{
     pagination::resolve_page_size,
     repository::{parse_commit_id, ActiveRepo},
 };
-
-use reflog::Record;
 
 /// Stash rows returned when no page size is specified.
 pub const DEFAULT_STASH_PAGE_SIZE: u16 = 50;
@@ -173,9 +182,13 @@ pub fn get_stashes(active: &ActiveRepo, request: &StashListRequest) -> Result<St
         .enumerate()
         .filter(|(_, record)| record.matches(&search))
         .collect();
-    let position = cursor
-        .as_ref()
-        .map_or(Ok(0), |cursor| cursor.position(&scope, &matches))?;
+    let position = cursor.as_ref().map_or(Ok(0), |cursor| {
+        cursor.position(&scope, matches.len(), |offset| {
+            matches
+                .get(offset)
+                .map(|(index, record)| record.anchor(*index))
+        })
+    })?;
     let end = position.saturating_add(limit).min(matches.len());
     let entries = matches
         .iter()
@@ -248,8 +261,11 @@ fn recorded_branch(message: Option<&str>, lossy: bool) -> StashBranch {
 }
 
 fn scope_id(revision: &str, search: &str) -> Result<String, AppError> {
-    let bytes = serde_json::to_vec(&(revision, search))
-        .map_err(|error| AppError::Internal(error.to_string()))?;
+    hash_value(&(revision, search))
+}
+
+fn hash_value(value: &impl Serialize) -> Result<String, AppError> {
+    let bytes = serde_json::to_vec(value).map_err(|error| AppError::Internal(error.to_string()))?;
     Ok(format!("{:x}", Sha256::digest(bytes)))
 }
 
@@ -264,7 +280,7 @@ struct Cursor {
 
 impl Cursor {
     fn parse(value: &str) -> Result<Self, AppError> {
-        let invalid = || AppError::InvalidInput("Invalid stash-list cursor".into());
+        let invalid = || AppError::InvalidInput("Invalid stash continuation or file key".into());
         if value.len() > MAX_STASH_CURSOR_BYTES as usize {
             return Err(invalid());
         }
@@ -280,14 +296,21 @@ impl Cursor {
         Ok(cursor)
     }
 
-    fn position(&self, scope: &str, matches: &[(usize, &Record<'_>)]) -> Result<usize, AppError> {
-        let stale = || AppError::StaleCursor("The stash listing or search changed; refresh".into());
+    fn position(
+        &self,
+        scope: &str,
+        total: usize,
+        anchor: impl FnOnce(usize) -> Option<String>,
+    ) -> Result<usize, AppError> {
+        let stale = || {
+            AppError::StaleCursor("The stash listing, search or comparison changed; refresh".into())
+        };
         if self.scope != scope {
             return Err(stale());
         }
         let position = self.position as usize;
-        let (index, record) = matches.get(position.saturating_sub(1)).ok_or_else(stale)?;
-        if position >= matches.len() || record.anchor(*index) != self.anchor {
+        let expected = anchor(position.saturating_sub(1)).ok_or_else(stale)?;
+        if position >= total || expected != self.anchor {
             return Err(stale());
         }
         Ok(position)
