@@ -16,6 +16,16 @@
       Evidencia y límites: [verificación v0.7](docs/verification/v0.7.md).
       → `feat(core): add bounded revisioned stash listing and search` (`f2a0152`).
 
+## v0.7 — Comparaciones y contenido de stash (ST-2)
+
+- [x] **ST-2 — Comparaciones y contenido inmutable.** Completada el 2026-11-08.
+      W/H/I/U, claves exactas, resúmenes y lecturas compartidas, sin escrituras.
+      Veinticuatro pruebas nuevas; suite del motor: 264 aprobadas. Medición de
+      5.000 archivos: página inicial 154,18 ms y un parche 135,37 ms. Evidencia y
+      memoria en [verificación v0.7](docs/verification/v0.7.md).
+      → `refactor(core): share exact delta and header-bounded blob readers` (`c1ef95c`).
+      → `feat(core): inspect saved stash states with bounded diff and content` (`4eeec7b`).
+
 ## ✅ Fase G — Bootstrap del repositorio (6/6)
 
 - [x] **G-1 — Inicializar el repositorio.** `git init -b main`. `main` es el punto de

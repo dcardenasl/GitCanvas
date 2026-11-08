@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted for stash listing (ST-1) — 2026-11-08. The comparison, observation, IPC and
+Accepted for stash listing and inspection (ST-1/ST-2) — 2026-11-08. The observation, IPC and
 UI sections remain planned for subsequent tasks. Product decisions ST-D01–ST-D10
 were agreed with David; stash inspection is not yet exposed in the application.
 See the [implementation plan](../plan/2026-11-08-v0.7-implementacion.md)
@@ -162,6 +162,15 @@ context. Unknown branch metadata and unsupported storage are explicit limitation
 Read-only retention of a removed stash is opportunistic and ends when its data is
 unavailable. Engineering tests must cover cancellation between saved states, reflog
 changes without a tip change, simultaneous event scopes and immutable content keys.
+
+ST-2 resolves W/H/I/U and exact file keys through comparison and inspection modules.
+Shared delta readers identify files by byte path/position, not lossy display names.
+An ODB-header pass checks 64 MiB of unique readable blob work before similarity or
+statistics. Blobs beyond the 32 MiB content cap retain metadata and exact-only rename
+pairing with a notice. Binary and non-blob statistics are explicitly unavailable.
+UTF-8 replacement expansion is counted before allocating returned text. No new
+cache or production subprocess is introduced. The measured native tree-diff stage
+remains libgit2 work, not a claimed cancellable or hard-deadline operation.
 
 ## References
 

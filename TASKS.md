@@ -12,7 +12,7 @@ manifiestos están en 0.6.0, existe el tag local `v0.6.0` y `main` local contien
 merge del PR #16. Esta revisión no verificó la publicación remota ni repitió release.
 `dev` incluye cambios posteriores de historial por archivo y el roadmap de stash.
 La próxima entrega es **v0.7 — stash de solo lectura**: decisiones de producto
-acordadas con David, ST-1 implementada y verificada en el motor, ST-2–ST-8 pendientes.
+acordadas con David, ST-1 y ST-2 implementadas y verificadas en el motor, ST-3–ST-8 pendientes.
 Todavía no existe inspección de stash por IPC ni en la interfaz.
 Crear commits permanece al final de la secuencia, objetivo v0.12. El
 [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md) prevalece sobre
@@ -31,7 +31,7 @@ crear tags ni publicar como parte de la planificación.
 
 ## Siguiente paso
 
-La próxima tarea de implementación es **ST-2**, siguiendo el
+La próxima tarea de implementación es **ST-3**, siguiendo el
 [plan v0.7](docs/plan/2026-11-08-v0.7-implementacion.md) y
 [ADR 0009](docs/adr/0009-read-only-stash.md). ST-1 tiene evidencia en
 [verificación v0.7](docs/verification/v0.7.md). Los gates históricos continúan como seguimiento
@@ -60,9 +60,14 @@ planificada para las tareas siguientes. Evidencia:
       20.000 entradas/2.999.902 bytes. Clippy estricto y formato aprobados; bindings
       existentes sin deriva. Solo verificación nativa en macOS; UI/E2E de stash
       pendientes de sus tareas. Ver [evidencia](docs/verification/v0.7.md).
-- [ ] **ST-2 — Comparaciones y contenido inmutable.** Todos, preparados, sin preparar
+- [x] **ST-2 — Comparaciones y contenido inmutable.** Todos, preparados, sin preparar
       y no rastreados; contenido anterior/guardado, origen exacto, lectores compartidos
       y límites. Depende de ST-1.
+      Implementada en `4eeec7b`, con lectores compartidos extraídos en `c1ef95c`.
+      Veinticuatro pruebas nuevas; motor completo: 264 aprobadas, tres benchmarks
+      omitidos por defecto. Benchmark explícito de 5.000 archivos: primera página
+      154,18 ms y un parche 135,37 ms. Límites de memoria y resultados en la
+      [verificación v0.7](docs/verification/v0.7.md). Sin IPC ni UI todavía.
 - [ ] **ST-3 — IPC y observación del stash compartido.** Comandos autorizados,
       bindings, alcance stash, reflog/ref, fingerprint y eventos combinados sin
       invalidar el grafo por cambios exclusivos de stash. Depende de ST-1/ST-2.
@@ -84,7 +89,7 @@ planificada para las tareas siguientes. Evidencia:
 ### Entregas anteriores y seguimiento
 
 Las secciones siguientes conservan evidencia y tareas históricas. La cola nueva
-pendiente es ST-2–ST-8; las verificaciones históricas sin evidencia siguen abiertas.
+pendiente es ST-3–ST-8; las verificaciones históricas sin evidencia siguen abiertas.
 
 ### v0.4 — Líneas y colores de las ramas
 
