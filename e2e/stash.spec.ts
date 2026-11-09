@@ -89,6 +89,27 @@ async function expectPressed(label: string): Promise<void> {
   }
 }
 
+/** Reads the inventory count in the page, avoiding driver differences when reading text. */
+async function expectCount(expected: string): Promise<void> {
+  const read = () =>
+    browser.execute(
+      () =>
+        document
+          .querySelector(".stash-section .sidebar__count")
+          ?.textContent?.trim() ?? null,
+    );
+  try {
+    await browser.waitUntil(async () => (await read()) === expected, {
+      timeout: 20_000,
+    });
+  } catch (error) {
+    throw new Error(
+      `stash count is ${JSON.stringify(await read())}, expected ${expected}`,
+      { cause: error },
+    );
+  }
+}
+
 /** Opens an exact saved row through the shared file browser. */
 async function file(name: string): Promise<void> {
   const row = await browser.$(
@@ -257,27 +278,7 @@ describe("read-only stash inspection", () => {
 
   it("shares inventory across worktrees while keeping each tab's inspection", async () => {
     await (await browser.$(LINKED_WORKTREE)).click();
-    try {
-      await expect(browser.$(".stash-section .sidebar__count")).toHaveText(
-        "202",
-      );
-    } catch (error) {
-      const state = await browser.execute(() => ({
-        tabs: [...document.querySelectorAll('[role="tab"]')].map((tab) => ({
-          title: tab.getAttribute("title"),
-          selected: tab.getAttribute("aria-selected"),
-        })),
-        alerts: [...document.querySelectorAll('[role="alert"]')].map(
-          (alert) => alert.textContent,
-        ),
-        section: document.querySelector(".stash-section")?.textContent ?? null,
-        sidebar: document.querySelector(".sidebar")?.textContent?.slice(0, 600),
-        width: innerWidth,
-      }));
-      throw new Error(`${String(error)}\nDIAG ${JSON.stringify(state)}`, {
-        cause: error,
-      });
-    }
+    await expectCount("202");
     await expect(browser.$(PANEL)).not.toExist();
     await (await browser.$("[data-stash-row]")).click();
     await mode("Preparados");
@@ -291,21 +292,21 @@ describe("read-only stash inspection", () => {
       ["-C", `${e2eRepository}-linked`, "stash", "drop", "stash@{201}"],
       { stdio: "pipe" },
     );
-    await expect(browser.$(".stash-section .sidebar__count")).toHaveText("201");
+    await expectCount("201");
     await (await browser.$(MAIN_WORKTREE)).click();
-    await expect(browser.$(".stash-section .sidebar__count")).toHaveText("201");
+    await expectCount("201");
     await expectPressed("Todos");
   });
 
   it("refreshes an old drop with unchanged tip and retains a removed selected stash", async () => {
     git("stash", "drop", "stash@{200}");
-    await expect(browser.$(".stash-section .sidebar__count")).toHaveText("200");
+    await expectCount("200");
     // Every seeded row has the same OID; removing one alias must not mark it absent.
     await expect(browser.$(PANEL)).not.toHaveText(
       expect.stringContaining("Este stash se eliminó"),
     );
     git("stash", "clear");
-    await expect(browser.$(".stash-section .sidebar__count")).toHaveText("0");
+    await expectCount("0");
     await expect(browser.$(PANEL)).toHaveText(
       expect.stringContaining("Este stash se eliminó"),
     );
@@ -320,7 +321,7 @@ describe("read-only stash inspection", () => {
       "external next stash\n",
     );
     git("stash", "push", "-m", "new external stash");
-    await expect(browser.$(".stash-section .sidebar__count")).toHaveText("1");
+    await expectCount("1");
     await expect(browser.$(PANEL)).toHaveText(
       expect.stringContaining("Este stash se eliminó"),
     );
