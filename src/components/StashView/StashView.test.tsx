@@ -174,6 +174,9 @@ describe("stash inventory and saved readers", () => {
     expect(ipc.getStashFileContent).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Cerrar stash" }));
     expect(activeNavigation().stash).toBeNull();
+    await waitFor(() => {
+      expect(document.activeElement?.hasAttribute("data-stash-row")).toBe(true);
+    });
   });
 
   it("reads both versions only on demand and uses saved identity across modes and partial pages", async () => {

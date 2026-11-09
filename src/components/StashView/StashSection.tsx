@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useStashes } from "../../state/stashes";
 import { useNavigation, useNavigationActions } from "../../state/workspace";
@@ -22,8 +23,34 @@ export function StashSection({
 }: StashSectionProps) {
   const { t } = useTranslation(["stash", "common"]);
   const query = useStashes(root, search);
-  const selected = useNavigation((nav) => nav.stash?.entry.stash_id);
+  const selectedEntry = useNavigation((nav) => nav.stash?.entry);
+  const selected = selectedEntry?.stash_id;
   const { openStash } = useNavigationActions();
+  const previousSelection = useRef(selected);
+  const pendingFocus = useRef<string | null>(null);
+  useEffect(() => {
+    if (selected === undefined && previousSelection.current !== undefined) {
+      pendingFocus.current = previousSelection.current;
+    }
+    previousSelection.current = selected;
+    if (
+      selected !== undefined ||
+      pendingFocus.current === null ||
+      (query.first === undefined && query.error === null)
+    )
+      return;
+    const row = document.querySelector<HTMLButtonElement>(
+      `[data-stash-row="${pendingFocus.current}"]`,
+    );
+    const fallback = document.querySelector<HTMLElement>(
+      search.trim() === ""
+        ? "[data-stash-section-toggle]"
+        : ".sidebar input[type=search]",
+    );
+    (row ?? fallback)?.focus();
+    pendingFocus.current = null;
+  }, [selected, query.first, query.error, search]);
+
   const folded = collapsed && search.trim() === "";
   return (
     <section
@@ -35,6 +62,7 @@ export function StashSection({
         <button
           type="button"
           className="sidebar__section-toggle"
+          data-stash-section-toggle
           aria-expanded={!folded}
           disabled={search.trim() !== ""}
           onClick={onCollapse}
@@ -93,7 +121,10 @@ export function StashSection({
                   className="stash-section__entry"
                   data-stash-row={entry.stash_id}
                   aria-current={
-                    selected === entry.stash_id ? "true" : undefined
+                    selected === entry.stash_id &&
+                    selectedEntry?.index === entry.index
+                      ? "true"
+                      : undefined
                   }
                   onClick={() => {
                     openStash(entry);

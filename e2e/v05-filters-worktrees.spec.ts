@@ -40,7 +40,7 @@ describe("v0.5 reference filters and linked worktrees", () => {
       await setPreferences("light", "es");
       await expect($('[aria-label="Ramas y etiquetas"]')).toBeDisplayed();
       await expect(
-        $('input[placeholder="Buscar ramas y etiquetas"]'),
+        $('input[placeholder="Buscar ramas, etiquetas y stashes"]'),
       ).toBeDisplayed();
       await expect($('[aria-label="Worktrees vinculados"]')).toBeDisplayed();
       await expect($('[aria-label="Ramas y etiquetas"]')).toHaveText(
@@ -55,7 +55,7 @@ describe("v0.5 reference filters and linked worktrees", () => {
       await setPreferences("dark", "en");
       await expect($('[aria-label="Branches and tags"]')).toBeDisplayed();
       await expect(
-        $('input[placeholder="Search branches and tags"]'),
+        $('input[placeholder="Search branches, tags and stashes"]'),
       ).toBeDisplayed();
       await expect($('[aria-label="Linked worktrees"]')).toBeDisplayed();
       await expect($('[aria-label="Branches and tags"]')).toHaveText(
