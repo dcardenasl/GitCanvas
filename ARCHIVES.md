@@ -3,6 +3,16 @@
 > Registro histórico de tareas completadas, movidas desde [`TASKS.md`](TASKS.md).
 > Se conserva el detalle original, incluidos los hallazgos y mensajes de commit.
 
+## v0.7 — Inspección de stash (ST-0–ST-8)
+
+- [x] **Entrega implementada y verificada localmente en macOS, 2026-11-09.** Listado
+      compartido, comparación y lectura acotadas, IPC autorizado, observación del stash,
+      estado aislado por pestaña, sección/inspector/diff y cinco recorridos E2E. La suite
+      frontend final pasó 909 pruebas; Rust, lint, tipos, formato, auditorías y build
+      quedaron aprobados con los límites anotados. Capturas y matriz en
+      [verificación v0.7](docs/verification/v0.7.md). Linux/Windows nativos y lector de
+      pantalla real siguen sin verificar. Sin bump, tag, push ni publicación.
+
 ## v0.7 — Motor de listado de stash (ST-1)
 
 - [x] **ST-1 — Listado estable, búsqueda y paginación.** Completada el 2026-11-08.

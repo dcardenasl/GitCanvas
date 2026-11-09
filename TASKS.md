@@ -6,45 +6,42 @@
 > [tres funcionalidades](docs/plan/2026-10-08-plan-tres-funcionalidades.md) y el
 > [plan general](docs/plans/2026-09-08-plan-de-implementacion.md).
 
-**Estado al 2026-11-08:** v0.6 está implementada; la evidencia de su verificación y
-sus límites está en [`docs/verification/v0.6.md`](docs/verification/v0.6.md). Los
+**Estado al 2026-11-09:** v0.7 está implementada localmente en `dev`; la evidencia de su
+verificación y sus límites está en [`docs/verification/v0.7.md`](docs/verification/v0.7.md).
+La verificación histórica de v0.6 está en [`docs/verification/v0.6.md`](docs/verification/v0.6.md). Los
 manifiestos están en 0.6.0, existe el tag local `v0.6.0` y `main` local contiene el
 merge del PR #16. Esta revisión no verificó la publicación remota ni repitió release.
-`dev` incluye cambios posteriores de historial por archivo y el roadmap de stash.
-La próxima entrega es **v0.7 — stash de solo lectura**: decisiones de producto
-acordadas con David, ST-1 y ST-2 implementadas y verificadas en el motor, ST-3–ST-8 pendientes.
-Todavía no existe inspección de stash por IPC ni en la interfaz.
+`dev` incluye las entregas posteriores a v0.6 y la implementación completa de stash.
+La funcionalidad está verificada en macOS; Linux/Windows nativos y lector de pantalla real
+permanecen como gates externos sin evidencia. No es una release.
 Crear commits permanece al final de la secuencia, objetivo v0.12. El
 [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md) prevalece sobre
 asignaciones de versiones de planes anteriores.
 
 Los gates históricos sin evidencia siguen abiertos: GRF-5, V05-VERIFY, WS-17 y los
-límites declarados en las verificaciones de v0.4–v0.6. La planificación de v0.7 no
+límites declarados en las verificaciones de v0.4–v0.6. La verificación de v0.7 no
 los cierra ni les atribuye pruebas nuevas.
 
-**Estado de trabajo:** rama `dev`; planificación basada en `5fb6a3b` y commit local
-de plan `0b3e1d5`, seguido por ST-1 en `f2a0152`. No se hizo push ni se
-consultó el servidor. Inspeccionar estado/historial antes de afirmar sincronización.
+**Estado de trabajo:** rama `dev`; cierre de v0.7 completado localmente. No se hizo push
+ni se consultó el servidor. No afirmar sincronización remota ni publicación.
 Se preservan `docs/audits/evidence/`, `docs/media/`, `install-backups/` y
 `tools/demo/record-v05*`, sin seguimiento; no agregarlos a commits. No cambiar versiones,
 crear tags ni publicar como parte de la planificación.
 
 ## Siguiente paso
 
-La próxima tarea de implementación es **ST-7**, siguiendo el
-[plan v0.7](docs/plan/2026-11-08-v0.7-implementacion.md) y
-[ADR 0009](docs/adr/0009-read-only-stash.md). ST-1 tiene evidencia en
-[verificación v0.7](docs/verification/v0.7.md). Los gates históricos continúan como seguimiento
-independiente.
+v0.7 queda cerrada en `dev`. La siguiente entrega se define según el roadmap vigente.
+Los gates históricos y la verificación de v0.7 en Linux/Windows/lector real siguen como
+seguimiento independiente.
 
 ## Cola de trabajo
 
-### v0.7 — Stash de solo lectura (cola vigente)
+### v0.7 — Stash de solo lectura (completada en dev)
 
 Plan: [decisiones ST-D01–ST-D10, contrato, matriz y dependencias](docs/plan/2026-11-08-v0.7-implementacion.md).
 Arquitectura: [ADR 0009](docs/adr/0009-read-only-stash.md), aceptada para ST-1 y
-planificada para las tareas siguientes. Evidencia:
-[verificación v0.7](docs/verification/v0.7.md), parcial para ST-1.
+implementada de ST-0 a ST-8. Evidencia completa y límites:
+[verificación v0.7](docs/verification/v0.7.md).
 
 - [x] **ST-0 — Plan y contrato.** Entrevista, decisiones, diseño técnico, límites,
       matriz y tareas documentados. Prueba exploratoria en repositorio Git temporal;
@@ -58,8 +55,8 @@ planificada para las tareas siguientes. Evidencia:
       del workspace con todas las features: 297 aprobadas, dos benchmarks omitidos
       por defecto. El benchmark de stash se ejecutó aparte en release: 22,39 ms para
       20.000 entradas/2.999.902 bytes. Clippy estricto y formato aprobados; bindings
-      existentes sin deriva. Solo verificación nativa en macOS; UI/E2E de stash
-      pendientes de sus tareas. Ver [evidencia](docs/verification/v0.7.md).
+      existentes sin deriva. UI/E2E completados después en ST-3–ST-8; ver
+      [evidencia](docs/verification/v0.7.md).
 - [x] **ST-2 — Comparaciones y contenido inmutable.** Todos, preparados, sin preparar
       y no rastreados; contenido anterior/guardado, origen exacto, lectores compartidos
       y límites. Depende de ST-1.
@@ -67,7 +64,7 @@ planificada para las tareas siguientes. Evidencia:
       Veinticuatro pruebas nuevas; motor completo: 264 aprobadas, tres benchmarks
       omitidos por defecto. Benchmark explícito de 5.000 archivos: primera página
       154,18 ms y un parche 135,37 ms. Límites de memoria y resultados en la
-      [verificación v0.7](docs/verification/v0.7.md). Sin IPC ni UI todavía.
+      [verificación v0.7](docs/verification/v0.7.md).
 - [x] **ST-3 — IPC y observación del stash compartido.** Comandos autorizados,
       bindings, alcance stash, reflog/ref, fingerprint y eventos combinados sin
       invalidar el grafo por cambios exclusivos de stash. Depende de ST-1/ST-2.
@@ -78,18 +75,18 @@ planificada para las tareas siguientes. Evidencia:
       archivos y estados claros; EN/ES; sin acciones de escritura. Depende de ST-4.
 - [x] **ST-6 — Visor y navegación integrados.** Diff, ambos lados, cambios de modo,
       fijado/ocultamiento, volver/Escape y conservación del gráfico. Depende de ST-5.
-- [ ] **ST-7 — Accesibilidad y verificación integrada.** Fixture E2E, cambios externos,
+- [x] **ST-7 — Accesibilidad y verificación integrada.** Fixture E2E, cambios externos,
       worktrees, cero escrituras por inspección, temas/idiomas/940×600 y evidencia
       de teclado/lector por plataforma. Depende de ST-6.
-- [ ] **ST-8 — Verificación final y documentación entregada.** Suites, auditorías,
+- [x] **ST-8 — Verificación final y documentación entregada.** Suites, auditorías,
       build y evidencia real; actualizar producto/arquitectura y CHANGELOG según
       comportamiento implementado. Sin autorización implícita de release. Depende
       de ST-1–ST-7.
 
 ### Entregas anteriores y seguimiento
 
-Las secciones siguientes conservan evidencia y tareas históricas. La cola nueva
-pendiente es ST-3–ST-8; las verificaciones históricas sin evidencia siguen abiertas.
+Las secciones siguientes conservan evidencia y tareas históricas. Los gates externos
+sin evidencia permanecen abiertos y separados del cierre de v0.7.
 
 ### v0.4 — Líneas y colores de las ramas
 

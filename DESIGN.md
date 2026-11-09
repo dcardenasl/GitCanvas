@@ -84,6 +84,16 @@ rename budget says so on that row. Escape returns to the graph unless a menu is 
 Each history action is labelled with its file, so a screen reader can tell the rows apart.
 The sidebar does not fold away while a file's history is open.
 
+## Stash inspection (v0.7 in dev)
+
+Saved stashes appear in a foldable sidebar section below worktrees. Selecting a row keeps
+the graph visible and opens metadata in the inspector; choosing a file opens its bounded
+diff in the centre. Four modes are available: All, Staged, Unstaged and Untracked. Previous
+and saved sides are read on demand. Search spans the complete snapshot, and a selected
+stash remains addressable by object id outside the current page or search. The inventory is
+shared across linked worktrees, while selection and navigation are per tab. Only folding
+persists. Inspection does not write to Git; closing it restores the graph selection and focus.
+
 ## Platform behavior
 
 The product is a desktop Tauri application for macOS, Linux, and Windows. The layout is

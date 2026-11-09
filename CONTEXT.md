@@ -84,10 +84,10 @@ replaces the graph while it is open and is kept only for the session, never writ
 disk. Its query is immutable per start commit, so a refresh from a moved HEAD is a new
 query. Opening it never changes the graph's reference filters.
 
-## Stash engine (v0.7 in progress)
+## Stash inspection (v0.7 implemented in dev)
 
-Read-only stash listing and saved-state inspection are implemented in `gitcanvas-core::stash` (ST-1/ST-2), not yet
-exposed through IPC or UI. It reads a bounded shared reflog without creating it;
+Read-only stash listing and saved-state inspection are implemented from core through
+IPC and UI. It reads a bounded shared reflog without creating it;
 search covers the complete snapshot, and cursors bind repository, revision, search
 and position. Saved OIDs are stable identities; reflog indexes are display aliases.
 Git and libgit2 serve as integration-test oracles only. Product decisions, remaining
@@ -95,13 +95,14 @@ contracts and task dependencies are recorded in
 [the v0.7 plan](docs/plan/2026-11-08-v0.7-implementacion.md) and
 [ADR 0009](docs/adr/0009-read-only-stash.md). Stashes remain outside graph roots
 and filter state. Listing uses the shared repository reflog, while inspection state
-is per tab and session-only; only section folding is durable. Planned comparisons
+is per tab and session-only; only section folding is durable. Comparisons
 are net/base, saved index, saved worktree after index, and saved untracked content.
 Saved comparisons use exact origin/delta keys and shared header-bounded blob readers.
 Content and patch limits also cover UTF-8 replacement expansion. Comparison work is
 bounded to 64 MiB of unique readable blobs; oversized files keep metadata and exact
-rename pairing with an explicit notice. IPC, observation and UI are still pending. Engine evidence and
-its platform limits are recorded in `docs/verification/v0.7.md`.
+rename pairing with an explicit notice. Linux/Windows native verification and a real
+screen-reader pass remain open. Evidence and platform limits are recorded in
+`docs/verification/v0.7.md`.
 
 ## Session entry points
 

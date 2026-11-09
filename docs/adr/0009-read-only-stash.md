@@ -2,9 +2,9 @@
 
 ## Status
 
-Accepted for stash listing and inspection (ST-1/ST-2) — 2026-11-08. The observation, IPC and
-UI sections remain planned for subsequent tasks. Product decisions ST-D01–ST-D10
-were agreed with David; stash inspection is not yet exposed in the application.
+Accepted and implemented in v0.7 — 2026-11-09. ST-0–ST-8 are implemented in `dev`;
+macOS verification and remaining platform limits are recorded in
+[`docs/verification/v0.7.md`](../verification/v0.7.md). This does not represent a release.
 See the [implementation plan](../plan/2026-11-08-v0.7-implementacion.md)
 for the decision record, task dependencies, bounds and acceptance matrix.
 

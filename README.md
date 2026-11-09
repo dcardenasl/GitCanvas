@@ -30,6 +30,13 @@ GitCanvas is the opposite trade: small, fast, free, and focused on reading histo
   <img src="docs/assets/screenshot.jpg" alt="GitCanvas showing the branch graph with a color per branch, a selected merge commit and its details" width="860">
 </p>
 
+## Read-only stash inspection (v0.7 in development)
+
+Browse and search saved stashes without applying, creating or deleting them. Compare
+the saved result, staged changes, unstaged changes and saved untracked files; inspect
+previous or saved file contents with the same bounded readers as the rest of the app.
+Linked worktrees share the inventory, while each tab keeps its own inspection.
+
 ## What's new in 0.5
 
 The sidebar is now a reference explorer for repositories with many branches, tags and linked

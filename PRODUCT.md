@@ -27,7 +27,11 @@ clones are not used. Credentials stay in Rust and the OS keychain. The product i
 read-mostly, not strictly read-only: explicit checkout, pull and push mutate Git state;
 inspection does not stage, unstage, commit or delete user files. Per-file history (v0.6 in
 dev) is read-only inspection of one path: it follows renames and shows the change in each
-commit.
+commit. Stash inspection (v0.7 in dev) lists saved states and compares the base, saved
+index, saved worktree and saved untracked files with bounded content and diffs. It never
+applies, creates or deletes a stash, and never changes the graph. Linked worktrees share
+the stash inventory; inspection context is per tab and session-only, while section
+folding is durable.
 
 ## Brand Commitments
 
