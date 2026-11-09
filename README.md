@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="GitCanvas 0.5: searching and filtering the branch tree with linked worktrees beside the commit graph" width="860">
+  <img src="docs/assets/demo.gif" alt="GitCanvas 0.7: opening a stash from its base commit in the graph, then switching between its all, staged, unstaged and untracked changes" width="860">
 </p>
 
 GitCanvas does one thing: it lets you **see the shape of a repository's history**.
@@ -30,14 +30,36 @@ GitCanvas is the opposite trade: small, fast, free, and focused on reading histo
   <img src="docs/assets/screenshot.jpg" alt="GitCanvas showing the branch graph with a color per branch, a selected merge commit and its details" width="860">
 </p>
 
-## Read-only stash inspection (v0.7 in development)
+## What's new in 0.7
 
-Browse and search saved stashes without applying, creating or deleting them. Compare
-the saved result, staged changes, unstaged changes and saved untracked files; inspect
-previous or saved file contents with the same bounded readers as the rest of the app.
-Linked worktrees share the inventory, while each tab keeps its own inspection.
-When a stash's base commit is already loaded, the graph row shows a compact Orchid
-count. Open it to choose a stash and inspect it without moving the graph selection.
+Stashes become readable. GitCanvas lists them, shows where each one came from and lets you
+inspect what it saved, without applying, creating or deleting anything.
+
+<p align="center">
+  <img src="docs/assets/screenshot-stash.jpg" alt="A stash open in GitCanvas: the diff of a saved file in the center and the stash's message, base branch and files in the inspector" width="860">
+</p>
+
+- **Stashes in the sidebar.** A collapsible **Stashes** section shows each entry's message,
+  recorded branch and date. The sidebar search also filters stashes by message and branch,
+  without changing which references shape the graph.
+- **Saved states, separated.** Switch between everything, staged, unstaged and untracked
+  changes. A file can appear in more than one view, because each one is a different comparison.
+- **Diff and full versions.** Open a saved file as a diff, or read its previous or saved
+  version, using the same bounded readers as the rest of the app.
+- **Markers in the graph.** When a stash's base commit is loaded, its row shows a compact
+  count. Open it to choose a stash and inspect it without moving the graph selection.
+- **Shared, live inventory.** Linked worktrees share the list, each tab keeps its own
+  inspection, and the list refreshes when another tool adds or removes a stash.
+
+Stash inspection never writes to Git. Applying, discarding and saving stashes are planned for
+a later release (see the [roadmap](docs/plan/2026-10-19-roadmap-de-versiones.md)).
+
+## What's new in 0.6
+
+**File history.** Open the history of a file from a commit's file list, the local changes
+list or a row menu. GitCanvas lists the commits that touched it, follows it through renames,
+shows the diff of each commit, and can show the version a file had before it was deleted.
+Arrow, Home, End and Page keys move between commits, and any commit can be located in the graph.
 
 ## What's new in 0.5
 
@@ -97,6 +119,12 @@ See the [changelog](CHANGELOG.md) for the full list.
 - **Commit inspector.** Author, full message, changed files (as a list or a directory
   tree) and a line-numbered diff against the first parent. Binary and oversized files are
   reported instead of rendered.
+- **File history.** Follow a single file across commits and renames, with the diff of each
+  commit and the version before a deletion.
+- **Stash inspection.** Browse, search and read stashes (all, staged, unstaged and untracked
+  changes) in read-only form, with markers on their base commits in the graph.
+- **Reference explorer and worktrees.** Search branches and tags in a folder tree, choose
+  which references shape the history, and move between linked worktrees in their own tabs.
 - **Live local changes.** Staged, unstaged and new files show up as a working-tree row and
   refresh as you edit, without reopening the repository.
 - **Search.** Find a commit by message, author or abbreviated hash (`Cmd/Ctrl-F`).
@@ -172,6 +200,8 @@ gitcanvas /path/to/repo
 | ↑ / ↓ | Moves the selection without leaving the keyboard |
 | **Pull** | Fetches and fast-forwards. Anything needing a merge is reported, not resolved |
 | **Push** | Asks for confirmation first, and never forces |
+| Row menu → **History** | Opens the history of a file, following renames |
+| **Stashes** (sidebar) | Lists saved stashes; click one to inspect it without changing the graph |
 | **GitHub** | Stores a token in the OS keychain, lists your repositories, clones one |
 
 Logs are written to `logs/` under the application data directory (daily JSONL, up to
@@ -196,6 +226,9 @@ Documented on purpose rather than discovered later:
   number of simultaneously active branches.
 - File history follows renames by similarity (50%) and does not follow copies. Merges are
   compared with their first parent only, and a file's history does not show blame.
+- Stashes are **read-only**: you can inspect them, but not create, apply or discard them
+  from GitCanvas yet. Stashes do not appear as nodes in the graph, only as markers on
+  their base commits.
 - The installers are unsigned (see above) and the interface is available in English and Spanish only.
 
 ## Build from source
