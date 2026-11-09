@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-11-09
+
 ### Added
 
 - **Stash inspection** — browse and search saved states, inspect net, staged, unstaged and untracked changes, and read previous or saved files without modifying Git; linked worktrees share the inventory while each tab keeps its own inspection.
