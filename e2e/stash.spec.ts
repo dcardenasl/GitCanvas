@@ -229,10 +229,27 @@ describe("read-only stash inspection", () => {
     await (await browser.$("[data-stash-row]")).click();
     await mode("Preparados");
     await (await browser.$(MAIN_WORKTREE)).click();
-    await expect(browser.$(control(PANEL, "Todos"))).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    try {
+      await expect(browser.$(control(PANEL, "Todos"))).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    } catch (error) {
+      const state = await browser.execute(() => ({
+        tabs: [...document.querySelectorAll('[role="tab"]')].map((tab) => ({
+          title: tab.getAttribute("title"),
+          selected: tab.getAttribute("aria-selected"),
+        })),
+        panel: document.querySelector(".stash-detail")?.textContent ?? null,
+        worktrees: [...document.querySelectorAll(".sidebar__worktree")].map(
+          (item) => item.getAttribute("title"),
+        ),
+        width: innerWidth,
+      }));
+      throw new Error(`${String(error)}\nDIAG ${JSON.stringify(state)}`, {
+        cause: error,
+      });
+    }
     await (await browser.$(LINKED_WORKTREE)).click();
     await expect(browser.$(control(PANEL, "Preparados"))).toHaveAttribute(
       "aria-pressed",
