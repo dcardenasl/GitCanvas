@@ -8,6 +8,10 @@ import { waitForHistory } from "./history";
 import { clickAndConfirm, setReactSelectValue } from "./interactions";
 
 const PANEL = ".stash-detail";
+// Windows temp paths can use 8.3 aliases (RUNNER~1) while the app shows the canonical path,
+// so worktrees are matched by their final folder name, which never differs.
+const MAIN_WORKTREE = `.sidebar__worktree[title$="${path.basename(e2eRepository)}"]`;
+const LINKED_WORKTREE = `.sidebar__worktree[title$="${path.basename(e2eRepository)}-linked"]`;
 const CENTER = ".file-diff";
 
 /** Scoped text selector supported by the native WebDriver bridge. */
@@ -219,23 +223,17 @@ describe("read-only stash inspection", () => {
   });
 
   it("shares inventory across worktrees while keeping each tab's inspection", async () => {
-    await (
-      await browser.$(`.sidebar__worktree[title="${e2eRepository}-linked"]`)
-    ).click();
+    await (await browser.$(LINKED_WORKTREE)).click();
     await expect(browser.$(".stash-section .sidebar__count")).toHaveText("202");
     await expect(browser.$(PANEL)).not.toExist();
     await (await browser.$("[data-stash-row]")).click();
     await mode("Preparados");
-    await (
-      await browser.$(`.sidebar__worktree[title="${e2eRepository}"]`)
-    ).click();
+    await (await browser.$(MAIN_WORKTREE)).click();
     await expect(browser.$(control(PANEL, "Todos"))).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    await (
-      await browser.$(`.sidebar__worktree[title="${e2eRepository}-linked"]`)
-    ).click();
+    await (await browser.$(LINKED_WORKTREE)).click();
     await expect(browser.$(control(PANEL, "Preparados"))).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -247,9 +245,7 @@ describe("read-only stash inspection", () => {
       { stdio: "pipe" },
     );
     await expect(browser.$(".stash-section .sidebar__count")).toHaveText("201");
-    await (
-      await browser.$(`.sidebar__worktree[title="${e2eRepository}"]`)
-    ).click();
+    await (await browser.$(MAIN_WORKTREE)).click();
     await expect(browser.$(".stash-section .sidebar__count")).toHaveText("201");
     await expect(browser.$(control(PANEL, "Todos"))).toHaveAttribute(
       "aria-pressed",
