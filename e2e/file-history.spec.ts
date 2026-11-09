@@ -48,9 +48,16 @@ async function openFileHistory(summary: string, file: string): Promise<void> {
 
 /** The history rows as their visible text, in the order the engine returned them. */
 async function historyRows(): Promise<string[]> {
-  const rows = await browser.$$(
-    `${VIEW}//ul[contains(@class, "file-history__rows")]/li`,
+  const selector = `${VIEW}//ul[contains(@class, "file-history__rows")]/li`;
+  // The view opens before its first page of commits arrives.
+  await browser.waitUntil(
+    async () => {
+      const found = await browser.$$(selector);
+      return (await found.length) > 0;
+    },
+    { timeout: 20_000, timeoutMsg: "the history never listed a commit" },
   );
+  const rows = await browser.$$(selector);
   const texts: string[] = [];
   for (const row of rows) texts.push(await row.getText());
   return texts;
