@@ -28,11 +28,12 @@ alcance aquí y mantener TASKS.md como fuente de ejecución. Cada entrega debe q
 | v0.5 | Panel izquierdo, filtros y worktrees | Reconocimiento y navegación de worktrees del mismo repositorio; búsqueda, secciones plegables, carpetas por prefijos, contadores, menús; activar/desactivar ramas y tags; Solo esta, restablecer y deshacer; persistencia por repositorio e indicador de filtros durante el diff. |
 | v0.6 | Historial por archivo | Entrada desde inspector/lista de archivos; commits que modificaron el archivo, diff y contenido histórico; seguimiento de renombrados cuando sea determinable, con límites explícitos. |
 | v0.7 | Stash de solo lectura | Listar los stashes en una sección plegable del panel izquierdo (mensaje, rama base, fecha) y ver su diff y contenido sin aplicar, descartar ni crear. Sin escrituras Git. El nodo de stash en el gráfico queda reservado. |
-| v0.8 | Contribuyentes y releases | Identidades con .mailmap, énfasis y navegación por autor; releases GitHub, notas, tag, adjuntos, caché sin conexión, recuperación de acceso y descargas explícitas. |
-| v0.9 | Múltiples proveedores | Separar Git local de capacidades del proveedor; GitLab como primera ampliación; cuentas/servidores y credenciales aisladas. Bitbucket, Azure DevOps y servidores propios quedan para ampliaciones según necesidad. |
-| v0.10 | Crear y conectar repositorios | Inicializar repositorios locales; crear remotos en proveedores compatibles; elegir cuenta/organización, nombre y visibilidad; conectar proyectos existentes y ofrecer primer push explícito. |
-| v0.11 | Escrituras locales seguras: stash y ramas | Primero la base común de escrituras (exclusión por directorio Git común, recuperación, deshacer). Después, stash: guardar todos los cambios, aplicar, aplicar y quitar, descartar con deshacer. Luego crear, renombrar y eliminar ramas con protecciones; crear tags y gestionar remotos; fetch explícito y diferencias local/upstream. Ver [registro de alcance](#registro-de-cambios-de-alcance). |
-| v0.12 | Preparar archivos y crear commits | Preparar/retirar archivos completos, título/descripción, borradores por proyecto, hooks y firma, recuperación de errores y actualización del gráfico. |
+| v0.8 | Vista de imágenes | Mostrar como imagen los archivos binarios de imagen en todos los visores de archivos (commit, historial por archivo, stash y cambios locales): formatos comunes, SVG sin ejecutar scripts, comparación anterior/guardada, dimensiones y tamaño. Solo lectura, con los presupuestos existentes. Los demás binarios siguen reportándose sin renderizar. |
+| v0.9 | Contribuyentes y releases | Identidades con .mailmap, énfasis y navegación por autor; releases GitHub, notas, tag, adjuntos, caché sin conexión, recuperación de acceso y descargas explícitas. |
+| v0.10 | Múltiples proveedores | Separar Git local de capacidades del proveedor; GitLab como primera ampliación; cuentas/servidores y credenciales aisladas. Bitbucket, Azure DevOps y servidores propios quedan para ampliaciones según necesidad. |
+| v0.11 | Crear y conectar repositorios | Inicializar repositorios locales; crear remotos en proveedores compatibles; elegir cuenta/organización, nombre y visibilidad; conectar proyectos existentes y ofrecer primer push explícito. |
+| v0.12 | Escrituras locales seguras: stash y ramas | Primero la base común de escrituras (exclusión por directorio Git común, recuperación, deshacer). Después, stash: guardar todos los cambios, aplicar, aplicar y quitar, descartar con deshacer. Luego crear, renombrar y eliminar ramas con protecciones; crear tags y gestionar remotos; fetch explícito y diferencias local/upstream. Ver [registro de alcance](#registro-de-cambios-de-alcance). |
+| v0.13 | Preparar archivos y crear commits | Preparar/retirar archivos completos, título/descripción, borradores por proyecto, hooks y firma, recuperación de errores y actualización del gráfico. |
 
 ## Próxima entrega: v0.7 — stash de solo lectura
 
@@ -113,21 +114,33 @@ independiente del futuro alcance y de la posición del carril.
   representación debe respetar "un nodo por commit" y la reanudabilidad; v0.7 no
   incorpora estos objetos como raíces del gráfico. Las comparaciones acordadas y la
   lectura del reflog se concretan en el [plan v0.7](2026-11-08-v0.7-implementacion.md).
-- **v0.8:** catálogo completo/progresivo de autores independiente de páginas y
+- **v0.8:** consulta explícita de los bytes de un archivo de imagen, por comando Rust
+  con `runtime::read` y `with_repo`, acotada por los presupuestos del
+  [ADR 0002](../adr/0002-local-file-safety-and-resource-budgets.md): el contenido
+  grande se rechaza con metadatos, sin leerlo entero. El formato se decide por los bytes
+  iniciales, nunca por la extensión. Formatos iniciales: PNG, JPEG, GIF, WebP, BMP e
+  ICO; el SVG se muestra como imagen aislada (sin scripts ni recursos externos) y también
+  como texto. Respeta orientación y fotogramas de GIF animado de forma acotada. La vista
+  se integra en los cuatro lectores existentes sin duplicarlos: un archivo nuevo o
+  borrado muestra una sola imagen, y uno modificado ofrece anterior y guardada, lado a
+  lado y con deslizador. Los binarios que no son imagen siguen mostrando su estado actual.
+  Accesible (texto alternativo con ruta, dimensiones y tamaño) y verificada en ambos temas
+  e idiomas. Sin edición ni conversión de formatos.
+- **v0.9:** catálogo completo/progresivo de autores independiente de páginas y
   filtros, sin fusionar personas por nombre. Atenuar conserva nodos/conexiones.
   Releases y tags comparten visibilidad; fuente GitHub identificada y caché separada.
   Consulta de notas no trae tags ni adjuntos. Traer tag y descargar archivo son
   acciones explícitas; destinos, progreso, cancelación y retorno tras autenticación
   conservan contexto. Aplicar las protecciones de escritura necesarias antes de
   incorporar fetch de tags, sin esperar a la entrega de commits.
-- **v0.9:** interfaz por capacidades, sin exigir que todos los proveedores permitan
+- **v0.10:** interfaz por capacidades, sin exigir que todos los proveedores permitan
   lo mismo. Mantener Git local independiente de REST del proveedor. Reutilizar la
   frontera Rust/keychain; no mezclar cuentas, servidores o cachés. El diseño debe
   permitir extensiones, sin implementar todos los proveedores en esta versión.
-- **v0.10:** creación remota depende de capacidades y permisos del proveedor. Definir
+- **v0.11:** creación remota depende de capacidades y permisos del proveedor. Definir
   recuperación ante creación remota exitosa y fallo local posterior, sin reintentos
   que dupliquen repositorios. No ejecutar primer push automáticamente.
-- **v0.11:** definir guardias y recuperación de cada operación antes de exponerla.
+- **v0.12:** definir guardias y recuperación de cada operación antes de exponerla.
   Respetar worktrees y operaciones concurrentes; borrar ramas o alterar remotos no
   se deduce de un clic de navegación. No incluir merge/rebase por inferencia.
   Orden interno: (1) base de escrituras, (2) stash, (3) ramas, tags y remotos. El
@@ -147,10 +160,10 @@ independiente del futuro alcance y de la posición del carril.
   - **Guardar:** todos los cambios, con mensaje y opción de incluir no rastreados. Es
     el complemento de aplicar y permite "guardar y cambiar de rama" cuando el checkout
     rechaza por cambios locales. Guardar parcial (rutas, mantener índice) se agrupa con
-    la preparación de v0.12.
+    la preparación de v0.13.
   - Reutiliza la observación del reflog y el fingerprint de v0.7: tras cada escritura
     el listado se actualiza sin invalidar el gráfico.
-- **v0.12:** aplicar el contrato de commits del plan de 2026-10-08: Git del sistema,
+- **v0.13:** aplicar el contrato de commits del plan de 2026-10-08: Git del sistema,
   hooks/firma, índice completo, validación HEAD/índice, borradores y conciliación de
   resultados indeterminados. Exclusión de escrituras por directorio Git común antes
   de habilitar operaciones; adelantarla cuando una entrega anterior la requiera.
@@ -211,9 +224,9 @@ Sin versión ni implementación comprometida:
 
 - Comparar dos commits o ramas.
 - Blame por línea.
-- Stash: aplicar, descartar y guardar todo están asignados a v0.11 (ver registro de
+- Stash: aplicar, descartar y guardar todo están asignados a v0.12 (ver registro de
   alcance). Sin versión: guardar parcial (rutas, mantener índice), que se agrupa con la
-  preparación de v0.12, y el nodo de stash en el gráfico (tras decidir su tratamiento
+  preparación de v0.13, y el nodo de stash en el gráfico (tras decidir su tratamiento
   en el layout; hoy solo existe el marcador sobre el commit base).
 - Gestión de worktrees: creación y retirada; reconocimiento/navegación ya planificados para v0.5.
 - Acceso a pull requests/merge requests según proveedor.
@@ -229,24 +242,55 @@ Sin versión ni implementación comprometida:
 Pregunta: tras v0.7 (solo lectura), ¿aplicar y descartar se quitan, se adelantan o se
 dejan para cuando haya commits?
 
-Decisión: **se conservan, en v0.11, antes de commits (v0.12) y sin renumerar.**
+Decisión: **se conservan, antes de commits y sin renumerar en ese momento** (hoy v0.12, antes de los commits de v0.13, tras la renumeración del registro siguiente).
 
 - **No se eliminan.** Inspeccionar sin poder actuar deja el flujo a medias, y el
   inspector de v0.7 es justo la vista previa que aplicar necesita.
 - **No esperan a los commits.** Aplicar no depende de crearlos: checkout, pull y push
   ya escriben sin que existan. Lo que el usuario hace con los cambios aplicados puede
-  seguir siendo externo hasta v0.12, igual que hoy.
-- **No se adelantan a v0.8–v0.10.** Aplicar y descartar son las primeras escrituras
+  seguir siendo externo hasta v0.13, igual que hoy.
+- **No se adelantan a v0.9–v0.11.** Aplicar y descartar son las primeras escrituras
   que cambian el árbol de trabajo y el reflog. Necesitan antes la base de escrituras
   (exclusión por directorio Git común, recuperación, deshacer) y esa base es la misma
   de ramas y commits; construirla una vez y usar el stash como primer cliente reduce
-  el riesgo de v0.12. Aplicar con conflictos requeriría además una interfaz de
+  el riesgo de v0.13. Aplicar con conflictos requeriría además una interfaz de
   conflictos que sigue sin planificar, por eso se rechaza en vez de resolverse.
-- **Regla de adelanto:** si v0.8 construye la base de escrituras (lo exige para traer
+- **Regla de adelanto:** si v0.9 construye la base de escrituras (lo exige para traer
   tags), el stash se publica en la primera versión posterior a ella, sin esperar a
-  v0.11. Se registra aquí al decidirlo.
-- **Agrupación:** la secuencia queda como lectura (v0.4–v0.8), conexión y proveedores
-  (v0.9–v0.10) y escrituras locales (v0.11–v0.12), con las de menor riesgo primero.
+  v0.12. Se registra aquí al decidirlo.
+- **Agrupación:** la secuencia queda como lectura (v0.4–v0.9), conexión y proveedores
+  (v0.10–v0.11) y escrituras locales (v0.12–v0.13), con las de menor riesgo primero.
+
+### 2026-11-09 — Imágenes: se añade como v0.8 y se renumera lo posterior
+
+Pregunta: el roadmap no contemplaba mostrar los binarios de imagen; hoy el lector los
+marca como `Binary` y no muestra nada. ¿Se incluye y dónde?
+
+Decisión: **se incluye como v0.8, justo después del stash de solo lectura. Las entregas
+posteriores pasan a v0.9–v0.13** (contribuyentes/releases v0.9, proveedores v0.10,
+crear/conectar v0.11, escrituras locales seguras v0.12, commits v0.13).
+
+- **Sí corresponde.** Es lectura de historia, el centro del producto, y para diseño web,
+  móvil o de juegos buena parte de lo que cambia en un commit son imágenes. Sin esto,
+  esos cambios parecen vacíos.
+- **Por qué ahora y no después.** Los cuatro lectores de archivos quedan unificados en
+  v0.7 (commit, índice, disco y stash comparten la misma política de binarios). Añadir la
+  vista mientras ese lector compartido está fresco cuesta una vez; hacerlo tras proveedores
+  o escrituras obligaría a reabrirlo con más superficie.
+- **Por qué antes de v0.9.** Contribuyentes y releases, proveedores y creación de
+  repositorios no dependen de ella ni la necesitan; la línea de lectura local queda
+  continua (v0.4–v0.8) antes de abrir la red y los proveedores. Es una entrega pequeña,
+  de bajo riesgo y útil por sí sola.
+- **Por qué antes de comparar y de commits.** "Comparar dos commits o ramas" (reserva) y la
+  revisión de cambios previa a un commit (v0.13) reutilizarán el visor; ya deben heredar
+  las imágenes.
+- **Riesgo que fija el alcance.** Decodificar contenido de repositorios es una superficie
+  de ataque: por eso solo formatos comunes decodificados por el WebView, SVG aislado,
+  límites de bytes y dimensiones, y ningún archivo se ejecuta ni se abre fuera de la app.
+- **Fuera de alcance.** PDF, audio, vídeo, formatos de diseño (PSD, Figma) y modelos 3D.
+  Se evalúan por separado si hay demanda; no se deducen de esta entrega.
+- **Renumeración.** Es solo de planificación: no hay versiones aplicadas a manifiestos.
+  El contrato del stash escrito (v0.12) y la regla de adelanto no cambian, solo su número.
 
 ## Seguimiento y evidencia
 

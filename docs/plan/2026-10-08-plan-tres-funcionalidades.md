@@ -2,7 +2,7 @@
 
 > Actualización 2026-10-19: el [roadmap vigente](2026-10-19-roadmap-de-versiones.md)
 > sustituye el orden de entrega: gráfico/panel primero y commits al final (objetivo
-> v0.12). Los contratos funcionales de este documento siguen como referencia.
+> v0.13). Los contratos funcionales de este documento siguen como referencia.
 
 ## 1. Objetivo y arquitectura
 

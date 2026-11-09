@@ -15,7 +15,7 @@ el render SVG. El graph es el núcleo de valor: todo lo demás está subordinado
    El [roadmap de versiones](docs/plan/2026-10-19-roadmap-de-versiones.md) fija la
    secuencia: v0.6 historial por archivo implementado; v0.7 stash de solo lectura
    en desarrollo, con ST-1/ST-2 terminadas y ST-3 como próxima tarea de implementación; commits al final
-   (objetivo v0.12). Consultar el plan específico de esa tarea antes del plan rector.
+   (objetivo v0.13). Consultar el plan específico de esa tarea antes del plan rector.
 2. Leer la sección de esa fase en
    [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
    Trae las decisiones técnicas ya cerradas: no las vuelvas a abrir.
