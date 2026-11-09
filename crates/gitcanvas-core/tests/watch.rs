@@ -27,6 +27,8 @@ use support::Fixture;
 /// Long enough for a debounced watcher to report, short enough to fail fast.
 const WAIT: Duration = Duration::from_secs(10);
 const QUIET: Duration = Duration::from_millis(500);
+/// Total time a test gives the event stream to become live and report a change.
+const LIVE_WAIT: Duration = Duration::from_secs(30);
 
 fn wait_until_quiet<T>(receiver: &Receiver<T>) {
     let deadline = Instant::now()
@@ -63,8 +65,10 @@ const ATTEMPT: Duration = Duration::from_secs(2);
 /// watcher reports once it is live, and that is what a later change checks.
 /// `change` receives the attempt number, so every attempt makes a new change.
 fn event_after_changing<T>(receiver: &Receiver<T>, mut change: impl FnMut(u64)) -> T {
+    // A loaded CI runner can take several seconds to start delivering events, so
+    // the stream gets many more attempts than a report that merely arrives late.
     let deadline = Instant::now()
-        .checked_add(WAIT)
+        .checked_add(LIVE_WAIT)
         .expect("deadline is representable");
     for attempt in 0_u64.. {
         change(attempt);
