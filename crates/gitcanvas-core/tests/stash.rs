@@ -11,7 +11,7 @@
 
 mod support;
 
-use std::{fs, path::PathBuf, process::Command};
+use std::{fs, path::PathBuf};
 
 use git2::{Oid, Signature, Time};
 use gitcanvas_core::{
@@ -1120,7 +1120,7 @@ fn a_symbolic_stash_ref_or_a_tip_that_disagrees_with_the_log_is_an_error() {
 #[cfg(unix)]
 #[test]
 fn unreadable_reflog_is_a_filesystem_error_and_fifo_is_rejected_without_opening_it() {
-    use std::os::unix::fs::PermissionsExt;
+    use std::{os::unix::fs::PermissionsExt, process::Command};
     let fixture = fixture();
     write_log(&fixture, 1);
     let path = log_path(&fixture);
