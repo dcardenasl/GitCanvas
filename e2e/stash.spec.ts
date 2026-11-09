@@ -56,6 +56,34 @@ async function mode(label: string): Promise<void> {
   );
 }
 
+/** Reads the pressed state in the page, avoiding driver differences for ARIA attributes. */
+async function expectPressed(label: string): Promise<void> {
+  const read = () =>
+    browser.execute((text) => {
+      const button = [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          ".stash-detail .segmented__option",
+        ),
+      ].find((item) => item.textContent?.trim() === text);
+      return {
+        pressed: button?.getAttribute("aria-pressed") ?? null,
+        modes: [
+          ...document.querySelectorAll(".stash-detail .segmented__option"),
+        ].map((item) => item.outerHTML),
+      };
+    }, label);
+  try {
+    await browser.waitUntil(async () => (await read()).pressed === "true", {
+      timeout: 20_000,
+    });
+  } catch (error) {
+    throw new Error(
+      `${label} is not pressed: ${JSON.stringify(await read())}`,
+      { cause: error },
+    );
+  }
+}
+
 /** Opens an exact saved row through the shared file browser. */
 async function file(name: string): Promise<void> {
   const row = await browser.$(
@@ -229,32 +257,9 @@ describe("read-only stash inspection", () => {
     await (await browser.$("[data-stash-row]")).click();
     await mode("Preparados");
     await (await browser.$(MAIN_WORKTREE)).click();
-    try {
-      await expect(browser.$(control(PANEL, "Todos"))).toHaveAttribute(
-        "aria-pressed",
-        "true",
-      );
-    } catch (error) {
-      const state = await browser.execute(() => ({
-        tabs: [...document.querySelectorAll('[role="tab"]')].map((tab) => ({
-          title: tab.getAttribute("title"),
-          selected: tab.getAttribute("aria-selected"),
-        })),
-        panel: document.querySelector(".stash-detail")?.textContent ?? null,
-        worktrees: [...document.querySelectorAll(".sidebar__worktree")].map(
-          (item) => item.getAttribute("title"),
-        ),
-        width: innerWidth,
-      }));
-      throw new Error(`${String(error)}\nDIAG ${JSON.stringify(state)}`, {
-        cause: error,
-      });
-    }
+    await expectPressed("Todos");
     await (await browser.$(LINKED_WORKTREE)).click();
-    await expect(browser.$(control(PANEL, "Preparados"))).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expectPressed("Preparados");
     // Change the common inventory from the linked worktree, then reactivate main.
     execFileSync(
       "git",
@@ -264,10 +269,7 @@ describe("read-only stash inspection", () => {
     await expect(browser.$(".stash-section .sidebar__count")).toHaveText("201");
     await (await browser.$(MAIN_WORKTREE)).click();
     await expect(browser.$(".stash-section .sidebar__count")).toHaveText("201");
-    await expect(browser.$(control(PANEL, "Todos"))).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expectPressed("Todos");
   });
 
   it("refreshes an old drop with unchanged tip and retains a removed selected stash", async () => {
