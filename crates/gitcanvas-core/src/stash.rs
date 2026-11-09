@@ -145,6 +145,71 @@ pub struct StashPage {
     pub limits: StashLimits,
 }
 
+/// One unique saved object anchored to its first-parent commit for graph rows.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct StashAnchorEntry {
+    /// Alias and metadata from the newest reflog occurrence of this object.
+    pub entry: StashEntry,
+    /// First parent of the stash commit (`H`).
+    pub base_commit_id: String,
+}
+
+/// Complete, revision-consistent index for the currently readable stash reflog.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct StashAnchorIndex {
+    /// Same snapshot identity as the stash inventory.
+    pub revision: String,
+    /// Unique stash objects grouped by their first parent.
+    pub entries: Vec<StashAnchorEntry>,
+    /// Unique objects whose commit or first parent could not be resolved.
+    pub unresolved: u32,
+}
+
+/// Resolves unique stash objects to their first parent without reading trees.
+///
+/// The reflog snapshot is bounded by the same published limits as inventory. Invalid
+/// or pruned objects are omitted from the graph index and remain visible in inventory.
+///
+/// # Errors
+/// Returns the same authorization-independent snapshot, filesystem, repository and
+/// resource errors as stash listing; malformed or inconsistent reflogs are not hidden.
+pub fn get_stash_anchors(active: &ActiveRepo) -> Result<StashAnchorIndex, AppError> {
+    use std::collections::HashSet;
+
+    let snapshot = snapshot::read(active)?;
+    let records = reflog::parse(&snapshot.bytes)?;
+    snapshot.validate_tip(records.last().map(|record| record.id))?;
+    let revision = snapshot.revision();
+    let repo = active.open()?;
+    let mut seen = HashSet::new();
+    let mut entries = Vec::new();
+    let mut unresolved = 0_usize;
+    for (index, record) in records.iter().rev().enumerate() {
+        if !seen.insert(record.id) {
+            continue;
+        }
+        let base = repo
+            .find_commit(record.id)
+            .ok()
+            .and_then(|commit| commit.parent_id(0).ok());
+        let Some(base) = base else {
+            unresolved = unresolved.checked_add(1).ok_or_else(|| {
+                AppError::ResourceLimitExceeded("Stash count cannot be represented".into())
+            })?;
+            continue;
+        };
+        entries.push(StashAnchorEntry {
+            entry: record.entry(count(index)?),
+            base_commit_id: base.to_string(),
+        });
+    }
+    Ok(StashAnchorIndex {
+        revision,
+        entries,
+        unresolved: count(unresolved)?,
+    })
+}
+
 /// Lists stashes without modifying Git, reading their objects or walking history.
 ///
 /// Search trims outer Unicode whitespace and uses Unicode lowercase without

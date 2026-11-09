@@ -7,8 +7,9 @@ use super::{
 use gitcanvas_core::{
     error::AppError,
     stash::{
-        self, StashFileContent, StashFileContentRequest, StashFileDiff, StashFileDiffRequest,
-        StashFilesPage, StashFilesRequest, StashFingerprint, StashListRequest, StashPage,
+        self, StashAnchorIndex, StashFileContent, StashFileContentRequest, StashFileDiff,
+        StashFileDiffRequest, StashFilesPage, StashFilesRequest, StashFingerprint,
+        StashListRequest, StashPage,
     },
 };
 
@@ -25,6 +26,20 @@ pub async fn get_stashes(
         with_repo(&allowed, &path, |active| {
             stash::get_stashes(active, &request)
         })
+    })
+    .await
+}
+
+/// Reads the bounded stash-to-base index through the canonical authorization boundary.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_stash_anchors(
+    path: String,
+    allowed: tauri::State<'_, AllowedRepos>,
+) -> Result<StashAnchorIndex, AppError> {
+    let allowed = allowed.inner().clone();
+    read("get_stash_anchors", move || {
+        with_repo(&allowed, &path, stash::get_stash_anchors)
     })
     .await
 }

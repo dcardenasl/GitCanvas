@@ -51,6 +51,8 @@ export const commands = {
 	getFileHistory: (path: string, request: FileHistoryRequest) => typedError<FileHistoryPage, AppError>(__TAURI_INVOKE("get_file_history", { path, request })),
 	/**  Reads bounded stash data through the canonical repository authorization boundary. */
 	getStashes: (path: string, request: StashListRequest) => typedError<StashPage, AppError>(__TAURI_INVOKE("get_stashes", { path, request })),
+	/**  Reads the bounded stash-to-base index through the canonical authorization boundary. */
+	getStashAnchors: (path: string) => typedError<StashAnchorIndex, AppError>(__TAURI_INVOKE("get_stash_anchors", { path })),
 	/**  Reads bounded stash data through the canonical repository authorization boundary. */
 	getStashFiles: (path: string, request: StashFilesRequest) => typedError<StashFilesPage, AppError>(__TAURI_INVOKE("get_stash_files", { path, request })),
 	/**  Reads bounded stash data through the canonical repository authorization boundary. */
@@ -802,6 +804,24 @@ snapshot: boolean } |
 side: WorktreeSide;
 /**  Repository-relative path of the selected file, if any. */
 file_path: string | null };
+
+/**  One unique saved object anchored to its first-parent commit for graph rows. */
+export type StashAnchorEntry = {
+	/**  Alias and metadata from the newest reflog occurrence of this object. */
+	entry: StashEntry,
+	/**  First parent of the stash commit (`H`). */
+	base_commit_id: string,
+};
+
+/**  Complete, revision-consistent index for the currently readable stash reflog. */
+export type StashAnchorIndex = {
+	/**  Same snapshot identity as the stash inventory. */
+	revision: string,
+	/**  Unique stash objects grouped by their first parent. */
+	entries: StashAnchorEntry[],
+	/**  Unique objects whose commit or first parent could not be resolved. */
+	unresolved: number,
+};
 
 /**  Branch context recorded by a recognized Git stash message, never guessed from HEAD. */
 export type StashBranch =

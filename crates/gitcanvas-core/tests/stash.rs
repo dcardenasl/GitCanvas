@@ -13,14 +13,14 @@ mod support;
 
 use std::{fs, path::PathBuf, process::Command};
 
-use git2::Oid;
+use git2::{Oid, Signature, Time};
 use gitcanvas_core::{
     error::AppError,
     repository::ActiveRepo,
     stash::{
-        get_stashes, StashBranch, StashListRequest, StashPage, DEFAULT_STASH_PAGE_SIZE,
-        MAX_STASH_CURSOR_BYTES, MAX_STASH_ENTRIES, MAX_STASH_ENTRY_BYTES, MAX_STASH_PAGE_SIZE,
-        MAX_STASH_REFLOG_BYTES, MAX_STASH_SEARCH_BYTES,
+        get_stash_anchors, get_stashes, StashBranch, StashListRequest, StashPage,
+        DEFAULT_STASH_PAGE_SIZE, MAX_STASH_CURSOR_BYTES, MAX_STASH_ENTRIES, MAX_STASH_ENTRY_BYTES,
+        MAX_STASH_PAGE_SIZE, MAX_STASH_REFLOG_BYTES, MAX_STASH_SEARCH_BYTES,
     },
 };
 use support::{git, Fixture};
@@ -130,6 +130,164 @@ fn rows_match_git_and_libgit2_without_deduplicating_objects_or_writing_the_log()
         assert_eq!(entry.message.as_deref(), oracle.message().unwrap());
     }
     assert_eq!(fs::read(log_path(&fixture)).unwrap(), before);
+}
+
+#[test]
+fn graph_index_deduplicates_objects_and_anchors_to_the_stash_first_parent() {
+    let fixture = fixture();
+    let stash = write_log(&fixture, 4);
+    let base = fixture.repo.head().unwrap().target().unwrap();
+    let anchors = get_stash_anchors(&ActiveRepo::validate(fixture.dir.path()).unwrap()).unwrap();
+    assert_eq!(
+        anchors.revision,
+        list(&fixture, &StashListRequest::default())
+            .unwrap()
+            .revision
+    );
+    assert_eq!(anchors.entries.len(), 1);
+    assert_eq!(anchors.entries[0].entry.stash_id, stash.to_string());
+    assert_eq!(anchors.entries[0].entry.index, 0);
+    assert_eq!(
+        anchors.entries[0].entry.message.as_deref(),
+        Some("WIP on main: change 3")
+    );
+    assert_eq!(anchors.entries[0].base_commit_id, base.to_string());
+    assert_eq!(anchors.unresolved, 0);
+}
+
+#[test]
+fn different_stash_objects_with_one_base_are_returned_for_one_graph_group() {
+    let fixture = fixture();
+    let base = fixture.repo.head().unwrap().target().unwrap();
+    let index = fixture.commit("refs/heads/index", "index", &[base], 1_001);
+    let first = fixture.commit("refs/heads/first", "first stash", &[base, index], 1_002);
+    let second = fixture.commit("refs/heads/second", "second stash", &[base, index], 1_003);
+    fixture
+        .repo
+        .reference("refs/stash", second, true, "fixture")
+        .unwrap();
+    let path = log_path(&fixture);
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(
+        path,
+        format!(
+            "{}{}",
+            row(Oid::ZERO_SHA1, first, 1_002, "first stash"),
+            row(first, second, 1_003, "second stash")
+        ),
+    )
+    .unwrap();
+
+    let anchors = get_stash_anchors(&ActiveRepo::validate(fixture.dir.path()).unwrap()).unwrap();
+    assert_eq!(anchors.entries.len(), 2);
+    assert!(anchors
+        .entries
+        .iter()
+        .all(|anchor| anchor.base_commit_id == base.to_string()));
+    assert_ne!(
+        anchors.entries[0].entry.stash_id,
+        anchors.entries[1].entry.stash_id
+    );
+}
+
+#[test]
+fn graph_index_skips_missing_objects_without_losing_the_inventory() {
+    let fixture = fixture();
+    let stash = write_log(&fixture, 1);
+    let missing = Oid::from_str(&"f".repeat(40)).unwrap();
+    let path = log_path(&fixture);
+    fs::write(
+        &path,
+        format!(
+            "{}{}",
+            row(Oid::ZERO_SHA1, missing, 1_000, "pruned"),
+            row(missing, stash, 1_001, "live")
+        ),
+    )
+    .unwrap();
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let anchors = get_stash_anchors(&active).unwrap();
+    assert_eq!(anchors.entries.len(), 1);
+    assert_eq!(anchors.unresolved, 1);
+    assert_eq!(
+        get_stashes(&active, &StashListRequest::default())
+            .unwrap()
+            .total,
+        2
+    );
+}
+
+#[test]
+fn graph_index_skips_commit_objects_without_a_base_parent() {
+    let fixture = fixture();
+    let root = fixture.commit("refs/heads/unrelated-root", "no base", &[], 1_050);
+    fixture
+        .repo
+        .reference("refs/stash", root, true, "fixture")
+        .unwrap();
+    let path = log_path(&fixture);
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(path, row(Oid::ZERO_SHA1, root, 1_050, "no base")).unwrap();
+
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let anchors = get_stash_anchors(&active).unwrap();
+    assert!(anchors.entries.is_empty());
+    assert_eq!(anchors.unresolved, 1);
+    assert_eq!(
+        get_stashes(&active, &StashListRequest::default())
+            .unwrap()
+            .total,
+        1
+    );
+}
+
+#[test]
+#[ignore = "release-mode maximum-inventory resolver benchmark"]
+#[allow(
+    clippy::print_stderr,
+    reason = "the benchmark reports its measured run time"
+)]
+fn twenty_thousand_unique_stash_objects_resolve_within_the_published_bound() {
+    use std::time::Instant;
+
+    let fixture = fixture();
+    let base = fixture.repo.head().unwrap().target().unwrap();
+    let mut lines = String::new();
+    let mut previous = Oid::ZERO_SHA1;
+    let mut newest = Oid::ZERO_SHA1;
+    for index in 0..MAX_STASH_ENTRIES {
+        let message = format!("stash object {index}");
+        let time = 2_000 + i64::from(index);
+        let signature =
+            Signature::new("Test Author", "test@example.com", &Time::new(time, 0)).unwrap();
+        let tree_id = fixture.repo.treebuilder(None).unwrap().write().unwrap();
+        let tree = fixture.repo.find_tree(tree_id).unwrap();
+        let parent = fixture.repo.find_commit(base).unwrap();
+        let stash = fixture
+            .repo
+            .commit(None, &signature, &signature, &message, &tree, &[&parent])
+            .unwrap();
+        lines.push_str(&row(previous, stash, time, &message));
+        previous = stash;
+        newest = stash;
+    }
+    fixture
+        .repo
+        .reference("refs/stash", newest, true, "benchmark")
+        .unwrap();
+    let path = log_path(&fixture);
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(path, lines).unwrap();
+
+    let started = Instant::now();
+    let index = get_stash_anchors(&ActiveRepo::validate(fixture.dir.path()).unwrap()).unwrap();
+    eprintln!(
+        "resolved {} unique stash objects in {:?}",
+        index.entries.len(),
+        started.elapsed()
+    );
+    assert_eq!(index.entries.len(), MAX_STASH_ENTRIES as usize);
+    assert_eq!(index.unresolved, 0);
 }
 
 #[test]
