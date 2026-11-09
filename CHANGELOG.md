@@ -10,7 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Stash inspection** — browse and search saved states, inspect net, staged, unstaged and untracked changes, and read previous or saved files without modifying Git; linked worktrees share the inventory while each tab keeps its own inspection.
-- **Stash graph markers** — find saved states from their visible base commits with grouped counts and an accessible picker, without changing graph history or selection.
 - **Stash graph markers** — see each unique stash object on its loaded base commit row and open the existing inspector from an accessible, bounded picker.
 
 ### Fixed

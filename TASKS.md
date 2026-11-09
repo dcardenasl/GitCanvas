@@ -7,10 +7,11 @@
 > [plan general](docs/plans/2026-09-08-plan-de-implementacion.md).
 
 **Estado al 2026-11-09:** v0.7 y la asociación visual de stash (ST-9) están implementadas
-y verificadas localmente en `dev`. La evidencia y límites están en
+y verificadas localmente en `dev`; los manifiestos se preparan como 0.7.0 para la build
+local de pruebas. La evidencia y límites están en
 [`docs/verification/v0.7.md`](docs/verification/v0.7.md).
-La verificación histórica de v0.6 está en [`docs/verification/v0.6.md`](docs/verification/v0.6.md). Los
-manifiestos están en 0.6.0, existe el tag local `v0.6.0` y `main` local contiene el
+La verificación histórica de v0.6 está en [`docs/verification/v0.6.md`](docs/verification/v0.6.md). El tag
+local `v0.6.0` existe y `main` local contiene el
 merge del PR #16. Esta revisión no verificó la publicación remota ni repitió release.
 `dev` incluye las entregas posteriores a v0.6 y la implementación completa de stash.
 La funcionalidad está verificada en macOS; Linux/Windows nativos y lector de pantalla real
@@ -26,8 +27,8 @@ los cierra ni les atribuye pruebas nuevas.
 **Estado de trabajo:** rama `dev`; ST-0–ST-9 completadas localmente. No se hizo push
 ni se consultó el servidor. No afirmar sincronización remota ni publicación.
 Se preservan `docs/audits/evidence/`, `docs/media/`, `install-backups/` y
-`tools/demo/record-v05*`, sin seguimiento; no agregarlos a commits. No cambiar versiones,
-crear tags ni publicar como parte de la planificación.
+`tools/demo/record-v05*`, sin seguimiento; no agregarlos a commits. La versión 0.7.0
+se prepara para pruebas locales; no crear tags ni publicar como parte de la planificación.
 
 ## Siguiente paso
 
