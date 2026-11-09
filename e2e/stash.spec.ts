@@ -3,9 +3,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { browser, expect } from "@wdio/globals";
+import { setOptions } from "expect-webdriverio";
 import { e2eRepository } from "../wdio.conf";
 import { waitForHistory } from "./history";
 import { clickAndConfirm, setReactSelectValue } from "./interactions";
+
+// The default assertion wait is 2 s, too short for a slow Windows runner loading 200 stashes.
+// Every spec runs in its own worker, so this does not leak into the others.
+setOptions({ wait: 20_000, interval: 250 });
 
 const PANEL = ".stash-detail";
 // Windows temp paths can use 8.3 aliases (RUNNER~1) while the app shows the canonical path,
