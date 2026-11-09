@@ -257,7 +257,27 @@ describe("read-only stash inspection", () => {
 
   it("shares inventory across worktrees while keeping each tab's inspection", async () => {
     await (await browser.$(LINKED_WORKTREE)).click();
-    await expect(browser.$(".stash-section .sidebar__count")).toHaveText("202");
+    try {
+      await expect(browser.$(".stash-section .sidebar__count")).toHaveText(
+        "202",
+      );
+    } catch (error) {
+      const state = await browser.execute(() => ({
+        tabs: [...document.querySelectorAll('[role="tab"]')].map((tab) => ({
+          title: tab.getAttribute("title"),
+          selected: tab.getAttribute("aria-selected"),
+        })),
+        alerts: [...document.querySelectorAll('[role="alert"]')].map(
+          (alert) => alert.textContent,
+        ),
+        section: document.querySelector(".stash-section")?.textContent ?? null,
+        sidebar: document.querySelector(".sidebar")?.textContent?.slice(0, 600),
+        width: innerWidth,
+      }));
+      throw new Error(`${String(error)}\nDIAG ${JSON.stringify(state)}`, {
+        cause: error,
+      });
+    }
     await expect(browser.$(PANEL)).not.toExist();
     await (await browser.$("[data-stash-row]")).click();
     await mode("Preparados");
