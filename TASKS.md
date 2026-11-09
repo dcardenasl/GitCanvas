@@ -197,7 +197,8 @@ comparación de commits ni escrituras Git. Leer [ADR 0002](docs/adr/0002-local-f
 
 v0.5 panel/filtros y worktrees (publicada) → v0.6 historial por archivo → v0.7 stash de solo lectura →
 v0.8 contribuyentes/releases →
-v0.9 proveedores → v0.10 crear/conectar repositorios → v0.11 gestión de ramas →
+v0.9 proveedores → v0.10 crear/conectar repositorios → v0.11 escrituras locales seguras
+(base de escrituras, stash aplicar/descartar/guardar, ramas) →
 v0.12 preparar/crear commits. Objetivos de planificación, sin fechas ni bumps.
 Desglosar cada entrega al prepararla siguiendo el roadmap y los acuerdos existentes.
 

@@ -16,7 +16,7 @@
 
 La secuencia objetivo es v0.4 gráfico/colores, v0.5 panel/filtros, v0.6 historial por
 archivo, v0.7 stash de solo lectura, v0.8 contribuyentes/releases, v0.9 proveedores, v0.10 crear/conectar repositorios,
-v0.11 gestión de ramas y v0.12 preparar/crear commits. Sin fechas ni bumps aplicados.
+v0.11 escrituras locales seguras (stash y ramas) y v0.12 preparar/crear commits. Sin fechas ni bumps aplicados.
 
 ## Estado del trabajo en curso
 

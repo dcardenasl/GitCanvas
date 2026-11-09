@@ -31,7 +31,7 @@ alcance aquí y mantener TASKS.md como fuente de ejecución. Cada entrega debe q
 | v0.8 | Contribuyentes y releases | Identidades con .mailmap, énfasis y navegación por autor; releases GitHub, notas, tag, adjuntos, caché sin conexión, recuperación de acceso y descargas explícitas. |
 | v0.9 | Múltiples proveedores | Separar Git local de capacidades del proveedor; GitLab como primera ampliación; cuentas/servidores y credenciales aisladas. Bitbucket, Azure DevOps y servidores propios quedan para ampliaciones según necesidad. |
 | v0.10 | Crear y conectar repositorios | Inicializar repositorios locales; crear remotos en proveedores compatibles; elegir cuenta/organización, nombre y visibilidad; conectar proyectos existentes y ofrecer primer push explícito. |
-| v0.11 | Gestión cotidiana de ramas | Crear, renombrar y eliminar ramas con protecciones; crear tags y gestionar remotos; fetch explícito y diferencias local/upstream. |
+| v0.11 | Escrituras locales seguras: stash y ramas | Primero la base común de escrituras (exclusión por directorio Git común, recuperación, deshacer). Después, stash: guardar todos los cambios, aplicar, aplicar y quitar, descartar con deshacer. Luego crear, renombrar y eliminar ramas con protecciones; crear tags y gestionar remotos; fetch explícito y diferencias local/upstream. Ver [registro de alcance](#registro-de-cambios-de-alcance). |
 | v0.12 | Preparar archivos y crear commits | Preparar/retirar archivos completos, título/descripción, borradores por proyecto, hooks y firma, recuperación de errores y actualización del gráfico. |
 
 ## Próxima entrega: v0.7 — stash de solo lectura
@@ -130,6 +130,26 @@ independiente del futuro alcance y de la posición del carril.
 - **v0.11:** definir guardias y recuperación de cada operación antes de exponerla.
   Respetar worktrees y operaciones concurrentes; borrar ramas o alterar remotos no
   se deduce de un clic de navegación. No incluir merge/rebase por inferencia.
+  Orden interno: (1) base de escrituras, (2) stash, (3) ramas, tags y remotos. El
+  stash va primero porque es el consumidor de menor riesgo: no toca historia, remotos
+  ni ramas, y cada operación es reversible. Contrato de stash:
+  - **Vista previa:** el inspector de v0.7 es el paso previo a aplicar; la acción se
+    ofrece desde él y desde la fila del panel.
+  - **Aplicar:** simulación previa de la mezcla en memoria. Si hay conflictos, cambios
+    locales que se pisarían o archivos no rastreados que colisionan, se rechaza sin
+    tocar el disco. Nunca deja un árbol en conflicto: la app no resuelve conflictos
+    hasta que exista su planificación específica. Aplica al worktree activo.
+  - **Aplicar y quitar (pop):** quita el stash solo después de verificar que la
+    aplicación terminó bien.
+  - **Descartar:** confirmación que muestra el mensaje y el SHA; conserva el SHA para
+    deshacer (reinsertarlo en el reflog) mientras la sesión o el objeto existan. Como
+    el stash es compartido, avisa cuando otros worktrees lo ven.
+  - **Guardar:** todos los cambios, con mensaje y opción de incluir no rastreados. Es
+    el complemento de aplicar y permite "guardar y cambiar de rama" cuando el checkout
+    rechaza por cambios locales. Guardar parcial (rutas, mantener índice) se agrupa con
+    la preparación de v0.12.
+  - Reutiliza la observación del reflog y el fingerprint de v0.7: tras cada escritura
+    el listado se actualiza sin invalidar el gráfico.
 - **v0.12:** aplicar el contrato de commits del plan de 2026-10-08: Git del sistema,
   hooks/firma, índice completo, validación HEAD/índice, borradores y conciliación de
   resultados indeterminados. Exclusión de escrituras por directorio Git común antes
@@ -191,15 +211,42 @@ Sin versión ni implementación comprometida:
 
 - Comparar dos commits o ramas.
 - Blame por línea.
-- Stash: aplicar y descartar (escrituras con guardias y recuperación); crear un
-  stash (se agrupa con la preparación de archivos de v0.12); nodo de stash en el
-  gráfico (posterior a v0.7, tras decidir su tratamiento en el layout).
+- Stash: aplicar, descartar y guardar todo están asignados a v0.11 (ver registro de
+  alcance). Sin versión: guardar parcial (rutas, mantener índice), que se agrupa con la
+  preparación de v0.12, y el nodo de stash en el gráfico (tras decidir su tratamiento
+  en el layout; hoy solo existe el marcador sobre el commit base).
 - Gestión de worktrees: creación y retirada; reconocimiento/navegación ya planificados para v0.5.
 - Acceso a pull requests/merge requests según proveedor.
 - Proveedores adicionales: Bitbucket, Azure DevOps y servidores propios.
 - Merge, rebase, cherry-pick y resolución de conflictos: requieren planificación
   específica de seguridad y recuperación.
 - Preparación por líneas y amend: posteriores al flujo de commits por archivos.
+
+## Registro de cambios de alcance
+
+### 2026-11-09 — Stash: dónde van las escrituras
+
+Pregunta: tras v0.7 (solo lectura), ¿aplicar y descartar se quitan, se adelantan o se
+dejan para cuando haya commits?
+
+Decisión: **se conservan, en v0.11, antes de commits (v0.12) y sin renumerar.**
+
+- **No se eliminan.** Inspeccionar sin poder actuar deja el flujo a medias, y el
+  inspector de v0.7 es justo la vista previa que aplicar necesita.
+- **No esperan a los commits.** Aplicar no depende de crearlos: checkout, pull y push
+  ya escriben sin que existan. Lo que el usuario hace con los cambios aplicados puede
+  seguir siendo externo hasta v0.12, igual que hoy.
+- **No se adelantan a v0.8–v0.10.** Aplicar y descartar son las primeras escrituras
+  que cambian el árbol de trabajo y el reflog. Necesitan antes la base de escrituras
+  (exclusión por directorio Git común, recuperación, deshacer) y esa base es la misma
+  de ramas y commits; construirla una vez y usar el stash como primer cliente reduce
+  el riesgo de v0.12. Aplicar con conflictos requeriría además una interfaz de
+  conflictos que sigue sin planificar, por eso se rechaza en vez de resolverse.
+- **Regla de adelanto:** si v0.8 construye la base de escrituras (lo exige para traer
+  tags), el stash se publica en la primera versión posterior a ella, sin esperar a
+  v0.11. Se registra aquí al decidirlo.
+- **Agrupación:** la secuencia queda como lectura (v0.4–v0.8), conexión y proveedores
+  (v0.9–v0.10) y escrituras locales (v0.11–v0.12), con las de menor riesgo primero.
 
 ## Seguimiento y evidencia
 
