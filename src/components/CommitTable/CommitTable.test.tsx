@@ -9,7 +9,8 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { CommitInfo } from "../../bindings";
+import type { CommitInfo, StashAnchorEntry } from "../../bindings";
+import { stashEntry } from "../../test/stash";
 
 import { CommitTable } from "./CommitTable";
 import { ROW_HEIGHT, graphWidth } from "../../lib/historyGeometry";
@@ -98,6 +99,97 @@ function withViewport(height: number): void {
 }
 
 describe("CommitTable", () => {
+  it("opens the stash picker without selecting the commit and preserves graph semantics", async () => {
+    withViewport(ROW_HEIGHT * 10);
+    const onSelect = vi.fn();
+    const onSelectStash = vi.fn();
+    const commit = makeCommits(1)[0];
+    if (commit === undefined) throw new Error("missing commit fixture");
+    const anchor: StashAnchorEntry = {
+      entry: stashEntry(),
+      base_commit_id: commit.id,
+    };
+
+    render(
+      <CommitTable
+        commits={[commit]}
+        selectedId={null}
+        onSelect={onSelect}
+        onSelectStash={onSelectStash}
+        stashesByBase={new Map([[commit.id, [anchor]]])}
+        activeStashId={null}
+        maxLanes={1}
+      />,
+    );
+
+    const row = screen.getByRole("row", { name: /commit 0/ });
+    expect(row.getAttribute("aria-rowindex")).toBe("1");
+    const trigger = screen.getByRole("button", {
+      name: "1 stash guardado desde este commit",
+    });
+    await userEvent.click(trigger);
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("dialog", { name: "Stashes basados en este commit" }),
+    ).not.toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /saved work/i }));
+    expect(onSelectStash).toHaveBeenCalledWith(anchor.entry);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("restores focus on dismissal and bounds long stash groups to pages", async () => {
+    withViewport(ROW_HEIGHT * 10);
+    const commit = makeCommits(1)[0];
+    if (commit === undefined) throw new Error("missing commit fixture");
+    const entries: StashAnchorEntry[] = Array.from(
+      { length: 101 },
+      (_, index) => ({
+        entry: stashEntry({
+          stash_id: index.toString(16).padStart(40, "0"),
+          index,
+        }),
+        base_commit_id: commit.id,
+      }),
+    );
+    render(
+      <CommitTable
+        commits={[commit]}
+        selectedId={null}
+        onSelect={() => undefined}
+        onSelectStash={() => undefined}
+        stashesByBase={new Map([[commit.id, entries]])}
+        maxLanes={1}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "101 stashes guardados desde este commit",
+    });
+    await userEvent.click(trigger);
+    expect(screen.getAllByRole("button", { name: /saved work/i })).toHaveLength(
+      50,
+    );
+    expect(screen.getByText("1 de 3")).not.toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Siguiente" }));
+    expect(screen.getAllByRole("button", { name: /saved work/i })).toHaveLength(
+      50,
+    );
+    expect(screen.getByText("2 de 3")).not.toBeNull();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+
+    await userEvent.click(trigger);
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+
+    await userEvent.click(trigger);
+    fireEvent.scroll(window);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
   it("mounts only the visible rows plus overscan, not the whole history", () => {
     withViewport(ROW_HEIGHT * 10);
     const commits = makeCommits(5000);
@@ -111,7 +203,7 @@ describe("CommitTable", () => {
       />,
     );
 
-    const rows = screen.getAllByRole("option");
+    const rows = screen.getAllByRole("row");
     // Ten visible rows plus two overscan margins; the exact count depends on
     // the virtualizer, but it must be nowhere near five thousand.
     expect(rows.length).toBeGreaterThan(0);
@@ -151,13 +243,13 @@ describe("CommitTable", () => {
       />,
     );
 
-    const selected = screen.getByRole("option", { selected: true });
+    const selected = screen.getByRole("row", { selected: true });
     selected.focus();
     await userEvent.keyboard("{ArrowDown}");
 
     expect(onSelect).toHaveBeenCalledWith(commits[3]?.id);
     expect(document.activeElement).toBe(
-      screen.getByRole("option", { name: /^commit 3\./ }),
+      screen.getByRole("row", { name: /^commit 3\./ }),
     );
   });
 
@@ -174,7 +266,7 @@ describe("CommitTable", () => {
 
     await userEvent.tab();
 
-    expect(document.activeElement).toBe(screen.getAllByRole("option")[0]);
+    expect(document.activeElement).toBe(screen.getAllByRole("row")[0]);
   });
 
   it.each([
@@ -196,7 +288,7 @@ describe("CommitTable", () => {
       />,
     );
 
-    screen.getByRole("option", { selected: true }).focus();
+    screen.getByRole("row", { selected: true }).focus();
     await userEvent.keyboard(`{${key}}`);
 
     expect(onSelect).toHaveBeenCalledWith(commits[targetIndex]?.id);
@@ -213,7 +305,7 @@ describe("CommitTable", () => {
       />,
     );
 
-    screen.getAllByRole("option")[0]?.focus();
+    screen.getAllByRole("row")[0]?.focus();
     await userEvent.keyboard("{Shift>}{F10}{/Shift}");
 
     expect(await screen.findByRole("menu")).toBeInstanceOf(HTMLElement);
@@ -298,7 +390,7 @@ describe("CommitTable", () => {
       />,
     );
 
-    const list = screen.getByRole("listbox", { name: "Historial de commits" });
+    const list = screen.getByRole("table", { name: "Historial de commits" });
     const expected = `${String(graphWidth(4))}px`;
 
     expect(list.style.getPropertyValue("--graph-width")).toBe(expected);
@@ -318,7 +410,7 @@ describe("CommitTable", () => {
       />,
     );
 
-    const label = screen.getAllByRole("option")[0]?.getAttribute("aria-label");
+    const label = screen.getAllByRole("row")[0]?.getAttribute("aria-label");
     expect(label).toContain("commit 0. por David Cardenas");
     expect(label).toMatch(/commit [0-9a-f]{7}$/);
   });
@@ -335,7 +427,7 @@ describe("CommitTable", () => {
       />,
     );
 
-    const row = screen.getAllByRole("option")[0];
+    const row = screen.getAllByRole("row")[0];
     if (row === undefined) throw new Error("no rows rendered");
     fireEvent.contextMenu(row);
 
@@ -362,7 +454,7 @@ describe("CommitTable", () => {
       />,
     );
 
-    const row = screen.getAllByRole("option")[0];
+    const row = screen.getAllByRole("row")[0];
     if (row === undefined) throw new Error("no rows rendered");
     fireEvent.contextMenu(row);
     fireEvent.click(
@@ -391,7 +483,7 @@ describe("CommitTable", () => {
       />,
     );
 
-    const row = screen.getAllByRole("option")[0];
+    const row = screen.getAllByRole("row")[0];
     if (row === undefined) throw new Error("no rows rendered");
     fireEvent.contextMenu(row);
     fireEvent.click(
@@ -419,7 +511,7 @@ describe("CommitTable", () => {
       />,
     );
 
-    const row = screen.getAllByRole("option")[1];
+    const row = screen.getAllByRole("row")[1];
     if (row === undefined) throw new Error("no rows rendered");
     fireEvent.contextMenu(row);
 

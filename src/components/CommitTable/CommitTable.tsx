@@ -11,7 +11,7 @@ import {
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 
-import type { CommitInfo } from "../../bindings";
+import type { CommitInfo, StashAnchorEntry } from "../../bindings";
 import type { RefBadge } from "../../state/refs";
 
 import { copyText } from "../../lib/clipboard";
@@ -22,6 +22,7 @@ import {
   type VisibleWindow,
 } from "../../lib/historyGeometry";
 import { ContextMenu } from "../ContextMenu";
+import { StashAnchor } from "./StashAnchor";
 
 import { authorInitials, formatCommitTime, shortId } from "./format";
 import "./CommitTable.css";
@@ -77,6 +78,9 @@ interface CommitTableProps {
    * graph is to see where the branches are without cross-referencing a list.
    */
   readonly refsByCommit?: ReadonlyMap<string, readonly RefBadge[]>;
+  readonly stashesByBase?: ReadonlyMap<string, readonly StashAnchorEntry[]>;
+  readonly activeStashId?: string | null;
+  readonly onSelectStash?: (entry: StashAnchorEntry["entry"]) => void;
 }
 
 /** How long scrolling must pause before the position is reported. */
@@ -122,6 +126,9 @@ export function CommitTable({
   anchorCommitId = null,
   onAnchorChange,
   refsByCommit,
+  stashesByBase,
+  activeStashId = null,
+  onSelectStash,
 }: CommitTableProps) {
   const { t } = useTranslation("history");
   const commitIndexById = useMemo(() => {
@@ -270,6 +277,7 @@ export function CommitTable({
       index: number,
       commit: CommitInfo,
     ) => {
+      if (event.target !== event.currentTarget) return;
       if (
         event.key === "ContextMenu" ||
         (event.key === "F10" && event.shiftKey)
@@ -370,8 +378,9 @@ export function CommitTable({
 
         <div
           className="commit-table__rows"
-          role="listbox"
+          role="table"
           aria-label={t("table.label")}
+          aria-rowcount={commits.length}
           // The width the graph column needs. Applied to each row's `left`
           // rather than as padding here: rows are absolutely positioned, and an
           // absolutely positioned box resolves `left` against the padding box,
@@ -395,7 +404,8 @@ export function CommitTable({
                 className={
                   selected ? "commit-row commit-row--selected" : "commit-row"
                 }
-                role="option"
+                role="row"
+                aria-rowindex={item.index + 1}
                 aria-selected={selected}
                 /*
                  * Without this the accessible name is whatever the DOM
@@ -431,7 +441,7 @@ export function CommitTable({
                   transform: `translateY(${String(item.start)}px)`,
                 }}
               >
-                <span className="commit-row__message">
+                <span className="commit-row__message" role="cell">
                   {refsByCommit?.get(commit.id) !== undefined && (
                     <CommitRefs
                       refs={refsByCommit.get(commit.id) ?? []}
@@ -440,11 +450,19 @@ export function CommitTable({
                       }}
                     />
                   )}
+                  {(stashesByBase?.get(commit.id)?.length ?? 0) > 0 &&
+                    onSelectStash !== undefined && (
+                      <StashAnchor
+                        entries={stashesByBase?.get(commit.id) ?? []}
+                        activeStashId={activeStashId}
+                        onSelect={onSelectStash}
+                      />
+                    )}
                   <span className="commit-row__summary" title={commit.summary}>
                     {commit.summary}
                   </span>
                 </span>
-                <span className="commit-row__author">
+                <span className="commit-row__author" role="cell">
                   <span className="commit-row__avatar" aria-hidden="true">
                     {authorInitials(commit.author_name)}
                   </span>
@@ -452,8 +470,10 @@ export function CommitTable({
                     {commit.author_name}
                   </span>
                 </span>
-                <span className="commit-row__sha">{shortId(commit.id)}</span>
-                <time className="commit-row__date">
+                <span className="commit-row__sha" role="cell">
+                  {shortId(commit.id)}
+                </span>
+                <time className="commit-row__date" role="cell">
                   {formatCommitTime(commit.commit_time)}
                 </time>
               </div>

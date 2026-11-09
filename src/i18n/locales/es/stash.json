@@ -39,5 +39,16 @@
   "filesCount": "{{count}} archivos",
   "readFailed": "No se pudo leer este estado guardado.",
   "hardLimit": "Este archivo supera el tamaño máximo de previsualización.",
-  "sourcePath": "Ruta guardada: {{path}}"
+  "sourcePath": "Ruta guardada: {{path}}",
+  "graph": {
+    "title": "Stashes basados en este commit",
+    "count_one": "{{count}} stash guardado desde este commit",
+    "count_other": "{{count}} stashes guardados desde este commit",
+    "page": "{{page}} de {{pages}}",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "refreshFailed": "No se pudieron actualizar los marcadores de stash. Se conservan los últimos disponibles.",
+    "count_many": "{{count}} stashes guardados desde este commit",
+    "alias": "stash@{{index}}"
+  }
 }

@@ -144,13 +144,123 @@
 }
 
 .commit-row__summary {
-  /* Never less than a readable stretch, however many badges the row carries. */
-  min-width: 12ch;
+  min-width: 0;
+  flex: 1 1 auto;
   overflow: hidden;
   color: var(--ink);
   font-size: var(--font-size-ui);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.stash-anchor {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 30px;
+  height: 22px;
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, var(--accent) 54%, var(--border));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--accent);
+  font: 600 var(--font-size-caption) var(--font-mono);
+  cursor: pointer;
+}
+
+.stash-anchor:hover,
+.stash-anchor--active {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.stash-anchor:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.stash-anchor svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+
+.stash-anchor-popover {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  width: min(360px, calc(100vw - 16px));
+  max-height: min(360px, calc(100vh - 16px));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sidebar);
+  box-shadow: 0 12px 36px rgb(0 0 0 / 36%);
+}
+
+.stash-anchor-popover__list {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.stash-anchor-popover__entry {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--divider);
+  background: transparent;
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+}
+
+.stash-anchor-popover__entry:hover,
+.stash-anchor-popover__entry:focus-visible {
+  background: var(--surface-hover);
+}
+
+.stash-anchor-popover__message {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stash-anchor-popover__meta,
+.stash-anchor-popover__pager {
+  color: var(--ink-muted);
+  font-size: var(--font-size-caption);
+}
+
+.stash-anchor-popover__pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--divider);
+}
+
+.stash-anchor-popover__pager button {
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.stash-anchor-popover__pager button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .commit-row__author {

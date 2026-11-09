@@ -69,6 +69,46 @@ describe("read-only stash inspection", () => {
     baseline = snapshot();
   });
 
+  it("shows the stash on its visible base row and opens its inspector from the popover", async () => {
+    await waitForHistory(1);
+    const row = await browser.$(".commit-row");
+    await row.waitForDisplayed({ timeout: 20_000 });
+    await row.click();
+    const selectedRowName = await browser
+      .$(".commit-row--selected")
+      .getAttribute("aria-label");
+    if (selectedRowName === null) {
+      throw new Error("The graph row did not retain its selection name");
+    }
+    const graphScrollTop = await browser
+      .$(".commit-table")
+      .getProperty("scrollTop");
+    const trigger = await row.$(".stash-anchor");
+    await trigger.waitForDisplayed({ timeout: 20_000 });
+    await expect(trigger).toHaveText("1");
+    await trigger.click();
+    await expect(browser.$(".stash-anchor-popover")).toBeDisplayed();
+    await expect(browser.$(".stash-anchor-popover")).toHaveText(
+      expect.stringContaining("saved states with a deliberately long message"),
+    );
+    await (await browser.$(".stash-anchor-popover__entry")).click();
+    await expect(browser.$(PANEL)).toBeDisplayed();
+    await expect(browser.$(PANEL)).toHaveText(
+      expect.stringContaining("saved states with a deliberately long message"),
+    );
+    await expect(browser.$(".stash-anchor--active")).toExist();
+    await expect(browser.$(".commit-row--selected")).toHaveAttribute(
+      "aria-label",
+      selectedRowName,
+    );
+    expect(await browser.$(".commit-table").getProperty("scrollTop")).toBe(
+      graphScrollTop,
+    );
+    await browser.keys(["Escape"]);
+    await expect(browser.$(PANEL)).not.toExist();
+    expect(snapshot()).toBe(baseline);
+  });
+
   it("opens metadata over the graph and inspects all saved comparisons and whole versions", async () => {
     await (await browser.$("[data-stash-row]")).click();
     await expect(browser.$(PANEL)).toBeDisplayed();
@@ -137,6 +177,7 @@ describe("read-only stash inspection", () => {
     await expect(browser.$(".stash-section")).toHaveText(
       expect.stringContaining("No hay stashes que coincidan"),
     );
+    await expect(browser.$(".stash-anchor")).toHaveText("1");
     await expect(browser.$(PANEL)).toHaveText(
       expect.stringContaining("saved states with a deliberately long message"),
     );

@@ -197,6 +197,9 @@ export const acknowledgeShutdown = () => result(commands.acknowledgeShutdown());
 /** Lists the bounded shared stash reflog, with server-side search and membership. */
 export const getStashes = (path: string, request: StashListRequest) =>
   result(commands.getStashes(path, request));
+/** Resolves unique stash objects to first-parent commits for visible graph rows. */
+export const getStashAnchors = (path: string) =>
+  result(commands.getStashAnchors(path));
 /** Reads one page of exact saved comparison files, without patch text. */
 export const getStashFiles = (path: string, request: StashFilesRequest) =>
   result(commands.getStashFiles(path, request));

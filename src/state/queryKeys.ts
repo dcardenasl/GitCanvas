@@ -28,6 +28,7 @@ export const queryKeys = {
     search === undefined
       ? (["stash-list", root] as const)
       : (["stash-list", root, search, selected ?? null] as const),
+  stashAnchors: (root: string | null) => ["stash-anchors", root] as const,
   stashFiles: (root: string | null, id: string | null, mode: string) =>
     ["stash-files", root, id, mode] as const,
   stashDiff: (
@@ -122,6 +123,7 @@ function liveKeys(repositoryPath: string, scope: LiveQueryScope): QueryKey[] {
 
   const stashes: QueryKey[] = [
     queryKeys.stashes(repositoryPath),
+    queryKeys.stashAnchors(repositoryPath),
     queryKeys.stashFingerprint(repositoryPath),
   ];
   switch (scope) {

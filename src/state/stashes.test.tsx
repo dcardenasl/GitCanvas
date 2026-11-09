@@ -15,12 +15,13 @@ import {
 import { navigationActionsFor } from "./workspace";
 import { queryKeys } from "./queryKeys";
 import { IpcError } from "../lib/ipc";
-import { useStashes, useStashRuntime } from "./stashes";
+import { useStashAnchors, useStashes, useStashRuntime } from "./stashes";
 
 const ipc = vi.hoisted(() => ({
   getStashes: vi.fn<typeof Ipc.getStashes>(),
   getStashFiles: vi.fn<typeof Ipc.getStashFiles>(),
   getStashFingerprint: vi.fn<typeof Ipc.getStashFingerprint>(),
+  getStashAnchors: vi.fn<typeof Ipc.getStashAnchors>(),
 }));
 vi.mock("../lib/ipc", async (original) => ({
   ...(await original<typeof Ipc>()),
@@ -33,6 +34,11 @@ beforeEach(() => {
   openTestProject();
   ipc.getStashes.mockResolvedValue(stashPage());
   ipc.getStashFingerprint.mockResolvedValue({ revision: "first" });
+  ipc.getStashAnchors.mockResolvedValue({
+    revision: "first",
+    entries: [],
+    unresolved: 0,
+  });
 });
 afterEach(() => {
   cleanup();
@@ -165,5 +171,34 @@ describe("stash session queries", () => {
         String(filters?.queryKey?.[0]).startsWith("stash-"),
       ),
     ).toBe(true);
+  });
+
+  it("keeps the last valid graph index available when a refresh fails", async () => {
+    const entry = stashEntry();
+    const anchor = { entry, base_commit_id: "b".repeat(40) };
+    ipc.getStashAnchors.mockResolvedValueOnce({
+      revision: "first",
+      entries: [anchor],
+      unresolved: 0,
+    });
+    const client = createTestQueryClient();
+    const { result } = renderHook(() => useStashAnchors("/tmp/repo"), {
+      wrapper: createQueryClientWrapper(client),
+    });
+    await waitFor(() => {
+      expect(result.current.data?.entries).toEqual([anchor]);
+    });
+
+    ipc.getStashAnchors.mockRejectedValue(
+      new IpcError({ kind: "Io", message: "unavailable" }),
+    );
+    let refreshed:
+      Awaited<ReturnType<typeof result.current.refetch>> | undefined;
+    await act(async () => {
+      refreshed = await result.current.refetch();
+    });
+    expect(refreshed?.isError).toBe(true);
+    expect(ipc.getStashAnchors.mock.calls.length).toBeGreaterThan(1);
+    expect(result.current.data?.entries).toEqual([anchor]);
   });
 });

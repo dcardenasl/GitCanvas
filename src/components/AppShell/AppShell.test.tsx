@@ -41,6 +41,8 @@ vi.mock("@tauri-apps/api/webview", () => ({
 }));
 
 vi.mock("../../lib/ipc", () => ({
+  getStashAnchors: () =>
+    Promise.resolve({ revision: "stash-revision", entries: [], unresolved: 0 }),
   getStashes: () => Promise.resolve(stashPage()),
   getStashFingerprint: () => Promise.resolve({ revision: "stash-revision" }),
   getCommits: () => getCommits(),

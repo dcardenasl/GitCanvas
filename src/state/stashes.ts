@@ -6,11 +6,32 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type { StashComparisonMode } from "../bindings";
 import { errorKind } from "../lib/errors";
-import { getStashes, getStashFiles, getStashFingerprint } from "../lib/ipc";
+import {
+  getStashes,
+  getStashAnchors,
+  getStashFiles,
+  getStashFingerprint,
+} from "../lib/ipc";
 import { shouldRetryLocalRead } from "../lib/query-retry";
 import { invalidateLive, queryKeys } from "./queryKeys";
 import { pollInterval } from "./worktree";
 import { useNavigation, useNavigationActions } from "./workspace";
+
+/** Complete stash-to-base index, independent of sidebar filtering and paging. */
+export function useStashAnchors(root: string | null) {
+  return useQuery({
+    queryKey: queryKeys.stashAnchors(root),
+    enabled: root !== null,
+    queryFn: () => {
+      if (root === null) throw new Error("No repository is open");
+      return getStashAnchors(root);
+    },
+    // Reopening an inactive worktree must eventually refresh an index whose
+    // fingerprint changed while that tab was not the observed one.
+    staleTime: 5_000,
+    retry: shouldRetryLocalRead,
+  });
+}
 
 /** Debounces server-side search; every page still searches the complete snapshot. */
 export function useStashes(root: string | null, search: string) {

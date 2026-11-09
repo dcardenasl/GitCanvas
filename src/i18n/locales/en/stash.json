@@ -39,5 +39,16 @@
   "filesCount": "{{count}} files",
   "readFailed": "Could not read this saved state.",
   "hardLimit": "This file exceeds the maximum preview size.",
-  "sourcePath": "Saved path: {{path}}"
+  "sourcePath": "Saved path: {{path}}",
+  "graph": {
+    "title": "Stashes based on this commit",
+    "count_one": "{{count}} stash saved from this commit",
+    "count_other": "{{count}} stashes saved from this commit",
+    "page": "{{page}} of {{pages}}",
+    "previous": "Previous",
+    "next": "Next",
+    "refreshFailed": "Could not refresh stash markers. The last available markers are still shown.",
+    "count_many": "{{count}} stashes saved from this commit",
+    "alias": "stash@{{index}}"
+  }
 }

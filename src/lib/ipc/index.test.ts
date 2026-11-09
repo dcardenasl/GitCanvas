@@ -288,6 +288,12 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
     ],
   ],
   [
+    "getStashAnchors",
+    () => ipc.getStashAnchors(PATH),
+    "getStashAnchors",
+    [PATH],
+  ],
+  [
     "getStashFiles",
     () =>
       ipc.getStashFiles(PATH, {

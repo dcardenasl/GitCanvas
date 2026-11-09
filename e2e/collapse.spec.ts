@@ -10,7 +10,7 @@ describe("reading a file with the sidebar collapsed", () => {
   });
 
   it("gives the file view the room the sidebar released", async () => {
-    const rows = await $$('[role="option"]');
+    const rows = await $$('[role="row"]');
     const row = rows[4];
     if (row === undefined) throw new Error("Expected at least five commits");
     await row.click();

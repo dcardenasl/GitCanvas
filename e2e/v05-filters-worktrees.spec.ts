@@ -83,7 +83,7 @@ describe("v0.5 reference filters and linked worktrees", () => {
   it("walks only the selected refs and preserves an excluded commit detail", async () => {
     await waitForHistory(3);
 
-    const merge = await $('[role="option"]*=merge side into main');
+    const merge = await $('[role="row"]*=merge side into main');
     await merge.click();
     await $(".sidebar__head-label input[type='checkbox']").click();
     await $('[aria-label="Alternar todas las referencias de Local"]').click();
@@ -93,8 +93,7 @@ describe("v0.5 reference filters and linked worktrees", () => {
     await $('[aria-label="Incluir side-snapshot en el historial"]').click();
 
     await browser.waitUntil(
-      async () =>
-        !(await $('[role="option"]*=merge side into main').isExisting()),
+      async () => !(await $('[role="row"]*=merge side into main').isExisting()),
       { timeoutMsg: "the filtered walk still included the main-only merge" },
     );
     await expect(
@@ -104,13 +103,13 @@ describe("v0.5 reference filters and linked worktrees", () => {
         "Este commit está fuera de las referencias incluidas en el historial.",
       ),
     );
-    await expect($('[role="option"]*=second commit on side')).toBeDisplayed();
+    await expect($('[role="row"]*=second commit on side')).toBeDisplayed();
 
     await $(
       '//aside[@aria-label="Detalle del commit"]//button[contains(normalize-space(.), "Mostrar todas las referencias y localizar commit")]',
     ).click();
     await browser.waitUntil(
-      async () => await $('[role="option"]*=merge side into main').isExisting(),
+      async () => await $('[role="row"]*=merge side into main').isExisting(),
     );
     await expect(
       $('[aria-label="Detalle del commit"] [role="status"]'),
@@ -217,7 +216,7 @@ describe("v0.5 reference filters and linked worktrees", () => {
     await $("button*=Mostrar todo").click();
     await waitForHistory(3);
     await $('[aria-label="Incluir side-snapshot en el historial"]').click();
-    const merge = await $('[role="option"]*=merge side into main');
+    const merge = await $('[role="row"]*=merge side into main');
     await merge.click();
     await $('[aria-label="Detalle del commit"] .file-row').click();
     await browser.waitUntil(async () => await $(".file-diff").isDisplayed(), {

@@ -9,7 +9,7 @@ import { waitForHistory } from "./history";
 describe("commit tree browsing", () => {
   before(async () => {
     await waitForHistory();
-    const commits = await $$('[role="option"]');
+    const commits = await $$('[role="row"]');
     await commits[0]?.click();
     await browser.waitUntil(
       async () =>

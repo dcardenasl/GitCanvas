@@ -36,9 +36,7 @@ async function expectProject(
   otherFile: string,
 ) {
   await waitForHistory();
-  await expect($('[role="option"]')).toHaveText(
-    expect.stringContaining(summary),
-  );
+  await expect($('[role="row"]')).toHaveText(expect.stringContaining(summary));
   const panel = await $('[aria-label="Cambios locales"]');
   await expect(panel).toHaveText(expect.stringContaining(localFile));
   await expect(panel).not.toHaveText(expect.stringContaining(otherFile));

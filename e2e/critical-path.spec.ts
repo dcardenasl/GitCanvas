@@ -18,7 +18,7 @@ describe("open a repository and read a commit", () => {
   });
 
   it("draws the history over the commit rows", async () => {
-    const rows = await $$('[role="option"]');
+    const rows = await $$('[role="row"]');
     await expect(rows).toBeElementsArrayOfSize({ gte: 3 });
 
     const nodes = await $$(".graph-canvas circle");
@@ -36,7 +36,7 @@ describe("open a repository and read a commit", () => {
   });
 
   it("shows the diff of the commit that is selected", async () => {
-    const rows = await $$('[role="option"]');
+    const rows = await $$('[role="row"]');
     const row = rows[0];
     if (row === undefined) throw new Error("Expected a commit in history");
     await row.click();

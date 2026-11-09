@@ -12,7 +12,7 @@ const DETAIL = '[aria-label="Detalle del commit"]';
 
 /** The graph row whose summary contains `summary`. Rows are announced as options. */
 function commitRow(summary: string) {
-  return browser.$(`//*[@role="option"][contains(., "${summary}")]`);
+  return browser.$(`//*[@role="row"][contains(., "${summary}")]`);
 }
 
 /**
