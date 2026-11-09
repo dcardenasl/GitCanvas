@@ -45,6 +45,10 @@ updates refresh the inventory without rebuilding graph roots. Linked worktrees s
 inventory, while tab selection and bounded query caches are session state; only section
 folding is persisted. Stash inspection has no write command. See [ADR 0009](docs/adr/0009-read-only-stash.md)
 and [the v0.7 verification record](docs/verification/v0.7.md).
+The graph association is a separate bounded query: unique stash OIDs resolve only the
+first parent of their commit, then annotate loaded history rows without adding nodes
+or edges. Its accessible picker pages at most 50 entries at a time and opens the existing
+inspector while preserving graph navigation.
 
 ## Three boundaries, each enforced by a build failure
 

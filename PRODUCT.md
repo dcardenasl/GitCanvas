@@ -31,7 +31,9 @@ commit. Stash inspection (v0.7 in dev) lists saved states and compares the base,
 index, saved worktree and saved untracked files with bounded content and diffs. It never
 applies, creates or deletes a stash, and never changes the graph. Linked worktrees share
 the stash inventory; inspection context is per tab and session-only, while section
-folding is durable.
+folding is durable. Each unique stash object is associated with its first-parent base
+commit on loaded graph rows using an Orchid count and a bounded accessible picker;
+the association does not add graph nodes or change selection, filters or paging.
 
 ## Brand Commitments
 

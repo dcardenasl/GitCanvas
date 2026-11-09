@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted and implemented in v0.7 — 2026-11-09. ST-0–ST-8 are implemented in `dev`;
-macOS verification and remaining platform limits are recorded in
+Accepted and implemented in v0.7 — 2026-11-09. ST-0–ST-9 are implemented in `dev`.
+Verification and remaining platform limits are recorded in
 [`docs/verification/v0.7.md`](../verification/v0.7.md). This does not represent a release.
 See the [implementation plan](../plan/2026-11-08-v0.7-implementacion.md)
 for the decision record, task dependencies, bounds and acceptance matrix.
@@ -171,6 +171,13 @@ pairing with a notice. Binary and non-blob statistics are explicitly unavailable
 UTF-8 replacement expansion is counted before allocating returned text. No new
 cache or production subprocess is introduced. The measured native tree-diff stage
 remains libgit2 work, not a claimed cancellable or hard-deadline operation.
+
+ST-9 adds an annotation layer to loaded commit rows, based on the first parent of each
+stash commit. It does not add graph nodes or edges. The index is separate from ordinary
+stash listing so missing stash objects cannot break inventory reads; duplicate reflog
+aliases collapse by stash OID for graph counts and popover entries. Only already loaded
+commit rows are annotated. Resolution is bounded, and each index carries the reflog
+revision that produced it; stash observation invalidates the root-owned cache.
 
 ## References
 

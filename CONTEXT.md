@@ -84,7 +84,7 @@ replaces the graph while it is open and is kept only for the session, never writ
 disk. Its query is immutable per start commit, so a refresh from a moved HEAD is a new
 query. Opening it never changes the graph's reference filters.
 
-## Stash inspection (v0.7 implemented in dev)
+## Stash inspection (v0.7 implemented in dev; not released)
 
 Read-only stash listing and saved-state inspection are implemented from core through
 IPC and UI. It reads a bounded shared reflog without creating it;
@@ -103,6 +103,11 @@ bounded to 64 MiB of unique readable blobs; oversized files keep metadata and ex
 rename pairing with an explicit notice. Linux/Windows native verification and a real
 screen-reader pass remain open. Evidence and platform limits are recorded in
 `docs/verification/v0.7.md`.
+The agreed ST-9 association is a compact Orchid count on already loaded base-commit
+rows. Its revision-bound index resolves each unique stash OID to the stash commit's
+first parent; it reads no trees and changes no graph geometry or filters. A bounded,
+keyboard-accessible popover opens the existing inspector without changing graph
+selection. Missing objects remain in inventory and have no anchor.
 
 ## Session entry points
 

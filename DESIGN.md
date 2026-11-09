@@ -93,6 +93,13 @@ and saved sides are read on demand. Search spans the complete snapshot, and a se
 stash remains addressable by object id outside the current page or search. The inventory is
 shared across linked worktrees, while selection and navigation are per tab. Only folding
 persists. Inspection does not write to Git; closing it restores the graph selection and focus.
+When the base commit is already among the loaded rows, a compact Orchid stash chip with
+a unique-object count sits after reference labels and before the commit message. It adds
+no graph node or connector. Activating it opens a bounded anchored popover; choosing an
+entry opens the existing stash inspector and leaves graph selection and position intact.
+The chip remains visible on narrow rows while the commit message truncates. Its active
+group uses a subtle Orchid fill. Unknown base commits have no canvas marker; the sidebar
+inventory remains complete. See ST-9 in the v0.7 plan.
 
 ## Platform behavior
 

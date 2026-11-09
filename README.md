@@ -36,6 +36,8 @@ Browse and search saved stashes without applying, creating or deleting them. Com
 the saved result, staged changes, unstaged changes and saved untracked files; inspect
 previous or saved file contents with the same bounded readers as the rest of the app.
 Linked worktrees share the inventory, while each tab keeps its own inspection.
+When a stash's base commit is already loaded, the graph row shows a compact Orchid
+count. Open it to choose a stash and inspect it without moving the graph selection.
 
 ## What's new in 0.5
 

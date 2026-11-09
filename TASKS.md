@@ -6,8 +6,9 @@
 > [tres funcionalidades](docs/plan/2026-10-08-plan-tres-funcionalidades.md) y el
 > [plan general](docs/plans/2026-09-08-plan-de-implementacion.md).
 
-**Estado al 2026-11-09:** v0.7 está implementada localmente en `dev`; la evidencia de su
-verificación y sus límites está en [`docs/verification/v0.7.md`](docs/verification/v0.7.md).
+**Estado al 2026-11-09:** v0.7 y la asociación visual de stash (ST-9) están implementadas
+y verificadas localmente en `dev`. La evidencia y límites están en
+[`docs/verification/v0.7.md`](docs/verification/v0.7.md).
 La verificación histórica de v0.6 está en [`docs/verification/v0.6.md`](docs/verification/v0.6.md). Los
 manifiestos están en 0.6.0, existe el tag local `v0.6.0` y `main` local contiene el
 merge del PR #16. Esta revisión no verificó la publicación remota ni repitió release.
@@ -22,7 +23,7 @@ Los gates históricos sin evidencia siguen abiertos: GRF-5, V05-VERIFY, WS-17 y 
 límites declarados en las verificaciones de v0.4–v0.6. La verificación de v0.7 no
 los cierra ni les atribuye pruebas nuevas.
 
-**Estado de trabajo:** rama `dev`; cierre de v0.7 completado localmente. No se hizo push
+**Estado de trabajo:** rama `dev`; ST-0–ST-9 completadas localmente. No se hizo push
 ni se consultó el servidor. No afirmar sincronización remota ni publicación.
 Se preservan `docs/audits/evidence/`, `docs/media/`, `install-backups/` y
 `tools/demo/record-v05*`, sin seguimiento; no agregarlos a commits. No cambiar versiones,
@@ -30,17 +31,16 @@ crear tags ni publicar como parte de la planificación.
 
 ## Siguiente paso
 
-v0.7 queda cerrada en `dev`. La siguiente entrega se define según el roadmap vigente.
-Los gates históricos y la verificación de v0.7 en Linux/Windows/lector real siguen como
-seguimiento independiente.
+ST-9 está completa. Linux/Windows nativos, lector de pantalla real y los gates históricos
+siguen como seguimiento independiente; no autorizan ni implican publicar v0.7.
 
 ## Cola de trabajo
 
-### v0.7 — Stash de solo lectura (completada en dev)
+### v0.7 — Stash de solo lectura (ST-0–ST-9 completadas en `dev`; sin publicar)
 
 Plan: [decisiones ST-D01–ST-D10, contrato, matriz y dependencias](docs/plan/2026-11-08-v0.7-implementacion.md).
-Arquitectura: [ADR 0009](docs/adr/0009-read-only-stash.md), aceptada para ST-1 y
-implementada de ST-0 a ST-8. Evidencia completa y límites:
+Arquitectura: [ADR 0009](docs/adr/0009-read-only-stash.md), aceptada e implementada.
+Evidencia y límites:
 [verificación v0.7](docs/verification/v0.7.md).
 
 - [x] **ST-0 — Plan y contrato.** Entrevista, decisiones, diseño técnico, límites,
@@ -82,6 +82,12 @@ implementada de ST-0 a ST-8. Evidencia completa y límites:
       build y evidencia real; actualizar producto/arquitectura y CHANGELOG según
       comportamiento implementado. Sin autorización implícita de release. Depende
       de ST-1–ST-7.
+- [x] **ST-9 — Asociar visualmente stashes con sus commits base.** Chip orchid compacto
+      dentro de filas ya cargadas, agregado por OID único; popover de selección
+      accesible, sin modificar geometría, filtros, raíces ni selección del grafo.
+      Consulta de padres separada y acotada, identidad por revisión, actualización
+      resistente a errores y evidencia de rendimiento/accesibilidad. Contrato, imagen
+      y aceptación en [plan v0.7](docs/plan/2026-11-08-v0.7-implementacion.md#st-9--anotaciones-de-stash-en-las-filas-del-grafo).
 
 ### Entregas anteriores y seguimiento
 
