@@ -190,9 +190,16 @@ fn stash_path(path: &Path, paths: &WatchPaths, kind: EventKind) -> bool {
         return true;
     }
     // kqueue can report an atomic reflog replacement on the containing
-    // directory. Reflog-container edits are not graph-root changes.
+    // directory. Reflog-container edits are not graph-root changes. A bare
+    // modification of that directory is not enough: Windows reports one for the
+    // parent of every branch reflog, so each commit would also look like a stash.
     if relative == Path::new("logs/refs") {
-        return true;
+        return !matches!(
+            kind,
+            EventKind::Modify(
+                notify::event::ModifyKind::Any | notify::event::ModifyKind::Metadata(_)
+            )
+        );
     }
     // Parent directories matter when first created, removed or replaced. Their
     // ordinary mtime changes alone must not turn every commit into a stash event.
@@ -556,5 +563,25 @@ mod tests {
             assert!(scopes.contains(&ChangeScope::Metadata));
             assert_eq!(scopes.len(), 2);
         }
+    }
+
+    #[test]
+    fn a_bare_modification_of_the_reflog_parent_is_not_a_stash_event() {
+        let common = PathBuf::from("/tmp/refs/repository/.git");
+        let paths = WatchPaths {
+            common: common.clone(),
+            metadata: vec![common.clone()],
+            registry: common.join("worktrees"),
+        };
+        for kind in [
+            EventKind::Modify(ModifyKind::Any),
+            EventKind::Modify(ModifyKind::Metadata(notify::event::MetadataKind::Any)),
+        ] {
+            let event = Event::new(kind).add_path(common.join("logs/refs"));
+            assert!(!super::classify_scopes(&event, &paths).contains(&ChangeScope::Stashes));
+        }
+        let event = Event::new(EventKind::Modify(ModifyKind::Data(DataChange::Any)))
+            .add_path(common.join("logs/refs"));
+        assert!(super::classify_scopes(&event, &paths).contains(&ChangeScope::Stashes));
     }
 }
