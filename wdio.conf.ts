@@ -125,7 +125,8 @@ function createFixtureRepository(
     | "local-changes"
     | "workspace"
     | "graph-performance"
-    | "file-history",
+    | "file-history"
+    | "stash",
 ): OwnedFixture {
   const repository = fs.mkdtempSync(path.join(os.tmpdir(), "gitcanvas-e2e-"));
   const token = randomUUID();
@@ -159,6 +160,45 @@ function createFixtureRepository(
         input: stream.join(""),
         stdio: ["pipe", "pipe", "pipe"],
       });
+      return { repository: fs.realpathSync(repository), token };
+    }
+
+    if (kind === "stash") {
+      fs.writeFileSync(path.join(repository, "dual.txt"), "base\n");
+      fs.writeFileSync(path.join(repository, "cancel.txt"), "base\n");
+      fs.writeFileSync(path.join(repository, ".gitignore"), "ignored.txt\n");
+      git("add", "dual.txt", "cancel.txt", ".gitignore");
+      git("commit", "-m", "stash base");
+      git("branch", "side");
+      fs.writeFileSync(path.join(repository, "dual.txt"), "prepared\n");
+      fs.writeFileSync(
+        path.join(repository, "cancel.txt"),
+        "prepared cancellation\n",
+      );
+      git("add", "dual.txt", "cancel.txt");
+      fs.writeFileSync(path.join(repository, "dual.txt"), "saved worktree\n");
+      fs.writeFileSync(path.join(repository, "cancel.txt"), "base\n");
+      fs.writeFileSync(
+        path.join(repository, "untracked.txt"),
+        "saved untracked\n",
+      );
+      fs.writeFileSync(path.join(repository, "ignored.txt"), "saved ignored\n");
+      git(
+        "stash",
+        "push",
+        "-a",
+        "-m",
+        "saved states with a deliberately long message for layout verification",
+      );
+      // Repeated OIDs are legitimate reflog entries. Seed a bounded inventory
+      // without creating hundreds of duplicate Git objects or invoking a shell.
+      const log = path.join(repository, ".git/logs/refs/stash");
+      const record = fs.readFileSync(log, "utf8");
+      const old = record.replace(
+        /\t[^\n]*\n$/,
+        "\tOn archived-branch: needle oldest\n",
+      );
+      fs.writeFileSync(log, old + record.repeat(201));
       return { repository: fs.realpathSync(repository), token };
     }
 
@@ -259,7 +299,8 @@ if (
   fixtureKind !== "local-changes" &&
   fixtureKind !== "workspace" &&
   fixtureKind !== "graph-performance" &&
-  fixtureKind !== "file-history"
+  fixtureKind !== "file-history" &&
+  fixtureKind !== "stash"
 ) {
   throw new Error(`Unsupported E2E fixture kind: ${fixtureKind}`);
 }
@@ -298,7 +339,8 @@ export const e2eRepository = fixture;
 // repository is never modified. Its deterministic sibling path is unique to
 // the UUID-scoped fixture and is removed alongside that fixture below.
 const linkedFixtureWorktree =
-  fixtureKind === "history" && ownedFixture !== null
+  (fixtureKind === "history" || fixtureKind === "stash") &&
+  ownedFixture !== null
     ? `${ownedFixture.repository}-linked`
     : null;
 if (

@@ -84,3 +84,40 @@ impl Fixture {
             .unwrap()
     }
 }
+
+#[allow(
+    clippy::disallowed_methods,
+    reason = "Git is the test oracle in disposable fixtures; production never spawns it"
+)]
+pub fn git_with_input(fixture: &Fixture, args: &[&str], input: Option<&[u8]>) -> String {
+    use std::io::Write;
+    use std::process::Stdio;
+    let mut child = std::process::Command::new("git")
+        .args(args)
+        .current_dir(fixture.dir.path())
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("LC_ALL", "C")
+        .env(
+            "GIT_CONFIG_GLOBAL",
+            if cfg!(windows) { "NUL" } else { "/dev/null" },
+        )
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    if let Some(input) = input {
+        child.stdin.take().unwrap().write_all(input).unwrap();
+    }
+    let output = child.wait_with_output().unwrap();
+    assert!(
+        output.status.success(),
+        "git {args:?}: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8(output.stdout).unwrap()
+}
+
+pub fn git(fixture: &Fixture, args: &[&str]) -> String {
+    git_with_input(fixture, args, None)
+}

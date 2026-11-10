@@ -84,6 +84,31 @@ replaces the graph while it is open and is kept only for the session, never writ
 disk. Its query is immutable per start commit, so a refresh from a moved HEAD is a new
 query. Opening it never changes the graph's reference filters.
 
+## Stash inspection (v0.7 implemented in dev; not released)
+
+Read-only stash listing and saved-state inspection are implemented from core through
+IPC and UI. It reads a bounded shared reflog without creating it;
+search covers the complete snapshot, and cursors bind repository, revision, search
+and position. Saved OIDs are stable identities; reflog indexes are display aliases.
+Git and libgit2 serve as integration-test oracles only. Product decisions, remaining
+contracts and task dependencies are recorded in
+[the v0.7 plan](docs/plan/2026-11-08-v0.7-implementacion.md) and
+[ADR 0009](docs/adr/0009-read-only-stash.md). Stashes remain outside graph roots
+and filter state. Listing uses the shared repository reflog, while inspection state
+is per tab and session-only; only section folding is durable. Comparisons
+are net/base, saved index, saved worktree after index, and saved untracked content.
+Saved comparisons use exact origin/delta keys and shared header-bounded blob readers.
+Content and patch limits also cover UTF-8 replacement expansion. Comparison work is
+bounded to 64 MiB of unique readable blobs; oversized files keep metadata and exact
+rename pairing with an explicit notice. Linux/Windows native verification and a real
+screen-reader pass remain open. Evidence and platform limits are recorded in
+`docs/verification/v0.7.md`.
+The agreed ST-9 association is a compact Orchid count on already loaded base-commit
+rows. Its revision-bound index resolves each unique stash OID to the stash commit's
+first parent; it reads no trees and changes no graph geometry or filters. A bounded,
+keyboard-accessible popover opens the existing inspector without changing graph
+selection. Missing objects remain in inventory and have no anchor.
+
 ## Session entry points
 
 Read `TASKS.md` for the next open task and its acceptance evidence. Read the referenced

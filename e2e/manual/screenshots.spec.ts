@@ -17,7 +17,7 @@ describe("GitCanvas against its own history", () => {
   });
 
   it("captures the graph with branch badges and no selection", async () => {
-    const rows = await $$('[role="option"]');
+    const rows = await $$('[role="row"]');
     await expect(rows).toBeElementsArrayOfSize({ gte: 10 });
 
     await browser.saveScreenshot(`${OUT}/01-graph.png`);
@@ -45,7 +45,7 @@ describe("GitCanvas against its own history", () => {
   });
 
   it("captures a commit with its file list", async () => {
-    const rows = await $$('[role="option"]');
+    const rows = await $$('[role="row"]');
     const row = rows[4];
     if (row === undefined) throw new Error("Expected at least five commits");
     await row.click();

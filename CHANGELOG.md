@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-11-09
+
+### Added
+
+- **Stash inspection** — browse and search saved states, inspect net, staged, unstaged and untracked changes, and read previous or saved files without modifying Git; linked worktrees share the inventory while each tab keeps its own inspection.
+- **Stash graph markers** — see each unique stash object on its loaded base commit row and open the existing inspector from an accessible, bounded picker.
+
+### Fixed
+
+- **File previews** — enforce diff and content byte budgets after UTF-8 replacement so malformed text cannot exceed the viewer's limits.
+
 ## [0.6.0] — 2026-11-01
 
 ### Added

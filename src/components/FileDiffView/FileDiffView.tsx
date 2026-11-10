@@ -1,5 +1,6 @@
+import { WholeFilePreview } from "./WholeFilePreview";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import type {
@@ -16,7 +17,7 @@ import { useNavigation, useNavigationActions } from "../../state/workspace";
 import { useWorktreeFileDiff, useWorktreeSnapshot } from "../../state/worktree";
 import { queryKeys } from "../../state/queryKeys";
 import { shortId } from "../CommitTable/format";
-import { DiffViewer, LineTable, parseWholeFile } from "../DiffViewer";
+import { DiffViewer } from "../DiffViewer";
 import { DiffStat } from "../DiffStat/DiffStat";
 import { ErrorMessage } from "../ErrorMessage";
 
@@ -177,12 +178,6 @@ export function FileDiffView(props: FileDiffViewProps) {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [embedded, selectFile]);
-
-  const wholeText = whole.data?.text ?? null;
-  const wholeLines = useMemo(
-    () => (wholeText === null ? [] : parseWholeFile(wholeText)),
-    [wholeText],
-  );
 
   const setMode = (next: Mode) => {
     setChoice({ key, mode: next });
@@ -354,38 +349,16 @@ export function FileDiffView(props: FileDiffViewProps) {
                 <ErrorMessage error={whole.error} />
               </div>
             )}
-            {whole.data?.omitted === "Binary" && (
-              <p className="diff-viewer__notice">
-                {t("diff.binaryFile", { count: Number(whole.data.bytes) })}
-              </p>
-            )}
-            {whole.data?.omitted === "TooLarge" && (
-              <div className="diff-viewer__notice">
-                <p className="diff-viewer__notice-text">
-                  {t("diff.tooLarge", { count: Number(whole.data.bytes) })}
-                </p>
-                <button
-                  type="button"
-                  className="button"
-                  disabled={whole.isFetching}
-                  onClick={() => {
-                    expandFile(path);
-                  }}
-                >
-                  {whole.isFetching
-                    ? t("common:actions.loading")
-                    : t("diff.loadWhole")}
-                </button>
-              </div>
-            )}
-            {whole.data?.text === "" && (
-              <p className="state file-diff__state">{t("diff.emptyFile")}</p>
-            )}
-            {wholeLines.length > 0 && (
-              <LineTable
-                lines={wholeLines}
+            {whole.data !== undefined && (
+              <WholeFilePreview
+                content={whole.data}
+                path={path}
                 wrap={wrap}
-                highlight={{ path, mode: "source" }}
+                fetching={whole.isFetching}
+                expanded={expanded}
+                onExpand={() => {
+                  expandFile(path);
+                }}
               />
             )}
           </>

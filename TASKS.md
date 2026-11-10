@@ -6,31 +6,94 @@
 > [tres funcionalidades](docs/plan/2026-10-08-plan-tres-funcionalidades.md) y el
 > [plan general](docs/plans/2026-09-08-plan-de-implementacion.md).
 
-**Estado al 2026-11-01:** v0.5.0 está publicada: tag `v0.5.0` sobre `main` (2026-10-27) y
-release de GitHub publicada el 2026-10-27. `dev` coincide con `origin/dev` e incluye
-después de ese tag solo dos cambios del flujo de release (`4bd10ac`, `af87682`).
-Las verificaciones externas/manuales sin evidencia de v0.4 y v0.5 siguen abiertas y no
-se consideran cerradas por las releases: GRF-5 y V05-VERIFY (Windows nativo y lector de
-pantalla real), además de WS-17 histórica. Evidencia local en
-[`docs/verification/v0.4.md`](docs/verification/v0.4.md) y
-[`docs/verification/v0.5.md`](docs/verification/v0.5.md). **v0.6: historial por archivo**
-está implementada y verificada en `dev` ([evidencia](docs/verification/v0.6.md)); su release
-0.6.0 espera la aprobación de David para abrir el PR a `main`. La creación de commits permanece al final de la
-secuencia, objetivo v0.11. El [roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md)
-prevalece sobre asignaciones de versiones de planes anteriores.
+**Estado al 2026-11-09:** v0.7 y la asociación visual de stash (ST-9) están implementadas
+y verificadas localmente en `dev`; los manifiestos se preparan como 0.7.0 para la build
+local de pruebas. La evidencia y límites están en
+[`docs/verification/v0.7.md`](docs/verification/v0.7.md).
+La verificación histórica de v0.6 está en [`docs/verification/v0.6.md`](docs/verification/v0.6.md). El tag
+local `v0.6.0` existe y `main` local contiene el
+merge del PR #16. Esta revisión no verificó la publicación remota ni repitió release.
+`dev` incluye las entregas posteriores a v0.6 y la implementación completa de stash.
+La funcionalidad está verificada en macOS; Linux/Windows nativos y lector de pantalla real
+permanecen como gates externos sin evidencia. No es una release.
+Crear commits permanece al final de la secuencia, objetivo v0.13. El
+[roadmap vigente](docs/plan/2026-10-19-roadmap-de-versiones.md) prevalece sobre
+asignaciones de versiones de planes anteriores.
 
-**Estado de trabajo:** rama `dev`, sincronizada con `origin/dev`. Se preservan
-`docs/audits/evidence/`, `docs/media/` y `tools/demo/record-v05*`, que están sin
-seguimiento; no agregarlas a commits. Inspeccionar estado e historial al retomar. Los
-manifiestos están en 0.6.0 desde el commit de release; no crear tag ni publicar sin autorización.
+Los gates históricos sin evidencia siguen abiertos: GRF-5, V05-VERIFY, WS-17 y los
+límites declarados en las verificaciones de v0.4–v0.6. La verificación de v0.7 no
+los cierra ni les atribuye pruebas nuevas.
+
+**Estado de trabajo:** rama `dev`; ST-0–ST-9 completadas localmente. No se hizo push
+ni se consultó el servidor. No afirmar sincronización remota ni publicación.
+Se preservan `docs/audits/evidence/`, `docs/media/`, `install-backups/` y
+`tools/demo/record-v05*`, sin seguimiento; no agregarlos a commits. La versión 0.7.0
+se prepara para pruebas locales; no crear tags ni publicar como parte de la planificación.
 
 ## Siguiente paso
 
-v0.6 está implementada y verificada en `dev` ([evidencia](docs/verification/v0.6.md)). Falta el release 0.6.0: confirmar la versión con David, renombrar `Unreleased` y abrir el PR `dev → main`; no se hace tag ni release sin su aprobación.. Los gates de v0.4/v0.5 sin
-evidencia son seguimiento independiente: no bloquean v0.6 ni se atribuyen a recorridos no
-comprobados.
+ST-9 está completa. Linux/Windows nativos, lector de pantalla real y los gates históricos
+siguen como seguimiento independiente; no autorizan ni implican publicar v0.7.
 
 ## Cola de trabajo
+
+### v0.7 — Stash de solo lectura (ST-0–ST-9 completadas en `dev`; sin publicar)
+
+Plan: [decisiones ST-D01–ST-D10, contrato, matriz y dependencias](docs/plan/2026-11-08-v0.7-implementacion.md).
+Arquitectura: [ADR 0009](docs/adr/0009-read-only-stash.md), aceptada e implementada.
+Evidencia y límites:
+[verificación v0.7](docs/verification/v0.7.md).
+
+- [x] **ST-0 — Plan y contrato.** Entrevista, decisiones, diseño técnico, límites,
+      matriz y tareas documentados. Prueba exploratoria en repositorio Git temporal;
+      no es evidencia de una funcionalidad implementada. Sin cambios en código,
+      manifiestos, release ni commits.
+- [x] **ST-1 — Listado estable, búsqueda y paginación.** Lectura acotada del reflog
+      común, revisión/cursor, metadatos fieles, búsqueda completa y presencia por OID.
+      Pruebas diferenciales, carreras, límites y medición. Depende de ST-0.
+      Implementación en `gitcanvas-core::stash`, sin escrituras ni subprocesos de
+      producción. Treinta y tres pruebas nuevas más benchmark explícito; suites
+      del workspace con todas las features: 297 aprobadas, dos benchmarks omitidos
+      por defecto. El benchmark de stash se ejecutó aparte en release: 22,39 ms para
+      20.000 entradas/2.999.902 bytes. Clippy estricto y formato aprobados; bindings
+      existentes sin deriva. UI/E2E completados después en ST-3–ST-8; ver
+      [evidencia](docs/verification/v0.7.md).
+- [x] **ST-2 — Comparaciones y contenido inmutable.** Todos, preparados, sin preparar
+      y no rastreados; contenido anterior/guardado, origen exacto, lectores compartidos
+      y límites. Depende de ST-1.
+      Implementada en `4eeec7b`, con lectores compartidos extraídos en `c1ef95c`.
+      Veinticuatro pruebas nuevas; motor completo: 264 aprobadas, tres benchmarks
+      omitidos por defecto. Benchmark explícito de 5.000 archivos: primera página
+      154,18 ms y un parche 135,37 ms. Límites de memoria y resultados en la
+      [verificación v0.7](docs/verification/v0.7.md).
+- [x] **ST-3 — IPC y observación del stash compartido.** Comandos autorizados,
+      bindings, alcance stash, reflog/ref, fingerprint y eventos combinados sin
+      invalidar el grafo por cambios exclusivos de stash. Depende de ST-1/ST-2.
+- [x] **ST-4 — Estado por pestaña y consultas.** Navegación de sesión, selección
+      estable, búsqueda acotada, refresco/activación, eliminación externa, LRU y
+      plegado durable sin persistir inspección. Depende de ST-3.
+- [x] **ST-5 — Sección e inspector de stash.** Listado, búsqueda, comparaciones,
+      archivos y estados claros; EN/ES; sin acciones de escritura. Depende de ST-4.
+- [x] **ST-6 — Visor y navegación integrados.** Diff, ambos lados, cambios de modo,
+      fijado/ocultamiento, volver/Escape y conservación del gráfico. Depende de ST-5.
+- [x] **ST-7 — Accesibilidad y verificación integrada.** Fixture E2E, cambios externos,
+      worktrees, cero escrituras por inspección, temas/idiomas/940×600 y evidencia
+      de teclado/lector por plataforma. Depende de ST-6.
+- [x] **ST-8 — Verificación final y documentación entregada.** Suites, auditorías,
+      build y evidencia real; actualizar producto/arquitectura y CHANGELOG según
+      comportamiento implementado. Sin autorización implícita de release. Depende
+      de ST-1–ST-7.
+- [x] **ST-9 — Asociar visualmente stashes con sus commits base.** Chip orchid compacto
+      dentro de filas ya cargadas, agregado por OID único; popover de selección
+      accesible, sin modificar geometría, filtros, raíces ni selección del grafo.
+      Consulta de padres separada y acotada, identidad por revisión, actualización
+      resistente a errores y evidencia de rendimiento/accesibilidad. Contrato, imagen
+      y aceptación en [plan v0.7](docs/plan/2026-11-08-v0.7-implementacion.md#st-9--anotaciones-de-stash-en-las-filas-del-grafo).
+
+### Entregas anteriores y seguimiento
+
+Las secciones siguientes conservan evidencia y tareas históricas. Los gates externos
+sin evidencia permanecen abiertos y separados del cierre de v0.7.
 
 ### v0.4 — Líneas y colores de las ramas
 
@@ -86,7 +149,7 @@ de conflictos Git, autores ni releases; el checkout explícito existente se cons
 - [ ] **V05-VERIFY — Verificación y cierre documental (seguimiento de gates externos).** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#v05-verify--verificacion-y-documentacion-de-cierre), [evidencia v0.5](docs/verification/v0.5.md), [verificación v0.4](docs/verification/v0.4.md), [`CLAUDE.md`](CLAUDE.md). v0.5.0 ya está publicada. Verificado localmente: macOS (831 pruebas frontend, ocho specs E2E nativos), Linux arm64 (830 pruebas frontend, ocho specs/20 recorridos E2E, Rust, Clippy y build), compilación cruzada MSVC (check, Clippy estricto, tests `--no-run` y enlace release), temas, idiomas, 940×600 e indicador del diff. **Pendiente, sin evidencia:** E2E en Windows nativo y prueba con lector de pantalla real; los intentos con VoiceOver solo confirmaron árbol de accesibilidad y foco de teclado, no anuncios. No se declaran verificados.
 
 Crear o retirar worktrees sigue reservado para una entrega futura sin versión asignada;
-preparación por líneas, amend y commits permanecen después de v0.10/v0.11 según el
+preparación por líneas, amend y commits permanecen después de v0.12/v0.13 según el
 roadmap.
 
 ### v0.6 — Historial por archivo
@@ -132,9 +195,11 @@ comparación de commits ni escrituras Git. Leer [ADR 0002](docs/adr/0002-local-f
 
 ### Entregas posteriores
 
-v0.5 panel/filtros y worktrees (publicada) → v0.6 historial por archivo → v0.7 contribuyentes/releases →
-v0.8 proveedores → v0.9 crear/conectar repositorios → v0.10 gestión de ramas →
-v0.11 preparar/crear commits. Objetivos de planificación, sin fechas ni bumps.
+v0.5 panel/filtros y worktrees (publicada) → v0.6 historial por archivo → v0.7 stash de solo lectura →
+v0.8 vista de imágenes → v0.9 contribuyentes/releases →
+v0.10 proveedores → v0.11 crear/conectar repositorios → v0.12 escrituras locales seguras
+(base de escrituras, stash aplicar/descartar/guardar, ramas) →
+v0.13 preparar/crear commits. Objetivos de planificación, sin fechas ni bumps.
 Desglosar cada entrega al prepararla siguiendo el roadmap y los acuerdos existentes.
 
 ### Seguimiento histórico de v0.3

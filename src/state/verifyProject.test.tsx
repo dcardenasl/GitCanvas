@@ -144,6 +144,25 @@ describe("verifyProject", () => {
     ).toBe(false);
   });
 
+  it("refreshes stashes even when ordinary refs are unchanged", async () => {
+    const client = createTestQueryClient();
+    openTestProject(ALPHA);
+    client.setQueryData(queryKeys.history(ALPHA.path), page());
+    client.setQueryData(queryKeys.refs(ALPHA.path), MAIN);
+    client.setQueryData(queryKeys.stashes(ALPHA.path, "", null), {
+      pages: [],
+      pageParams: [],
+    });
+    await verifyProject(ALPHA.path, client);
+    expect(
+      client.getQueryState(queryKeys.stashes(ALPHA.path, "", null))
+        ?.isInvalidated,
+    ).toBe(true);
+    expect(
+      client.getQueryState(queryKeys.history(ALPHA.path))?.isInvalidated,
+    ).toBe(false);
+  });
+
   it("always reads the working tree again", async () => {
     const client = createTestQueryClient();
     openTestProject(ALPHA);

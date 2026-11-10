@@ -35,6 +35,37 @@ pub(crate) struct ContentRead {
     pub text: Option<String>,
 }
 
+impl ContentRead {
+    /// Adds presentation identity to the shared bounded-read result.
+    pub(crate) fn into_fields(self, path: String) -> FileContentFields {
+        FileContentFields {
+            path,
+            lines: self.lines,
+            bytes: self.bytes,
+            omitted: self.omitted,
+            text: self.text,
+        }
+    }
+}
+
+/// Inspects the object header before loading a blob, including for packed objects.
+/// Oversized blobs are never looked up as fully materialized Git objects here.
+pub(crate) fn read_blob_by_id(
+    repo: &git2::Repository,
+    id: git2::Oid,
+    path: &str,
+    expand: bool,
+) -> Result<ContentRead, AppError> {
+    let (size, kind) = repo.odb()?.read_header(id)?;
+    if kind != git2::ObjectType::Blob {
+        return Err(AppError::InvalidInput(format!("{path} is not a blob")));
+    }
+    if size > MAX_EXPANDED_CONTENT_BYTES || (!expand && size > MAX_INITIAL_CONTENT_BYTES) {
+        return too_large_content(u64::try_from(size).unwrap_or(u64::MAX), path, expand);
+    }
+    read_blob_content(&repo.find_blob(id)?, path, expand)
+}
+
 /// Creates a bounded response from a known file size without reading bytes.
 pub(crate) fn too_large_content(
     byte_count: u64,
@@ -88,7 +119,19 @@ pub(crate) fn read_content(raw: &[u8], path: &str, expand: bool) -> Result<Conte
         });
     }
 
-    let text = String::from_utf8_lossy(raw).into_owned();
+    let maximum = if expand {
+        MAX_EXPANDED_CONTENT_BYTES
+    } else {
+        MAX_INITIAL_CONTENT_BYTES
+    };
+    let Some(text) = crate::text::bounded_utf8(raw, maximum) else {
+        if expand {
+            return Err(AppError::ResourceLimitExceeded(format!(
+                "Decoded text for {path} exceeds {maximum} bytes"
+            )));
+        }
+        return too_large_content(u64::try_from(byte_count).unwrap_or(u64::MAX), path, false);
+    };
     let lines = u32::try_from(text.lines().count()).unwrap_or(u32::MAX);
 
     if lines > LARGE_FILE_LINE_LIMIT && !expand {
@@ -189,22 +232,12 @@ pub fn get_file_content(
             AppError::InvalidInput(format!("{} is not in this commit's tree", request.path))
         })?;
 
-    let blob = repo.find_blob(entry.id()).map_err(|_| {
-        AppError::InvalidInput(format!("{} is not a file at this commit", request.path))
-    })?;
-
     // Lossy UTF-8 is intentional: a file with a stray invalid byte remains
     // useful, with a replacement character where the byte was.
-    let content = read_blob_content(&blob, &request.path, request.expand)?;
+    let content = read_blob_by_id(&repo, entry.id(), &request.path, request.expand)?;
 
     Ok(FileContent {
-        fields: FileContentFields {
-            path: request.path.clone(),
-            lines: content.lines,
-            bytes: content.bytes,
-            omitted: content.omitted,
-            text: content.text,
-        },
+        fields: content.into_fields(request.path.clone()),
         commit_id: commit.id().to_string(),
     })
 }

@@ -14,6 +14,10 @@ import type {
   WorktreeSnapshotRequest,
   WatchRequest,
   MenuLabels,
+  StashListRequest,
+  StashFilesRequest,
+  StashFileDiffRequest,
+  StashFileContentRequest,
 } from "../../bindings";
 
 export type {
@@ -189,3 +193,24 @@ export const restartApplication = () => result(commands.restartApplication());
  * presume the interface hung and destroy the window before the session is saved.
  */
 export const acknowledgeShutdown = () => result(commands.acknowledgeShutdown());
+
+/** Lists the bounded shared stash reflog, with server-side search and membership. */
+export const getStashes = (path: string, request: StashListRequest) =>
+  result(commands.getStashes(path, request));
+/** Resolves unique stash objects to first-parent commits for visible graph rows. */
+export const getStashAnchors = (path: string) =>
+  result(commands.getStashAnchors(path));
+/** Reads one page of exact saved comparison files, without patch text. */
+export const getStashFiles = (path: string, request: StashFilesRequest) =>
+  result(commands.getStashFiles(path, request));
+/** Reads the selected immutable file patch only. */
+export const getStashFileDiff = (path: string, request: StashFileDiffRequest) =>
+  result(commands.getStashFileDiff(path, request));
+/** Reads one saved content side using a validated opaque file key. */
+export const getStashFileContent = (
+  path: string,
+  request: StashFileContentRequest,
+) => result(commands.getStashFileContent(path, request));
+/** Reads cheap stash metadata for active-project backup polling. */
+export const getStashFingerprint = (path: string) =>
+  result(commands.getStashFingerprint(path));

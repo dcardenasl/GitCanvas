@@ -1,3 +1,4 @@
+import { stashPage } from "../../test/stash";
 // @vitest-environment jsdom
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -40,6 +41,10 @@ vi.mock("@tauri-apps/api/webview", () => ({
 }));
 
 vi.mock("../../lib/ipc", () => ({
+  getStashAnchors: () =>
+    Promise.resolve({ revision: "stash-revision", entries: [], unresolved: 0 }),
+  getStashes: () => Promise.resolve(stashPage()),
+  getStashFingerprint: () => Promise.resolve({ revision: "stash-revision" }),
   getCommits: () => getCommits(),
   getCommit: () => getCommit(),
   getCommitDiff: () => getCommitDiff(),

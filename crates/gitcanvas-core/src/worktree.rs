@@ -21,6 +21,7 @@ use crate::{
     blob::{self, ContentRead, FileContentFields},
     diff::{self, FileDiff, FileDiffSummary},
     error::AppError,
+    file_identity::same_file_identity,
     pagination::resolve_page_size,
     repository::{validate_relative_path, ActiveRepo},
 };
@@ -262,13 +263,7 @@ pub fn get_worktree_file_content(
     Ok(WorktreeFileContent {
         side: request.side,
         revision: before,
-        fields: FileContentFields {
-            path: request.path.clone(),
-            lines: content.lines,
-            bytes: content.bytes,
-            omitted: content.omitted,
-            text: content.text,
-        },
+        fields: content.into_fields(request.path.clone()),
     })
 }
 
@@ -403,8 +398,7 @@ fn read_index_content(
     let entry = index
         .get_path(relative, 0)
         .ok_or_else(|| AppError::WorktreeFileUnavailable(path.to_owned()))?;
-    let blob = repo.find_blob(entry.id)?;
-    blob::read_blob_content(&blob, path, expand)
+    blob::read_blob_by_id(repo, entry.id, path, expand)
 }
 
 fn read_disk_content(
@@ -541,36 +535,6 @@ fn verify_open_file(
         return Err(changed());
     }
     Ok(())
-}
-
-#[cfg(unix)]
-fn same_file_identity(_file: &File, _path: &Path, opened: &Metadata, current: &Metadata) -> bool {
-    use std::os::unix::fs::MetadataExt;
-
-    opened.dev() == current.dev() && opened.ino() == current.ino()
-}
-
-#[cfg(windows)]
-fn same_file_identity(file: &File, path: &Path, _opened: &Metadata, _current: &Metadata) -> bool {
-    // `MetadataExt::file_index` is still unstable, so compare handles instead.
-    let Ok(clone) = file.try_clone() else {
-        return false;
-    };
-    match (
-        same_file::Handle::from_file(clone),
-        same_file::Handle::from_path(path),
-    ) {
-        (Ok(opened), Ok(current)) => opened == current,
-        _ => false,
-    }
-}
-
-#[cfg(not(any(unix, windows)))]
-fn same_file_identity(_file: &File, _path: &Path, opened: &Metadata, current: &Metadata) -> bool {
-    opened.is_file()
-        && current.is_file()
-        && opened.len() == current.len()
-        && opened.modified().ok() == current.modified().ok()
 }
 
 fn revision(repo: &Repository, index: &Index) -> Result<String, AppError> {

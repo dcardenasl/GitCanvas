@@ -36,6 +36,20 @@ The v0.4 implementation uses one reference snapshot, frozen history roots, pure 
 trajectory geometry and separately persisted semantic colors. See [ADR 0007](docs/adr/0007-stable-branch-graph.md)
 for identity, upstream grouping, principal detection, schema migration and render ordering.
 
+## Read-only stash inspection (v0.7)
+
+`gitcanvas-core::stash` reads a bounded snapshot of the shared stash reflog and resolves
+immutable saved states. Typed IPC commands authorize each requested root. The watcher
+tracks stash ref/reflog changes separately from ordinary graph references, so stash-only
+updates refresh the inventory without rebuilding graph roots. Linked worktrees share the
+inventory, while tab selection and bounded query caches are session state; only section
+folding is persisted. Stash inspection has no write command. See [ADR 0009](docs/adr/0009-read-only-stash.md)
+and [the v0.7 verification record](docs/verification/v0.7.md).
+The graph association is a separate bounded query: unique stash OIDs resolve only the
+first parent of their commit, then annotate loaded history rows without adding nodes
+or edges. Its accessible picker pages at most 50 entries at a time and opens the existing
+inspector while preserving graph navigation.
+
 ## Three boundaries, each enforced by a build failure
 
 A rule that depends on someone remembering it is already technical debt. Each

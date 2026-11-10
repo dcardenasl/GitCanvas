@@ -49,8 +49,9 @@ describe("the history table's responsive columns", () => {
     );
   });
 
-  it("keeps a readable summary and fits references without crushing badges", () => {
-    expect(css).toMatch(/\.commit-row__summary \{[^}]*min-width: 12ch/s);
+  it("keeps stash markers visible while commit messages truncate", () => {
+    expect(css).toMatch(/\.commit-row__summary \{[^}]*min-width: 0/s);
+    expect(css).toMatch(/\.stash-anchor \{[^}]*flex: 0 0 auto/s);
     expect(css).toMatch(/\.ref-pill \{[^}]*flex-shrink: 0/s);
   });
 

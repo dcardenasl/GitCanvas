@@ -238,49 +238,93 @@ pub(crate) fn collect_file(
     path: &str,
     expand: bool,
 ) -> Result<Option<FileDiff>, AppError> {
-    let expanded = expand.then_some(path);
-    collect_files_internal(diff, Some(path), expanded, Some(path), true)
-        .map(|mut files| files.pop())
+    let index = diff
+        .deltas()
+        .position(|delta| String::from_utf8_lossy(delta_path(&delta)) == path);
+    index
+        .map(|index| collect_file_at(diff, index, expand, true))
+        .transpose()
+}
+
+/// Collects exactly one delta by position, preserving byte-distinct path identity.
+pub(crate) fn collect_file_at(
+    diff: &git2::Diff<'_>,
+    index: usize,
+    expand: bool,
+    include_patch: bool,
+) -> Result<FileDiff, AppError> {
+    let delta = diff.get_delta(index).ok_or_else(|| {
+        AppError::InvalidInput("Diff file position is outside the comparison".into())
+    })?;
+    let path = String::from_utf8_lossy(delta_path(&delta));
+    collect_files_internal(
+        diff,
+        Some(&path),
+        expand.then_some(path.as_ref()),
+        Some(index),
+        include_patch,
+    )?
+    .pop()
+    .ok_or_else(|| AppError::Internal("Diff file was not collected".into()))
+}
+
+/// The exact destination path, or the previous path of a removed entry.
+pub(crate) fn delta_path<'a>(delta: &git2::DiffDelta<'a>) -> &'a [u8] {
+    delta
+        .new_file()
+        .path_bytes()
+        .or_else(|| delta.old_file().path_bytes())
+        .unwrap_or_default()
+}
+
+/// Metadata shared by readable, oversized and non-blob deltas; no content is read.
+pub(crate) fn delta_summary(delta: &git2::DiffDelta<'_>) -> FileDiffSummary {
+    let path = String::from_utf8_lossy(delta_path(delta)).into_owned();
+    let old_path = delta
+        .old_file()
+        .path_bytes()
+        .filter(|old| *old != delta_path(delta))
+        .map(|old| String::from_utf8_lossy(old).into_owned());
+    FileDiffSummary {
+        path,
+        old_path,
+        change: FileChange::from(delta.status()),
+        insertions: 0,
+        deletions: 0,
+        omitted: None,
+    }
 }
 
 fn collect_files_internal(
     diff: &git2::Diff<'_>,
     patch_path: Option<&str>,
     expand_path: Option<&str>,
-    only_path: Option<&str>,
+    only_index: Option<usize>,
     include_patch: bool,
 ) -> Result<Vec<FileDiff>, AppError> {
-    let file_stats = if only_path.is_none() {
+    let file_stats = if only_index.is_none() {
         Some(collect_file_stats(diff)?)
     } else {
         None
     };
     let mut files = Vec::new();
 
-    for index in 0..diff.deltas().len() {
+    let range = only_index.map_or(0..diff.deltas().len(), |index| {
+        index..index.saturating_add(1)
+    });
+    for index in range {
         let Some(delta) = diff.get_delta(index) else {
             continue;
         };
-        let path = delta
-            .new_file()
-            .path()
-            .or_else(|| delta.old_file().path())
-            .map(|path| path.to_string_lossy().into_owned())
-            .unwrap_or_default();
-
-        if only_path.is_some_and(|requested| requested != path) {
-            continue;
-        }
-
-        let old_path = delta
-            .old_file()
-            .path()
-            .map(|old| old.to_string_lossy().into_owned())
-            .filter(|old| *old != path);
+        let mut summary = delta_summary(&delta);
+        let path = &summary.path;
 
         let mut requested_hunks = None;
         let stats = if let Some(file_stats) = &file_stats {
-            file_stats.get(&path).copied().unwrap_or_default()
+            file_stats
+                .get(delta_path(&delta))
+                .copied()
+                .unwrap_or_default()
         } else {
             let hunks = git2::Patch::from_diff(diff, index)?;
             let (_, insertions, deletions) = hunks
@@ -308,7 +352,7 @@ fn collect_files_internal(
         let beyond_hard_limit = patch_bytes > MAX_COMMIT_DIFF_BYTES && expanded;
         let requested_patch = patch_path == Some(path.as_str());
 
-        let omitted = if binary {
+        let mut omitted = if binary {
             Some(DiffOmission::Binary)
         } else if oversized || beyond_hard_limit {
             Some(DiffOmission::TooLarge)
@@ -323,22 +367,27 @@ fn collect_files_internal(
             };
             match hunks {
                 Some(mut hunks) => {
-                    Some(String::from_utf8_lossy(hunks.to_buf()?.as_ref()).into_owned())
+                    let maximum = if expanded {
+                        MAX_EXPANDED_DIFF_BYTES
+                    } else {
+                        MAX_INITIAL_DIFF_BYTES
+                    };
+                    let text = crate::text::bounded_utf8(hunks.to_buf()?.as_ref(), maximum);
+                    if text.is_none() {
+                        omitted = Some(DiffOmission::TooLarge);
+                    }
+                    text
                 }
                 None => None,
             }
         } else {
             None
         };
+        summary.insertions = insertions;
+        summary.deletions = deletions;
+        summary.omitted = omitted;
         files.push(FileDiff {
-            summary: FileDiffSummary {
-                path,
-                old_path,
-                change: FileChange::from(delta.status()),
-                insertions,
-                deletions,
-                omitted,
-            },
+            summary,
             patch: text,
         });
     }
@@ -353,47 +402,41 @@ struct FileDiffStats {
     patch_bytes: usize,
 }
 
-fn collect_file_stats(diff: &git2::Diff<'_>) -> Result<HashMap<String, FileDiffStats>, AppError> {
-    let mut stats: HashMap<String, FileDiffStats> = HashMap::new();
-    for delta in diff.deltas() {
-        let path = delta
-            .new_file()
-            .path()
-            .or_else(|| delta.old_file().path())
-            .map(|path| path.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        stats.entry(path).or_default();
-    }
-
+fn collect_file_stats(diff: &git2::Diff<'_>) -> Result<HashMap<Vec<u8>, FileDiffStats>, AppError> {
+    let mut stats: HashMap<_, _> = diff
+        .deltas()
+        .map(|delta| (delta_path(&delta).to_vec(), FileDiffStats::default()))
+        .collect();
     diff.print(DiffFormat::Patch, |delta, _, line| {
-        let path = delta
-            .new_file()
-            .path()
-            .or_else(|| delta.old_file().path())
-            .map(|path| path.to_string_lossy());
-        if let Some(file_stats) = path.and_then(|path| stats.get_mut(path.as_ref())) {
+        if let Some(stats) = stats.get_mut(delta_path(&delta)) {
             match line.origin() {
-                '+' => file_stats.insertions = file_stats.insertions.saturating_add(1),
-                '-' => file_stats.deletions = file_stats.deletions.saturating_add(1),
+                '+' => stats.insertions = stats.insertions.saturating_add(1),
+                '-' => stats.deletions = stats.deletions.saturating_add(1),
                 _ => {}
             }
-            let line_bytes = line.content().len().saturating_add(1);
-            file_stats.patch_bytes = file_stats
+            stats.patch_bytes = stats
                 .patch_bytes
-                .saturating_add(line_bytes)
+                .saturating_add(line.content().len().saturating_add(1))
                 .min(MAX_COMMIT_DIFF_BYTES.saturating_add(1));
         }
         true
     })?;
-
     Ok(stats)
 }
 
 /// Pairs deleted and added files that are similar enough to be renames. Commit
 /// diffs and per-file history share this detection so both report the same renames.
 pub(crate) fn find_renames(diff: &mut git2::Diff<'_>) -> Result<(), git2::Error> {
+    find_renames_with_policy(diff, false)
+}
+
+/// Exact-only pairing avoids loading objects excluded by a caller's read budget.
+pub(crate) fn find_renames_with_policy(
+    diff: &mut git2::Diff<'_>,
+    exact_only: bool,
+) -> Result<(), git2::Error> {
     let mut options = git2::DiffFindOptions::new();
-    options.renames(true);
+    options.renames(true).exact_match_only(exact_only);
     diff.find_similar(Some(&mut options))
 }
 

@@ -15,8 +15,8 @@
 | Fuentes | [TASKS.md](../TASKS.md) y [roadmap vigente](plan/2026-10-19-roadmap-de-versiones.md) |
 
 La secuencia objetivo es v0.4 gráfico/colores, v0.5 panel/filtros, v0.6 historial por
-archivo, v0.7 contribuyentes/releases, v0.8 proveedores, v0.9 crear/conectar repositorios,
-v0.10 gestión de ramas y v0.11 preparar/crear commits. Sin fechas ni bumps aplicados.
+archivo, v0.7 stash de solo lectura, v0.8 vista de imágenes, v0.9 contribuyentes/releases, v0.10 proveedores, v0.11 crear/conectar repositorios,
+v0.12 escrituras locales seguras (stash y ramas) y v0.13 preparar/crear commits. Sin fechas ni bumps aplicados.
 
 ## Estado del trabajo en curso
 

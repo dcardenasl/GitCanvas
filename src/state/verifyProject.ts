@@ -55,7 +55,10 @@ export async function verifyProject(
       await invalidateLive(queryClient, root, "metadata");
     }
     queryClient.setQueryData(queryKeys.worktreeFingerprint(root), fingerprint);
-    await invalidateLive(queryClient, root, "worktree");
+    await Promise.all([
+      invalidateLive(queryClient, root, "worktree"),
+      invalidateLive(queryClient, root, "stashes"),
+    ]);
     if (current())
       useWorkspace.getState().setVerification(root, { status: "verified" });
   } catch (error) {

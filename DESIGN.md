@@ -84,6 +84,23 @@ rename budget says so on that row. Escape returns to the graph unless a menu is 
 Each history action is labelled with its file, so a screen reader can tell the rows apart.
 The sidebar does not fold away while a file's history is open.
 
+## Stash inspection (v0.7 in dev)
+
+Saved stashes appear in a foldable sidebar section below worktrees. Selecting a row keeps
+the graph visible and opens metadata in the inspector; choosing a file opens its bounded
+diff in the centre. Four modes are available: All, Staged, Unstaged and Untracked. Previous
+and saved sides are read on demand. Search spans the complete snapshot, and a selected
+stash remains addressable by object id outside the current page or search. The inventory is
+shared across linked worktrees, while selection and navigation are per tab. Only folding
+persists. Inspection does not write to Git; closing it restores the graph selection and focus.
+When the base commit is already among the loaded rows, a compact Orchid stash chip with
+a unique-object count sits after reference labels and before the commit message. It adds
+no graph node or connector. Activating it opens a bounded anchored popover; choosing an
+entry opens the existing stash inspector and leaves graph selection and position intact.
+The chip remains visible on narrow rows while the commit message truncates. Its active
+group uses a subtle Orchid fill. Unknown base commits have no canvas marker; the sidebar
+inventory remains complete. See ST-9 in the v0.7 plan.
+
 ## Platform behavior
 
 The product is a desktop Tauri application for macOS, Linux, and Windows. The layout is

@@ -238,3 +238,98 @@ fn independent_requests_do_not_change_each_others_repository() {
         json!([])
     );
 }
+
+#[test]
+fn stash_reads_are_authorized_and_round_trip_saved_content_through_real_ipc() {
+    let directory = tempfile::tempdir().unwrap();
+    let repo = git2::Repository::init(directory.path()).unwrap();
+    repo.config()
+        .unwrap()
+        .set_str("user.name", "Fixture")
+        .unwrap();
+    repo.config()
+        .unwrap()
+        .set_str("user.email", "fixture@example.invalid")
+        .unwrap();
+    let signature = git2::Signature::now("Fixture", "fixture@example.invalid").unwrap();
+    let commit = |reference: &str, body: &[u8], parents: &[git2::Oid]| {
+        let blob = repo.blob(body).unwrap();
+        let mut builder = repo.treebuilder(None).unwrap();
+        builder.insert("file.txt", blob, 0o100_644).unwrap();
+        let tree = repo.find_tree(builder.write().unwrap()).unwrap();
+        let parents = parents
+            .iter()
+            .map(|id| repo.find_commit(*id).unwrap())
+            .collect::<Vec<_>>();
+        repo.commit(
+            Some(reference),
+            &signature,
+            &signature,
+            "fixture",
+            &tree,
+            &parents.iter().collect::<Vec<_>>(),
+        )
+        .unwrap()
+    };
+    let base = commit("HEAD", b"base", &[]);
+    let index = commit("refs/heads/index", b"prepared", &[base]);
+    let stash = commit("refs/heads/saved", b"saved", &[base, index]);
+    repo.reference_ensure_log("refs/stash").unwrap();
+    repo.reference("refs/stash", stash, true, "On main: fixture")
+        .unwrap();
+    let path = directory.path().to_str().unwrap();
+    let webview = test_webview();
+    let selection =
+        json!({"stash_id": stash.to_string(), "mode": "all", "file_key": "placeholder"});
+    let requests = [
+        (
+            "get_stashes",
+            json!({"path":path,"request":{"limit":null,"cursor":null,"search":null,"selected_stash_id":stash.to_string()}}),
+        ),
+        (
+            "get_stash_files",
+            json!({"path":path,"request":{"stash_id":stash.to_string(),"mode":"all","limit":null,"cursor":null}}),
+        ),
+        (
+            "get_stash_file_diff",
+            json!({"path":path,"request":{"file":selection,"expand":false}}),
+        ),
+        (
+            "get_stash_file_content",
+            json!({"path":path,"request":{"file":selection,"side":"saved","expand":false}}),
+        ),
+        ("get_stash_fingerprint", json!({"path":path})),
+    ];
+    for (command, request) in &requests {
+        assert_eq!(
+            invoke(&webview, command, request.clone()).unwrap_err()["kind"],
+            "InvalidRepository"
+        );
+    }
+    invoke(&webview, "open_repository", json!({"path":path})).unwrap();
+    let listed = invoke(&webview, "get_stashes", requests[0].1.clone()).unwrap();
+    assert_eq!(listed["selected_entry"]["stash_id"], stash.to_string());
+    let files = invoke(&webview, "get_stash_files", requests[1].1.clone()).unwrap();
+    assert_eq!(files["files"][0]["file"]["path"], "file.txt");
+    let file =
+        json!({"stash_id":stash.to_string(),"mode":"all","file_key":files["files"][0]["key"]});
+    let saved_diff = invoke(
+        &webview,
+        "get_stash_file_diff",
+        json!({"path":path,"request":{"file":file,"expand":false}}),
+    )
+    .unwrap();
+    assert!(saved_diff["patch"].as_str().unwrap().contains("+saved"));
+    let content = invoke(
+        &webview,
+        "get_stash_file_content",
+        json!({"path":path,"request":{"file":file,"side":"saved","expand":false}}),
+    )
+    .unwrap();
+    assert_eq!(content["outcome"]["kind"], "available");
+    assert_eq!(content["outcome"]["content"]["text"], "saved");
+    assert!(
+        invoke(&webview, "get_stash_fingerprint", requests[4].1.clone()).unwrap()["revision"]
+            .is_string()
+    );
+}

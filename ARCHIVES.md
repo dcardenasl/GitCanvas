@@ -3,6 +3,39 @@
 > Registro histórico de tareas completadas, movidas desde [`TASKS.md`](TASKS.md).
 > Se conserva el detalle original, incluidos los hallazgos y mensajes de commit.
 
+## v0.7 — Inspección de stash (ST-0–ST-8)
+
+- [x] **Entrega implementada y verificada localmente en macOS, 2026-11-09.** Listado
+      compartido, comparación y lectura acotadas, IPC autorizado, observación del stash,
+      estado aislado por pestaña, sección/inspector/diff y cinco recorridos E2E. La suite
+      frontend final pasó 909 pruebas; Rust, lint, tipos, formato, auditorías y build
+      quedaron aprobados con los límites anotados. Capturas y matriz en
+      [verificación v0.7](docs/verification/v0.7.md). Linux/Windows nativos y lector de
+      pantalla real siguen sin verificar. Sin bump, tag, push ni publicación.
+
+## v0.7 — Motor de listado de stash (ST-1)
+
+- [x] **ST-1 — Listado estable, búsqueda y paginación.** Completada el 2026-11-08.
+      Lectura acotada y de solo lectura del reflog compartido; búsqueda sobre todo
+      el snapshot, selección por OID y cursores ligados a raíz, revisión y búsqueda.
+      Módulos separados para contrato/paginación, registros y snapshot; identidad
+      de archivo compartida con cambios locales. Sin IPC ni interfaz todavía.
+      Treinta y tres pruebas nuevas; workspace: 297 aprobadas, dos benchmarks
+      omitidos por defecto. Benchmark stash ejecutado aparte en release: 22,39 ms
+      para 20.000 entradas. Clippy estricto, formato y bindings aprobados.
+      Evidencia y límites: [verificación v0.7](docs/verification/v0.7.md).
+      → `feat(core): add bounded revisioned stash listing and search` (`f2a0152`).
+
+## v0.7 — Comparaciones y contenido de stash (ST-2)
+
+- [x] **ST-2 — Comparaciones y contenido inmutable.** Completada el 2026-11-08.
+      W/H/I/U, claves exactas, resúmenes y lecturas compartidas, sin escrituras.
+      Veinticuatro pruebas nuevas; suite del motor: 264 aprobadas. Medición de
+      5.000 archivos: página inicial 154,18 ms y un parche 135,37 ms. Evidencia y
+      memoria en [verificación v0.7](docs/verification/v0.7.md).
+      → `refactor(core): share exact delta and header-bounded blob readers` (`c1ef95c`).
+      → `feat(core): inspect saved stash states with bounded diff and content` (`4eeec7b`).
+
 ## ✅ Fase G — Bootstrap del repositorio (6/6)
 
 - [x] **G-1 — Inicializar el repositorio.** `git init -b main`. `main` es el punto de

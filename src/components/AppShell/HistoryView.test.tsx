@@ -11,6 +11,7 @@ const mockIpc = createIpcMocks([
   "getWorktreeSnapshot",
   "getRepositoryRefs",
   "getRepositoryWorktrees",
+  "getStashAnchors",
 ] as const);
 const { getCommits, getWorktreeSnapshot } = mockIpc;
 
@@ -69,6 +70,11 @@ beforeEach(() => {
     head: null,
     head_reference: null,
     roots: [],
+  });
+  mockIpc.getStashAnchors.mockResolvedValue({
+    revision: "stash-revision",
+    entries: [],
+    unresolved: 0,
   });
   getCommits.mockReset();
   getWorktreeSnapshot.mockReset();

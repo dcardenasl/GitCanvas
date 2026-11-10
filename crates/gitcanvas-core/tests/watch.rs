@@ -27,6 +27,8 @@ use support::Fixture;
 /// Long enough for a debounced watcher to report, short enough to fail fast.
 const WAIT: Duration = Duration::from_secs(10);
 const QUIET: Duration = Duration::from_millis(500);
+/// Total time a test gives the event stream to become live and report a change.
+const LIVE_WAIT: Duration = Duration::from_secs(30);
 
 fn wait_until_quiet<T>(receiver: &Receiver<T>) {
     let deadline = Instant::now()
@@ -63,8 +65,10 @@ const ATTEMPT: Duration = Duration::from_secs(2);
 /// watcher reports once it is live, and that is what a later change checks.
 /// `change` receives the attempt number, so every attempt makes a new change.
 fn event_after_changing<T>(receiver: &Receiver<T>, mut change: impl FnMut(u64)) -> T {
+    // A loaded CI runner can take several seconds to start delivering events, so
+    // the stream gets many more attempts than a report that merely arrives late.
     let deadline = Instant::now()
-        .checked_add(WAIT)
+        .checked_add(LIVE_WAIT)
         .expect("deadline is representable");
     for attempt in 0_u64.. {
         change(attempt);
@@ -339,4 +343,52 @@ fn reports_configuration_changes_as_metadata() {
             .unwrap();
     });
     assert!(matches!(event, WatchEvent::Changed(ChangeScope::Metadata)));
+}
+
+#[test]
+fn reports_stash_log_edits_replacements_and_recreation_without_history_changes() {
+    let fixture = Fixture::new();
+    fixture.commit("refs/heads/main", "base", &[], 1000);
+    let directory = fixture.repo.commondir().join("logs/refs");
+    std::fs::create_dir_all(&directory).unwrap();
+    let path = directory.join("stash");
+    std::fs::write(&path, "initial").unwrap();
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let (tx, rx) = mpsc::channel();
+    let _watcher = watch_repository(&active, move |event| {
+        let _ = tx.send(event);
+    })
+    .unwrap();
+    wait_until_quiet(&rx);
+    let event = event_after_changing(&rx, |attempt| {
+        std::fs::write(&path, format!("edited {attempt}")).unwrap();
+    });
+    assert!(
+        matches!(event, WatchEvent::Changed(ChangeScope::Stashes)),
+        "{event:?}"
+    );
+    wait_until_quiet(&rx);
+    let event = event_after_changing(&rx, |attempt| {
+        let replacement = directory.join("stash.lock");
+        std::fs::write(&replacement, format!("replaced {attempt}")).unwrap();
+        std::fs::rename(replacement, &path).unwrap();
+    });
+    assert!(
+        matches!(event, WatchEvent::Changed(ChangeScope::Stashes)),
+        "{event:?}"
+    );
+    wait_until_quiet(&rx);
+    std::fs::remove_file(&path).unwrap();
+    assert!(matches!(
+        rx.recv_timeout(WAIT).unwrap(),
+        WatchEvent::Changed(ChangeScope::Stashes)
+    ));
+    wait_until_quiet(&rx);
+    let event = event_after_changing(&rx, |attempt| {
+        std::fs::write(&path, format!("recreated {attempt}")).unwrap();
+    });
+    assert!(
+        matches!(event, WatchEvent::Changed(ChangeScope::Stashes)),
+        "{event:?}"
+    );
 }

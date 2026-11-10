@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CommitTable } from "../CommitTable";
 import { ErrorMessage } from "../ErrorMessage";
 import { GraphCanvas } from "../GraphCanvas";
 import type { HistoryData } from "../../state/history";
+import type { StashAnchorEntry } from "../../bindings";
 import { useGraphModel } from "../../state/graph";
 import { useRefsByCommit } from "../../state/refs";
 import { selectedCommitId as getSelectedCommitId } from "../../state/navigation";
@@ -16,6 +17,7 @@ import {
 } from "../../state/workspace";
 import { useWorktreeSnapshot } from "../../state/worktree";
 import { DiffStat } from "../DiffStat/DiffStat";
+import { useStashAnchors } from "../../state/stashes";
 
 const NO_EXCLUSIONS: readonly string[] = [];
 
@@ -27,7 +29,7 @@ const NO_EXCLUSIONS: readonly string[] = [];
  * would lay the whole graph out a second time on every page.
  */
 export function HistoryView({ history }: { readonly history: HistoryData }) {
-  const { t } = useTranslation(["history", "common"]);
+  const { t } = useTranslation(["history", "common", "stash"]);
   const repository = useActiveRepository();
   const selection = useNavigation((navigation) => navigation.selection);
   const selectedCommitId = useNavigation(getSelectedCommitId);
@@ -38,6 +40,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
     clearReveal,
     clearOrphanedReveal,
     setHistoryAnchor,
+    openStash,
   } = useNavigationActions();
   const historyAnchor = useNavigation((navigation) => navigation.historyAnchor);
   const revealCommitId = useNavigation(
@@ -55,6 +58,18 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
   );
   const refsByCommit = useRefsByCommit(repository?.path ?? null);
   const local = useWorktreeSnapshot(repository?.path ?? null);
+  const stashAnchors = useStashAnchors(repository?.path ?? null);
+  const stashView = useNavigation((navigation) => navigation.stash);
+  const visibleStashesByBase = useMemo(() => {
+    const groups = new Map<string, StashAnchorEntry[]>();
+    for (const anchor of stashAnchors.data?.entries ?? []) {
+      if (!history.commitIndexById.has(anchor.base_commit_id)) continue;
+      const group = groups.get(anchor.base_commit_id) ?? [];
+      group.push(anchor);
+      groups.set(anchor.base_commit_id, group);
+    }
+    return groups;
+  }, [history.commitIndexById, stashAnchors.data]);
 
   const { commits, hasNextPage, isFetchingNextPage, fetchNextPage } = history;
   const loaded =
@@ -192,6 +207,19 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
           </button>
         </div>
       )}
+      {stashAnchors.error !== null && (
+        <div className="state history-view__state" role="status">
+          <span>{t("stash:graph.refreshFailed")}</span>{" "}
+          <button
+            type="button"
+            className="button"
+            disabled={stashAnchors.isFetching}
+            onClick={() => void stashAnchors.refetch()}
+          >
+            {t("common:actions.retry")}
+          </button>
+        </div>
+      )}
       <CommitTable
         commits={commits}
         commitIndexById={history.commitIndexById}
@@ -204,6 +232,9 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
         anchorCommitId={historyAnchor}
         onAnchorChange={setHistoryAnchor}
         refsByCommit={refsByCommit}
+        stashesByBase={visibleStashesByBase}
+        activeStashId={stashView?.entry.stash_id ?? null}
+        onSelectStash={openStash}
         renderGraph={(window) => (
           <GraphCanvas
             colors={graph.colors}

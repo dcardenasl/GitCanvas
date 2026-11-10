@@ -12,7 +12,7 @@ export default tseslint.config(
       "dist",
       "coverage",
       ".ua",
-      "brag-output",
+      "brag-output*",
       "target",
       "src-tauri/target",
       "src-tauri/gen",

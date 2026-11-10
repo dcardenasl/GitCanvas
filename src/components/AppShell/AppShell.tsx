@@ -1,3 +1,6 @@
+import { StashDetailPanel } from "../StashView/StashDetailPanel";
+import { useStashRuntime } from "../../state/stashes";
+import { focusStashControl } from "../StashView/metadata";
 import { useQueryClient } from "@tanstack/react-query";
 import { lazy, Suspense, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -50,6 +53,11 @@ import { useOpenFolder } from "./useOpenFolder";
 
 import "./AppShell.css";
 
+const StashFileView = lazy(async () => {
+  const module = await import("../StashView/StashFileView");
+  return { default: module.StashFileView };
+});
+
 const NO_EXCLUSIONS: readonly string[] = [];
 const GitHubPicker = lazy(async () => {
   const module = await import("../GitHubPicker/GitHubPicker");
@@ -58,7 +66,7 @@ const GitHubPicker = lazy(async () => {
 
 /** The application window: toolbar, navigation and history. */
 export function AppShell() {
-  const { t } = useTranslation(["shell", "common"]);
+  const { t } = useTranslation(["shell", "common", "stash"]);
   const repository = useActiveRepository();
   const verified = useWorkspace(
     (state) =>
@@ -80,6 +88,7 @@ export function AppShell() {
   const selectedCommitId = useNavigation(getSelectedCommitId);
   const history = useHistory(readableRoot);
   const selectedFilePath = useNavigation(getSelectedFilePath);
+  const stash = useNavigation((nav) => nav.stash);
   const fileHistory = useNavigation((navigation) => navigation.fileHistory);
   const showGitHub = useWorkspace((state) => state.githubOpen);
   const setShowGitHub = useWorkspace((state) => state.setGitHubOpen);
@@ -92,6 +101,7 @@ export function AppShell() {
   );
 
   const watcher = useLiveRepository(readableRoot);
+  useStashRuntime(readableRoot, watcher.status.kind === "degraded");
   const currentBranch = useCurrentBranch(readableRoot);
   const gitActions = useGitActions(repository?.path ?? null);
   const sidebarPinned = useNavigation((navigation) => navigation.sidebarPinned);
@@ -102,6 +112,8 @@ export function AppShell() {
 
   const {
     revealCommit,
+    closeStash,
+    updateStash,
     setSidebarPinned,
     setSidebarTemporaryOpen,
     setSearchQuery,
@@ -188,7 +200,36 @@ export function AppShell() {
   const worktreeFile = selection.kind === "worktree" ? selection : null;
   const readingWorktreeFile =
     worktreeFile !== null && worktreeFile.filePath !== null;
-  const readingFile = readingCommitFile || readingWorktreeFile;
+  const readingFile =
+    stash === null
+      ? readingCommitFile || readingWorktreeFile
+      : stash.center === "file";
+  useEffect(() => {
+    if (stash === null) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (
+        event.key !== "Escape" ||
+        event.defaultPrevented ||
+        document.querySelector("[role=menu]") !== null
+      )
+        return;
+      event.preventDefault();
+      if (stash.center !== "graph") {
+        updateStash(stash.entry.stash_id, (view) => ({
+          ...view,
+          center: "graph",
+        }));
+        focusStashControl("[data-stash-close]");
+      } else {
+        closeStash();
+        focusStashControl(`[data-stash-row="${stash.entry.stash_id}"]`);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [stash, closeStash, updateStash]);
   // A file's history keeps the commit list where the branches are; reading a
   // file would otherwise fold that list away.
   const collapseSidebar =
@@ -421,7 +462,17 @@ export function AppShell() {
                 </p>
               }
             >
-              {fileHistory !== null ? (
+              {stash !== null ? (
+                stash.center === "file" ? (
+                  <StashFileView root={project.path} view={stash} />
+                ) : stash.center === "choose_file" ? (
+                  <p className="state" role="status">
+                    {t("stash:choose")}
+                  </p>
+                ) : (
+                  <HistoryView history={history} />
+                )
+              ) : fileHistory !== null ? (
                 <FileHistoryDiff history={history} />
               ) : selected !== null && selectedFilePath !== null ? (
                 <LazyFileDiffView
@@ -453,7 +504,9 @@ export function AppShell() {
             grows="left"
             onResize={layout.setInspector}
           />
-          {selected === null && selectedCommitId !== null ? (
+          {stash !== null ? (
+            <StashDetailPanel root={project.path} view={stash} />
+          ) : selected === null && selectedCommitId !== null ? (
             <aside
               className="detail-panel"
               aria-label={t("workspace.commitDetails")}

@@ -1,7 +1,11 @@
 import type { FileDiff, FileDiffSummary } from "../bindings";
 
 /** A changed path represented by either a patch or bounded summary metadata. */
-export type ChangedFile = FileDiff | FileDiffSummary;
+export type ChangedFile = (FileDiff | FileDiffSummary) & {
+  /** Exact opaque identity when a display path cannot identify a delta. */
+  readonly key?: string;
+  readonly statsAvailable?: boolean;
+};
 
 const NAME_ORDER = new Intl.Collator("en", {
   numeric: true,

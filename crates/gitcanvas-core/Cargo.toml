@@ -25,6 +25,11 @@ url.workspace = true
 [target.'cfg(windows)'.dependencies]
 same-file = "1"
 
+[target.'cfg(unix)'.dependencies]
+# Safe OpenOptions flags prevent a replaced reflog from blocking on a FIFO or
+# following a final-component symlink. No raw syscalls or unsafe code are needed.
+libc = "0.2"
+
 # Deliberately absent: `tauri`. This crate must stay usable, and testable,
 # without starting an application. Adding it here would silently undo the
 # boundary the workspace exists to enforce.

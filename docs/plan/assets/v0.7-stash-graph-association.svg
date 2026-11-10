@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="680" viewBox="0 0 1240 680" role="img" aria-labelledby="title desc">
+  <title id="title">Stash markers in the commit graph</title>
+  <desc id="desc">Two unique stash objects are grouped on their loaded base commit row. An anchored popover lists aliases, messages, and dates. The graph has no stash connector.</desc>
+  <defs>
+    <style>
+      text { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    </style>
+  </defs>
+  <rect width="1240" height="680" fill="#10131a"/>
+  <rect width="1240" height="52" fill="#14161d"/>
+  <text x="24" y="33" fill="#d3d6e0" font-size="17" font-weight="650">GitCanvas</text>
+  <text x="470" y="33" fill="#d3d6e0" font-size="15">Historial</text>
+  <rect x="24" y="76" width="220" height="570" rx="10" fill="#14161d" stroke="#262b38"/>
+  <text x="44" y="110" fill="#d3d6e0" font-size="13" font-weight="650">REFERENCIAS</text>
+  <circle cx="51" cy="148" r="4" fill="#c4a3ff"/>
+  <text x="65" y="153" fill="#d3d6e0" font-size="13">main</text>
+  <circle cx="51" cy="182" r="4" fill="#74c7ec"/>
+  <text x="65" y="187" fill="#a1a9bc" font-size="13">feature/layout</text>
+  <text x="272" y="98" fill="#8b93a6" font-size="11" letter-spacing="1.1">GRAFO Y COMMITS</text>
+  <rect x="260" y="112" width="710" height="534" rx="10" fill="#10131a" stroke="#262b38"/>
+  <path d="M306 140 V236 C306 270 348 278 348 311 V411 C348 446 306 454 306 488 V618" fill="none" stroke="#747c91" stroke-width="2"/>
+  <path d="M348 236 C348 278 390 278 390 311 V411" fill="none" stroke="#74c7ec" stroke-width="2"/>
+  <circle cx="306" cy="156" r="5" fill="#c4a3ff"/>
+  <circle cx="306" cy="236" r="5" fill="#c4a3ff"/>
+  <circle cx="348" cy="311" r="5" fill="#74c7ec"/>
+  <circle cx="306" cy="411" r="6" fill="#c4a3ff"/>
+  <circle cx="306" cy="488" r="5" fill="#c4a3ff"/>
+  <g fill="#d3d6e0" font-size="13">
+    <text x="372" y="160">Fix keyboard navigation in history</text>
+    <text x="372" y="240">Keep branch labels visible on narrow rows</text>
+    <text x="414" y="315">Add accessible row controls</text>
+    <text x="500" y="415">Refactor commit history layout</text>
+    <text x="372" y="492">Initial graph view</text>
+  </g>
+  <g class="mono" font-size="10" font-weight="600">
+    <rect x="372" y="269" width="86" height="19" rx="5" fill="#211d2d" stroke="#6c568f"/>
+    <text x="383" y="282" fill="#c4a3ff">feature/layout</text>
+    <rect x="372" y="388" width="43" height="19" rx="5" fill="#211d2d" stroke="#6c568f"/>
+    <text x="384" y="401" fill="#c4a3ff">main</text>
+  </g>
+  <rect x="454" y="387" width="38" height="22" rx="11" fill="#211d2d" stroke="#9c7bd3"/>
+  <path d="M465 393v10m0-7h6a3 3 0 0 1 0 6h-2m7-8v2" fill="none" stroke="#c4a3ff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="479" y="402" fill="#c4a3ff" font-size="10" font-weight="700" class="mono">2</text>
+  <rect x="454" y="421" width="320" height="174" rx="10" fill="#171a22" stroke="#393247"/>
+  <text x="472" y="447" fill="#d3d6e0" font-size="13" font-weight="650">Stashes basados en este commit</text>
+  <path d="M454 458h320" stroke="#262b38"/>
+  <text x="472" y="481" fill="#d3d6e0" font-size="12">WIP on main: extracting row controls</text>
+  <text x="472" y="500" fill="#8b93a6" font-size="10" class="mono">stash@{0} · 2026-11-09 10:42 -03:00</text>
+  <path d="M454 512h320" stroke="#262b38"/>
+  <text x="472" y="535" fill="#d3d6e0" font-size="12">On main: adjust commit spacing</text>
+  <text x="472" y="554" fill="#8b93a6" font-size="10" class="mono">stash@{1} · 2026-11-08 18:16 -03:00</text>
+  <path d="M454 567h320" stroke="#262b38"/>
+  <text x="472" y="585" fill="#a1a9bc" font-size="10">1 de 1</text>
+  <rect x="990" y="112" width="226" height="534" rx="10" fill="#14161d" stroke="#262b38"/>
+  <text x="1012" y="145" fill="#8b93a6" font-size="11" letter-spacing="1.1">INSPECTOR EXISTENTE</text>
+  <text x="1012" y="181" fill="#d3d6e0" font-size="15" font-weight="650">Stash · stash@{0}</text>
+  <text x="1012" y="207" fill="#a1a9bc" font-size="11">WIP on main: extracting row controls</text>
+  <rect x="1012" y="228" width="180" height="27" rx="6" fill="#171a22" stroke="#393247"/>
+  <text x="1024" y="246" fill="#c4a3ff" font-size="11">Todos   Preparados   Sin preparar</text>
+  <text x="1012" y="291" fill="#d3d6e0" font-size="12" font-weight="600">Archivos guardados</text>
+  <rect x="1012" y="308" width="180" height="72" rx="6" fill="#10131a" stroke="#262b38"/>
+  <text x="1024" y="334" fill="#d3d6e0" font-size="11">M  src/CommitTable.tsx</text>
+  <text x="1024" y="357" fill="#8b93a6" font-size="10">+ 12   − 4</text>
+  <text x="272" y="664" fill="#8b93a6" font-size="11">El chip cuenta OIDs únicos. Las líneas representan únicamente relaciones normales entre commits.</text>
+</svg>

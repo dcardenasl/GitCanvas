@@ -1290,7 +1290,7 @@ dependencies = [
 
 [[package]]
 name = "gitcanvas"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "filetime",
  "git2",
@@ -1318,12 +1318,13 @@ dependencies = [
 
 [[package]]
 name = "gitcanvas-core"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "filetime",
  "fs2",
  "git2",
  "keyring",
+ "libc",
  "notify",
  "same-file",
  "serde",

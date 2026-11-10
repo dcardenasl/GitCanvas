@@ -49,6 +49,18 @@ export const commands = {
 	getCommit: (path: string, commitId: string) => typedError<CommitInfo, AppError>(__TAURI_INVOKE("get_commit", { path, commitId })),
 	/**  Reads one bounded page of a file's history, following renames from a start commit. */
 	getFileHistory: (path: string, request: FileHistoryRequest) => typedError<FileHistoryPage, AppError>(__TAURI_INVOKE("get_file_history", { path, request })),
+	/**  Reads bounded stash data through the canonical repository authorization boundary. */
+	getStashes: (path: string, request: StashListRequest) => typedError<StashPage, AppError>(__TAURI_INVOKE("get_stashes", { path, request })),
+	/**  Reads the bounded stash-to-base index through the canonical authorization boundary. */
+	getStashAnchors: (path: string) => typedError<StashAnchorIndex, AppError>(__TAURI_INVOKE("get_stash_anchors", { path })),
+	/**  Reads bounded stash data through the canonical repository authorization boundary. */
+	getStashFiles: (path: string, request: StashFilesRequest) => typedError<StashFilesPage, AppError>(__TAURI_INVOKE("get_stash_files", { path, request })),
+	/**  Reads bounded stash data through the canonical repository authorization boundary. */
+	getStashFileDiff: (path: string, request: StashFileDiffRequest) => typedError<StashFileDiff, AppError>(__TAURI_INVOKE("get_stash_file_diff", { path, request })),
+	/**  Reads bounded stash data through the canonical repository authorization boundary. */
+	getStashFileContent: (path: string, request: StashFileContentRequest) => typedError<StashFileContent, AppError>(__TAURI_INVOKE("get_stash_file_content", { path, request })),
+	/**  Reads a cheap stash metadata revision for active-project polling. */
+	getStashFingerprint: (path: string) => typedError<StashFingerprint, AppError>(__TAURI_INVOKE("get_stash_fingerprint", { path })),
 	/**  Reads one coherent generation of branches, tags, HEAD and history roots. */
 	getRepositoryRefs: (path: string) => typedError<RepositoryRefsSnapshot, AppError>(__TAURI_INVOKE("get_repository_refs", { path })),
 	/**  Reads linked-worktree metadata from the authorized active repository. */
@@ -707,7 +719,7 @@ export type RepositoryChangedEvent = {
 };
 
 /**  Announces a scoped change in the generation currently shown by the window. */
-export type RepositoryChangedKind = "Metadata" | "Worktree" | "Worktrees" | { Degraded: {
+export type RepositoryChangedKind = "Metadata" | "Worktree" | "Worktrees" | "Stashes" | { Degraded: {
 	message: string,
 } };
 
@@ -792,6 +804,337 @@ snapshot: boolean } |
 side: WorktreeSide;
 /**  Repository-relative path of the selected file, if any. */
 file_path: string | null };
+
+/**  One unique saved object anchored to its first-parent commit for graph rows. */
+export type StashAnchorEntry = {
+	/**  Alias and metadata from the newest reflog occurrence of this object. */
+	entry: StashEntry,
+	/**  First parent of the stash commit (`H`). */
+	base_commit_id: string,
+};
+
+/**  Complete, revision-consistent index for the currently readable stash reflog. */
+export type StashAnchorIndex = {
+	/**  Same snapshot identity as the stash inventory. */
+	revision: string,
+	/**  Unique stash objects grouped by their first parent. */
+	entries: StashAnchorEntry[],
+	/**  Unique objects whose commit or first parent could not be resolved. */
+	unresolved: number,
+};
+
+/**  Branch context recorded by a recognized Git stash message, never guessed from HEAD. */
+export type StashBranch =
+/**  A branch name recorded when the entry was saved. */
+{ kind: "named";
+/**  Recorded branch name; the branch may no longer exist. */
+name: string } |
+/**  Git recorded that HEAD was detached. */
+{ kind: "detached" } |
+/**  The message does not unambiguously record a branch. */
+{ kind: "unknown" };
+
+/**  Which two saved states are compared; never the current HEAD, index or disk. */
+export type StashComparisonMode =
+/**  Base to saved worktree, plus saved untracked files. */
+"all" |
+/**  Base to saved index. */
+"staged" |
+/**  Saved index to saved worktree. */
+"unstaged" |
+/**  Empty tree to the optional saved untracked tree. */
+"untracked";
+
+/**  A valid content read or explicit absence; failed object reads remain errors. */
+export type StashContentOutcome =
+/**  Bounded blob content and omission metadata. */
+{ kind: "available";
+/**  Shared content representation, including binary/size omissions. */
+content: FileContentFields } |
+/**  This side intentionally has no renderable file. */
+{ kind: "unavailable";
+/**  Typed explanation for the caller. */
+reason: StashContentUnavailable };
+
+/**  Side of the selected saved comparison. */
+export type StashContentSide =
+/**  Previous path/object, including the source of a rename. */
+"previous" |
+/**  Saved destination path/object. */
+"saved";
+
+/**  Expected absence of renderable content, distinct from an unreadable Git object. */
+export type StashContentUnavailable =
+/**  An addition has no previous side; a deletion has no saved side. */
+"missing_side" |
+/**  A gitlink has no file blob to render. */
+"submodule" |
+/**  The saved entry is not a supported blob. */
+"unsupported_entry";
+
+/**  One reflog entry; two entries may deliberately name the same saved object. */
+export type StashEntry = {
+	/**  Full object id used for later inspection, independent of the current index. */
+	stash_id: string,
+	/**  Index in this revision, for displaying `stash@{index}` only. */
+	index: number,
+	/**  Original reflog message, with invalid UTF-8 replaced only for display. */
+	message: string | null,
+	/**  Whether the displayed message contains UTF-8 replacements. */
+	message_lossy: boolean,
+	/**  Recorded branch context, independent of currently existing references. */
+	branch: StashBranch,
+	/**  Reflog record time in Unix seconds, as a decimal string for JavaScript safety. */
+	recorded_at: string,
+	/**  Recorded timezone offset in minutes. */
+	offset_minutes: number,
+};
+
+/**  One exact saved version and its whole-content outcome. */
+export type StashFileContent = {
+	/**  Frozen context. */
+	inspection: StashInspection,
+	/**  Selected key, unchanged from the caller's validated key. */
+	file_key: string,
+	/**  Selected side. */
+	side: StashContentSide,
+	/**  Saved version, absent only for a missing side. */
+	version: StashFileVersion | null,
+	/**  Content or explicit absence. */
+	outcome: StashContentOutcome,
+	/**  Engine limits. */
+	limits: StashInspectionLimits,
+};
+
+/**  Whole-content request for one side of a saved comparison. */
+export type StashFileContentRequest = {
+	/**  Selected comparison and file. */
+	file: StashFileRequest,
+	/**  Previous or saved version. */
+	side: StashContentSide,
+	/**  Bypass initial limits, retaining the hard content cap. */
+	expand: boolean,
+};
+
+/**  One patch and its file metadata, never patches for the rest of the comparison. */
+export type StashFileDiff = {
+	/**  Frozen saved-state context. */
+	inspection: StashInspection,
+	/**  File metadata for the exact requested delta. */
+	entry: StashFileSummary,
+	/**  Patch text, absent for binary, oversized or non-blob entries. */
+	patch: string | null,
+	/**  Engine limits. */
+	limits: StashInspectionLimits,
+};
+
+/**  On-demand patch request for exactly one file. */
+export type StashFileDiffRequest = {
+	/**  Selected comparison and file. */
+	file: StashFileRequest,
+	/**  Bypass initial limits, retaining the hard patch cap. */
+	expand: boolean,
+};
+
+/**  What the saved tree entry represents. */
+export type StashFileKind =
+/**  Ordinary or executable file blob. */
+"blob" |
+/**  Link target stored as a blob; never followed on disk. */
+"symlink" |
+/**  Gitlink; no submodule repository is opened. */
+"submodule" |
+/**  An entry that cannot be rendered as file content. */
+"other";
+
+/**  Origin distinguishes byte-identical names in the worktree and untracked trees. */
+export type StashFileOrigin =
+/**  Saved tracked comparison. */
+"tracked" |
+/**  Saved untracked/ignored tree. */
+"untracked";
+
+/**  Identifies a selected saved file without trusting a display path or client object id. */
+export type StashFileRequest = {
+	/**  Immutable full stash id. */
+	stash_id: string,
+	/**  Comparison in which the key was issued. */
+	mode: StashComparisonMode,
+	/**  Opaque key issued by the file listing. */
+	file_key: string,
+};
+
+/**  One exact delta, with reusable file metadata and independently resolved versions. */
+export type StashFileSummary = {
+	/**  Opaque key bound to repository, stash, mode, origin and exact delta. */
+	key: string,
+	/**  Mode-independent raw path/origin identity for retaining a file across comparisons. */
+	path_identity: string,
+	/**  Saved tracked or untracked origin. */
+	origin: StashFileOrigin,
+	/**  Shared change metadata; the list never contains patch text. */
+	file: FileDiffSummary,
+	/**  False when line counts cannot be calculated without exceeding read bounds. */
+	stats_available: boolean,
+	/**  Previous version, absent for an addition. */
+	previous: StashFileVersion | null,
+	/**  Saved version, absent for a deletion. */
+	saved: StashFileVersion | null,
+	/**  Non-blob preview limitation, independent of content-side availability. */
+	preview_unavailable: StashPreviewUnavailable | null,
+};
+
+/**  A version resolved by the server from a validated comparison and file key. */
+export type StashFileVersion = {
+	/**  Commit supplying this version. */
+	commit_id: string,
+	/**  Exact object id in that commit's tree. */
+	object_id: string,
+	/**  Display path, never accepted back as file identity. */
+	path: string,
+	/**  Whether the display path replaces invalid UTF-8 bytes. */
+	path_lossy: boolean,
+	/**  Saved object kind. */
+	kind: StashFileKind,
+};
+
+/**  One page of changed files from an immutable comparison. */
+export type StashFilesPage = {
+	/**  Frozen context, preserved even if the stash is removed from the list. */
+	inspection: StashInspection,
+	/**  Only the requested page of summaries. */
+	files: StashFileSummary[],
+	/**  Total changed files in this comparison; modes must not be added together. */
+	total_files: number,
+	/**  Cursor tied to this effective comparison, or `None` when complete. */
+	next_cursor: string | null,
+	/**  Engine policy, without frontend copies of limits. */
+	limits: StashInspectionLimits,
+};
+
+/**  Page selection for one saved-state comparison. */
+export type StashFilesRequest = {
+	/**  Immutable full stash id, never a reflog index or revision expression. */
+	stash_id: string,
+	/**  Saved states to compare. */
+	mode: StashComparisonMode,
+	/**  Page size, or the engine default. */
+	limit: number | null,
+	/**  Continuation for this comparison. */
+	cursor: string | null,
+};
+
+/**  Cheap opaque metadata revision for active-project backup polling. */
+export type StashFingerprint = {
+	/**  Ref target and reflog metadata, not a durable or cryptographic content identity. */
+	revision: string,
+};
+
+/**  Frozen identity of the saved states and the effective comparison. */
+export type StashInspection = {
+	/**  Full stash id W. */
+	stash_id: string,
+	/**  Base commit H. */
+	base_commit_id: string,
+	/**  Saved index commit I. */
+	index_commit_id: string,
+	/**  Optional saved untracked commit U. */
+	untracked_commit_id: string | null,
+	/**  Selected saved-state comparison. */
+	mode: StashComparisonMode,
+	/**  Repository, saved states and effective delta identity. */
+	revision: string,
+	/**  Explicit limits on interpretation of the comparison. */
+	notices: StashInspectionNotice[],
+};
+
+/**  Resource policy published alongside every inspection response. */
+export type StashInspectionLimits = {
+	/**  Changed deltas allowed before rename detection. */
+	max_files: number,
+	/**  Default and maximum file summaries per page. */
+	max_page_size: number,
+	/**  Maximum unique readable blob bytes for comparison work. */
+	max_comparison_blob_bytes: number,
+	/**  Maximum bytes in file keys and cursors. */
+	max_key_bytes: number,
+	/**  Initial patch line budget. */
+	initial_patch_lines: number,
+	/**  Initial patch byte budget. */
+	initial_patch_bytes: number,
+	/**  Explicit patch hard cap. */
+	expanded_patch_bytes: number,
+	/**  Initial content line budget. */
+	initial_content_lines: number,
+	/**  Initial content byte budget. */
+	initial_content_bytes: number,
+	/**  Explicit content hard cap. */
+	expanded_content_bytes: number,
+};
+
+/**  An explicit reduction of content-based rename search, not a claim of no renames. */
+export type StashInspectionNotice =
+/**  Oversized objects were paired by exact id only, without reading their data. */
+"rename_similarity_skipped";
+
+/**  Bounds published by Rust rather than copied into consumers. */
+export type StashLimits = {
+	/**  Default rows per page. */
+	default_page_size: number,
+	/**  Maximum rows per page. */
+	max_page_size: number,
+	/**  Maximum reflog snapshot bytes. */
+	max_reflog_bytes: number,
+	/**  Maximum entries in a snapshot. */
+	max_entries: number,
+	/**  Maximum entry bytes, including its newline. */
+	max_entry_bytes: number,
+	/**  Maximum search bytes before normalization. */
+	max_search_bytes: number,
+	/**  Maximum cursor bytes. */
+	max_cursor_bytes: number,
+};
+
+/**  A request for a bounded page, optionally filtered across the entire snapshot. */
+export type StashListRequest = {
+	/**  Page size, or the published default. */
+	limit: number | null,
+	/**  Opaque continuation returned by this same repository and normalized search. */
+	cursor: string | null,
+	/**  Message/recorded-branch substring, or no filter. */
+	search: string | null,
+	/**  Full id whose membership should be checked even outside the matching page. */
+	selected_stash_id: string | null,
+};
+
+/**  A complete-snapshot count with only the requested bounded slice of rows. */
+export type StashPage = {
+	/**  Opaque revision of this repository's complete reflog and stash reference. */
+	revision: string,
+	/**  Requested rows in reflog order, newest first, without deduplication. */
+	entries: StashEntry[],
+	/**  All reflog entries, independent of search and page size. */
+	total: number,
+	/**  Matching entries in the entire snapshot. */
+	total_matches: number,
+	/**  Normalized search used for this page and its cursor. */
+	search: string,
+	/**  Whether the requested selected id is listed anywhere; `None` if not requested. */
+	selected_present: boolean | null,
+	/**  Newest alias of the selected OID across the whole snapshot, even outside search/pages. */
+	selected_entry: StashEntry | null,
+	/**  Next page, or `None` when all matching entries have been returned. */
+	next_cursor: string | null,
+	/**  Resource limits that apply to this query. */
+	limits: StashLimits,
+};
+
+/**  Why an entry cannot have a text patch. */
+export type StashPreviewUnavailable =
+/**  At least one side is a submodule gitlink. */
+"submodule" |
+/**  At least one side has another non-blob kind. */
+"unsupported_entry";
 
 /**  One open project and how its view was left. */
 export type TabRecord = {

@@ -171,6 +171,35 @@ fn a_file_with_invalid_utf8_is_shown_rather_than_refused() {
 }
 
 #[test]
+fn decoded_utf8_replacements_cannot_bypass_initial_or_expanded_content_limits() {
+    let fixture = Fixture::new();
+    let initial = vec![0xff; 1024 * 1024];
+    let hard = vec![0xff; 11 * 1024 * 1024];
+    let commit = fixture.commit_files(
+        "refs/heads/main",
+        "invalid text",
+        &[],
+        1000,
+        &[("initial", &initial), ("hard", &hard)],
+    );
+    let active = open(&fixture);
+    let omitted =
+        get_file_content(&active, &request(&commit.to_string(), "initial", false)).unwrap();
+    assert_eq!(omitted.omitted, Some(DiffOmission::TooLarge));
+    assert!(omitted.text.is_none());
+    let expanded =
+        get_file_content(&active, &request(&commit.to_string(), "initial", true)).unwrap();
+    assert_eq!(
+        expanded.text.as_ref().unwrap().len(),
+        initial.len().saturating_mul(3)
+    );
+    assert!(matches!(
+        get_file_content(&active, &request(&commit.to_string(), "hard", true)),
+        Err(AppError::ResourceLimitExceeded(_))
+    ));
+}
+
+#[test]
 fn a_path_the_commit_does_not_have_is_an_error() {
     let fixture = Fixture::new();
     let commit = fixture.commit_files("refs/heads/main", "first", &[], 1_000, &[("a.txt", b"a\n")]);

@@ -1,3 +1,10 @@
+import {
+  openStash,
+  closeStash,
+  updateStash,
+  type StashView,
+} from "./stashNavigation";
+import type { StashEntry } from "../bindings";
 import { createGraphSlice } from "./workspaceStore/graphSlice";
 import { createReferenceFilterSlice } from "./workspaceStore/referenceFilterSlice";
 import { createReferenceTreeSlice } from "./workspaceStore/referenceTreeSlice";
@@ -91,6 +98,12 @@ export function useNavigation<T>(select: (navigation: Navigation) => T): T {
 
 /** Changes to one project's navigation, bound to that project. */
 export interface NavigationActions {
+  readonly openStash: (entry: StashEntry) => void;
+  readonly closeStash: () => void;
+  readonly updateStash: (
+    id: string,
+    change: (view: StashView) => StashView,
+  ) => void;
   readonly selectCommit: (id: string | null) => void;
   readonly selectFile: (
     path: string | null,
@@ -134,6 +147,15 @@ export function navigationActionsFor(root: string | null): NavigationActions {
     if (root !== null) useWorkspace.getState().navigate(root, transition);
   };
   return {
+    openStash: (entry) => {
+      apply(openStash(entry));
+    },
+    closeStash: () => {
+      apply(closeStash);
+    },
+    updateStash: (id, change) => {
+      apply(updateStash(id, change));
+    },
     selectCommit: (id) => {
       apply(selectCommit(id));
     },
