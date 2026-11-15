@@ -13,8 +13,8 @@ el render SVG. El graph es el núcleo de valor: todo lo demás está subordinado
 
 1. Leer [`TASKS.md`](TASKS.md) → primera tarea sin marcar de la cola vigente.
    El [roadmap de versiones](docs/plan/2026-10-19-roadmap-de-versiones.md) fija la
-   secuencia: v0.6 historial por archivo implementado; v0.7 stash de solo lectura
-   en desarrollo, con ST-1/ST-2 terminadas y ST-3 como próxima tarea de implementación; commits al final
+   secuencia: v0.6 historial por archivo y v0.7 stash de solo lectura implementados;
+   v0.8 vista de imágenes planificada (IMG-1 es la próxima tarea); commits al final
    (objetivo v0.13). Consultar el plan específico de esa tarea antes del plan rector.
 2. Leer la sección de esa fase en
    [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
@@ -32,6 +32,7 @@ el render SVG. El graph es el núcleo de valor: todo lo demás está subordinado
 | `docs/plans/2026-09-08-plan-de-implementacion.md` | Plan rector: fases, deltas, ledger de commits |
 | `docs/plan/2026-10-19-roadmap-de-versiones.md` | Approved release sequence: graph/sidebar first, commit creation last |
 | `docs/plan/2026-11-08-v0.7-implementacion.md` | Read-only stash decisions, planned contracts, bounds and ST task acceptance |
+| `docs/plan/2026-11-15-v0.8-implementacion.md` | Image viewer decisions, contract, bounds, 24-case matrix and IMG task acceptance (ADR 0010) |
 | `docs/plan/2026-10-08-plan-tres-funcionalidades.md` | Workspace and future commit creation contracts; delivery order superseded by roadmap |
 | `docs/plan/2026-10-04-plan-de-endurecimiento.md` | Plan de endurecimiento H2 y sus criterios de verificación |
 | `docs/PLAN-DESARROLLO.md` | Plan de diseño original. El plan rector lo endurece en 10 puntos (D1–D10) |
