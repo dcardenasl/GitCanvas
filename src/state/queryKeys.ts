@@ -46,6 +46,15 @@ export const queryKeys = {
     side: string,
     expand: boolean,
   ) => ["stash-content", root, id, mode, key, side, expand] as const,
+  image: (
+    root: string | null,
+    source: string,
+    path: string,
+    version: string,
+    expanded: boolean,
+    revision?: string | null,
+  ) =>
+    ["image", root, source, path, version, expanded, revision ?? null] as const,
   stashFingerprint: (root: string | null) =>
     ["stash-fingerprint", root] as const,
 
