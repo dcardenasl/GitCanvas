@@ -135,15 +135,142 @@ pub(super) fn animated(format: ImageFormat, raw: &[u8]) -> bool {
                 raw.get(..at)
                     .is_some_and(|prefix| prefix.windows(4).any(|chunk| chunk == b"IDAT"))
             }),
-        ImageFormat::Gif => {
-            raw.windows(2)
-                .filter(|bytes| bytes.first() == Some(&0x2c))
-                .count()
-                > 1
-        }
+        ImageFormat::Gif => gif_animated(raw),
         ImageFormat::Webp => {
             raw.get(12..16) == Some(b"VP8X") && raw.get(20).is_some_and(|flags| flags & 0x02 != 0)
         }
         _ => false,
+    }
+}
+
+/// Walks GIF blocks so compressed image bytes cannot impersonate frame markers.
+fn gif_animated(raw: &[u8]) -> bool {
+    if raw.len() < 13 || !(raw.starts_with(b"GIF87a") || raw.starts_with(b"GIF89a")) {
+        return false;
+    }
+    let mut offset = 13_usize;
+    let screen_packed = raw.get(10).copied().unwrap_or_default();
+    if screen_packed & 0x80 != 0 {
+        let entries = 1_usize.checked_shl(u32::from(screen_packed & 0x07) + 1);
+        let Some(bytes) = entries.and_then(|count| count.checked_mul(3)) else {
+            return false;
+        };
+        let Some(next) = offset.checked_add(bytes).filter(|next| *next <= raw.len()) else {
+            return false;
+        };
+        offset = next;
+    }
+
+    let mut frames = 0_u8;
+    loop {
+        let Some(marker) = raw.get(offset).copied() else {
+            return false;
+        };
+        let Some(next) = offset.checked_add(1) else {
+            return false;
+        };
+        offset = next;
+        match marker {
+            0x21 => {
+                // Extension label, then its size-prefixed data sub-blocks.
+                if raw.get(offset).is_none() {
+                    return false;
+                }
+                let Some(next) = offset.checked_add(1) else {
+                    return false;
+                };
+                offset = next;
+                let Some(next) = gif_skip_sub_blocks(raw, offset) else {
+                    return false;
+                };
+                offset = next;
+            }
+            0x2c => {
+                let Some(descriptor) = raw.get(offset..offset.saturating_add(9)) else {
+                    return false;
+                };
+                let Some(packed) = descriptor.get(8).copied() else {
+                    return false;
+                };
+                let Some(next) = offset.checked_add(9) else {
+                    return false;
+                };
+                offset = next;
+                if packed & 0x80 != 0 {
+                    let entries = 1_usize.checked_shl(u32::from(packed & 0x07) + 1);
+                    let Some(bytes) = entries.and_then(|count| count.checked_mul(3)) else {
+                        return false;
+                    };
+                    let Some(next) = offset.checked_add(bytes).filter(|next| *next <= raw.len())
+                    else {
+                        return false;
+                    };
+                    offset = next;
+                }
+                // LZW minimum code size precedes the image data sub-blocks.
+                if raw.get(offset).is_none() {
+                    return false;
+                }
+                let Some(next) = offset.checked_add(1) else {
+                    return false;
+                };
+                offset = next;
+                let Some(next) = gif_skip_sub_blocks(raw, offset) else {
+                    return false;
+                };
+                offset = next;
+                frames = frames.saturating_add(1);
+                if frames > 1 {
+                    return true;
+                }
+            }
+            _ => return false,
+        }
+    }
+}
+
+fn gif_skip_sub_blocks(raw: &[u8], mut offset: usize) -> Option<usize> {
+    loop {
+        let length = usize::from(*raw.get(offset)?);
+        offset = offset.checked_add(1)?;
+        if length == 0 {
+            return Some(offset);
+        }
+        offset = offset
+            .checked_add(length)
+            .filter(|next| *next <= raw.len())?;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::gif_animated;
+
+    fn gif_with_frames(frames: u8) -> Vec<u8> {
+        let still = base64::Engine::decode(
+            &base64::engine::general_purpose::STANDARD,
+            "R0lGODlhAQABAIAAAP///////yH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==",
+        )
+        .expect("valid fixture base64");
+        if frames < 2 {
+            return still;
+        }
+        let frame_start = still
+            .iter()
+            .position(|byte| *byte == 0x2c)
+            .expect("image separator");
+        let trailer = still.len().checked_sub(1).expect("GIF trailer");
+        [
+            still.get(..trailer).unwrap_or_default(),
+            still.get(frame_start..trailer).unwrap_or_default(),
+            &[0x3b],
+        ]
+        .concat()
+    }
+
+    #[test]
+    fn counts_gif_frames_from_blocks_not_compressed_byte_values() {
+        assert!(!gif_animated(&gif_with_frames(1)));
+        assert!(gif_animated(&gif_with_frames(2)));
     }
 }
