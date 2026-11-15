@@ -17,8 +17,7 @@ crear tags ni publicar como parte de la implementación; los bumps son del flujo
 
 ## Siguiente paso
 
-**IMG-1** (núcleo: lectura acotada, detección de formato y cabeceras). Leer antes el
-[plan v0.8](docs/plan/2026-11-15-v0.8-implementacion.md) completo y su sección IMG-1.
+**IMG-7** (accesibilidad, i18n y E2E nativo).
 
 ## Cola de trabajo
 
@@ -37,7 +36,7 @@ completada y archivada.
 - [x] **IMG-3 — IPC y bindings.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-3--ipc-y-bindings). Tres comandos autorizados, wrappers y medición de 32 MiB. Caso 20. Depende de IMG-2. Invariantes y bindings pasan; prueba IPC confirma allowlist y respuesta de imagen de commit. La medición de 32 MiB queda pendiente para IMG-8. → `feat(ipc): expose authorized image reads for commits, local changes and stashes`
 - [x] **IMG-4 — Estado frontend.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-4--estado-frontend). Consultas con caché acotada, claves por raíz y `shouldProbeImage`. Caso 24. Depende de IMG-3. Hooks sin reintentos/focus-refetch, caché de 15 s y revisión local en clave. Typecheck y pruebas dirigidas (9) aprobados. → `feat(images): add image queries with bounded cache retention`
 - [x] **IMG-5 — Componente `ImageCompare`.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-5--componente-imagecompare). Una/dos versiones, lado a lado, deslizador, ajuste, animación, errores, i18n. Caso 21. Depende de IMG-4. Componente accesible con MIME por formato detectado, SVG aislado en `<img>`, control de animación y reduced-motion, expansión acotada y catálogo EN/ES. 31 pruebas de componente/i18n, typecheck y ESLint focalizados aprobados. → `feat(images): add the image comparison viewer component`
-- [ ] **IMG-6 — Integración en los cuatro lectores.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-6--integración-en-los-cuatro-lectores). Modo imagen en `FileDiffView` (commit, historial, cambios locales) y `StashFileView`, sin duplicar. Depende de IMG-5. → `feat(images): show images in the commit, history, local changes and stash viewers`
+- [x] **IMG-6 — Integración en los cuatro lectores.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-6--integración-en-los-cuatro-lectores). Modo imagen en `FileDiffView` (commit, historial, cambios locales) y `StashFileView`, sin duplicar. Solo aparece al confirmar una imagen; binarios compatibles se abren directamente en modo imagen. Preserva diff/archivo y limita la expansión al lado elegido. Typecheck y ESLint aprobados; pruebas dirigidas existentes: 30. → `feat(images): show images in the commit, history, local changes and stash viewers`
 - [ ] **IMG-7 — Accesibilidad, i18n y E2E.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-7--accesibilidad-i18n-y-e2e). Fixture y spec nativo, ambos temas e idiomas, 940×600. Casos 19, 21, 22, 24. Depende de IMG-6. → `test(e2e): cover image viewing across sources, themes and languages`
 - [ ] **IMG-8 — Verificación final y documentación.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-8--verificación-final-y-documentación). `docs/verification/v0.8.md`, CHANGELOG en `Unreleased`, documentos de producto, ADR 0010 aceptado. Sin bump ni release. Depende de IMG-1–IMG-7. → `docs(images): record v0.8 verification and update product docs`
 

@@ -5,10 +5,13 @@ import type { StashView, StashReading } from "../../state/stashNavigation";
 import { useNavigationActions } from "../../state/workspace";
 import { getStashFileContent, getStashFileDiff } from "../../lib/ipc";
 import { queryKeys } from "../../state/queryKeys";
+import { shouldProbeImage, useStashImage } from "../../state/image";
+import type { ImageVersion } from "../../bindings";
 import { DiffViewer } from "../DiffViewer";
 import { WholeFilePreview } from "../FileDiffView/WholeFilePreview";
 import { ErrorMessage } from "../ErrorMessage";
 import { focusStashControl } from "./metadata";
+import { ImageCompare } from "../ImageCompare";
 import "../FileDiffView/FileDiffView.css";
 
 /** Reads exact immutable versions, with no current-HEAD or working-tree queries. */
@@ -27,6 +30,51 @@ export function StashFileView({
   const key = selected?.key ?? "";
   const ready = selected !== null && view.fileMode === view.mode;
   const request = { stash_id: id, mode: view.mode, file_key: key };
+  const path = selected?.file.path ?? "";
+  const probeImage =
+    selected !== null &&
+    shouldProbeImage({ path, omitted: selected.file.omitted ?? null });
+  const [imageExpansion, setImageExpansion] = useState<{
+    key: string;
+    previous: boolean;
+    saved: boolean;
+  }>({ key: "", previous: false, saved: false });
+  const expandImage = (version: ImageVersion) => {
+    setImageExpansion((current) => ({
+      key,
+      previous:
+        (current.key === key && current.previous) || version === "previous",
+      saved: (current.key === key && current.saved) || version === "saved",
+    }));
+  };
+  const previousImageRequest =
+    ready && probeImage
+      ? { file: request, version: "previous" as const }
+      : null;
+  const savedImageRequest =
+    ready && probeImage ? { file: request, version: "saved" as const } : null;
+  const previousImage = useStashImage(
+    root,
+    previousImageRequest,
+    imageExpansion.key === key && imageExpansion.previous,
+  );
+  const savedImage = useStashImage(
+    root,
+    savedImageRequest,
+    imageExpansion.key === key && imageExpansion.saved,
+  );
+  const imageAvailable =
+    previousImage.data?.outcome.kind === "image" ||
+    savedImage.data?.outcome.kind === "image";
+  const imagePending =
+    (previousImageRequest !== null && previousImage.isPending) ||
+    (savedImageRequest !== null && savedImage.isPending);
+  const effectiveReading =
+    view.reading === "diff" &&
+    selected?.file.omitted === "Binary" &&
+    (imageAvailable || imagePending)
+      ? "image"
+      : view.reading;
   const diff = useQuery({
     queryKey: queryKeys.stashDiff(root, id, view.mode, key, view.expanded),
     enabled: ready && view.reading === "diff",
@@ -44,12 +92,12 @@ export function StashFileView({
       side,
       view.expanded,
     ),
-    enabled: ready && view.reading !== "diff",
+    enabled: ready && (view.reading === "previous" || view.reading === "saved"),
     queryFn: () =>
       getStashFileContent(root, { file: request, side, expand: view.expanded }),
     staleTime: Infinity,
   });
-  const current = view.reading === "diff" ? diff : whole;
+  const current = effectiveReading === "diff" ? diff : whole;
   const expand = () => {
     updateStash(id, (state) => ({ ...state, expanded: true }));
   };
@@ -57,7 +105,6 @@ export function StashFileView({
     updateStash(id, (state) => ({ ...state, center: "graph" }));
     focusStashControl("[data-stash-close]");
   };
-  const path = selected?.file.path ?? "";
   return (
     <section className="file-diff" aria-label={path}>
       <header className="file-diff__head">
@@ -106,17 +153,31 @@ export function StashFileView({
                 </button>
               ),
             )}
+            {imageAvailable && (
+              <button
+                type="button"
+                className="segmented__option"
+                aria-pressed={view.reading === "image"}
+                onClick={() => {
+                  updateStash(id, (state) => ({ ...state, reading: "image" }));
+                }}
+              >
+                {t("image")}
+              </button>
+            )}
           </div>
-          <button
-            type="button"
-            className="button"
-            aria-pressed={wrap}
-            onClick={() => {
-              setWrap(!wrap);
-            }}
-          >
-            {t("wrap")}
-          </button>
+          {effectiveReading !== "image" && (
+            <button
+              type="button"
+              className="button"
+              aria-pressed={wrap}
+              onClick={() => {
+                setWrap(!wrap);
+              }}
+            >
+              {t("wrap")}
+            </button>
+          )}
         </div>
       </header>
       <div className="file-diff__body">
@@ -124,7 +185,7 @@ export function StashFileView({
           selected?.saved?.path_lossy === true) && (
           <p className="diff-viewer__notice">{t("lossy")}</p>
         )}
-        {(!ready || current.isPending) && (
+        {(!ready || (effectiveReading !== "image" && current.isPending)) && (
           <p className="state" role="status">
             {t("loading")}
           </p>
@@ -144,8 +205,26 @@ export function StashFileView({
             </button>
           </div>
         )}
+        {ready && effectiveReading === "image" && (
+          <ImageCompare
+            path={path}
+            previous={previousImage.data?.outcome ?? null}
+            saved={savedImage.data?.outcome ?? null}
+            previousLoading={
+              previousImageRequest !== null && previousImage.isPending
+            }
+            savedLoading={savedImageRequest !== null && savedImage.isPending}
+            previousError={previousImage.error}
+            savedError={savedImage.error}
+            previousExpanded={
+              imageExpansion.key === key && imageExpansion.previous
+            }
+            savedExpanded={imageExpansion.key === key && imageExpansion.saved}
+            onExpand={expandImage}
+          />
+        )}
         {ready &&
-          view.reading === "diff" &&
+          effectiveReading === "diff" &&
           diff.data !== undefined &&
           (diff.data.entry.preview_unavailable !== null ? (
             <p className="diff-viewer__notice">
@@ -159,31 +238,33 @@ export function StashFileView({
               onExpand={expand}
             />
           ))}
-        {ready && view.reading !== "diff" && whole.data !== undefined && (
-          <>
-            {whole.data.version !== null && (
-              <p className="diff-viewer__notice">
-                {t("sourcePath", { path: whole.data.version.path })} ·{" "}
-                <code>{whole.data.version.commit_id.slice(0, 12)}</code>
-                {whole.data.version.path_lossy && <> · {t("lossy")}</>}
-              </p>
-            )}
-            {whole.data.outcome.kind === "available" ? (
-              <WholeFilePreview
-                content={whole.data.outcome.content}
-                path={whole.data.version?.path ?? path}
-                wrap={wrap}
-                expanded={view.expanded}
-                fetching={whole.isFetching}
-                onExpand={expand}
-              />
-            ) : (
-              <p className="diff-viewer__notice">
-                {t(whole.data.outcome.reason)}
-              </p>
-            )}
-          </>
-        )}
+        {ready &&
+          (effectiveReading === "previous" || effectiveReading === "saved") &&
+          whole.data !== undefined && (
+            <>
+              {whole.data.version !== null && (
+                <p className="diff-viewer__notice">
+                  {t("sourcePath", { path: whole.data.version.path })} ·{" "}
+                  <code>{whole.data.version.commit_id.slice(0, 12)}</code>
+                  {whole.data.version.path_lossy && <> · {t("lossy")}</>}
+                </p>
+              )}
+              {whole.data.outcome.kind === "available" ? (
+                <WholeFilePreview
+                  content={whole.data.outcome.content}
+                  path={whole.data.version?.path ?? path}
+                  wrap={wrap}
+                  expanded={view.expanded}
+                  fetching={whole.isFetching}
+                  onExpand={expand}
+                />
+              ) : (
+                <p className="diff-viewer__notice">
+                  {t(whole.data.outcome.reason)}
+                </p>
+              )}
+            </>
+          )}
       </div>
     </section>
   );
