@@ -6,6 +6,7 @@ import fileHistory from "./fileHistory.json";
 import git from "./git.json";
 import github from "./github.json";
 import history from "./history.json";
+import image from "./image.json";
 import menu from "./menu.json";
 import refs from "./refs.json";
 import shell from "./shell.json";
@@ -20,6 +21,7 @@ export const es = {
   git,
   github,
   history,
+  image,
   menu,
   refs,
   shell,
