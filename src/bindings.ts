@@ -59,6 +59,8 @@ export const commands = {
 	getStashFileDiff: (path: string, request: StashFileDiffRequest) => typedError<StashFileDiff, AppError>(__TAURI_INVOKE("get_stash_file_diff", { path, request })),
 	/**  Reads bounded stash data through the canonical repository authorization boundary. */
 	getStashFileContent: (path: string, request: StashFileContentRequest) => typedError<StashFileContent, AppError>(__TAURI_INVOKE("get_stash_file_content", { path, request })),
+	/**  Reads one bounded image version from the exact selected stash comparison. */
+	getStashImage: (path: string, request: StashImageRequest) => typedError<StashImage, AppError>(__TAURI_INVOKE("get_stash_image", { path, request })),
 	/**  Reads a cheap stash metadata revision for active-project polling. */
 	getStashFingerprint: (path: string) => typedError<StashFingerprint, AppError>(__TAURI_INVOKE("get_stash_fingerprint", { path })),
 	/**  Reads one coherent generation of branches, tags, HEAD and history roots. */
@@ -79,6 +81,8 @@ export const commands = {
 	 *  around it is often what answers the question.
 	 */
 	getFileContent: (path: string, request: FileContentRequest) => typedError<FileContent, AppError>(__TAURI_INVOKE("get_file_content", { path, request })),
+	/**  Reads one bounded image version from a commit or its first parent. */
+	getCommitImage: (path: string, request: CommitImageRequest) => typedError<ImageOutcome, AppError>(__TAURI_INVOKE("get_commit_image", { path, request })),
 	/**  Reads one bounded page of direct children from a commit directory. */
 	getCommitTreePage: (path: string, request: CommitTreeRequest) => typedError<CommitTreePage, AppError>(__TAURI_INVOKE("get_commit_tree_page", { path, request })),
 	/**  Reads both local change sets with one repository revision. */
@@ -87,6 +91,8 @@ export const commands = {
 	getWorktreeFileDiff: (path: string, request: WorktreeFileDiffRequest) => typedError<WorktreeFileDiff, AppError>(__TAURI_INVOKE("get_worktree_file_diff", { path, request })),
 	/**  Reads a staged file from the index or an unstaged file from disk. */
 	getWorktreeFileContent: (path: string, request: WorktreeFileContentRequest) => typedError<WorktreeFileContent, AppError>(__TAURI_INVOKE("get_worktree_file_content", { path, request })),
+	/**  Reads one bounded staged or unstaged image version at a guarded revision. */
+	getWorktreeImage: (path: string, request: WorktreeImageRequest) => typedError<WorktreeImage, AppError>(__TAURI_INVOKE("get_worktree_image", { path, request })),
 	/**  Reads a cheap revision used when filesystem events are unavailable. */
 	getWorktreeFingerprint: (path: string) => typedError<WorktreeFingerprint, AppError>(__TAURI_INVOKE("get_worktree_fingerprint", { path })),
 	/**  Stores a personal access token in the OS keychain. */
@@ -247,6 +253,20 @@ export type CommitDiff = {
 	deletions: number,
 	/**  True when this commit has more than one parent, so the diff covers one side. */
 	is_merge: boolean,
+};
+
+/**  Image read for a commit and its first parent. */
+export type CommitImageRequest = {
+	/**  Commit whose tree is the saved version. */
+	commit_id: string,
+	/**  Repository relative path. */
+	path: string,
+	/**  Previous path for a detected rename. */
+	previous_path: string | null,
+	/**  Requested comparison side. */
+	version: ImageVersion,
+	/**  Whether to use the explicit expanded byte budget. */
+	expand: boolean,
 };
 
 /**  One commit in the graph. Times are decimal Unix seconds, preserving Git's full integer range. */
@@ -577,6 +597,77 @@ export type HistoryRequest = {
 	/**  Full reference names selected for the walk; `None` selects every branch, tag and HEAD. */
 	references: string[] | null,
 };
+
+/**  Supported image format determined from its leading bytes. */
+export type ImageFormat =
+/**  Portable Network Graphics. */
+"png" |
+/**  Joint Photographic Experts Group. */
+"jpeg" |
+/**  Graphics Interchange Format. */
+"gif" |
+/**  Web Picture. */
+"webp" |
+/**  Bitmap image. */
+"bmp" |
+/**  Windows icon container. */
+"ico" |
+/**  Isolated Scalable Vector Graphics. */
+"svg";
+
+/**  Result of classifying a bounded file version. */
+export type ImageOutcome =
+/**  This version is absent. */
+{ kind: "missing" } |
+/**  This version is not a regular blob. */
+{ kind: "unsupported" } |
+/**  The bytes are not a supported image. */
+{ kind: "not_image";
+/**  Size of the inspected bytes. */
+bytes: string } |
+/**  The content exceeds the initial budget. */
+{ kind: "too_large";
+/**  Total size, without returning content. */
+bytes: string } |
+/**  Recognized bytes are withheld because safe metadata is unavailable. */
+{ kind: "withheld";
+/**  Detected container format. */
+format: ImageFormat;
+/**  Total size. */
+bytes: string;
+/**  Stored width when readable. */
+width: number | null;
+/**  Stored height when readable. */
+height: number | null;
+/**  Why bytes were not returned. */
+reason: WithheldReason } |
+/**  An image and its metadata. */
+{ kind: "image";
+/**  Safe metadata and base64 content. */
+image: ImagePayload };
+
+/**  Image bytes and metadata safe to pass through the bounded IPC contract. */
+export type ImagePayload = {
+	/**  Detected format. */
+	format: ImageFormat,
+	/**  Stored width, if available from the header. */
+	width: number | null,
+	/**  Stored height, if available from the header. */
+	height: number | null,
+	/**  Byte count as a decimal string. */
+	bytes: string,
+	/**  Whether the container advertises multiple frames. */
+	animated: boolean,
+	/**  Standard base64 of the exact bounded bytes. */
+	data: string,
+};
+
+/**  Which side of an image comparison a request reads. */
+export type ImageVersion =
+/**  The version before the selected change. */
+"previous" |
+/**  The version after the selected change. */
+"saved";
 
 /**  What loading produced. */
 export type LoadedWorkspace = {
@@ -1030,6 +1121,32 @@ export type StashFingerprint = {
 	revision: string,
 };
 
+/**  One exact saved version and its image outcome. */
+export type StashImage = {
+	/**  Frozen context. */
+	inspection: StashInspection,
+	/**  Selected file key, unchanged from the validated caller key. */
+	file_key: string,
+	/**  Requested side. */
+	version: ImageVersion,
+	/**  Version metadata, absent only for a missing side. */
+	source: StashFileVersion | null,
+	/**  Classified image or typed absence. */
+	outcome: ImageOutcome,
+	/**  Engine limits. */
+	limits: StashInspectionLimits,
+};
+
+/**  Whole-image request for one saved comparison version. */
+export type StashImageRequest = {
+	/**  Selected comparison and file. */
+	file: StashFileRequest,
+	/**  Previous or saved version. */
+	version: ImageVersion,
+	/**  Bypass initial limits, retaining the hard byte cap. */
+	expand: boolean,
+};
+
 /**  Frozen identity of the saved states and the effective comparison. */
 export type StashInspection = {
 	/**  Full stash id W. */
@@ -1181,6 +1298,13 @@ export type WatchRequest = {
 	generation: number,
 };
 
+/**  Why a recognized image was withheld from the webview. */
+export type WithheldReason =
+/**  The recognized container did not expose usable dimensions. */
+"unreadable_header" |
+/**  The declared pixel count exceeds the safety limit. */
+"too_many_pixels";
+
 /**  Everything the application remembers between runs about its projects. */
 export type Workspace = {
 	/**  Open projects, in tab order. */
@@ -1329,6 +1453,36 @@ export type WorktreeHead =
 { kind: "unborn"; reference: string } |
 /**  HEAD could not be decoded safely. */
 { kind: "unknown" };
+
+/**  An image outcome tied to the local-change revision it was read from. */
+export type WorktreeImage = {
+	/**  Requested change side. */
+	side: WorktreeSide,
+	/**  Local-change revision checked around the read. */
+	revision: string,
+	/**  Requested path. */
+	path: string,
+	/**  Requested version. */
+	version: ImageVersion,
+	/**  Image classification or explicit absence. */
+	outcome: ImageOutcome,
+};
+
+/**  One requested image version from staged or unstaged local changes. */
+export type WorktreeImageRequest = {
+	/**  Staged or unstaged changes. */
+	side: WorktreeSide,
+	/**  Current path of the changed file. */
+	path: string,
+	/**  Previous path for a detected rename. */
+	previous_path: string | null,
+	/**  Which version to read. */
+	version: ImageVersion,
+	/**  Snapshot revision used to select this file. */
+	expected_revision: string | null,
+	/**  Whether to use the explicit expanded byte budget. */
+	expand: boolean,
+};
 
 /**  Which side of the local changes the caller wants to inspect. */
 export type WorktreeSide =

@@ -149,6 +149,43 @@ fn file_history_is_authorized_before_it_reads_anything() {
 }
 
 #[test]
+fn image_commands_require_authorization_and_commit_reads_return_bounded_metadata() {
+    let dir = tempfile::tempdir().unwrap();
+    let repo = git2::Repository::init(dir.path()).unwrap();
+    let signature = git2::Signature::now("Test", "test@example.com").unwrap();
+    let mut image = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR".to_vec();
+    image.extend_from_slice(&3_u32.to_be_bytes());
+    image.extend_from_slice(&4_u32.to_be_bytes());
+    let blob = repo.blob(&image).unwrap();
+    let mut builder = repo.treebuilder(None).unwrap();
+    builder.insert("logo.png", blob, 0o100_644).unwrap();
+    let tree = repo.find_tree(builder.write().unwrap()).unwrap();
+    let commit = repo
+        .commit(Some("HEAD"), &signature, &signature, "image", &tree, &[])
+        .unwrap();
+    let path = dir.path().to_str().unwrap();
+    let webview = test_webview();
+    let request = json!({
+        "path": path,
+        "request": {
+            "commit_id": commit.to_string(),
+            "path": "logo.png",
+            "previous_path": null,
+            "version": "saved",
+            "expand": false
+        }
+    });
+    let denied = invoke(&webview, "get_commit_image", request.clone()).unwrap_err();
+    assert_eq!(denied["kind"], "InvalidRepository");
+    invoke(&webview, "open_repository", json!({"path": path})).unwrap();
+    let result = invoke(&webview, "get_commit_image", request).unwrap();
+    assert_eq!(result["kind"], "image");
+    assert_eq!(result["image"]["format"], "png");
+    assert_eq!(result["image"]["width"], 3);
+    assert_eq!(result["image"]["height"], 4);
+}
+
+#[test]
 fn command_failures_are_structured_and_invalid_limits_are_rejected() {
     let dir = tempfile::tempdir().unwrap();
     let webview = test_webview();
