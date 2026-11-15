@@ -28,6 +28,7 @@ pub mod file_history;
 mod file_identity;
 pub mod github;
 pub mod history;
+pub mod image;
 mod pagination;
 pub mod refs;
 pub mod repository;

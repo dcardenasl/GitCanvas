@@ -1320,6 +1320,7 @@ dependencies = [
 name = "gitcanvas-core"
 version = "0.7.0"
 dependencies = [
+ "base64 0.21.7",
  "filetime",
  "fs2",
  "git2",

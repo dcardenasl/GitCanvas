@@ -16,6 +16,8 @@
       Decisiones IMG-D01–D16, contrato Rust/IPC/frontend, matriz de 24 casos y tareas IMG-1–IMG-8.
       → `docs(images): plan the v0.8 image viewer and record adr 0010` (`0ee9b5c`)
 
+- [x] **IMG-1 — Núcleo: lectura acotada, detección y cabeceras.** Extraída la política común de bytes acotados y añadido `gitcanvas_core::image` para detección por firmas, cabeceras, límite de 40 MP y base64. Pruebas unitarias y Clippy del núcleo aprobados; las pruebas de integración que levantan sockets locales quedaron bloqueadas por el sandbox. Desviación: parsers acotados propios en lugar de `imagesize`, no disponible offline; revisar auditoría de dependencias al recuperar red. → `feat(core): classify image bytes and read their headers`
+
 ### v0.7 — Stash de solo lectura (ST-0–ST-9 completadas en `dev`; sin publicar)
 
 Plan: [decisiones ST-D01–ST-D10, contrato, matriz y dependencias](docs/plan/2026-11-08-v0.7-implementacion.md).
