@@ -280,6 +280,23 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::print_stdout)] // Retain the release measurement in the verification log.
+    fn measures_classification_of_the_initial_two_mib_budget() {
+        use std::time::Instant;
+
+        let mut bytes = png(1, 1);
+        bytes.resize(2 * 1024 * 1024, 0);
+        let started = Instant::now();
+        let result = classify(&bytes, "image.png", false).unwrap();
+        let elapsed = started.elapsed();
+        let ImageOutcome::Image { image } = result else {
+            panic!("expected bounded image payload")
+        };
+        assert_eq!(image.bytes, "2097152");
+        println!("2 MiB image classification and base64: {elapsed:?}");
+    }
+
+    #[test]
     fn classifies_svg_without_parsing_or_rewriting_it() {
         let svg = b"\xef\xbb\xbf<?xml version=\"1.0\"?><!-- x --><!DOCTYPE svg><svg onload=\"x\"><script/></svg>";
         let result = classify(svg, "image.svg", false).unwrap();

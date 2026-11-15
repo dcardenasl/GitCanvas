@@ -35,16 +35,17 @@ alcance aquí y mantener TASKS.md como fuente de ejecución. Cada entrega debe q
 | v0.12 | Escrituras locales seguras: stash y ramas | Primero la base común de escrituras (exclusión por directorio Git común, recuperación, deshacer). Después, stash: guardar todos los cambios, aplicar, aplicar y quitar, descartar con deshacer. Luego crear, renombrar y eliminar ramas con protecciones; crear tags y gestionar remotos; fetch explícito y diferencias local/upstream. Ver [registro de alcance](#registro-de-cambios-de-alcance). |
 | v0.13 | Preparar archivos y crear commits | Preparar/retirar archivos completos, título/descripción, borradores por proyecto, hooks y firma, recuperación de errores y actualización del gráfico. |
 
-## Próxima entrega: v0.8 — vista de imágenes
+## Entrega implementada: v0.8 — vista de imágenes
 
 Actualización de planificación: 2026-11-15. v0.7 (stash de solo lectura) está
 implementada y verificada en macOS en `dev`; sus gates externos siguen abiertos en
-`TASKS.md` (V07-VERIFY). La próxima funcionalidad es la vista de imágenes. Contrato,
-límites, matriz y tareas IMG-0–IMG-8 en el
-[plan v0.8](2026-11-15-v0.8-implementacion.md), con
-[ADR 0010](../adr/0010-image-viewing.md) como diseño técnico propuesto. No implica
-bump ni publicación. Detalle anterior de v0.7: [plan v0.7](2026-11-08-v0.7-implementacion.md)
-y [ADR 0009](../adr/0009-read-only-stash.md).
+`TASKS.md` (V07-VERIFY). v0.8 añade lectura y comparación de imágenes. Contrato,
+límites, matriz y evidencia están en el
+[plan v0.8](2026-11-15-v0.8-implementacion.md), [ADR 0010](../adr/0010-image-viewing.md)
+y [verificación](../verification/v0.8.md). La siguiente entrega planificada es v0.9.
+No implica bump ni publicación. Detalle anterior de v0.7:
+[plan v0.7](2026-11-08-v0.7-implementacion.md) y
+[ADR 0009](../adr/0009-read-only-stash.md).
 
 ## Entrega de referencia: v0.4 (plan histórico)
 

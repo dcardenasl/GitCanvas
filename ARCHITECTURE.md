@@ -231,6 +231,25 @@ failure or limit leaves plain text. Languages come from one registry, the gramma
 must cover it, and the colors are theme tokens. See
 [ADR 0005](docs/adr/0005-syntax-highlighting.md).
 
+## Image previews (v0.8 in dev)
+
+`gitcanvas-core::image` classifies leading bytes, reads bounded dimensions and frame
+metadata, and returns one exact image version. It does not decode pixels or parse SVG.
+Commit, worktree and stash reads use `get_commit_image`, `get_worktree_image` and
+`get_stash_image` behind the existing `read` + `with_repo` authorization boundary.
+Worktree requests carry the expected snapshot revision; stash requests retain the
+selected comparison and file key. The common 2 MiB initial and 32 MiB expanded byte
+policy is shared with blob reads, with a 40 MP header limit.
+
+Generated bindings carry one version per IPC response. Frontend query keys include root,
+source, path, side, expansion and worktree revision; image results leave the cache after
+15 seconds and are not refetched on focus. `ImageCompare` renders fixed-MIME `data:` URLs
+using `<img>`, compares side by side or with a slider, and follows reduced-motion
+preferences. No CSP source or Tauri capability was added. Bounded local parsers read
+header dimensions without a decoder or image-size dependency; ICO reports its first
+directory entry. See [ADR 0010](docs/adr/0010-image-viewing.md) and the
+[v0.8 verification record](docs/verification/v0.8.md).
+
 ## Where things run
 
 | Concern | Lives in | Runs on |

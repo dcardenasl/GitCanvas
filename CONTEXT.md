@@ -45,6 +45,16 @@ its own bounds (5 000 rows, 2 MiB) and falls back to plain text. Commit diffs co
 parent. Pull is fast-forward only. GitHub credentials are stored in the operating
 system keychain and remain inside Rust after entry.
 
+Image previews (v0.8 in `dev`) reuse the 2 MiB / 32 MiB byte budgets and cap reported
+dimensions at 40 megapixels. Rust identifies PNG, JPEG, GIF, WebP, BMP, ICO and SVG by
+content signature; paths only decide whether the frontend probes. Rust returns exact
+bytes and bounded header metadata, while the platform WebView decodes fixed-MIME `data:`
+URLs. SVG is never parsed or inserted as markup. Commit, per-file history, staged and
+unstaged changes, and read-only stash views share one comparison component and policy.
+Image queries are per version and expire after 15 seconds. ICO dimensions come from the
+first directory entry; final decoding support depends on the platform WebView. See ADR
+0010 and `docs/verification/v0.8.md`.
+
 ## Workspace
 
 Canonical worktree roots identify ordered tabs. Each keeps independent navigation and

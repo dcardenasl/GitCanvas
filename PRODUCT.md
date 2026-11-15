@@ -35,6 +35,13 @@ folding is durable. Each unique stash object is associated with its first-parent
 commit on loaded graph rows using an Orchid count and a bounded accessible picker;
 the association does not add graph nodes or change selection, filters or paging.
 
+Image preview (v0.8 in `dev`) compares supported image versions in commits, per-file
+history, staged/unstaged changes and stash. It reads exact bytes from each source, keeps
+non-image binaries on the existing notice, and never writes repository data. Formats are
+PNG, JPEG, GIF, WebP, BMP, ICO and SVG. Reads share the 2 MiB initial / 32 MiB expanded
+limits and a 40 MP metadata ceiling; the platform WebView determines final decoding.
+See ADR 0010 and `docs/verification/v0.8.md`.
+
 ## Brand Commitments
 
 The user requested execution of the existing plan, whose design is already closed.

@@ -119,6 +119,9 @@ See the [changelog](CHANGELOG.md) for the full list.
 - **Commit inspector.** Author, full message, changed files (as a list or a directory
   tree) and a line-numbered diff against the first parent. Binary and oversized files are
   reported instead of rendered.
+- **Image preview.** Compare supported PNG, JPEG, GIF, WebP, BMP, ICO and SVG versions in
+  commits, file history, local changes and stash. Modified images have side-by-side and
+  slider views; non-image binaries keep their existing notice.
 - **File history.** Follow a single file across commits and renames, with the diff of each
   commit and the version before a deletion.
 - **Stash inspection.** Browse, search and read stashes (all, staged, unstaged and untracked
@@ -229,6 +232,10 @@ Documented on purpose rather than discovered later:
 - Stashes are **read-only**: you can inspect them, but not create, apply or discard them
   from GitCanvas yet. Stashes do not appear as nodes in the graph, only as markers on
   their base commits.
+- Image reads share the existing 2 MiB initial and 32 MiB expanded byte limits and a
+  40 megapixel metadata limit. SVG is displayed through an isolated image element without
+  parsing or running markup; decoding depends on the system WebView. ICO dimensions use
+  the first directory entry. Other unsupported formats remain binary.
 - The installers are unsigned (see above) and the interface is available in English and Spanish only.
 
 ## Build from source

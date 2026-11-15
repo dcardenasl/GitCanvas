@@ -2,10 +2,9 @@
 
 ## Status
 
-Proposed — 2026-11-15. Planned for v0.8; nothing here is implemented yet. Decisions,
-bounds, acceptance matrix and task order are in the
-[implementation plan](../plan/2026-11-15-v0.8-implementacion.md). This ADR becomes
-*Accepted and implemented* when IMG-8 closes with real evidence.
+Accepted and implemented — 2026-11-15. Delivery evidence and platform limits are in the
+[v0.8 verification record](../verification/v0.8.md). Decisions, bounds, acceptance
+matrix and task order remain in the [implementation plan](../plan/2026-11-15-v0.8-implementacion.md).
 
 ## Context
 
@@ -70,9 +69,10 @@ this is a declared limit, not a guarantee.
 
 ### Bounded animation
 
-Animated GIF, APNG and WebP are flagged structurally in Rust. The WebView animates while
-mounted, starts paused under `prefers-reduced-motion`, and always offers play/pause. No
-frame counting or decoding in Rust.
+Animated GIF, APNG and WebP are flagged structurally in Rust. GIF detection walks its
+blocks and counts image descriptors; APNG checks `acTL` before `IDAT`; WebP checks the
+animation bit. The WebView animates while mounted, starts paused under
+`prefers-reduced-motion`, and always offers play/pause. Rust does not decode frames.
 
 ### Memory
 
@@ -84,9 +84,9 @@ them with the existing helpers.
 
 - No CSP change and no new Tauri capability; the existing attack surface for resources
   does not grow.
-- One new dependency for header dimensions (`imagesize`, no transitive dependencies) and
-  `base64` as a direct dependency of the core; both must pass `cargo deny` and
-  `cargo audit`.
+- Header dimensions use bounded local parsers; no image decoder or `imagesize` dependency
+  was added. `base64` is a direct core dependency. `cargo deny` and `cargo audit` pass
+  with the existing dependency-policy warnings recorded in the verification report.
 - A file between 2 and 32 MiB is shown as "too large" until the user asks for it, like
   text; the format cannot be known without reading it, and the budget forbids reading it
   first.
