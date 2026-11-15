@@ -17,6 +17,7 @@
       → `docs(images): plan the v0.8 image viewer and record adr 0010` (`0ee9b5c`)
 
 - [x] **IMG-1 — Núcleo: lectura acotada, detección y cabeceras.** Extraída la política común de bytes acotados y añadido `gitcanvas_core::image` para detección por firmas, cabeceras, límite de 40 MP y base64. Pruebas unitarias y Clippy del núcleo aprobados; las pruebas de integración que levantan sockets locales quedaron bloqueadas por el sandbox. Desviación: parsers acotados propios en lugar de `imagesize`, no disponible offline; revisar auditoría de dependencias al recuperar red. → `feat(core): classify image bytes and read their headers`
+- [x] **IMG-2 — Núcleo: fuentes de comparación.** Añadidas lecturas por commit/primer padre, índice/disco staged y unstaged, y comparaciones de stash. Se reutilizan las guardas de revisión, rutas confinadas y lectura `stat → read → stat`; las lecturas Git son por OID y verifican tamaño antes de materializar blobs. Pruebas dirigidas: 2 de imagen, 12 de worktree y 24 de stash aprobadas; Clippy del núcleo aprobado. → `feat(core): read image versions from commits, local changes and stashes`
 
 ### v0.7 — Stash de solo lectura (ST-0–ST-9 completadas en `dev`; sin publicar)
 

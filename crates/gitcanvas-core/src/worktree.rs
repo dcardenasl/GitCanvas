@@ -130,6 +130,38 @@ pub struct WorktreeFileContentRequest {
     pub expand: bool,
 }
 
+/// One requested image version from staged or unstaged local changes.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+pub struct WorktreeImageRequest {
+    /// Staged or unstaged changes.
+    pub side: WorktreeSide,
+    /// Current path of the changed file.
+    pub path: String,
+    /// Previous path for a detected rename.
+    pub previous_path: Option<String>,
+    /// Which version to read.
+    pub version: crate::image::ImageVersion,
+    /// Snapshot revision used to select this file.
+    pub expected_revision: Option<String>,
+    /// Whether to use the explicit expanded byte budget.
+    pub expand: bool,
+}
+
+/// An image outcome tied to the local-change revision it was read from.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+pub struct WorktreeImage {
+    /// Requested change side.
+    pub side: WorktreeSide,
+    /// Local-change revision checked around the read.
+    pub revision: String,
+    /// Requested path.
+    pub path: String,
+    /// Requested version.
+    pub version: crate::image::ImageVersion,
+    /// Image classification or explicit absence.
+    pub outcome: crate::image::ImageOutcome,
+}
+
 /// File text and metadata read from one worktree revision.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct WorktreeFileContent {
@@ -265,6 +297,101 @@ pub fn get_worktree_file_content(
         revision: before,
         fields: content.into_fields(request.path.clone()),
     })
+}
+
+/// Reads one side of a local image comparison with the existing path and revision guards.
+///
+/// # Errors
+/// Returns unsafe-path, stale-revision, filesystem, Git, or resource-limit errors.
+pub fn get_worktree_image(
+    active: &ActiveRepo,
+    request: &WorktreeImageRequest,
+) -> Result<WorktreeImage, AppError> {
+    use crate::image::{read_blob_image, ImageOutcome, ImageVersion};
+
+    validate_relative_path(&request.path)?;
+    if let Some(path) = request.previous_path.as_deref() {
+        validate_relative_path(path)?;
+    }
+    let repo = active.open()?;
+    let index = repo.index()?;
+    let before = revision(&repo, &index)?;
+    if let Some(expected) = request.expected_revision.as_deref() {
+        ensure_revision(&before, expected)?;
+    }
+    let path = if request.version == ImageVersion::Previous {
+        request.previous_path.as_deref().unwrap_or(&request.path)
+    } else {
+        &request.path
+    };
+    let outcome = match (request.side, request.version) {
+        (WorktreeSide::Staged, ImageVersion::Previous) => {
+            let tree = repo
+                .head()
+                .ok()
+                .and_then(|head| head.peel_to_commit().ok())
+                .and_then(|commit| commit.tree().ok());
+            match tree.and_then(|tree| tree.get_path(Path::new(path)).ok()) {
+                None => ImageOutcome::Missing,
+                Some(entry)
+                    if entry.kind() != Some(git2::ObjectType::Blob)
+                        || entry.filemode() == 0o120_000 =>
+                {
+                    ImageOutcome::Unsupported
+                }
+                Some(entry) => read_blob_image(&repo, entry.id(), path, request.expand)?,
+            }
+        }
+        (WorktreeSide::Staged, ImageVersion::Saved)
+        | (WorktreeSide::Unstaged, ImageVersion::Previous) => {
+            match image_index_entry(&index, path)? {
+                None => ImageOutcome::Missing,
+                Some((_id, 0o120_000)) => ImageOutcome::Unsupported,
+                Some((id, _)) => read_blob_image(&repo, id, path, request.expand)?,
+            }
+        }
+        (WorktreeSide::Unstaged, ImageVersion::Saved) => {
+            let Some(disk_path) = resolve_worktree_file_optional(active, path)? else {
+                let after = revision(&repo, &repo.index()?)?;
+                ensure_revision(&before, &after)?;
+                return Ok(WorktreeImage {
+                    side: request.side,
+                    revision: before,
+                    path: path.to_owned(),
+                    version: request.version,
+                    outcome: ImageOutcome::Missing,
+                });
+            };
+            ensure_visible_worktree_file(&repo, &index, path)?;
+            match read_disk_bytes(&disk_path, active.path(), path, request.expand)? {
+                Err(size) => ImageOutcome::TooLarge {
+                    bytes: size.to_string(),
+                },
+                Ok(bytes) => crate::image::classify(&bytes, path, request.expand)?,
+            }
+        }
+    };
+    let after = revision(&repo, &repo.index()?)?;
+    ensure_revision(&before, &after)?;
+    Ok(WorktreeImage {
+        side: request.side,
+        revision: before,
+        path: path.to_owned(),
+        version: request.version,
+        outcome,
+    })
+}
+
+fn image_index_entry(index: &Index, path: &str) -> Result<Option<(git2::Oid, u32)>, AppError> {
+    let relative = Path::new(path);
+    if index.conflict_get(relative).is_ok() {
+        return Err(AppError::WorktreeFileUnavailable(format!(
+            "{path} is in an unresolved index conflict"
+        )));
+    }
+    Ok(index
+        .get_path(relative, 0)
+        .map(|entry| (entry.id, entry.mode)))
 }
 
 /// Computes a deterministic fingerprint for fallback polling.
@@ -407,17 +534,33 @@ fn read_disk_content(
     display_path: &str,
     expand: bool,
 ) -> Result<ContentRead, AppError> {
+    match read_disk_bytes(path, repository_root, display_path, expand)? {
+        Ok(bytes) => blob::read_content(&bytes, display_path, expand),
+        Err(size) => blob::too_large_content(size, display_path, expand),
+    }
+}
+
+/// Reads bytes through the same confinement and stat/read/stat guard as text previews.
+fn read_disk_bytes(
+    path: &Path,
+    repository_root: &Path,
+    display_path: &str,
+    expand: bool,
+) -> Result<Result<Vec<u8>, u64>, AppError> {
     for _attempt in 0..2 {
         let before = file_stamp(path)?;
         if before.0 > blob::MAX_INITIAL_CONTENT_BYTES as u64 && !expand {
-            let result = blob::too_large_content(before.0, display_path, false)?;
             if file_stamp(path)? == before {
-                return Ok(result);
+                return Ok(Err(before.0));
             }
             continue;
         }
         if before.0 > blob::MAX_EXPANDED_CONTENT_BYTES as u64 {
-            return blob::too_large_content(before.0, display_path, expand);
+            return Err(AppError::ResourceLimitExceeded(format!(
+                "{display_path} is {} bytes; the maximum is {}",
+                before.0,
+                blob::MAX_EXPANDED_CONTENT_BYTES
+            )));
         }
 
         let mut file = OpenOptions::new().read(true).open(path)?;
@@ -427,14 +570,17 @@ fn read_disk_content(
             .take((blob::MAX_EXPANDED_CONTENT_BYTES + 1) as u64)
             .read_to_end(&mut bytes)?;
         if bytes.len() > blob::MAX_EXPANDED_CONTENT_BYTES {
-            return blob::too_large_content(bytes.len() as u64, display_path, true);
+            return Err(AppError::ResourceLimitExceeded(format!(
+                "{display_path} exceeds the maximum of {} bytes",
+                blob::MAX_EXPANDED_CONTENT_BYTES
+            )));
         }
         verify_open_file(path, repository_root, &file, display_path)?;
         let after = file_stamp(path)?;
         if before != after {
             continue;
         }
-        return blob::read_content(&bytes, display_path, expand);
+        return Ok(Ok(bytes));
     }
     Err(AppError::WorktreeChanged(display_path.to_owned()))
 }
@@ -469,6 +615,15 @@ fn ensure_visible_worktree_file(
 }
 
 fn resolve_worktree_file(active: &ActiveRepo, path: &str) -> Result<PathBuf, AppError> {
+    resolve_worktree_file_optional(active, path)?.ok_or_else(|| {
+        AppError::WorktreeFileUnavailable(format!("{path} cannot be read: file is missing"))
+    })
+}
+
+fn resolve_worktree_file_optional(
+    active: &ActiveRepo,
+    path: &str,
+) -> Result<Option<PathBuf>, AppError> {
     let relative = validate_relative_path(path)?;
     let repository_root = active.path();
     let candidate = repository_root.join(relative);
@@ -476,9 +631,15 @@ fn resolve_worktree_file(active: &ActiveRepo, path: &str) -> Result<PathBuf, App
     for component in Path::new(path).components() {
         if let Component::Normal(name) = component {
             component_path.push(name);
-            let metadata = fs::symlink_metadata(&component_path).map_err(|error| {
-                AppError::WorktreeFileUnavailable(format!("{path} cannot be read: {error}"))
-            })?;
+            let metadata = match fs::symlink_metadata(&component_path) {
+                Ok(metadata) => metadata,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+                Err(error) => {
+                    return Err(AppError::WorktreeFileUnavailable(format!(
+                        "{path} cannot be read: {error}"
+                    )))
+                }
+            };
             if metadata.file_type().is_symlink() {
                 let target = component_path.canonicalize().map_err(|error| {
                     AppError::WorktreeFileUnavailable(format!("{path} cannot be resolved: {error}"))
@@ -492,9 +653,15 @@ fn resolve_worktree_file(active: &ActiveRepo, path: &str) -> Result<PathBuf, App
             }
         }
     }
-    let metadata = fs::symlink_metadata(&candidate).map_err(|error| {
-        AppError::WorktreeFileUnavailable(format!("{path} cannot be read: {error}"))
-    })?;
+    let metadata = match fs::symlink_metadata(&candidate) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(AppError::WorktreeFileUnavailable(format!(
+                "{path} cannot be read: {error}"
+            )))
+        }
+    };
     if !metadata.file_type().is_file() {
         return Err(AppError::WorktreeFileUnavailable(format!(
             "{path} is not a regular file"
@@ -509,7 +676,7 @@ fn resolve_worktree_file(active: &ActiveRepo, path: &str) -> Result<PathBuf, App
     if !canonical.is_file() {
         return Err(AppError::WorktreeFileUnavailable(path.to_owned()));
     }
-    Ok(canonical)
+    Ok(Some(canonical))
 }
 
 fn verify_open_file(

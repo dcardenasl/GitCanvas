@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use crate::{
-    blob::{bounded_bytes, BoundedBytes},
+    blob::{bounded_bytes, BoundedBytes, MAX_EXPANDED_CONTENT_BYTES, MAX_INITIAL_CONTENT_BYTES},
     error::AppError,
 };
 
@@ -92,6 +92,99 @@ pub enum ImageOutcome {
         /// Safe metadata and base64 content.
         image: ImagePayload,
     },
+}
+
+/// Which side of an image comparison a request reads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum ImageVersion {
+    /// The version before the selected change.
+    Previous,
+    /// The version after the selected change.
+    Saved,
+}
+
+/// Image read for a commit and its first parent.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+pub struct CommitImageRequest {
+    /// Commit whose tree is the saved version.
+    pub commit_id: String,
+    /// Repository relative path.
+    pub path: String,
+    /// Previous path for a detected rename.
+    pub previous_path: Option<String>,
+    /// Requested comparison side.
+    pub version: ImageVersion,
+    /// Whether to use the explicit expanded byte budget.
+    pub expand: bool,
+}
+
+/// Reads an image from a selected commit side.
+///
+/// # Errors
+/// Returns repository, invalid commit/path, Git object, or resource-limit errors.
+pub fn get_commit_image(
+    active: &crate::repository::ActiveRepo,
+    request: &CommitImageRequest,
+) -> Result<ImageOutcome, AppError> {
+    use crate::repository::{parse_commit_id, validate_relative_path};
+    use std::path::Path;
+
+    validate_relative_path(&request.path)?;
+    if let Some(previous_path) = request.previous_path.as_deref() {
+        validate_relative_path(previous_path)?;
+    }
+    let repo = active.open()?;
+    let commit = repo.find_commit(parse_commit_id(&request.commit_id)?)?;
+    let (tree, path) = match request.version {
+        ImageVersion::Saved => (commit.tree()?, request.path.as_str()),
+        ImageVersion::Previous => {
+            let Some(parent) = commit.parent(0).ok() else {
+                return Ok(ImageOutcome::Missing);
+            };
+            (
+                parent.tree()?,
+                request.previous_path.as_deref().unwrap_or(&request.path),
+            )
+        }
+    };
+    let Ok(entry) = tree.get_path(Path::new(path)) else {
+        return Ok(ImageOutcome::Missing);
+    };
+    if entry.kind() != Some(git2::ObjectType::Blob) || entry.filemode() == 0o120_000 {
+        return Ok(ImageOutcome::Unsupported);
+    }
+    read_blob_image(&repo, entry.id(), path, request.expand)
+}
+
+pub(crate) fn read_blob_image(
+    repo: &git2::Repository,
+    id: git2::Oid,
+    path: &str,
+    expand: bool,
+) -> Result<ImageOutcome, AppError> {
+    let (size, kind) = repo.odb()?.read_header(id)?;
+    if kind != git2::ObjectType::Blob {
+        return Ok(ImageOutcome::Unsupported);
+    }
+    let size = u64::try_from(size).unwrap_or(u64::MAX);
+    let maximum = if expand {
+        MAX_EXPANDED_CONTENT_BYTES
+    } else {
+        MAX_INITIAL_CONTENT_BYTES
+    };
+    if size > maximum as u64 {
+        if expand && size > MAX_EXPANDED_CONTENT_BYTES as u64 {
+            return Err(AppError::ResourceLimitExceeded(format!(
+                "{path} is {size} bytes; the maximum is {MAX_EXPANDED_CONTENT_BYTES}"
+            )));
+        }
+        return Ok(ImageOutcome::TooLarge {
+            bytes: size.to_string(),
+        });
+    }
+    let blob = repo.find_blob(id)?;
+    classify(blob.content(), path, expand)
 }
 
 /// Classifies bytes without I/O, path inspection, or pixel decoding.

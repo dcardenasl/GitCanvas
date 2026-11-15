@@ -6,4 +6,8 @@ mod header;
 mod read;
 mod sniff;
 
-pub use read::{classify, ImageFormat, ImageOutcome, ImagePayload, WithheldReason};
+pub(crate) use read::read_blob_image;
+pub use read::{
+    classify, get_commit_image, CommitImageRequest, ImageFormat, ImageOutcome, ImagePayload,
+    ImageVersion, WithheldReason,
+};

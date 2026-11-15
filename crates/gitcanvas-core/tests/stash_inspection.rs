@@ -15,13 +15,15 @@ use gitcanvas_core::{
     blob::{MAX_EXPANDED_CONTENT_BYTES, MAX_INITIAL_CONTENT_BYTES},
     diff::{DiffOmission, FileChange},
     error::AppError,
+    image::{ImageOutcome, ImageVersion},
     repository::ActiveRepo,
     stash::{
-        get_stash_file_content, get_stash_file_diff, get_stash_files, StashComparisonMode as Mode,
-        StashContentOutcome, StashContentSide as Side, StashContentUnavailable,
-        StashFileContentRequest, StashFileDiffRequest, StashFileOrigin as Origin, StashFileRequest,
-        StashFileSummary, StashFilesPage, StashFilesRequest, StashInspectionNotice,
-        StashPreviewUnavailable, MAX_STASH_FILES,
+        get_stash_file_content, get_stash_file_diff, get_stash_files, get_stash_image,
+        StashComparisonMode as Mode, StashContentOutcome, StashContentSide as Side,
+        StashContentUnavailable, StashFileContentRequest, StashFileDiffRequest,
+        StashFileOrigin as Origin, StashFileRequest, StashFileSummary, StashFilesPage,
+        StashFilesRequest, StashImageRequest, StashInspectionNotice, StashPreviewUnavailable,
+        MAX_STASH_FILES,
     },
 };
 use std::{fs, time::Instant};
@@ -323,6 +325,35 @@ impl Saved {
             }
         }
     }
+}
+
+#[test]
+fn stash_image_reads_previous_and_saved_blob_versions() {
+    fn png(width: u32) -> Vec<u8> {
+        let mut bytes = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR".to_vec();
+        bytes.extend_from_slice(&width.to_be_bytes());
+        bytes.extend_from_slice(&2_u32.to_be_bytes());
+        bytes
+    }
+    let old = png(2);
+    let new = png(5);
+    let saved = Saved::new(
+        &[("logo.png", &old)],
+        &[("logo.png", &old)],
+        &[("logo.png", &new)],
+        None,
+    );
+    let page = saved.page(Mode::All);
+    let entry = file(&page, "logo.png");
+    let request = |version| StashImageRequest {
+        file: saved.request(Mode::All, entry),
+        version,
+        expand: false,
+    };
+    let previous = get_stash_image(&saved.active(), &request(ImageVersion::Previous)).unwrap();
+    let current = get_stash_image(&saved.active(), &request(ImageVersion::Saved)).unwrap();
+    assert!(matches!(previous.outcome, ImageOutcome::Image { image } if image.width == Some(2)));
+    assert!(matches!(current.outcome, ImageOutcome::Image { image } if image.width == Some(5)));
 }
 
 fn file<'a>(page: &'a StashFilesPage, path: &str) -> &'a StashFileSummary {
