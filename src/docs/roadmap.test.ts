@@ -6,9 +6,9 @@ import { describe, expect, it } from "vitest";
  * before something already published.
  */
 const ROADMAP = import.meta.glob<string>(
-  "../../docs/plan/2026-10-19-roadmap-de-versiones.md",
+  "../../ROADMAP.md",
   { query: "?raw", import: "default", eager: true },
-)["../../docs/plan/2026-10-19-roadmap-de-versiones.md"];
+)["../../ROADMAP.md"];
 
 interface Row {
   minor: number;

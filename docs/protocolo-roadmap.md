@@ -1,6 +1,6 @@
 # Protocolo del roadmap
 
-Cómo se mantiene el [roadmap de versiones](plan/2026-10-19-roadmap-de-versiones.md): cómo
+Cómo se mantiene el [roadmap de versiones](../ROADMAP.md): cómo
 entra una funcionalidad nueva, cómo se cambia el orden y qué se actualiza en cada
 release. Complementa el flujo de release de [`releasing.md`](releasing.md).
 
@@ -9,7 +9,7 @@ release. Complementa el flujo de release de [`releasing.md`](releasing.md).
 David decide el orden y el alcance. Quien trabaje en el proyecto (persona o asistente)
 propone con una recomendación y el motivo; nunca reordena, renumera ni amplía una
 entrega por inferencia. Toda decisión queda escrita en el
-[registro de cambios de alcance](plan/2026-10-19-roadmap-de-versiones.md#registro-de-cambios-de-alcance)
+[registro de cambios de alcance](../ROADMAP.md#registro-de-cambios-de-alcance)
 el mismo día en que se toma.
 
 ## Dónde vive cada cosa
@@ -75,10 +75,10 @@ estados intermedios se leen en `TASKS.md`, que es la fuente de ejecución.
 Forma parte del paso de README del flujo de release, antes del commit `chore: release`:
 
 1. En la tabla, la fila pasa a `Publicada vX.Y.Z`.
-2. La sección «Entrega implementada» del roadmap se reemplaza por la de la versión nueva
+2. La sección «Última entrega publicada» del roadmap se reemplaza por la de la versión nueva
    (un párrafo y enlaces a plan, ADR y verificación); la anterior pasa a referencia
    histórica o se elimina si no aporta.
-3. Se revisan las dos entregas siguientes de la tabla: ¿siguen siendo las correctas y en
+3. Se actualiza la tabla de cabecera (última revisión y próxima entrega) y se revisan las dos entregas siguientes de la tabla: ¿siguen siendo las correctas y en
    ese orden? Si algo cambia, se registra. David confirma la próxima versión.
 4. `TASKS.md` cierra la cola de la versión (archivada en `ARCHIVES.md`) y apunta a preparar
    el plan de la siguiente.

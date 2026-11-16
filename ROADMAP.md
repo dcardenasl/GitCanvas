@@ -1,7 +1,17 @@
-# GitCanvas — roadmap de versiones
+# ROADMAP — GitCanvas
 
-Fecha: 2026-10-19. Estrategia aprobada por David en conversación.
-Estado: planificación; las funcionalidades futuras no están implementadas por este documento.
+> Fuente de verdad del **orden y alcance de las versiones**. Se modifica solo siguiendo el
+> [protocolo del roadmap](docs/protocolo-roadmap.md) y cada cambio queda en el
+> [registro de cambios de alcance](#registro-de-cambios-de-alcance). La ejecución vive en
+> [`TASKS.md`](TASKS.md); el contrato técnico de cada versión, en `docs/plan/`.
+
+| | |
+|---|---|
+| Estrategia aprobada | 2026-10-19, por David |
+| Última revisión | 2026-11-16 (publicada v0.8.0) |
+| Próxima entrega | v0.9 — contribuyentes y releases |
+
+Este documento planifica: las funcionalidades futuras no están implementadas por él.
 
 ## Prioridad y precedencia
 
@@ -17,8 +27,7 @@ se distribuyen entre versiones, sin cambiar su comportamiento por inferencia.
 
 Las versiones son objetivos de planificación, sin fechas ni incrementos aplicados a
 los manifiestos. Confirmar el número al preparar cada release. Registrar cambios de
-alcance aquí siguiendo el [protocolo del roadmap](../protocolo-roadmap.md) y mantener
-TASKS.md como fuente de ejecución. Cada entrega debe quedar
+alcance aquí y mantener TASKS.md como fuente de ejecución. Cada entrega debe quedar
 útil y verificable por sí sola; no esperar al panel completo para publicar mejoras.
 
 ## Secuencia acordada
@@ -36,17 +45,15 @@ TASKS.md como fuente de ejecución. Cada entrega debe quedar
 | v0.12 | Escrituras locales seguras: stash y ramas | Planificada | Primero la base común de escrituras (exclusión por directorio Git común, recuperación, deshacer). Después, stash: guardar todos los cambios, aplicar, aplicar y quitar, descartar con deshacer. Luego crear, renombrar y eliminar ramas con protecciones; crear tags y gestionar remotos; fetch explícito y diferencias local/upstream. Ver [registro de alcance](#registro-de-cambios-de-alcance). |
 | v0.13 | Preparar archivos y crear commits | Planificada | Preparar/retirar archivos completos, título/descripción, borradores por proyecto, hooks y firma, recuperación de errores y actualización del gráfico. |
 
-## Entrega implementada: v0.8 — vista de imágenes
+## Última entrega publicada: v0.8 — vista de imágenes
 
-Actualización de planificación: 2026-11-15. v0.7 (stash de solo lectura) está
-implementada y verificada en macOS en `dev`; sus gates externos siguen abiertos en
-`TASKS.md` (V07-VERIFY). v0.8 añade lectura y comparación de imágenes. Contrato,
-límites, matriz y evidencia están en el
-[plan v0.8](2026-11-15-v0.8-implementacion.md), [ADR 0010](../adr/0010-image-viewing.md)
-y [verificación](../verification/v0.8.md). La siguiente entrega planificada es v0.9.
-No implica bump ni publicación. Detalle anterior de v0.7:
-[plan v0.7](2026-11-08-v0.7-implementacion.md) y
-[ADR 0009](../adr/0009-read-only-stash.md).
+Publicada como v0.8.0 el 2026-11-16. Añade lectura y comparación de imágenes en los
+cuatro lectores de archivos. Contrato, límites, matriz y evidencia están en el
+[plan v0.8](docs/plan/2026-11-15-v0.8-implementacion.md), [ADR 0010](docs/adr/0010-image-viewing.md)
+y [verificación](docs/verification/v0.8.md); sus gates externos siguen abiertos en
+`TASKS.md` (V08-VERIFY). La siguiente entrega planificada es v0.9. Detalle anterior de v0.7:
+[plan v0.7](docs/plan/2026-11-08-v0.7-implementacion.md) y
+[ADR 0009](docs/adr/0009-read-only-stash.md).
 
 ## Entrega de referencia: v0.4 (plan histórico)
 
@@ -105,8 +112,8 @@ independiente del futuro alcance y de la posición del carril.
 - **v0.6:** consulta explícita por archivo, con paginación y trabajo acotado. Puede
   encontrar commits fuera del alcance actual del gráfico; indicar contexto sin
   modificar silenciosamente filtros. Semántica de renombrados y merges concretada en
-  [ADR 0008](../adr/0008-per-file-history.md) y el
-  [plan técnico](2026-11-01-v0.6-implementacion.md), sin prometer seguimiento infalible.
+  [ADR 0008](docs/adr/0008-per-file-history.md) y el
+  [plan técnico](docs/plan/2026-11-01-v0.6-implementacion.md), sin prometer seguimiento infalible.
 - **v0.7 (stash de solo lectura):** consulta explícita de stashes en Rust, con
   límites y paginación, y sin tocar el gráfico. Los stashes se listan con su rama
   base y se abren en el visor de diff existente. Aplicar, descartar y crear quedan
@@ -115,10 +122,10 @@ independiente del futuro alcance y de la posición del carril.
   el índice guardado, con un tercero opcional para archivos no rastreados. Su futura
   representación debe respetar "un nodo por commit" y la reanudabilidad; v0.7 no
   incorpora estos objetos como raíces del gráfico. Las comparaciones acordadas y la
-  lectura del reflog se concretan en el [plan v0.7](2026-11-08-v0.7-implementacion.md).
+  lectura del reflog se concretan en el [plan v0.7](docs/plan/2026-11-08-v0.7-implementacion.md).
 - **v0.8:** consulta explícita de los bytes de un archivo de imagen, por comando Rust
   con `runtime::read` y `with_repo`, acotada por los presupuestos del
-  [ADR 0002](../adr/0002-local-file-safety-and-resource-budgets.md): el contenido
+  [ADR 0002](docs/adr/0002-local-file-safety-and-resource-budgets.md): el contenido
   grande se rechaza con metadatos, sin leerlo entero. El formato se decide por los bytes
   iniciales, nunca por la extensión. Formatos iniciales: PNG, JPEG, GIF, WebP, BMP e
   ICO; el SVG se muestra como imagen aislada (sin scripts ni recursos externos) y también
@@ -311,9 +318,9 @@ no cambia versiones de la aplicación ni ejecuta commits, push, PR o publicació
 
 ## Referencias
 
-- [Tareas de ejecución](../../TASKS.md)
-- [Panel izquierdo: acuerdos D01–D50](2026-10-18-panel-izquierdo-ui-ux.md)
-- [Plan de tres funcionalidades y contratos de commits](2026-10-08-plan-tres-funcionalidades.md)
+- [Tareas de ejecución](TASKS.md)
+- [Panel izquierdo: acuerdos D01–D50](docs/plan/2026-10-18-panel-izquierdo-ui-ux.md)
+- [Plan de tres funcionalidades y contratos de commits](docs/plan/2026-10-08-plan-tres-funcionalidades.md)
 - [Release v0.3.1](https://github.com/dcardenasl/GitCanvas/releases/tag/v0.3.1)
 - [Quality v0.3.1](https://github.com/dcardenasl/GitCanvas/actions/runs/38659431936)
 - [Publicación v0.3.1](https://github.com/dcardenasl/GitCanvas/actions/runs/38664028286)

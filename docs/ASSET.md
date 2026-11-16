@@ -42,7 +42,7 @@ read-only; véase [`CONTEXT.md`](../CONTEXT.md) y el [ADR 0001](adr/0001-working
 
 Completar GRF-5: matriz externa y verificaciones manuales de v0.4. La implementación
 local está terminada; ver [evidencia](verification/v0.4.md) y [TASKS.md](../TASKS.md).
-El [roadmap aprobado](plan/2026-10-19-roadmap-de-versiones.md)
+El [roadmap aprobado](../ROADMAP.md)
 define la secuencia: gráfico → panel/filtros → historial por archivo →
 contribuyentes/releases → proveedores → crear/conectar repositorios → gestión de
 ramas → preparar/crear commits (objetivo v0.13). Sustituye la anterior reserva de

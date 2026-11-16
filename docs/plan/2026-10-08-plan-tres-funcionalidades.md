@@ -1,6 +1,6 @@
 # GitCanvas: commits, idiomas y múltiples proyectos
 
-> Actualización 2026-10-19: el [roadmap vigente](2026-10-19-roadmap-de-versiones.md)
+> Actualización 2026-10-19: el [roadmap vigente](../../ROADMAP.md)
 > sustituye el orden de entrega: gráfico/panel primero y commits al final (objetivo
 > v0.13). Los contratos funcionales de este documento siguen como referencia.
 
