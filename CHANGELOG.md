@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Image preview** — compare supported image versions in commits, history, local changes and stash.
 
+### Fixed
+
+- **Commit tree image preview** — open supported images from the complete commit tree and show their saved version.
+
 ## [0.7.0] — 2026-11-09
 
 ### Added

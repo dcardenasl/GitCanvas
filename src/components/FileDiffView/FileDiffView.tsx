@@ -200,12 +200,15 @@ export function FileDiffView(props: FileDiffViewProps) {
     (worktreePreviousImageRequest !== null &&
       worktreePreviousImage.isPending) ||
     (worktreeSavedImageRequest !== null && worktreeSavedImage.isPending);
-  const mode: Mode = isSnapshot
-    ? "file"
-    : (selectedMode ??
-      (file?.omitted === "Binary" && (imageAvailable || imageProbePending)
+  const mode: Mode =
+    selectedMode ??
+    (isSnapshot
+      ? probeImage
         ? "image"
-        : "diff"));
+        : "file"
+      : file?.omitted === "Binary" && (imageAvailable || imageProbePending)
+        ? "image"
+        : "diff");
   // A commit that deleted a file has no content of its own. Its previous version
   // is the file at the first parent, which the whole-file view shows instead.
   const previousCommitId = deleted ? (props.commit?.parents[0] ?? null) : null;
@@ -333,22 +336,25 @@ export function FileDiffView(props: FileDiffViewProps) {
         </div>
 
         <div className="file-diff__controls">
-          {!isSnapshot && (deleted ? previousCommitId !== null : true) && (
+          {((!isSnapshot && (deleted ? previousCommitId !== null : true)) ||
+            (isSnapshot && probeImage)) && (
             <div
               className="segmented"
               role="group"
               aria-label={t("diff.modeLabel")}
             >
-              <button
-                type="button"
-                className="segmented__option"
-                aria-pressed={mode === "diff"}
-                onClick={() => {
-                  setMode("diff");
-                }}
-              >
-                {t("diff.modeChanges")}
-              </button>
+              {!isSnapshot && (
+                <button
+                  type="button"
+                  className="segmented__option"
+                  aria-pressed={mode === "diff"}
+                  onClick={() => {
+                    setMode("diff");
+                  }}
+                >
+                  {t("diff.modeChanges")}
+                </button>
+              )}
               <button
                 type="button"
                 className="segmented__option"
@@ -359,7 +365,7 @@ export function FileDiffView(props: FileDiffViewProps) {
               >
                 {deleted ? t("diff.modeBeforeDeletion") : t("diff.modeWhole")}
               </button>
-              {imageAvailable && (
+              {(imageAvailable || (isSnapshot && probeImage)) && (
                 <button
                   type="button"
                   className="segmented__option"
