@@ -5,6 +5,9 @@ versión, los ADR y los documentos de verificación. Complementa el
 [protocolo del roadmap](protocolo-roadmap.md) (qué entra y en qué orden) y el flujo de
 release de [`releasing.md`](releasing.md) (cómo se publica).
 
+**Idioma:** estos documentos de trabajo van en español; los ADR, en inglés (ver
+[`CLAUDE.md`](../CLAUDE.md), «Convenciones de código»).
+
 **Qué rige:** las reglas valen para todo lo nuevo. El contenido histórico no se reescribe
 para cumplirlas; `src/docs/trabajo.test.ts` aplica cada regla desde la versión que la
 introduce.

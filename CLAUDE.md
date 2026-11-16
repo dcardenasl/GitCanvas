@@ -27,15 +27,16 @@ el render SVG. El graph es el núcleo de valor: todo lo demás está subordinado
 
 | Archivo | Qué contiene |
 |---|---|
-| `TASKS.md` | **Fuente de verdad de ejecución.** Qué falta, qué se hizo, qué se descubrió |
+| `TASKS.md` | **Fuente de verdad de ejecución.** Qué falta y qué se descubrió |
+| `ARCHIVES.md` | Registro de lo completado, con su evidencia, por versión |
 | `CONTEXT.md` | Contexto vigente de arquitectura, observación del repositorio y límites de mutación |
 | `docs/plans/2026-09-08-plan-de-implementacion.md` | Plan rector: fases, deltas, ledger de commits |
 | `ROADMAP.md` | Orden y alcance de las versiones; se cambia solo con el protocolo y su registro de cambios |
 | `docs/protocolo-trabajo.md` | Cómo se llevan TASKS, ARCHIVES, planes, ADR, verificación y gates; lista única de cierre de versión |
 | `docs/protocolo-roadmap.md` | Cómo entran funcionalidades al roadmap, cómo se reordena y qué se actualiza al publicar |
-| `docs/plan/2026-11-08-v0.7-implementacion.md` | Read-only stash decisions, planned contracts, bounds and ST task acceptance |
-| `docs/plan/2026-11-15-v0.8-implementacion.md` | Image viewer decisions, contract, bounds, 24-case matrix and IMG task acceptance (ADR 0010) |
-| `docs/plan/2026-10-08-plan-tres-funcionalidades.md` | Workspace and future commit creation contracts; delivery order superseded by roadmap |
+| `docs/plan/2026-11-08-v0.7-implementacion.md` | Decisiones del stash de solo lectura, contratos, límites y aceptación de las tareas ST |
+| `docs/plan/2026-11-15-v0.8-implementacion.md` | Decisiones del visor de imágenes, contrato, límites, matriz de 24 casos y aceptación de las tareas IMG (ADR 0010) |
+| `docs/plan/2026-10-08-plan-tres-funcionalidades.md` | Contratos del workspace y de la futura creación de commits; el orden de entrega lo sustituye el roadmap |
 | `docs/plan/2026-10-04-plan-de-endurecimiento.md` | Plan de endurecimiento H2 y sus criterios de verificación |
 | `docs/PLAN-DESARROLLO.md` | Plan de diseño original. El plan rector lo endurece en 10 puntos (D1–D10) |
 | `PRODUCT.md` | Propósito, plataforma, capacidades y límites del producto |
@@ -171,9 +172,17 @@ Cada una está hecha para fallar el build, no para depender de que alguien se ac
 
 ## Convenciones de código
 
-- **Idioma:** la conversación con David es en español. **Código, comentarios, mensajes
-  de commit, CHANGELOG y docs técnicos del repo van en inglés.** `TASKS.md` y `docs/`
-  son la excepción: español.
+- **Idioma:** la conversación con David es en español. El idioma de cada documento lo
+  decide su audiencia, no su carpeta:
+  - **Inglés** — lo que lee el público o un contribuyente: código, comentarios, mensajes
+    de commit, CHANGELOG, `README.md`, `PRODUCT.md`, `CONTEXT.md`, `DESIGN.md`,
+    `ARCHITECTURE.md`, `docs/adr/`, `docs/releasing.md`, la guía de usuario `docs/v0.5.0.md`
+    y la interfaz base.
+  - **Español** — el trabajo interno de David: `TASKS.md`, `ARCHIVES.md`, `ROADMAP.md`,
+    los planes (`docs/plan/`, `docs/plans/`), las verificaciones (`docs/verification/`), los
+    protocolos (`docs/protocolo-*.md`), `docs/ASSET.md` y `docs/SNAPSHOT.md`.
+  - Un documento nuevo sigue esta regla desde su primera línea; el contenido existente
+    no se traduce por inercia.
 - **Idioma de la interfaz:** todo texto que ve el usuario sale de los catálogos de
   `src/i18n/locales/` (inglés base, español), nunca de un literal en el JSX; un test lo
   hace fallar. Los mensajes de error del backend son diagnósticos en inglés: se
