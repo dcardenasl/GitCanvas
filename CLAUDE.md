@@ -107,13 +107,15 @@ Es la **única** forma en que este proyecto llega a `main`:
 1. Auditar: último tag en `main`, `git log main..dev`, estado del CHANGELOG.
 2. Versión por SemVer (`feat` → minor, resto → patch; breaking pre-1.0 → minor).
    **Confirmar con David antes de seguir.**
-3. Renombrar `## [Unreleased]` a `## [X.Y.Z] — YYYY-MM-DD` y abrir un `[Unreleased]`
+3. Actualizar el README según [`docs/releasing.md`](docs/releasing.md#update-the-readme):
+   reemplazar la sección «Latest» y pasar la anterior a Features.
+4. Renombrar `## [Unreleased]` a `## [X.Y.Z] — YYYY-MM-DD` y abrir un `[Unreleased]`
    vacío arriba.
-4. `chore: release vX.Y.Z` como **último commit de `dev`**, y push.
-5. `gh pr create --base main --head dev`. **Parar y esperar aprobación de David.**
-6. `gh pr merge <N> --merge` — nunca `--squash` ni `--rebase`.
-7. Tag `vX.Y.Z` **solo sobre `main`**, y push del tag.
-8. `release.yml` crea el GitHub Release extrayendo la sección del CHANGELOG.
+5. `chore: release vX.Y.Z` como **último commit de `dev`**, y push.
+6. `gh pr create --base main --head dev`. **Parar y esperar aprobación de David.**
+7. `gh pr merge <N> --merge` — nunca `--squash` ni `--rebase`.
+8. Tag `vX.Y.Z` **solo sobre `main`**, y push del tag.
+9. `release.yml` crea el GitHub Release extrayendo la sección del CHANGELOG.
    **Nunca `gh release create` a mano.** Si falta la sección `## [X.Y.Z]`, el workflow
    falla — no taggear sin ella.
 

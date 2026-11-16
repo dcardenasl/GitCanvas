@@ -16,6 +16,25 @@ password, configure `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` as well. The matching
 public key belongs in `src-tauri/tauri.conf.json` and must stay stable for
 installed clients to accept future updates.
 
+## Update the README
+
+The README presents the product and only its latest release; the history lives in
+`CHANGELOG.md`. Do this before the `chore: release` commit. `src/docs/readme.test.ts`
+fails the build when the version, the images or the language drift.
+
+1. **Replace, do not accumulate.** Rewrite the `## Latest: X.Y — …` section for the new
+   version: a title, at most five lines and one demo GIF. There is always exactly one.
+2. **Promote the previous release.** Turn what the old Latest section described into a
+   bullet of **Features**, in present tense and without a version number.
+3. **Keep the hero GIF** (graph, then a file diff). Re-record it only when that experience
+   changes.
+4. **Record the new GIF in English** from the real app with the demo harness (about
+   800 px wide and under 1 MB), then delete the previous version's GIF. `docs/assets/`
+   holds only what the README shows.
+5. **Review Known limitations.** Add what affects users, remove what no longer applies.
+6. **Write everything in English**, and keep version numbers out of the README except in
+   Latest and Install.
+
 ## Retry a release
 
 Do not delete or move a published tag to retry a failed build. After the
