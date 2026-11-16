@@ -17,23 +17,24 @@ se distribuyen entre versiones, sin cambiar su comportamiento por inferencia.
 
 Las versiones son objetivos de planificación, sin fechas ni incrementos aplicados a
 los manifiestos. Confirmar el número al preparar cada release. Registrar cambios de
-alcance aquí y mantener TASKS.md como fuente de ejecución. Cada entrega debe quedar
+alcance aquí siguiendo el [protocolo del roadmap](../protocolo-roadmap.md) y mantener
+TASKS.md como fuente de ejecución. Cada entrega debe quedar
 útil y verificable por sí sola; no esperar al panel completo para publicar mejoras.
 
 ## Secuencia acordada
 
-| Objetivo | Entrega | Alcance |
-|---|---|---|
-| v0.4 | Ramas visualmente claras | Continuidad, curvas, separación y cruces de líneas; colores estables por rama, coherentes entre panel y gráfico; paleta accesible en claro/oscuro; selección de color y principal visual. |
-| v0.5 | Panel izquierdo, filtros y worktrees | Reconocimiento y navegación de worktrees del mismo repositorio; búsqueda, secciones plegables, carpetas por prefijos, contadores, menús; activar/desactivar ramas y tags; Solo esta, restablecer y deshacer; persistencia por repositorio e indicador de filtros durante el diff. |
-| v0.6 | Historial por archivo | Entrada desde inspector/lista de archivos; commits que modificaron el archivo, diff y contenido histórico; seguimiento de renombrados cuando sea determinable, con límites explícitos. |
-| v0.7 | Stash de solo lectura | Listar los stashes en una sección plegable del panel izquierdo (mensaje, rama base, fecha) y ver su diff y contenido sin aplicar, descartar ni crear. Sin escrituras Git. El nodo de stash en el gráfico queda reservado. |
-| v0.8 | Vista de imágenes | Mostrar como imagen los archivos binarios de imagen en todos los visores de archivos (commit, historial por archivo, stash y cambios locales): formatos comunes, SVG sin ejecutar scripts, comparación anterior/guardada, dimensiones y tamaño. Solo lectura, con los presupuestos existentes. Los demás binarios siguen reportándose sin renderizar. |
-| v0.9 | Contribuyentes y releases | Identidades con .mailmap, énfasis y navegación por autor; releases GitHub, notas, tag, adjuntos, caché sin conexión, recuperación de acceso y descargas explícitas. |
-| v0.10 | Múltiples proveedores | Separar Git local de capacidades del proveedor; GitLab como primera ampliación; cuentas/servidores y credenciales aisladas. Bitbucket, Azure DevOps y servidores propios quedan para ampliaciones según necesidad. |
-| v0.11 | Crear y conectar repositorios | Inicializar repositorios locales; crear remotos en proveedores compatibles; elegir cuenta/organización, nombre y visibilidad; conectar proyectos existentes y ofrecer primer push explícito. |
-| v0.12 | Escrituras locales seguras: stash y ramas | Primero la base común de escrituras (exclusión por directorio Git común, recuperación, deshacer). Después, stash: guardar todos los cambios, aplicar, aplicar y quitar, descartar con deshacer. Luego crear, renombrar y eliminar ramas con protecciones; crear tags y gestionar remotos; fetch explícito y diferencias local/upstream. Ver [registro de alcance](#registro-de-cambios-de-alcance). |
-| v0.13 | Preparar archivos y crear commits | Preparar/retirar archivos completos, título/descripción, borradores por proyecto, hooks y firma, recuperación de errores y actualización del gráfico. |
+| Objetivo | Entrega | Estado | Alcance |
+|---|---|---|---|
+| v0.4 | Ramas visualmente claras | Publicada v0.4.0 | Continuidad, curvas, separación y cruces de líneas; colores estables por rama, coherentes entre panel y gráfico; paleta accesible en claro/oscuro; selección de color y principal visual. |
+| v0.5 | Panel izquierdo, filtros y worktrees | Publicada v0.5.0 | Reconocimiento y navegación de worktrees del mismo repositorio; búsqueda, secciones plegables, carpetas por prefijos, contadores, menús; activar/desactivar ramas y tags; Solo esta, restablecer y deshacer; persistencia por repositorio e indicador de filtros durante el diff. |
+| v0.6 | Historial por archivo | Publicada v0.6.0 | Entrada desde inspector/lista de archivos; commits que modificaron el archivo, diff y contenido histórico; seguimiento de renombrados cuando sea determinable, con límites explícitos. |
+| v0.7 | Stash de solo lectura | Publicada v0.7.0 | Listar los stashes en una sección plegable del panel izquierdo (mensaje, rama base, fecha) y ver su diff y contenido sin aplicar, descartar ni crear. Sin escrituras Git. El nodo de stash en el gráfico queda reservado. |
+| v0.8 | Vista de imágenes | Publicada v0.8.0 | Mostrar como imagen los archivos binarios de imagen en todos los visores de archivos (commit, historial por archivo, stash y cambios locales): formatos comunes, SVG sin ejecutar scripts, comparación anterior/guardada, dimensiones y tamaño. Solo lectura, con los presupuestos existentes. Los demás binarios siguen reportándose sin renderizar. |
+| v0.9 | Contribuyentes y releases | Planificada | Identidades con .mailmap, énfasis y navegación por autor; releases GitHub, notas, tag, adjuntos, caché sin conexión, recuperación de acceso y descargas explícitas. |
+| v0.10 | Múltiples proveedores | Planificada | Separar Git local de capacidades del proveedor; GitLab como primera ampliación; cuentas/servidores y credenciales aisladas. Bitbucket, Azure DevOps y servidores propios quedan para ampliaciones según necesidad. |
+| v0.11 | Crear y conectar repositorios | Planificada | Inicializar repositorios locales; crear remotos en proveedores compatibles; elegir cuenta/organización, nombre y visibilidad; conectar proyectos existentes y ofrecer primer push explícito. |
+| v0.12 | Escrituras locales seguras: stash y ramas | Planificada | Primero la base común de escrituras (exclusión por directorio Git común, recuperación, deshacer). Después, stash: guardar todos los cambios, aplicar, aplicar y quitar, descartar con deshacer. Luego crear, renombrar y eliminar ramas con protecciones; crear tags y gestionar remotos; fetch explícito y diferencias local/upstream. Ver [registro de alcance](#registro-de-cambios-de-alcance). |
+| v0.13 | Preparar archivos y crear commits | Planificada | Preparar/retirar archivos completos, título/descripción, borradores por proyecto, hooks y firma, recuperación de errores y actualización del gráfico. |
 
 ## Entrega implementada: v0.8 — vista de imágenes
 

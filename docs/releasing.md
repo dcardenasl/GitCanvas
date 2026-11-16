@@ -35,6 +35,9 @@ fails the build when the version, the images or the language drift.
 6. **Write everything in English**, and keep version numbers out of the README except in
    Latest and Install.
 
+The roadmap is updated in the same step, following
+[`protocolo-roadmap.md`](protocolo-roadmap.md#al-publicar-una-versión).
+
 ## Retry a release
 
 Do not delete or move a published tag to retry a failed build. After the
