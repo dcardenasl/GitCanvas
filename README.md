@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="GitCanvas drawing a repository's branches and merges as colored lanes, then selecting a merge commit to read its details" width="860">
+  <img src="docs/assets/demo.gif" alt="GitCanvas showing a repository's branches and merges as colored lanes, selecting a commit and reading the diff of one of its files" width="860">
 </p>
 
 ## What it is
@@ -132,7 +132,7 @@ restructuring anything.
 
 ## Use
 
-Open a repository from the app with **Abrir repositorio**, or from a terminal the way a
+Open a repository from the app with **Open repository**, or from a terminal the way a
 Git client should behave:
 
 ```bash
