@@ -9,12 +9,13 @@ mod reflog;
 mod snapshot;
 
 pub use inspection::{
-    get_stash_file_content, get_stash_file_diff, get_stash_files, StashComparisonMode,
-    StashContentOutcome, StashContentSide, StashContentUnavailable, StashFileContent,
-    StashFileContentRequest, StashFileDiff, StashFileDiffRequest, StashFileKind, StashFileOrigin,
-    StashFileRequest, StashFileSummary, StashFileVersion, StashFilesPage, StashFilesRequest,
-    StashInspection, StashInspectionLimits, StashInspectionNotice, StashPreviewUnavailable,
-    MAX_STASH_COMPARISON_BLOB_BYTES, MAX_STASH_FILES, STASH_FILES_PAGE_SIZE,
+    get_stash_file_content, get_stash_file_diff, get_stash_files, get_stash_image,
+    StashComparisonMode, StashContentOutcome, StashContentSide, StashContentUnavailable,
+    StashFileContent, StashFileContentRequest, StashFileDiff, StashFileDiffRequest, StashFileKind,
+    StashFileOrigin, StashFileRequest, StashFileSummary, StashFileVersion, StashFilesPage,
+    StashFilesRequest, StashImage, StashImageRequest, StashInspection, StashInspectionLimits,
+    StashInspectionNotice, StashPreviewUnavailable, MAX_STASH_COMPARISON_BLOB_BYTES,
+    MAX_STASH_FILES, STASH_FILES_PAGE_SIZE,
 };
 
 use git2::Reference;

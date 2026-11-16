@@ -13,11 +13,12 @@ use std::{fs, path::Path};
 use git2::build::CheckoutBuilder;
 use gitcanvas_core::{
     error::AppError,
+    image::{ImageOutcome, ImageVersion},
     repository::ActiveRepo,
     worktree::{
         get_worktree_file_content, get_worktree_file_diff, get_worktree_fingerprint,
-        get_worktree_snapshot, WorktreeFileContentRequest, WorktreeFileDiffRequest, WorktreeSide,
-        WorktreeSnapshotRequest,
+        get_worktree_image, get_worktree_snapshot, WorktreeFileContentRequest,
+        WorktreeFileDiffRequest, WorktreeImageRequest, WorktreeSide, WorktreeSnapshotRequest,
     },
 };
 use support::Fixture;
@@ -31,6 +32,89 @@ fn clean_checkout(fixture: &Fixture, commit: git2::Oid) {
             Some(CheckoutBuilder::new().force()),
         )
         .unwrap();
+}
+
+fn png(width: u32, height: u32) -> Vec<u8> {
+    let mut bytes = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR".to_vec();
+    bytes.extend_from_slice(&width.to_be_bytes());
+    bytes.extend_from_slice(&height.to_be_bytes());
+    bytes
+}
+
+#[test]
+fn reads_staged_and_unstaged_image_versions_from_their_exact_sources() {
+    let fixture = Fixture::new();
+    let initial = png(2, 3);
+    let commit = fixture.commit_files(
+        "refs/heads/main",
+        "initial",
+        &[],
+        1_000,
+        &[("icon.png", &initial)],
+    );
+    clean_checkout(&fixture, commit);
+
+    let staged = png(4, 5);
+    fs::write(fixture.dir.path().join("icon.png"), &staged).unwrap();
+    let mut index = fixture.repo.index().unwrap();
+    index.add_path(Path::new("icon.png")).unwrap();
+    index.write().unwrap();
+
+    let previous = get_worktree_image(
+        &active(&fixture),
+        &WorktreeImageRequest {
+            side: WorktreeSide::Staged,
+            path: "icon.png".into(),
+            previous_path: None,
+            version: ImageVersion::Previous,
+            expected_revision: None,
+            expand: false,
+        },
+    )
+    .unwrap();
+    let saved = get_worktree_image(
+        &active(&fixture),
+        &WorktreeImageRequest {
+            side: WorktreeSide::Staged,
+            path: "icon.png".into(),
+            previous_path: None,
+            version: ImageVersion::Saved,
+            expected_revision: None,
+            expand: false,
+        },
+    )
+    .unwrap();
+    assert!(matches!(previous.outcome, ImageOutcome::Image { image } if image.width == Some(2)));
+    assert!(matches!(saved.outcome, ImageOutcome::Image { image } if image.width == Some(4)));
+
+    let unstaged = png(6, 7);
+    fs::write(fixture.dir.path().join("icon.png"), &unstaged).unwrap();
+    let previous = get_worktree_image(
+        &active(&fixture),
+        &WorktreeImageRequest {
+            side: WorktreeSide::Unstaged,
+            path: "icon.png".into(),
+            previous_path: None,
+            version: ImageVersion::Previous,
+            expected_revision: None,
+            expand: false,
+        },
+    )
+    .unwrap();
+    let saved = get_worktree_image(
+        &active(&fixture),
+        &WorktreeImageRequest {
+            side: WorktreeSide::Unstaged,
+            path: "icon.png".into(),
+            previous_path: None,
+            version: ImageVersion::Saved,
+            expected_revision: None,
+            expand: false,
+        },
+    )
+    .unwrap();
+    assert!(matches!(previous.outcome, ImageOutcome::Image { image } if image.width == Some(4)));
+    assert!(matches!(saved.outcome, ImageOutcome::Image { image } if image.width == Some(6)));
 }
 
 fn active(fixture: &Fixture) -> ActiveRepo {

@@ -6,7 +6,7 @@ import type {
 import type { Transition } from "./navigation";
 
 /** Reading choices belong to one tab and never enter durable workspace records. */
-export type StashReading = "diff" | "previous" | "saved";
+export type StashReading = "diff" | "previous" | "saved" | "image";
 /** One bounded saved-state overlay, independent of durable graph navigation. */
 export interface StashView {
   readonly entry: StashEntry;

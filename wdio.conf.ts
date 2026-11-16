@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
+import { deflateSync } from "node:zlib";
 
 /**
  * End-to-end configuration.
@@ -44,6 +45,63 @@ interface OwnedFixture {
 const FIXTURE_ENV = "GITCANVAS_E2E_FIXTURE";
 const FIXTURE_TOKEN_ENV = "GITCANVAS_E2E_FIXTURE_TOKEN";
 const FIXTURE_OWNER_MARKER = ".git/gitcanvas-e2e-owner";
+
+function crc32(bytes: Buffer): number {
+  let crc = 0xffff_ffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ ((crc & 1) === 1 ? 0xedb8_8320 : 0);
+    }
+  }
+  return (crc ^ 0xffff_ffff) >>> 0;
+}
+
+function pngChunk(type: string, data: Buffer): Buffer {
+  const name = Buffer.from(type, "ascii");
+  const checksumInput = Buffer.concat([name, data]);
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const checksum = Buffer.alloc(4);
+  checksum.writeUInt32BE(crc32(checksumInput));
+  return Buffer.concat([length, name, data, checksum]);
+}
+
+/** A valid, tiny RGBA PNG fixture generated without checked-in binary assets. */
+function fixturePng(width: number): Buffer {
+  const height = 1;
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8;
+  header[9] = 6;
+  const pixels = Buffer.alloc(1 + width * 4);
+  for (let pixel = 0; pixel < width; pixel += 1) {
+    pixels.set([32 + pixel * 40, 110, 210, 255], 1 + pixel * 4);
+  }
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk("IHDR", header),
+    pngChunk("IDAT", deflateSync(pixels)),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+function fixtureAnimatedGif(): Buffer {
+  const still = Buffer.from(
+    "R0lGODlhAQABAIAAAP///////yH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==",
+    "base64",
+  );
+  const frameStart = still.indexOf(0x2c);
+  if (frameStart < 0 || still.at(-1) !== 0x3b) {
+    throw new Error("Embedded GIF frame fixture is malformed");
+  }
+  return Buffer.concat([
+    still.subarray(0, -1),
+    still.subarray(frameStart, -1),
+    Buffer.from([0x3b]),
+  ]);
+}
 const FIXTURE_TOKEN_PATTERN = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/;
 
 /** Validate a fixture path and its ownership marker without following symlinks. */
@@ -126,6 +184,7 @@ function createFixtureRepository(
     | "workspace"
     | "graph-performance"
     | "file-history"
+    | "images"
     | "stash",
 ): OwnedFixture {
   const repository = fs.mkdtempSync(path.join(os.tmpdir(), "gitcanvas-e2e-"));
@@ -238,6 +297,32 @@ function createFixtureRepository(
       return { repository: fs.realpathSync(repository), token };
     }
 
+    if (kind === "images") {
+      const gif = fixtureAnimatedGif();
+      fs.writeFileSync(path.join(repository, "logo.png"), fixturePng(1));
+      git("add", "logo.png");
+      git("commit", "-m", "add logo image");
+      fs.writeFileSync(path.join(repository, "logo.png"), fixturePng(2));
+      git("commit", "-am", "resize logo image");
+      fs.writeFileSync(
+        path.join(repository, "icon.svg"),
+        '<svg xmlns="http://www.w3.org/2000/svg"><script>window.__svgExecuted=true</script><image href="https://invalid.example/tracker.png"/></svg>',
+      );
+      fs.writeFileSync(path.join(repository, "anim.gif"), gif);
+      git("add", "icon.svg", "anim.gif");
+      git("commit", "-m", "add svg and animation");
+      git("mv", "logo.png", "renamed.png");
+      fs.rmSync(path.join(repository, "icon.svg"));
+      git("add", "-u");
+      git("commit", "-m", "rename and delete images");
+      fs.writeFileSync(path.join(repository, "renamed.png"), fixturePng(2));
+      git("add", "renamed.png");
+      fs.writeFileSync(path.join(repository, "anim.gif"), gif);
+      git("stash", "push", "-m", "image comparison stash");
+      fs.writeFileSync(path.join(repository, "anim.gif"), gif);
+      return { repository: fs.realpathSync(repository), token };
+    }
+
     if (kind === "local-changes" || kind === "workspace") {
       fs.writeFileSync(path.join(repository, "base.txt"), "base\n");
       git("add", "base.txt");
@@ -300,6 +385,7 @@ if (
   fixtureKind !== "workspace" &&
   fixtureKind !== "graph-performance" &&
   fixtureKind !== "file-history" &&
+  fixtureKind !== "images" &&
   fixtureKind !== "stash"
 ) {
   throw new Error(`Unsupported E2E fixture kind: ${fixtureKind}`);

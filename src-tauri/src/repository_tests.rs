@@ -149,6 +149,100 @@ fn file_history_is_authorized_before_it_reads_anything() {
 }
 
 #[test]
+fn image_commands_require_authorization_and_commit_reads_return_bounded_metadata() {
+    let dir = tempfile::tempdir().unwrap();
+    let repo = git2::Repository::init(dir.path()).unwrap();
+    let signature = git2::Signature::now("Test", "test@example.com").unwrap();
+    let mut image = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR".to_vec();
+    image.extend_from_slice(&3_u32.to_be_bytes());
+    image.extend_from_slice(&4_u32.to_be_bytes());
+    let blob = repo.blob(&image).unwrap();
+    let mut builder = repo.treebuilder(None).unwrap();
+    builder.insert("logo.png", blob, 0o100_644).unwrap();
+    let tree = repo.find_tree(builder.write().unwrap()).unwrap();
+    let commit = repo
+        .commit(Some("HEAD"), &signature, &signature, "image", &tree, &[])
+        .unwrap();
+    let path = dir.path().to_str().unwrap();
+    let webview = test_webview();
+    let request = json!({
+        "path": path,
+        "request": {
+            "commit_id": commit.to_string(),
+            "path": "logo.png",
+            "previous_path": null,
+            "version": "saved",
+            "expand": false
+        }
+    });
+    let denied = invoke(&webview, "get_commit_image", request.clone()).unwrap_err();
+    assert_eq!(denied["kind"], "InvalidRepository");
+    invoke(&webview, "open_repository", json!({"path": path})).unwrap();
+    let result = invoke(&webview, "get_commit_image", request).unwrap();
+    assert_eq!(result["kind"], "image");
+    assert_eq!(result["image"]["format"], "png");
+    assert_eq!(result["image"]["width"], 3);
+    assert_eq!(result["image"]["height"], 4);
+}
+
+#[test]
+#[allow(clippy::print_stdout)] // The measurement is retained in the test log for v0.8 verification.
+fn expanded_commit_image_round_trips_the_32_mib_payload_over_ipc() {
+    use std::time::Instant;
+
+    const IMAGE_BYTES: usize = 32 * 1024 * 1024;
+    let dir = tempfile::tempdir().unwrap();
+    let repo = git2::Repository::init(dir.path()).unwrap();
+    let signature = git2::Signature::now("Test", "test@example.com").unwrap();
+    let mut image = vec![0_u8; IMAGE_BYTES];
+    image[..8].copy_from_slice(b"\x89PNG\r\n\x1a\n");
+    image[12..16].copy_from_slice(b"IHDR");
+    image[16..20].copy_from_slice(&1_u32.to_be_bytes());
+    image[20..24].copy_from_slice(&1_u32.to_be_bytes());
+    let blob = repo.blob(&image).unwrap();
+    let mut builder = repo.treebuilder(None).unwrap();
+    builder.insert("large.png", blob, 0o100_644).unwrap();
+    let tree = repo.find_tree(builder.write().unwrap()).unwrap();
+    let commit = repo
+        .commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            "large image",
+            &tree,
+            &[],
+        )
+        .unwrap();
+    let webview = test_webview();
+    let path = dir.path().to_str().unwrap();
+    invoke(&webview, "open_repository", json!({"path": path})).unwrap();
+    let request = json!({
+        "path": path,
+        "request": {
+            "commit_id": commit.to_string(),
+            "path": "large.png",
+            "previous_path": null,
+            "version": "saved",
+            "expand": true
+        }
+    });
+
+    let started = Instant::now();
+    let result = invoke(&webview, "get_commit_image", request).unwrap();
+    let serialized = serde_json::to_vec(&result).unwrap();
+    let elapsed = started.elapsed();
+    let data = result["image"]["data"].as_str().unwrap();
+    let expected_base64_bytes = IMAGE_BYTES.div_ceil(3) * 4;
+    assert_eq!(result["kind"], "image");
+    assert_eq!(data.len(), expected_base64_bytes);
+    println!(
+        "32 MiB image IPC: {} base64 bytes, {} JSON bytes, {elapsed:?}",
+        data.len(),
+        serialized.len(),
+    );
+}
+
+#[test]
 fn command_failures_are_structured_and_invalid_limits_are_rejected() {
     let dir = tempfile::tempdir().unwrap();
     let webview = test_webview();

@@ -37,6 +37,8 @@
   --surface-toolbar: #12141b;
   --surface-hover: #171a22;
   --surface-selected: #211d2d;
+  --image-checker-a: #191c24;
+  --image-checker-b: #242832;
   --control: #171a22;
   --border: #262b38;
   --divider: #1c2029;
@@ -96,6 +98,8 @@
   --surface-toolbar: #fbfaf8;
   --surface-hover: #eeece8;
   --surface-selected: #eee6fa;
+  --image-checker-a: #ffffff;
+  --image-checker-b: #e9e6e1;
   --control: #fff;
   --border: #d9d6d0;
   --divider: #e6e3dd;

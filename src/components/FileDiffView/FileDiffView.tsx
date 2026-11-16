@@ -7,6 +7,7 @@ import type {
   CommitInfo,
   FileContent,
   WorktreeFileContent,
+  ImageVersion,
 } from "../../bindings";
 import { errorKind } from "../../lib/errors";
 import { getFileContent, getWorktreeFileContent } from "../../lib/ipc";
@@ -15,11 +16,17 @@ import { fileHistoryUnavailable } from "../../state/fileHistory";
 import { useRepositoryRefs } from "../../state/refs";
 import { useNavigation, useNavigationActions } from "../../state/workspace";
 import { useWorktreeFileDiff, useWorktreeSnapshot } from "../../state/worktree";
+import {
+  shouldProbeImage,
+  useCommitImage,
+  useWorktreeImage,
+} from "../../state/image";
 import { queryKeys } from "../../state/queryKeys";
 import { shortId } from "../CommitTable/format";
 import { DiffViewer } from "../DiffViewer";
 import { DiffStat } from "../DiffStat/DiffStat";
 import { ErrorMessage } from "../ErrorMessage";
+import { ImageCompare } from "../ImageCompare";
 
 import "./FileDiffView.css";
 
@@ -48,7 +55,7 @@ export type FileDiffViewProps =
       readonly snapshot?: never;
     });
 
-type Mode = "diff" | "file";
+type Mode = "diff" | "file" | "image";
 
 /** One commit or one local file, with an impossible-to-confuse source. */
 export function FileDiffView(props: FileDiffViewProps) {
@@ -74,11 +81,7 @@ export function FileDiffView(props: FileDiffViewProps) {
     ? props.worktree.side
     : `commit-${props.commit.id}`;
   const key = `${sourceKey}/${path}`;
-  const mode: Mode = isSnapshot
-    ? "file"
-    : choice.key === key
-      ? choice.mode
-      : "diff";
+  const selectedMode = choice.key === key ? choice.mode : null;
   const expanded = expandPath === path;
 
   const commitDiff = useCommitDiff(
@@ -105,6 +108,107 @@ export function FileDiffView(props: FileDiffViewProps) {
     ? worktreeFileDiff.data?.file
     : commitDiff.data?.files.find((entry) => entry.path === path);
   const deleted = file?.change === "Deleted";
+  const probeImage = shouldProbeImage({ path, omitted: file?.omitted ?? null });
+  const previousPath = file?.old_path ?? null;
+  const commitPreviousImageRequest =
+    !isWorktree && !isSnapshot && probeImage
+      ? {
+          commit_id: props.commit.id,
+          path,
+          previous_path: previousPath,
+          version: "previous" as const,
+        }
+      : null;
+  const commitSavedImageRequest =
+    !isWorktree && probeImage
+      ? {
+          commit_id: props.commit.id,
+          path,
+          previous_path: previousPath,
+          version: "saved" as const,
+        }
+      : null;
+  const worktreePreviousImageRequest =
+    isWorktree && probeImage && localRevision !== undefined
+      ? {
+          side: props.worktree.side,
+          path,
+          previous_path: previousPath,
+          version: "previous" as const,
+          expected_revision: localRevision,
+        }
+      : null;
+  const worktreeSavedImageRequest =
+    isWorktree && probeImage && localRevision !== undefined
+      ? {
+          side: props.worktree.side,
+          path,
+          previous_path: previousPath,
+          version: "saved" as const,
+          expected_revision: localRevision,
+        }
+      : null;
+  const [imageExpansion, setImageExpansion] = useState<{
+    key: string;
+    previous: boolean;
+    saved: boolean;
+  }>({ key: "", previous: false, saved: false });
+  const previousExpanded =
+    imageExpansion.key === key && imageExpansion.previous;
+  const savedExpanded = imageExpansion.key === key && imageExpansion.saved;
+  const expandImage = (version: ImageVersion) => {
+    setImageExpansion((current) => ({
+      key,
+      previous:
+        (current.key === key && current.previous) || version === "previous",
+      saved: (current.key === key && current.saved) || version === "saved",
+    }));
+  };
+  const commitPreviousImage = useCommitImage(
+    repositoryPath,
+    commitPreviousImageRequest,
+    previousExpanded,
+  );
+  const commitSavedImage = useCommitImage(
+    repositoryPath,
+    commitSavedImageRequest,
+    savedExpanded,
+  );
+  const worktreePreviousImage = useWorktreeImage(
+    repositoryPath,
+    worktreePreviousImageRequest,
+    previousExpanded,
+  );
+  const worktreeSavedImage = useWorktreeImage(
+    repositoryPath,
+    worktreeSavedImageRequest,
+    savedExpanded,
+  );
+  const previousImage = isWorktree
+    ? (worktreePreviousImage.data?.outcome ?? null)
+    : isSnapshot
+      ? { kind: "missing" as const }
+      : (commitPreviousImage.data ?? null);
+  const savedImage = isWorktree
+    ? (worktreeSavedImage.data?.outcome ?? null)
+    : (commitSavedImage.data ?? null);
+  const imageAvailable =
+    previousImage?.kind === "image" || savedImage?.kind === "image";
+  const imageProbePending =
+    (commitPreviousImageRequest !== null && commitPreviousImage.isPending) ||
+    (commitSavedImageRequest !== null && commitSavedImage.isPending) ||
+    (worktreePreviousImageRequest !== null &&
+      worktreePreviousImage.isPending) ||
+    (worktreeSavedImageRequest !== null && worktreeSavedImage.isPending);
+  const mode: Mode =
+    selectedMode ??
+    (isSnapshot
+      ? probeImage
+        ? "image"
+        : "file"
+      : file?.omitted === "Binary" && (imageAvailable || imageProbePending)
+        ? "image"
+        : "diff");
   // A commit that deleted a file has no content of its own. Its previous version
   // is the file at the first parent, which the whole-file view shows instead.
   const previousCommitId = deleted ? (props.commit?.parents[0] ?? null) : null;
@@ -155,7 +259,11 @@ export function FileDiffView(props: FileDiffViewProps) {
   const refetchLocalSnapshot = localSnapshot.refetch;
   useEffect(() => {
     if (!isWorktree) return;
-    const failure = diff.error ?? whole.error;
+    const failure =
+      diff.error ??
+      whole.error ??
+      worktreePreviousImage.error ??
+      worktreeSavedImage.error;
     if (failure === null) return;
 
     // A read is tied to the revision it was asked for, so editing the file
@@ -166,7 +274,14 @@ export function FileDiffView(props: FileDiffViewProps) {
       void refetchLocalSnapshot();
       return;
     }
-  }, [diff.error, whole.error, isWorktree, refetchLocalSnapshot]);
+  }, [
+    diff.error,
+    whole.error,
+    worktreePreviousImage.error,
+    worktreeSavedImage.error,
+    isWorktree,
+    refetchLocalSnapshot,
+  ]);
 
   useEffect(() => {
     if (embedded) return;
@@ -221,22 +336,25 @@ export function FileDiffView(props: FileDiffViewProps) {
         </div>
 
         <div className="file-diff__controls">
-          {!isSnapshot && (deleted ? previousCommitId !== null : true) && (
+          {((!isSnapshot && (deleted ? previousCommitId !== null : true)) ||
+            (isSnapshot && probeImage)) && (
             <div
               className="segmented"
               role="group"
               aria-label={t("diff.modeLabel")}
             >
-              <button
-                type="button"
-                className="segmented__option"
-                aria-pressed={mode === "diff"}
-                onClick={() => {
-                  setMode("diff");
-                }}
-              >
-                {t("diff.modeChanges")}
-              </button>
+              {!isSnapshot && (
+                <button
+                  type="button"
+                  className="segmented__option"
+                  aria-pressed={mode === "diff"}
+                  onClick={() => {
+                    setMode("diff");
+                  }}
+                >
+                  {t("diff.modeChanges")}
+                </button>
+              )}
               <button
                 type="button"
                 className="segmented__option"
@@ -247,20 +365,34 @@ export function FileDiffView(props: FileDiffViewProps) {
               >
                 {deleted ? t("diff.modeBeforeDeletion") : t("diff.modeWhole")}
               </button>
+              {(imageAvailable || (isSnapshot && probeImage)) && (
+                <button
+                  type="button"
+                  className="segmented__option"
+                  aria-pressed={mode === "image"}
+                  onClick={() => {
+                    setMode("image");
+                  }}
+                >
+                  {t("diff.modeImage")}
+                </button>
+              )}
             </div>
           )}
 
-          <button
-            type="button"
-            className="button file-diff__toggle"
-            aria-pressed={wrap}
-            title={t("diff.wrapHint")}
-            onClick={() => {
-              setWrap((on) => !on);
-            }}
-          >
-            {t("diff.wrap")}
-          </button>
+          {mode !== "image" && (
+            <button
+              type="button"
+              className="button file-diff__toggle"
+              aria-pressed={wrap}
+              title={t("diff.wrapHint")}
+              onClick={() => {
+                setWrap((on) => !on);
+              }}
+            >
+              {t("diff.wrap")}
+            </button>
+          )}
 
           {!isSnapshot && !embedded && (
             <button
@@ -334,6 +466,33 @@ export function FileDiffView(props: FileDiffViewProps) {
               />
             )}
           </>
+        ) : mode === "image" ? (
+          <ImageCompare
+            path={path}
+            previous={previousImage ?? { kind: "missing" }}
+            saved={savedImage ?? { kind: "missing" }}
+            previousLoading={
+              (commitPreviousImageRequest !== null &&
+                commitPreviousImage.isPending) ||
+              (worktreePreviousImageRequest !== null &&
+                worktreePreviousImage.isPending)
+            }
+            savedLoading={
+              (commitSavedImageRequest !== null &&
+                commitSavedImage.isPending) ||
+              (worktreeSavedImageRequest !== null &&
+                worktreeSavedImage.isPending)
+            }
+            previousError={
+              commitPreviousImage.error ?? worktreePreviousImage.error ?? null
+            }
+            savedError={
+              commitSavedImage.error ?? worktreeSavedImage.error ?? null
+            }
+            previousExpanded={previousExpanded}
+            savedExpanded={savedExpanded}
+            onExpand={expandImage}
+          />
         ) : (
           <>
             {deleted && previousCommitId !== null && (

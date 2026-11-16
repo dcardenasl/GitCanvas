@@ -30,6 +30,10 @@ for spec in e2e/*.spec.ts; do
         if ! GITCANVAS_E2E_FIXTURE_KIND=file-history npx wdio run ./wdio.conf.ts --spec "${spec}"; then
             status=1
         fi
+    elif [[ "${spec}" == "e2e/images.spec.ts" ]]; then
+        if ! GITCANVAS_E2E_FIXTURE_KIND=images npx wdio run ./wdio.conf.ts --spec "${spec}"; then
+            failed=1
+        fi
     elif [[ "${spec}" == "e2e/stash.spec.ts" ]]; then
         if ! GITCANVAS_E2E_FIXTURE_KIND=stash npx wdio run ./wdio.conf.ts --spec "${spec}"; then
             status=1

@@ -6,9 +6,11 @@ use gitcanvas_core::{
     commit_tree::{self, CommitTreePage, CommitTreeRequest},
     diff::{self, CommitDiff, DiffRequest},
     error::AppError,
+    image::{self, CommitImageRequest, ImageOutcome},
     worktree::{
         self, WorktreeFileContent, WorktreeFileContentRequest, WorktreeFileDiff,
-        WorktreeFileDiffRequest, WorktreeFingerprint, WorktreeSnapshot, WorktreeSnapshotRequest,
+        WorktreeFileDiffRequest, WorktreeFingerprint, WorktreeImage, WorktreeImageRequest,
+        WorktreeSnapshot, WorktreeSnapshotRequest,
     },
 };
 
@@ -52,6 +54,23 @@ pub async fn get_file_content(
     read("get_file_content", move || {
         with_repo(&allowed, &path, |active| {
             blob::get_file_content(active, &request)
+        })
+    })
+    .await
+}
+
+/// Reads one bounded image version from a commit or its first parent.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_commit_image(
+    path: String,
+    request: CommitImageRequest,
+    allowed: tauri::State<'_, AllowedRepos>,
+) -> Result<ImageOutcome, AppError> {
+    let allowed = allowed.inner().clone();
+    read("get_commit_image", move || {
+        with_repo(&allowed, &path, |active| {
+            image::get_commit_image(active, &request)
         })
     })
     .await
@@ -120,6 +139,23 @@ pub async fn get_worktree_file_content(
     read("get_worktree_file_content", move || {
         with_repo(&allowed, &path, |active| {
             worktree::get_worktree_file_content(active, &request)
+        })
+    })
+    .await
+}
+
+/// Reads one bounded staged or unstaged image version at a guarded revision.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_worktree_image(
+    path: String,
+    request: WorktreeImageRequest,
+    allowed: tauri::State<'_, AllowedRepos>,
+) -> Result<WorktreeImage, AppError> {
+    let allowed = allowed.inner().clone();
+    read("get_worktree_image", move || {
+        with_repo(&allowed, &path, |active| {
+            worktree::get_worktree_image(active, &request)
         })
     })
     .await

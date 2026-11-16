@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
 import { createTestQueryClient } from "../test/test-utils";
-import { invalidateLive, queryKeys } from "./queryKeys";
+import { invalidateLive, queryKeys, removeProjectQueries } from "./queryKeys";
 
 const PATH = "/repo";
 const OTHER_PATH = "/other";
@@ -36,6 +36,33 @@ function seedLiveQueries(client: QueryClient): void {
 }
 
 describe("queryKeys and invalidateLive", () => {
+  it("scopes image bytes by root, source, version, expansion and revision", () => {
+    const client = makeClient();
+    const key = queryKeys.image(
+      PATH,
+      "worktree:staged",
+      "logo.png",
+      "saved",
+      false,
+      "r1",
+    );
+    const other = queryKeys.image(
+      OTHER_PATH,
+      "worktree:staged",
+      "logo.png",
+      "saved",
+      false,
+      "r1",
+    );
+    client.setQueryData(key, { payload: "repo" });
+    client.setQueryData(other, { payload: "other" });
+    expect(key[1]).toBe(PATH);
+    removeProjectQueries(client, PATH);
+    expect(client.getQueryData(key)).toBeUndefined();
+    expect(client.getQueryData(other)).toEqual({ payload: "other" });
+    client.clear();
+  });
+
   it("invalidates metadata queries without touching worktree or immutable data", async () => {
     const client = makeClient();
     seedLiveQueries(client);

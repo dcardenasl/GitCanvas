@@ -205,6 +205,28 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
     [PATH, { commit_id: "a", path: "f", expand: false }],
   ],
   [
+    "getCommitImage",
+    () =>
+      ipc.getCommitImage(PATH, {
+        commit_id: "a",
+        path: "logo.png",
+        previous_path: null,
+        version: "saved",
+        expand: false,
+      }),
+    "getCommitImage",
+    [
+      PATH,
+      {
+        commit_id: "a",
+        path: "logo.png",
+        previous_path: null,
+        version: "saved",
+        expand: false,
+      },
+    ],
+  ],
+  [
     "getWorktreeSnapshot",
     () =>
       ipc.getWorktreeSnapshot(PATH, {
@@ -252,6 +274,30 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
     [
       PATH,
       { side: "unstaged", path: "f", expected_revision: null, expand: true },
+    ],
+  ],
+  [
+    "getWorktreeImage",
+    () =>
+      ipc.getWorktreeImage(PATH, {
+        side: "staged",
+        path: "logo.png",
+        previous_path: null,
+        version: "previous",
+        expected_revision: "r1",
+        expand: false,
+      }),
+    "getWorktreeImage",
+    [
+      PATH,
+      {
+        side: "staged",
+        path: "logo.png",
+        previous_path: null,
+        version: "previous",
+        expected_revision: "r1",
+        expand: false,
+      },
     ],
   ],
   [
@@ -332,6 +378,24 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
       {
         file: { stash_id: "a", mode: "all", file_key: "key" },
         side: "saved",
+        expand: false,
+      },
+    ],
+  ],
+  [
+    "getStashImage",
+    () =>
+      ipc.getStashImage(PATH, {
+        file: { stash_id: "a", mode: "all", file_key: "key" },
+        version: "saved",
+        expand: false,
+      }),
+    "getStashImage",
+    [
+      PATH,
+      {
+        file: { stash_id: "a", mode: "all", file_key: "key" },
+        version: "saved",
         expand: false,
       },
     ],

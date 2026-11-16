@@ -101,6 +101,18 @@ The chip remains visible on narrow rows while the commit message truncates. Its 
 group uses a subtle Orchid fill. Unknown base commits have no canvas marker; the sidebar
 inventory remains complete. See ST-9 in the v0.7 plan.
 
+## Image previews (v0.8 in dev)
+
+The selected image occupies the existing centre file viewer, while the inspector and
+history navigation keep their current positions. Binary images open in image mode after
+their format is confirmed; supported images can also be selected beside Changes and
+Whole file. Added/deleted files show their one available side; modified files show
+Previous and Saved side by side, with an optional reveal slider. Controls expose fit or
+actual size, dimensions and byte size. Oversized images offer an explicit bounded
+expansion. The same surface is used by commit, history, local-change and stash readers.
+Labels are translated in English and Spanish; sliders and playback are keyboard
+operable, and animated images begin paused when reduced motion is enabled. See ADR 0010.
+
 ## Platform behavior
 
 The product is a desktop Tauri application for macOS, Linux, and Windows. The layout is

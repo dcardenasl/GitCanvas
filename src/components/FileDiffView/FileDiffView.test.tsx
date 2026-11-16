@@ -8,6 +8,7 @@ import type {
   CommitInfo,
   FileContent,
   FileDiff,
+  ImageOutcome,
   WorktreeSnapshot,
 } from "../../bindings";
 import {
@@ -19,6 +20,7 @@ import {
 const mockIpc = createIpcMocks([
   "getCommitDiff",
   "getFileContent",
+  "getCommitImage",
   "getWorktreeSnapshot",
   "getWorktreeFileDiff",
   "getWorktreeFileContent",
@@ -26,6 +28,7 @@ const mockIpc = createIpcMocks([
 const {
   getCommitDiff,
   getFileContent,
+  getCommitImage,
   getWorktreeSnapshot,
   getWorktreeFileDiff,
   getWorktreeFileContent,
@@ -143,6 +146,7 @@ function content(overrides: Partial<FileContent> = {}): FileContent {
 beforeEach(() => {
   getCommitDiff.mockReset();
   getFileContent.mockReset();
+  getCommitImage.mockReset();
   getWorktreeSnapshot.mockReset();
   getWorktreeFileDiff.mockReset();
   getWorktreeFileContent.mockReset();
@@ -184,6 +188,53 @@ describe("FileDiffView", () => {
       "/tmp/repo",
       expect.objectContaining({ commit_id: COMMIT.id, file_path: null }),
     );
+  });
+
+  it("opens an image from the complete commit tree using its saved version", async () => {
+    const image: ImageOutcome = {
+      kind: "image",
+      image: {
+        format: "png",
+        width: 96,
+        height: 96,
+        bytes: "7910",
+        animated: false,
+        data: "AA==",
+      },
+    };
+    getCommitDiff.mockResolvedValue(diff([]));
+    getCommitImage.mockResolvedValue(image);
+    renderView("public/favicon-96x96.png", undefined, true);
+
+    expect(
+      await screen.findByRole("region", {
+        name: "Vista previa de imagen de public/favicon-96x96.png",
+      }),
+    ).toBeInstanceOf(HTMLElement);
+    expect(
+      screen.getByRole("img", { name: /public\/favicon-96x96\.png/ }),
+    ).toBeInstanceOf(HTMLImageElement);
+    expect(
+      screen
+        .getByRole("button", { name: "Archivo completo" })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
+    expect(
+      screen
+        .getByRole("button", { name: "Imagen" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(getCommitImage).toHaveBeenCalledWith(
+      "/tmp/repo",
+      expect.objectContaining({
+        commit_id: COMMIT.id,
+        path: "public/favicon-96x96.png",
+        previous_path: null,
+        version: "saved",
+        expand: false,
+      }),
+    );
+    expect(getFileContent).not.toHaveBeenCalled();
   });
 
   it("switches to the diff if the commit tree opens a file before the diff arrives", async () => {

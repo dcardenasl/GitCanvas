@@ -8,8 +8,8 @@ use gitcanvas_core::{
     error::AppError,
     stash::{
         self, StashAnchorIndex, StashFileContent, StashFileContentRequest, StashFileDiff,
-        StashFileDiffRequest, StashFilesPage, StashFilesRequest, StashFingerprint,
-        StashListRequest, StashPage,
+        StashFileDiffRequest, StashFilesPage, StashFilesRequest, StashFingerprint, StashImage,
+        StashImageRequest, StashListRequest, StashPage,
     },
 };
 
@@ -90,6 +90,23 @@ pub async fn get_stash_file_content(
     read("get_stash_file_content", move || {
         with_repo(&allowed, &path, |active| {
             stash::get_stash_file_content(active, &request)
+        })
+    })
+    .await
+}
+
+/// Reads one bounded image version from the exact selected stash comparison.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_stash_image(
+    path: String,
+    request: StashImageRequest,
+    allowed: tauri::State<'_, AllowedRepos>,
+) -> Result<StashImage, AppError> {
+    let allowed = allowed.inner().clone();
+    read("get_stash_image", move || {
+        with_repo(&allowed, &path, |active| {
+            stash::get_stash_image(active, &request)
         })
     })
     .await

@@ -18,6 +18,9 @@ import type {
   StashFilesRequest,
   StashFileDiffRequest,
   StashFileContentRequest,
+  CommitImageRequest,
+  WorktreeImageRequest,
+  StashImageRequest,
 } from "../../bindings";
 
 export type {
@@ -49,6 +52,9 @@ export type {
   RepositoryWorktreesSnapshot,
   WorktreeAvailability,
   WorktreeHead,
+  ImageOutcome,
+  WorktreeImage,
+  StashImage,
 } from "../../bindings";
 
 /** A domain error with a stable category for actionable UI messages. */
@@ -129,6 +135,9 @@ export const pushCurrentBranch = (path: string) =>
 /** Reads a file's full contents as it stands at a commit. */
 export const getFileContent = (path: string, request: FileContentRequest) =>
   result(commands.getFileContent(path, request));
+/** Reads one bounded image version from a commit or its first parent. */
+export const getCommitImage = (path: string, request: CommitImageRequest) =>
+  result(commands.getCommitImage(path, request));
 /** Reads both local change sets with one shared revision. */
 export const getWorktreeSnapshot = (
   path: string,
@@ -144,6 +153,9 @@ export const getWorktreeFileContent = (
   path: string,
   request: WorktreeFileContentRequest,
 ) => result(commands.getWorktreeFileContent(path, request));
+/** Reads one bounded staged or unstaged image version at a guarded revision. */
+export const getWorktreeImage = (path: string, request: WorktreeImageRequest) =>
+  result(commands.getWorktreeImage(path, request));
 /** Reads the current local revision without materializing patches. */
 export const getWorktreeFingerprint = (path: string) =>
   result(commands.getWorktreeFingerprint(path));
@@ -211,6 +223,9 @@ export const getStashFileContent = (
   path: string,
   request: StashFileContentRequest,
 ) => result(commands.getStashFileContent(path, request));
+/** Reads one bounded image version from the selected stash comparison. */
+export const getStashImage = (path: string, request: StashImageRequest) =>
+  result(commands.getStashImage(path, request));
 /** Reads cheap stash metadata for active-project backup polling. */
 export const getStashFingerprint = (path: string) =>
   result(commands.getStashFingerprint(path));

@@ -38,6 +38,7 @@
     "modeChanges": "Cambios",
     "modeLabel": "Qué mostrar del archivo",
     "modeWhole": "Archivo completo",
+    "modeImage": "Imagen",
     "notInCommit": "Este commit no modifica {{path}}.",
     "notInLocal": "Este archivo ya no forma parte de los cambios locales.",
     "readingDiff": "Leyendo el diff…",

@@ -26,6 +26,7 @@ const ipc = vi.hoisted(() => ({
   getStashFiles: vi.fn<typeof Ipc.getStashFiles>(),
   getStashFileDiff: vi.fn<typeof Ipc.getStashFileDiff>(),
   getStashFileContent: vi.fn<typeof Ipc.getStashFileContent>(),
+  getStashImage: vi.fn<typeof Ipc.getStashImage>(),
 }));
 vi.mock("../../lib/ipc", async (original) => ({
   ...(await original<typeof Ipc>()),
@@ -78,6 +79,30 @@ beforeEach(() => {
       limits: stashFilesPage().limits,
     }),
   );
+  ipc.getStashImage.mockImplementation((_root, request) => {
+    const selected = stashFile({
+      file: { ...stashFile().file, path: "logo.png", omitted: "Binary" },
+    });
+    return Promise.resolve({
+      inspection: stashFilesPage().inspection,
+      file_key: request.file.file_key,
+      version: request.version,
+      source:
+        request.version === "previous" ? selected.previous : selected.saved,
+      outcome: {
+        kind: "image",
+        image: {
+          format: "png",
+          width: 1,
+          height: 1,
+          bytes: "70",
+          animated: false,
+          data: "iVBORw0KGgo=",
+        },
+      },
+      limits: stashFilesPage().limits,
+    });
+  });
 });
 afterEach(cleanup);
 
@@ -240,6 +265,38 @@ describe("stash inventory and saved readers", () => {
       screen.getByRole("button", { name: "Volver al gráfico" }),
     );
     expect(activeNavigation().stash?.center).toBe("graph");
+  });
+
+  it("opens and compares exact stash image versions", async () => {
+    navigationActionsFor(root).openStash(stashEntry());
+    const image = stashFile({
+      file: { ...stashFile().file, path: "logo.png", omitted: "Binary" },
+    });
+    ipc.getStashFiles.mockResolvedValue(stashFilesPage({ files: [image] }));
+    renderWithQueryClient(<Inspection />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /logo.png/ }),
+    );
+    expect(
+      await screen.findByRole("region", {
+        name: "Vista previa de imagen de logo.png",
+      }),
+    ).toBeTruthy();
+    expect(ipc.getStashImage).toHaveBeenCalledWith(
+      root,
+      expect.objectContaining({
+        file: {
+          stash_id: stashEntry().stash_id,
+          mode: "all",
+          file_key: image.key,
+        },
+        version: "previous",
+      }),
+    );
+    expect(ipc.getStashImage).toHaveBeenCalledWith(
+      root,
+      expect.objectContaining({ version: "saved" }),
+    );
   });
 
   it("does not select another file when a comparison excludes the selected path", async () => {

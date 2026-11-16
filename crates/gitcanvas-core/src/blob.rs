@@ -7,6 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
+use std::borrow::Cow;
 
 use crate::{
     diff::DiffOmission,
@@ -22,6 +23,40 @@ pub const MAX_INITIAL_CONTENT_BYTES: usize = 2 * 1024 * 1024;
 
 /// Hard maximum for content explicitly requested by the user.
 pub const MAX_EXPANDED_CONTENT_BYTES: usize = 32 * 1024 * 1024;
+
+/// The result of applying the single raw-byte budget shared by text and image readers.
+#[derive(Debug)]
+pub(crate) enum BoundedBytes<'a> {
+    /// Bytes within the selected budget, borrowed without copying.
+    Bytes(Cow<'a, [u8]>),
+    /// File size known without returning the file contents.
+    TooLarge(u64),
+}
+
+/// Applies the initial or expanded file byte budget without allocating a copy.
+pub(crate) fn bounded_bytes<'a>(
+    raw: &'a [u8],
+    path: &str,
+    expand: bool,
+) -> Result<BoundedBytes<'a>, AppError> {
+    let length = raw.len();
+    if length > MAX_EXPANDED_CONTENT_BYTES {
+        if expand {
+            return Err(AppError::ResourceLimitExceeded(format!(
+                "{path} is {length} bytes; the maximum is {MAX_EXPANDED_CONTENT_BYTES}"
+            )));
+        }
+        return Ok(BoundedBytes::TooLarge(
+            u64::try_from(length).unwrap_or(u64::MAX),
+        ));
+    }
+    if !expand && length > MAX_INITIAL_CONTENT_BYTES {
+        return Ok(BoundedBytes::TooLarge(
+            u64::try_from(length).unwrap_or(u64::MAX),
+        ));
+    }
+    Ok(BoundedBytes::Bytes(Cow::Borrowed(raw)))
+}
 
 /// The normalized result of reading text from either a commit blob or disk.
 ///
@@ -93,21 +128,14 @@ pub(crate) fn too_large_content(
 /// Returns a typed resource error when an explicit expansion exceeds the hard
 /// maximum.
 pub(crate) fn read_content(raw: &[u8], path: &str, expand: bool) -> Result<ContentRead, AppError> {
+    let bounded = bounded_bytes(raw, path, expand)?;
+    let raw = match bounded {
+        BoundedBytes::Bytes(bytes) => bytes,
+        BoundedBytes::TooLarge(byte_count) => return too_large_content(byte_count, path, expand),
+    };
+    let raw = raw.as_ref();
     let byte_count = raw.len();
     let byte_string = byte_count.to_string();
-
-    if byte_count > MAX_EXPANDED_CONTENT_BYTES {
-        return too_large_content(byte_count as u64, path, expand);
-    }
-
-    if byte_count > MAX_INITIAL_CONTENT_BYTES && !expand {
-        return Ok(ContentRead {
-            bytes: byte_string,
-            lines: 0,
-            omitted: Some(DiffOmission::TooLarge),
-            text: None,
-        });
-    }
 
     let binary = raw.iter().take(8_000).any(|byte| *byte == 0);
     if binary {

@@ -303,6 +303,35 @@ pub struct StashFileContent {
     pub limits: StashInspectionLimits,
 }
 
+/// Whole-image request for one saved comparison version.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(deny_unknown_fields)]
+pub struct StashImageRequest {
+    /// Selected comparison and file.
+    pub file: StashFileRequest,
+    /// Previous or saved version.
+    pub version: crate::image::ImageVersion,
+    /// Bypass initial limits, retaining the hard byte cap.
+    pub expand: bool,
+}
+
+/// One exact saved version and its image outcome.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+pub struct StashImage {
+    /// Frozen context.
+    pub inspection: StashInspection,
+    /// Selected file key, unchanged from the validated caller key.
+    pub file_key: String,
+    /// Requested side.
+    pub version: crate::image::ImageVersion,
+    /// Version metadata, absent only for a missing side.
+    pub source: Option<StashFileVersion>,
+    /// Classified image or typed absence.
+    pub outcome: crate::image::ImageOutcome,
+    /// Engine limits.
+    pub limits: StashInspectionLimits,
+}
+
 /// Reads a bounded page of summaries, without producing patch text.
 ///
 /// # Errors
@@ -424,6 +453,46 @@ pub fn get_stash_file_content(
         file_key: request.file.file_key.clone(),
         side: request.side,
         version,
+        outcome,
+        limits: StashInspectionLimits::current()?,
+    })
+}
+
+/// Reads one bounded image from the exact selected stash comparison.
+///
+/// # Errors
+/// Returns malformed comparison, Git object, resource-limit, or limit-conversion errors.
+pub fn get_stash_image(
+    active: &ActiveRepo,
+    request: &StashImageRequest,
+) -> Result<StashImage, AppError> {
+    use crate::image::{read_blob_image, ImageOutcome, ImageVersion};
+
+    let id = parse_commit_id(&request.file.stash_id)?;
+    let key = super::comparison::FileKey::parse(&request.file.file_key)?;
+    let repo = active.open()?;
+    let comparison = Comparison::load(&repo, id, request.file.mode)?;
+    let index = comparison.resolve_key(&key)?;
+    let side = match request.version {
+        ImageVersion::Previous => StashContentSide::Previous,
+        ImageVersion::Saved => StashContentSide::Saved,
+    };
+    let source = comparison.version(index, side)?;
+    let outcome = match source.as_ref() {
+        None => ImageOutcome::Missing,
+        Some(version) if version.kind == StashFileKind::Blob => read_blob_image(
+            &repo,
+            parse_commit_id(&version.object_id)?,
+            &version.path,
+            request.expand,
+        )?,
+        Some(_) => ImageOutcome::Unsupported,
+    };
+    Ok(StashImage {
+        inspection: comparison.inspection,
+        file_key: request.file.file_key.clone(),
+        version: request.version,
+        source,
         outcome,
         limits: StashInspectionLimits::current()?,
     })

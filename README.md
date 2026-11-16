@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="GitCanvas 0.7: opening a stash from its base commit in the graph, then switching between its all, staged, unstaged and untracked changes" width="860">
+  <img src="docs/assets/demo.gif" alt="GitCanvas 0.8: comparing a changed PNG side by side and with a slider, following it through the file history, then viewing an animated GIF, an SVG and a stashed image" width="860">
 </p>
 
 GitCanvas does one thing: it lets you **see the shape of a repository's history**.
@@ -30,10 +30,29 @@ GitCanvas is the opposite trade: small, fast, free, and focused on reading histo
   <img src="docs/assets/screenshot.jpg" alt="GitCanvas showing the branch graph with a color per branch, a selected merge commit and its details" width="860">
 </p>
 
+## What's new in 0.8
+
+Images stop being "binary". When a commit, a file's history, your local changes or a stash
+touches a PNG, JPEG, GIF, WebP, BMP, ICO or SVG, GitCanvas shows the picture instead of a notice.
+
+- **Compare versions.** A modified image opens side by side, with a notice when its size changed,
+  or with a slider that reveals the saved version over the previous one. Fit it to the pane or
+  view it at real size.
+- **Every source.** The same viewer works in the commit inspector, the file history, the local
+  changes list and stashes, including the previous and the saved version of a stashed image.
+- **Animated GIFs and SVG.** Pause and resume a GIF at any time. An SVG can be read as text or
+  seen as an isolated image that never runs scripts.
+- **Bounded and read-only.** Images reuse the existing byte budgets; anything over them, and
+  every non-image binary, keeps the previous notice. Nothing is written to the repository.
+
 ## What's new in 0.7
 
 Stashes become readable. GitCanvas lists them, shows where each one came from and lets you
 inspect what it saved, without applying, creating or deleting anything.
+
+<p align="center">
+  <img src="docs/assets/demo-stash.gif" alt="GitCanvas 0.7: opening a stash from its base commit in the graph, then switching between its all, staged, unstaged and untracked changes" width="860">
+</p>
 
 <p align="center">
   <img src="docs/assets/screenshot-stash.jpg" alt="A stash open in GitCanvas: the diff of a saved file in the center and the stash's message, base branch and files in the inspector" width="860">
@@ -56,12 +75,20 @@ a later release (see the [roadmap](docs/plan/2026-10-19-roadmap-de-versiones.md)
 
 ## What's new in 0.6
 
+<p align="center">
+  <img src="docs/assets/demo-file-history.gif" alt="GitCanvas 0.6: opening a file's history from a commit, reading the diff of each commit and moving through them without leaving the view" width="860">
+</p>
+
 **File history.** Open the history of a file from a commit's file list, the local changes
 list or a row menu. GitCanvas lists the commits that touched it, follows it through renames,
 shows the diff of each commit, and can show the version a file had before it was deleted.
 Arrow, Home, End and Page keys move between commits, and any commit can be located in the graph.
 
 ## What's new in 0.5
+
+<p align="center">
+  <img src="docs/assets/demo-references.gif" alt="GitCanvas 0.5: searching the reference tree, hiding branches from the graph with the eye controls and using the quick actions" width="860">
+</p>
 
 The sidebar is now a reference explorer for repositories with many branches, tags and linked
 worktrees. Search the tree, fold groups and folders, and use the eye controls to choose which
@@ -119,6 +146,9 @@ See the [changelog](CHANGELOG.md) for the full list.
 - **Commit inspector.** Author, full message, changed files (as a list or a directory
   tree) and a line-numbered diff against the first parent. Binary and oversized files are
   reported instead of rendered.
+- **Image preview.** Compare supported PNG, JPEG, GIF, WebP, BMP, ICO and SVG versions in
+  commits, file history, local changes and stash. Modified images have side-by-side and
+  slider views; non-image binaries keep their existing notice.
 - **File history.** Follow a single file across commits and renames, with the diff of each
   commit and the version before a deletion.
 - **Stash inspection.** Browse, search and read stashes (all, staged, unstaged and untracked
@@ -229,6 +259,10 @@ Documented on purpose rather than discovered later:
 - Stashes are **read-only**: you can inspect them, but not create, apply or discard them
   from GitCanvas yet. Stashes do not appear as nodes in the graph, only as markers on
   their base commits.
+- Image reads share the existing 2 MiB initial and 32 MiB expanded byte limits and a
+  40 megapixel metadata limit. SVG is displayed through an isolated image element without
+  parsing or running markup; decoding depends on the system WebView. ICO dimensions use
+  the first directory entry. Other unsupported formats remain binary.
 - The installers are unsigned (see above) and the interface is available in English and Spanish only.
 
 ## Build from source
