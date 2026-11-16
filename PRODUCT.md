@@ -20,14 +20,14 @@ Read the shape of repository history at a glance, then inspect the changes in a 
 
 The governing scope is TASKS.md: local history, a resumable graph, first-parent diffs,
 working-tree snapshots and diffs, stable branch trajectories/colors and a configurable
-visual main branch (v0.4 in dev), ordered project tabs with independent navigation,
+visual main branch (v0.4), ordered project tabs with independent navigation,
 lazy session restoration, favorites, recent projects, GitHub cloning, guarded checkout, fast-forward pull,
 and authenticated push. Git data comes from local repositories and full clones; shallow
 clones are not used. Credentials stay in Rust and the OS keychain. The product is
 read-mostly, not strictly read-only: explicit checkout, pull and push mutate Git state;
-inspection does not stage, unstage, commit or delete user files. Per-file history (v0.6 in
-dev) is read-only inspection of one path: it follows renames and shows the change in each
-commit. Stash inspection (v0.7 in dev) lists saved states and compares the base, saved
+inspection does not stage, unstage, commit or delete user files. Per-file history (v0.6)
+is read-only inspection of one path: it follows renames and shows the change in each
+commit. Stash inspection (v0.7) lists saved states and compares the base, saved
 index, saved worktree and saved untracked files with bounded content and diffs. It never
 applies, creates or deletes a stash, and never changes the graph. Linked worktrees share
 the stash inventory; inspection context is per tab and session-only, while section
@@ -35,7 +35,7 @@ folding is durable. Each unique stash object is associated with its first-parent
 commit on loaded graph rows using an Orchid count and a bounded accessible picker;
 the association does not add graph nodes or change selection, filters or paging.
 
-Image preview (v0.8 in `dev`) compares supported image versions in commits, per-file
+Image preview (v0.8) compares supported image versions in commits, per-file
 history, staged/unstaged changes and stash. It reads exact bytes from each source, keeps
 non-image binaries on the existing notice, and never writes repository data. Formats are
 PNG, JPEG, GIF, WebP, BMP, ICO and SVG. Reads share the 2 MiB initial / 32 MiB expanded

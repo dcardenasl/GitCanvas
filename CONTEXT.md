@@ -45,7 +45,7 @@ its own bounds (5 000 rows, 2 MiB) and falls back to plain text. Commit diffs co
 parent. Pull is fast-forward only. GitHub credentials are stored in the operating
 system keychain and remain inside Rust after entry.
 
-Image previews (v0.8 in `dev`) reuse the 2 MiB / 32 MiB byte budgets and cap reported
+Image previews (v0.8) reuse the 2 MiB / 32 MiB byte budgets and cap reported
 dimensions at 40 megapixels. Rust identifies PNG, JPEG, GIF, WebP, BMP, ICO and SVG by
 content signature; paths only decide whether the frontend probes. Rust returns exact
 bytes and bounded header metadata, while the platform WebView decodes fixed-MIME `data:`
@@ -94,7 +94,7 @@ replaces the graph while it is open and is kept only for the session, never writ
 disk. Its query is immutable per start commit, so a refresh from a moved HEAD is a new
 query. Opening it never changes the graph's reference filters.
 
-## Stash inspection (v0.7 implemented in dev; not released)
+## Stash inspection (v0.7, released)
 
 Read-only stash listing and saved-state inspection are implemented from core through
 IPC and UI. It reads a bounded shared reflog without creating it;
