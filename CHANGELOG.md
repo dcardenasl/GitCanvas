@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-11-15
+
 ### Added
 
 - **Image preview** — compare supported image versions in commits, history, local changes and stash.

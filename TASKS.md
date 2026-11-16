@@ -6,8 +6,8 @@
 > [roadmap](docs/plan/2026-10-19-roadmap-de-versiones.md).
 
 **Estado al 2026-11-15:** v0.4–v0.8 implementadas en `dev`; v0.7.0 etiquetada y `main`
-contiene el merge del PR #22. v0.8 es la siguiente versión planificada; no se ha hecho
-bump ni publicado. Crear commits permanece al final de la secuencia (objetivo v0.13). El roadmap
+contiene el merge del PR #22. v0.8.0 tiene bump de versión y CHANGELOG preparados en el commit de release; la etiqueta
+se crea solo tras fusionar el PR a `main`. Crear commits permanece al final de la secuencia (objetivo v0.13). El roadmap
 vigente prevalece sobre asignaciones de versiones de planes anteriores. Los gates externos
 sin evidencia (abajo) siguen abiertos y no se dan por cerrados.
 
