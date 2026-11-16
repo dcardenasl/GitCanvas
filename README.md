@@ -15,27 +15,25 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="GitCanvas 0.8: comparing a changed PNG side by side and with a slider, following it through the file history, then viewing an animated GIF, an SVG and a stashed image" width="860">
+  <img src="docs/assets/demo.gif" alt="GitCanvas drawing a repository's branches and merges as colored lanes, then selecting a merge commit to read its details" width="860">
 </p>
 
-GitCanvas does one thing: it lets you **see the shape of a repository's history**.
-Open a local repository (or clone one from GitHub), scroll the branch graph, click any
-commit and read what it changed. It updates as your working tree changes.
+## What it is
+
+GitCanvas does one thing: it lets you **see the shape of a repository's history**. Open a
+local repository (or clone one from GitHub), scroll the branch graph, click any commit and
+read what it changed. It updates as your working tree changes.
+
+- **The graph is the product.** Every branch keeps its color and its lane, merges are drawn
+  without detours, and lanes never reorder as you load more history.
+- **Reading first.** Inspecting history never changes it. The few actions that do write
+  (checkout, fast-forward pull, push) are explicit, protect uncommitted work and never force.
+- **Small, fast and free.** Large repositories load 500 commits at a time, nothing is locked
+  behind payment and there is no telemetry.
 
 It is deliberately not a full Git client. If you want conflict resolution, interactive
 rebase or pull-request workflows, tools like GitKraken, Tower or Fork do far more.
-GitCanvas is the opposite trade: small, fast, free, and focused on reading history well.
-
-<p align="center">
-  <img src="docs/assets/screenshot.jpg" alt="GitCanvas showing the branch graph with a color per branch, a selected merge commit and its details" width="860">
-</p>
-
-## Latest: 0.8 — images in history
-
-Image files stop being "binary". Commits, file history, local changes and stashes show
-supported PNG, JPEG, GIF, WebP, BMP, ICO and SVG files, side by side or with a slider, and
-GIFs can be paused. Everything stays read-only. Earlier releases and the full list of changes
-are in the [changelog](CHANGELOG.md).
+GitCanvas is the opposite trade: focused on reading history well.
 
 ## Features
 
@@ -81,6 +79,17 @@ are in the [changelog](CHANGELOG.md).
 
 > The interface is available in English and Spanish. It follows the system language by
 > default and can be switched from the toolbar.
+
+## Latest: 0.8 — images in history
+
+<p align="center">
+  <img src="docs/assets/demo-images.gif" alt="GitCanvas 0.8: comparing a changed PNG side by side and with a slider, following it through the file history, then viewing an animated GIF, an SVG and a stashed image" width="720">
+</p>
+
+Image files stop being "binary". Commits, file history, local changes and stashes show
+supported PNG, JPEG, GIF, WebP, BMP, ICO and SVG files, side by side or with a slider, and
+GIFs can be paused. Everything stays read-only. Earlier releases and the full list of changes
+are in the [changelog](CHANGELOG.md).
 
 ## Install
 
