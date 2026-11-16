@@ -9,26 +9,27 @@
 > cambios salvo las tres tareas aún abiertas (GRF-5, V05-VERIFY, WS-17), que viven en
 > [`TASKS.md`](TASKS.md) con su plan de origen.
 
-### v0.8 — Planificación (IMG-0)
+### v0.8 — Vista de imágenes (IMG-0–IMG-8; publicada como v0.8.0)
+
+Plan: [decisiones IMG-D01–D16, contrato, matriz de 24 casos y tareas](docs/plan/2026-11-15-v0.8-implementacion.md).
+Arquitectura: [ADR 0010](docs/adr/0010-image-viewing.md). Evidencia y límites:
+[verificación v0.8](docs/verification/v0.8.md). Release:
+[v0.8.0](https://github.com/dcardenasl/GitCanvas/releases/tag/v0.8.0) (PR #23). Gates
+externos pendientes, sin evidencia: E2E nativo en Linux y Windows y lector de pantalla real.
 
 - [x] **IMG-0 — Plan, contrato y ADR.** Plan [v0.8](docs/plan/2026-11-15-v0.8-implementacion.md),
       [ADR 0010](docs/adr/0010-image-viewing.md) (propuesto) y roadmap actualizado, sin código.
       Decisiones IMG-D01–D16, contrato Rust/IPC/frontend, matriz de 24 casos y tareas IMG-1–IMG-8.
       → `docs(images): plan the v0.8 image viewer and record adr 0010` (`0ee9b5c`)
 
-- [x] **IMG-1 — Núcleo: lectura acotada, detección y cabeceras.** Extraída la política común de bytes acotados y añadido `gitcanvas_core::image` para detección por firmas, cabeceras, límite de 40 MP y base64. Pruebas unitarias y Clippy del núcleo aprobados; las pruebas de integración que levantan sockets locales quedaron bloqueadas por el sandbox. Desviación: parsers acotados propios en lugar de `imagesize`, no disponible offline; revisar auditoría de dependencias al recuperar red. → `feat(core): classify image bytes and read their headers`
-- [x] **IMG-2 — Núcleo: fuentes de comparación.** Añadidas lecturas por commit/primer padre, índice/disco staged y unstaged, y comparaciones de stash. Se reutilizan las guardas de revisión, rutas confinadas y lectura `stat → read → stat`; las lecturas Git son por OID y verifican tamaño antes de materializar blobs. Pruebas dirigidas: 2 de imagen, 12 de worktree y 24 de stash aprobadas; Clippy del núcleo aprobado. → `feat(core): read image versions from commits, local changes and stashes`
-- [x] **IMG-3 — IPC y bindings.** Comandos de imagen de commit, worktree y stash registrados detrás de `read` + `with_repo`; wrappers tipados y bindings regenerados. 58 pruebas Tauri pasan, incluidas autorización, dispatch, invariantes y deriva de bindings; 37 wrappers IPC pasan. La medición release de 32 MiB consta en IMG-8. → `feat(ipc): expose authorized image reads for commits, local changes and stashes`
-- [x] **IMG-4 — Estado frontend.** Añadidas claves por raíz/fuente/path/versión/expansión/revisión, tres hooks de consulta con retención de 15 s y `shouldProbeImage`. Nueve pruebas enfocadas y typecheck aprobados; el cierre de proyecto elimina las consultas con la política existente. → `feat(images): add image queries with bounded cache retention`
-- [x] **IMG-5 — Componente `ImageCompare`.** Comparación de una/dos versiones con vista lado a lado o deslizador, ajuste/tamaño real, tamaño y dimensiones, animación reducida y pausada, manejo de límites y fallos de decodificación. SVG se sirve solo como `img` con URL `data:` y MIME de tabla fija. Catálogos EN/ES y tokens para tablero de transparencia. Pruebas del componente/i18n (31), typecheck y ESLint aprobados. → `feat(images): add the image comparison viewer component`
-- [x] **IMG-6 — Integración en los cuatro lectores.** `FileDiffView` da acceso a la comparación en commit, historial y cambios locales; `StashFileView` lee las versiones exactas guardadas. Conserva diff y vista de archivo, abre binarios compatibles en modo imagen y ofrece selección explícita tras confirmar una imagen. Expansión independiente por lado; errores de revisión local refrescan el snapshot. Typecheck y ESLint aprobados; 30 pruebas dirigidas de lectores/estado pasan. → `feat(images): show images in the commit, history, local changes and stash viewers`
-- [x] **IMG-7 — Accesibilidad, idiomas y E2E.** Fixture nativo generado en memoria (PNG válido, SVG hostil, GIF animado, cambios de ruta y stash); E2E macOS/WebKit compara historial con tema claro/oscuro, EN/ES y ventana 940×600; ambas capturas se inspeccionaron. La prueba de componente cubre teclado, slider accesible, animación y aislamiento SVG; se añade prueba de integración del lector stash. Hallazgo corregido: la detección GIF recorría bytes comprimidos y podía confundir datos con marcadores de frame; ahora recorre bloques y cuenta descriptores de imagen, con fixture de 1/2 frames válido. 4 pruebas de imagen y Clippy estricto del core pasan; E2E 1/1 pasa. Sin verificar en Linux/Windows ni lector de pantalla real. → `test(e2e): cover image viewing across sources, themes and languages`
-
-- [x] **IMG-8 — Verificación final y documentación.** Evidencia completa en
-      [`docs/verification/v0.8.md`](docs/verification/v0.8.md); documentos de producto,
-      CHANGELOG, roadmap, plan y ADR 0010 actualizados. Mediciones release: 2 MiB en
-      1.751 ms y payload IPC de 32 MiB en 133.437 ms. →
-      `docs(images): record v0.8 verification and update product docs`
+- [x] **IMG-1 — Núcleo: lectura acotada, detección y cabeceras.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-1--núcleo-lectura-acotada-detección-y-cabeceras). Extraer la primitiva de bytes acotados de `blob.rs`; módulo `image` con firmas, dimensiones, techo de 40 MP y animación. Casos 1–10. Las cabeceras se leen con parsers pequeños y acotados; no se incorporó `imagesize` porque la dependencia no está disponible en la caché local y el registro de crates no es accesible en este entorno. Las pruebas de red del crate no pudieron ejecutarse por la restricción del sandbox sobre sockets locales. → `feat(core): classify image bytes and read their headers`
+- [x] **IMG-2 — Núcleo: fuentes de comparación.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-2--núcleo-fuentes-de-comparación). Versión anterior/guardada de commit, índice/disco y stash. Casos 11–18 y 23. Depende de IMG-1. Pruebas dirigidas de imagen, worktree y stash aprobadas; lectura de disco comparte resolución confinada y guardas de revisión. → `feat(core): read image versions from commits, local changes and stashes`
+- [x] **IMG-3 — IPC y bindings.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-3--ipc-y-bindings). Tres comandos autorizados, wrappers y bindings. Caso 20. Depende de IMG-2. Invariantes y bindings pasan; prueba IPC confirma allowlist y respuesta de imagen de commit. La medición de 32 MiB release consta en IMG-8. → `feat(ipc): expose authorized image reads for commits, local changes and stashes`
+- [x] **IMG-4 — Estado frontend.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-4--estado-frontend). Consultas con caché acotada, claves por raíz y `shouldProbeImage`. Caso 24. Depende de IMG-3. Hooks sin reintentos/focus-refetch, caché de 15 s y revisión local en clave. Typecheck y pruebas dirigidas (9) aprobados. → `feat(images): add image queries with bounded cache retention`
+- [x] **IMG-5 — Componente `ImageCompare`.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-5--componente-imagecompare). Una/dos versiones, lado a lado, deslizador, ajuste, animación, errores, i18n. Caso 21. Depende de IMG-4. Componente accesible con MIME por formato detectado, SVG aislado en `<img>`, control de animación y reduced-motion, expansión acotada y catálogo EN/ES. 31 pruebas de componente/i18n, typecheck y ESLint focalizados aprobados. → `feat(images): add the image comparison viewer component`
+- [x] **IMG-6 — Integración en los cuatro lectores.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-6--integración-en-los-cuatro-lectores). Modo imagen en `FileDiffView` (commit, historial, cambios locales) y `StashFileView`, sin duplicar. Solo aparece al confirmar una imagen; binarios compatibles se abren directamente en modo imagen. Preserva diff/archivo y limita la expansión al lado elegido. Typecheck y ESLint aprobados; pruebas dirigidas existentes: 30. → `feat(images): show images in the commit, history, local changes and stash viewers`
+- [x] **IMG-7 — Accesibilidad, i18n y E2E.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-7--accesibilidad-i18n-y-e2e). Fixture sintético con PNG válidos de dimensiones distintas, SVG hostil, GIF animado, rename/delete, cambios de índice/disco y stash; sin binarios versionados. Componentes EN/ES, teclado, reduced motion y aislamiento SVG cubiertos. E2E nativo macOS/WebKit pasa en historial a 940×600, tema claro/oscuro, inglés/español; capturas revisadas. Prueba unitaria agrega comparación de imágenes exactas del stash. Linux/Windows nativos y lector real siguen sin verificar. → `test(e2e): cover image viewing across sources, themes and languages`
+- [x] **IMG-8 — Verificación final y documentación.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-8--verificación-final-y-documentación). Verificación reproducible en [`docs/verification/v0.8.md`](docs/verification/v0.8.md), CHANGELOG `Unreleased`, documentos de producto y ADR 0010 aceptado. Sin bump ni release. Medición release: clasificación/base64 de 2 MiB 1.751 ms; lectura y serialización IPC de 32 MiB 133.437 ms. → `docs(images): record v0.8 verification and update product docs`
 
 ### v0.7 — Stash de solo lectura (ST-0–ST-9 completadas en `dev`; sin publicar)
 
@@ -86,7 +87,7 @@ Evidencia y límites:
 ### v0.4 — Líneas y colores de las ramas
 
 Estrategia aprobada el 2026-10-19. Alcance, orden y aceptación en el
-[roadmap de versiones](docs/plan/2026-10-19-roadmap-de-versiones.md).
+[roadmap de versiones](ROADMAP.md).
 
 - [x] **GRF-0 — Reconciliar evidencia histórica de WS-17.** Separar CI y publicación
       ya realizadas de comprobaciones manuales sin evidencia. No repetir la release.
@@ -118,7 +119,7 @@ recorridos manuales sin evidencia. Detalles y límites en la verificación de v0
 ### v0.5 — Panel, filtros y worktrees
 
 Plan detallado: [implementación v0.5](docs/plan/2026-10-26-v0.5-implementacion.md).
-El [roadmap](docs/plan/2026-10-19-roadmap-de-versiones.md) y la
+El [roadmap](ROADMAP.md) y la
 [especificación del panel D01–D50](docs/plan/2026-10-18-panel-izquierdo-ui-ux.md)
 definen el alcance funcional. Leer también [ADR 0006](docs/adr/0006-workspace.md),
 [ADR 0007](docs/adr/0007-stable-branch-graph.md), `CONTEXT.md`, `ARCHITECTURE.md` y
@@ -128,7 +129,7 @@ de conflictos Git, autores ni releases; el checkout explícito existente se cons
 
 - [x] **WT-1 — Identidad, inventario y actualización.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#wt-1--identidad-inventario-y-actualizacion), [ADR 0006](docs/adr/0006-workspace.md), [`CONTEXT.md`](CONTEXT.md). Inventario por directorio Git común; estados detached/ausente/bloqueado; watcher, activación y actualización explícita, sin sondeo inactivo. Descubrir una ruta no autoriza Git. Evidencia: pruebas de worktrees enlazados, clones independientes, ubicación ausente/bloqueada, eventos externos y validación al abrir; `cargo test -p gitcanvas-core`, `cargo test -p gitcanvas --lib`, Clippy y bindings aprobados.
 - [x] **WT-2 — Preferencias compartidas y migración.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#wt-2--preferencias-compartidas-y-migracion), [ADR 0006](docs/adr/0006-workspace.md), [ADR 0007](docs/adr/0007-stable-branch-graph.md). Esquema 2→3, precedencia principal/fallback activo, preferencias compartidas por directorio Git común y filtros durables por worktree. Pruebas de migración y fallos atómicos Rust y pruebas de precedencia/fallback frontend aprobadas.
-- [x] **FLT-1 — Filtrado del historial completo.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#flt-1--filtrado-del-historial-completo), [roadmap](docs/plan/2026-10-19-roadmap-de-versiones.md), [ADR 0007](docs/adr/0007-stable-branch-graph.md). Rust resuelve ramas, tags y HEAD contra snapshot; scope/cursor inmutables; merges deduplicados, más de 500 commits, cursor obsoleto y detalle fuera de alcance con aviso cubiertos por pruebas.
+- [x] **FLT-1 — Filtrado del historial completo.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#flt-1--filtrado-del-historial-completo), [roadmap](ROADMAP.md), [ADR 0007](docs/adr/0007-stable-branch-graph.md). Rust resuelve ramas, tags y HEAD contra snapshot; scope/cursor inmutables; merges deduplicados, más de 500 commits, cursor obsoleto y detalle fuera de alcance con aviso cubiertos por pruebas.
 - [x] **FLT-2 — Estado, persistencia y deshacer.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#flt-2--estado-persistencia-y-deshacer), [especificación D01–D50](docs/plan/2026-10-18-panel-izquierdo-ui-ux.md), [ADR 0006](docs/adr/0006-workspace.md). Filtros por worktree, referencias nuevas activas, acciones y undo de 50 pasos por worktree/sesión; cobertura de slice e integración incluida en las 831 pruebas frontend.
 - [x] **SID-1 — Organización e interacción del panel.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#sid-1--organizacion-e-interaccion-del-panel), [especificación D01–D50](docs/plan/2026-10-18-panel-izquierdo-ui-ux.md), [`CONTEXT.md`](CONTEXT.md), [`CLAUDE.md`](CLAUDE.md). Búsqueda de sesión, secciones, carpetas virtuales, contadores, tri-state, acciones limitadas a coincidencias e inglés/español.
 - [x] **WT-3 — Panel de worktrees, pestañas y checkout.** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#wt-3--panel-de-worktrees-pestanas-y-checkout), [ADR 0006](docs/adr/0006-workspace.md), [`CONTEXT.md`](CONTEXT.md). Apertura validada y sin duplicar, estado de ramas ocupadas, grupos contiguos sin alterar el orden global, checkout explícito separado.
@@ -141,7 +142,7 @@ roadmap.
 
 ### v0.6 — Historial por archivo
 
-Estrategia aprobada el 2026-11-01 sobre el [roadmap](docs/plan/2026-10-19-roadmap-de-versiones.md#dependencias-y-criterios-de-versiones-posteriores).
+Estrategia aprobada el 2026-11-01 sobre el [roadmap](ROADMAP.md#dependencias-y-criterios-de-versiones-posteriores).
 Decisiones (inicio en HEAD con `focus_commit`, vista que reemplaza el gráfico, aviso «Actualizar», caché propia, rutas UTF-8 exactas, aviso en repos superficiales y criterios de rendimiento medibles: ver plan, decisiones 5–13; la vista no se persiste entre reinicios): seguir renombrados por similitud de `git2` (umbral predeterminado de Git, 50%)
 con límites y corte explícitos; acción «Historial del archivo» en inspector y lista de
 archivos que abre una vista dedicada en la pestaña, sin modificar filtros del gráfico y con
