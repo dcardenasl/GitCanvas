@@ -1,7 +1,36 @@
 # ARCHIVES — GitCanvas
 
 > Registro histórico de tareas completadas, movidas desde [`TASKS.md`](TASKS.md).
-> Se conserva el detalle original, incluidos los hallazgos y mensajes de commit.
+> Se conserva el detalle original, incluidos los hallazgos y mensajes de commit. Reglas de
+> este archivo: [protocolo de trabajo](docs/protocolo-trabajo.md#2-archivesmd-lo-completado-con-su-evidencia).
+
+## Índice
+
+> Se regenera al archivar una versión; ver el [protocolo de trabajo](docs/protocolo-trabajo.md#2-archivesmd-lo-completado-con-su-evidencia).
+
+- [Colas cerradas movidas desde TASKS.md (2026-11-15)](#colas-cerradas-movidas-desde-tasksmd-2026-11-15)
+  - [v0.8 — Vista de imágenes (IMG-0–IMG-8; publicada como v0.8.0)](#v08--vista-de-imágenes-img-0img-8-publicada-como-v080)
+  - [v0.7 — Stash de solo lectura (ST-0–ST-9; publicada como v0.7.0)](#v07--stash-de-solo-lectura-st-0st-9-publicada-como-v070)
+  - [v0.4 — Líneas y colores de las ramas](#v04--líneas-y-colores-de-las-ramas)
+  - [v0.5 — Panel, filtros y worktrees](#v05--panel-filtros-y-worktrees)
+  - [v0.6 — Historial por archivo](#v06--historial-por-archivo)
+- [v0.7 — Inspección de stash (ST-0–ST-8)](#v07--inspección-de-stash-st-0st-8)
+- [v0.7 — Motor de listado de stash (ST-1)](#v07--motor-de-listado-de-stash-st-1)
+- [v0.7 — Comparaciones y contenido de stash (ST-2)](#v07--comparaciones-y-contenido-de-stash-st-2)
+- [✅ Fase G — Bootstrap del repositorio (6/6)](#-fase-g--bootstrap-del-repositorio-66)
+- [✅ Fase 0 — Cimientos (10/10)](#-fase-0--cimientos-1010)
+- [✅ Fase 1 — Motor de datos Git (11/11)](#-fase-1--motor-de-datos-git-1111)
+- [✅ Fase 2 — Layout del graph y render (9/9)](#-fase-2--layout-del-graph-y-render-99)
+- [✅ Fase 3 — Detalle de commit y diff (6/6)](#-fase-3--detalle-de-commit-y-diff-66)
+- [✅ Fase 4 — Integración con GitHub (9/9)](#-fase-4--integración-con-github-99)
+- [✅ Fase 5 — Acciones básicas (8/8)](#-fase-5--acciones-básicas-88)
+- [✅ Fase P — Trabajo posterior al release candidate (registro retroactivo)](#-fase-p--trabajo-posterior-al-release-candidate-registro-retroactivo)
+- [🔧 Fase H — Endurecimiento (22/22)](#-fase-h--endurecimiento-2222)
+- [✅ Release v0.1.0 — trabajo completado](#-release-v010--trabajo-completado)
+- [✅ Completado](#-completado)
+- [✅ Fase H2 — Endurecimiento post-auditoría (46/46; 38 cierres con commit; H2-34–41 en `437ff07`)](#-fase-h2--endurecimiento-post-auditoría-4646-38-cierres-con-commit-h2-3441-en-437ff07)
+- [✅ Fase I18N — Internacionalización (6/6)](#-fase-i18n--internacionalización-66)
+- [✅ Auditoría posterior a v0.2.0 (8/8)](#-auditoría-posterior-a-v020-88)
 
 ## Colas cerradas movidas desde TASKS.md (2026-11-15)
 
@@ -31,7 +60,7 @@ externos pendientes, sin evidencia: E2E nativo en Linux y Windows y lector de pa
 - [x] **IMG-7 — Accesibilidad, i18n y E2E.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-7--accesibilidad-i18n-y-e2e). Fixture sintético con PNG válidos de dimensiones distintas, SVG hostil, GIF animado, rename/delete, cambios de índice/disco y stash; sin binarios versionados. Componentes EN/ES, teclado, reduced motion y aislamiento SVG cubiertos. E2E nativo macOS/WebKit pasa en historial a 940×600, tema claro/oscuro, inglés/español; capturas revisadas. Prueba unitaria agrega comparación de imágenes exactas del stash. Linux/Windows nativos y lector real siguen sin verificar. → `test(e2e): cover image viewing across sources, themes and languages`
 - [x] **IMG-8 — Verificación final y documentación.** [Plan](docs/plan/2026-11-15-v0.8-implementacion.md#img-8--verificación-final-y-documentación). Verificación reproducible en [`docs/verification/v0.8.md`](docs/verification/v0.8.md), CHANGELOG `Unreleased`, documentos de producto y ADR 0010 aceptado. Sin bump ni release. Medición release: clasificación/base64 de 2 MiB 1.751 ms; lectura y serialización IPC de 32 MiB 133.437 ms. → `docs(images): record v0.8 verification and update product docs`
 
-### v0.7 — Stash de solo lectura (ST-0–ST-9 completadas en `dev`; sin publicar)
+### v0.7 — Stash de solo lectura (ST-0–ST-9; publicada como v0.7.0)
 
 Plan: [decisiones ST-D01–ST-D10, contrato, matriz y dependencias](docs/plan/2026-11-08-v0.7-implementacion.md).
 Arquitectura: [ADR 0009](docs/adr/0009-read-only-stash.md), aceptada e implementada.

@@ -31,6 +31,7 @@ el render SVG. El graph es el núcleo de valor: todo lo demás está subordinado
 | `CONTEXT.md` | Contexto vigente de arquitectura, observación del repositorio y límites de mutación |
 | `docs/plans/2026-09-08-plan-de-implementacion.md` | Plan rector: fases, deltas, ledger de commits |
 | `ROADMAP.md` | Orden y alcance de las versiones; se cambia solo con el protocolo y su registro de cambios |
+| `docs/protocolo-trabajo.md` | Cómo se llevan TASKS, ARCHIVES, planes, ADR, verificación y gates; lista única de cierre de versión |
 | `docs/protocolo-roadmap.md` | Cómo entran funcionalidades al roadmap, cómo se reordena y qué se actualiza al publicar |
 | `docs/plan/2026-11-08-v0.7-implementacion.md` | Read-only stash decisions, planned contracts, bounds and ST task acceptance |
 | `docs/plan/2026-11-15-v0.8-implementacion.md` | Image viewer decisions, contract, bounds, 24-case matrix and IMG task acceptance (ADR 0010) |
@@ -112,13 +113,16 @@ Es la **única** forma en que este proyecto llega a `main`:
    reemplazar la sección «Latest» y pasar la anterior a Features. Actualizar el roadmap según
    el [protocolo](docs/protocolo-roadmap.md#al-publicar-una-versión): fila `Publicada`, revisar
    las dos entregas siguientes y confirmar la próxima versión con David.
-4. Renombrar `## [Unreleased]` a `## [X.Y.Z] — YYYY-MM-DD` y abrir un `[Unreleased]`
+4. Cerrar la versión según la [lista de cierre](docs/protocolo-trabajo.md#3-cierre-de-versión-una-sola-lista):
+   archivar su cola de `TASKS.md` en `ARCHIVES.md`, revisar los gates y dejar el ADR y la
+   verificación en su estado final.
+5. Renombrar `## [Unreleased]` a `## [X.Y.Z] — YYYY-MM-DD` y abrir un `[Unreleased]`
    vacío arriba.
-5. `chore: release vX.Y.Z` como **último commit de `dev`**, y push.
-6. `gh pr create --base main --head dev`. **Parar y esperar aprobación de David.**
-7. `gh pr merge <N> --merge` — nunca `--squash` ni `--rebase`.
-8. Tag `vX.Y.Z` **solo sobre `main`**, y push del tag.
-9. `release.yml` crea el GitHub Release extrayendo la sección del CHANGELOG.
+6. `chore: release vX.Y.Z` como **último commit de `dev`**, y push.
+7. `gh pr create --base main --head dev`. **Parar y esperar aprobación de David.**
+8. `gh pr merge <N> --merge` — nunca `--squash` ni `--rebase`.
+9. Tag `vX.Y.Z` **solo sobre `main`**, y push del tag.
+10. `release.yml` crea el GitHub Release extrayendo la sección del CHANGELOG.
    **Nunca `gh release create` a mano.** Si falta la sección `## [X.Y.Z]`, el workflow
    falla — no taggear sin ella.
 

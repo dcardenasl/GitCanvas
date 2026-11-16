@@ -85,5 +85,7 @@ roadmap y los acuerdos existentes. Crear o retirar worktrees sigue reservado sin
 - Cuando aparece algo que el plan no previó, se anota bajo la tarea con
   `*Hallazgo durante la ejecución:*`. Eso evita que la próxima sesión repita el error.
 - La flecha `→` de cada tarea es el mensaje de commit exacto que le corresponde.
+- Ciclo completo (cómo nace una cola, cuándo pasa a `ARCHIVES.md`, gates externos):
+  [protocolo de trabajo](docs/protocolo-trabajo.md).
 
 ---

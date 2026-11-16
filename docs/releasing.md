@@ -38,6 +38,9 @@ fails the build when the version, the images or the language drift.
 The roadmap is updated in the same step, following
 [`protocolo-roadmap.md`](protocolo-roadmap.md#al-publicar-una-versión).
 
+The full pre-release checklist (manifests, CHANGELOG, README, roadmap, tasks, archives, ADR
+and verification) is in [`protocolo-trabajo.md`](protocolo-trabajo.md#3-cierre-de-versión-una-sola-lista).
+
 ## Retry a release
 
 Do not delete or move a published tag to retry a failed build. After the

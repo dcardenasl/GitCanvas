@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted and implemented — 2026-11-15. Delivery evidence and platform limits are in the
+Accepted and implemented — 2026-11-15. Published in v0.8.0. Delivery evidence and platform limits are in the
 [v0.8 verification record](../verification/v0.8.md). Decisions, bounds, acceptance
 matrix and task order remain in the [implementation plan](../plan/2026-11-15-v0.8-implementacion.md).
 

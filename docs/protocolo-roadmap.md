@@ -81,7 +81,7 @@ Forma parte del paso de README del flujo de release, antes del commit `chore: re
 3. Se actualiza la tabla de cabecera (última revisión y próxima entrega) y se revisan las dos entregas siguientes de la tabla: ¿siguen siendo las correctas y en
    ese orden? Si algo cambia, se registra. David confirma la próxima versión.
 4. `TASKS.md` cierra la cola de la versión (archivada en `ARCHIVES.md`) y apunta a preparar
-   el plan de la siguiente.
+   el plan de la siguiente, según el [protocolo de trabajo](protocolo-trabajo.md).
 
 ## Comprobación automática
 
