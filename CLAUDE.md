@@ -36,7 +36,7 @@ el render SVG. El graph es el núcleo de valor: todo lo demás está subordinado
 | `docs/protocolo-roadmap.md` | Cómo entran funcionalidades al roadmap, cómo se reordena y qué se actualiza al publicar |
 | `docs/plan/2026-11-08-v0.7-implementacion.md` | Decisiones del stash de solo lectura, contratos, límites y aceptación de las tareas ST |
 | `docs/plan/2026-11-15-v0.8-implementacion.md` | Decisiones del visor de imágenes, contrato, límites, matriz de 24 casos y aceptación de las tareas IMG (ADR 0010) |
-| `docs/plan/2026-11-16-v0.9-implementacion.md` | Decisiones de autores y releases, contrato, límites, matriz de 38 casos y aceptación de las tareas CR (ADR 0011 y 0012) |
+| `docs/plan/2026-11-16-v0.9-implementacion.md` | Decisiones de autores y releases, contrato, límites, matriz de 56 casos y aceptación de las tareas CR (ADR 0011 y 0012) |
 | `docs/plan/2026-10-08-plan-tres-funcionalidades.md` | Contratos del workspace y de la futura creación de commits; el orden de entrega lo sustituye el roadmap |
 | `docs/plan/2026-10-04-plan-de-endurecimiento.md` | Plan de endurecimiento H2 y sus criterios de verificación |
 | `docs/PLAN-DESARROLLO.md` | Plan de diseño original. El plan rector lo endurece en 10 puntos (D1–D10) |

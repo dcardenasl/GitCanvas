@@ -16,34 +16,38 @@ crear tags ni publicar como parte de la implementación; los bumps son del flujo
 
 ## Siguiente paso
 
-Empezar CR-1 de la cola de v0.9 (CR-D15 confirmada por David el 2026-11-16), según el [plan](docs/plan/2026-11-16-v0.9-implementacion.md). La
+Empezar CR-1 de la cola de v0.9 (plan revisado por el Arquitecto; CR-D15 y CR-D23 confirmadas por David el 2026-11-16), según el [plan](docs/plan/2026-11-16-v0.9-implementacion.md). La
 cola de v0.8 está archivada en `ARCHIVES.md`.
 
 ## Cola de trabajo
 
 ### v0.9: Contribuyentes y releases (CR-0–CR-16)
 
-Plan: [decisiones CR-D01–D22, contrato, matriz de 38 casos y tareas](docs/plan/2026-11-16-v0.9-implementacion.md).
+Plan: [decisiones CR-D01–D30, contrato, matriz de 56 casos y tareas](docs/plan/2026-11-16-v0.9-implementacion.md), con la revisión del Arquitecto incorporada.
 Arquitectura: [ADR 0011](docs/adr/0011-author-identities-and-catalog.md) y [ADR 0012](docs/adr/0012-releases-tag-fetch-and-downloads.md), propuestos.
-Orden: autores (CR-1–CR-6), base de escritura (CR-7–CR-8), releases (CR-9–CR-14), cierre (CR-15–CR-16).
+Orden de ejecución: autores (CR-1–CR-6b), cerrojo (CR-7), fuente (CR-9a), tags (CR-8), releases (CR-9b–CR-14b), cierre (CR-15–CR-16).
 
-- [x] **CR-0: Plan, contrato y ADR.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-0-plan-contrato-y-adr). Plan v0.9, [ADR 0011](docs/adr/0011-author-identities-and-catalog.md) y [ADR 0012](docs/adr/0012-releases-tag-fetch-and-downloads.md) (propuestos), decisiones CR-D01–D22, matriz de 38 casos y tareas CR-1–CR-16. Sin código. → `docs(plan): add v0.9 implementation plan and adr 0011 and 0012`
-- [ ] **CR-1: Núcleo: identidades y `.mailmap`.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-1-núcleo-identidades-y-mailmap). Casos 1–4. → `feat(core): resolve author identities through mailmap`
-- [ ] **CR-2: Núcleo: catálogo progresivo.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-2-núcleo-catálogo-progresivo). Casos 5–9. Depende de CR-1. → `feat(core): scan the author catalog in bounded chunks`
+- [x] **CR-0: Plan, contrato y ADR.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-0-plan-contrato-y-adr). Plan v0.9, ADR 0011 y 0012 propuestos, decisiones CR-D01–D30, matriz de 56 casos y tareas; reordenado tras la revisión del Arquitecto. Sin código. → `docs(plan): add v0.9 implementation plan and adr 0011 and 0012`
+- [ ] **CR-1: Núcleo: identidades y `.mailmap`.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-1-núcleo-identidades-y-mailmap). Casos 1–4, 42. Depende de CR-0. → `feat(core): resolve author identities through mailmap`
+- [ ] **CR-2: Núcleo: catálogo progresivo.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-2-núcleo-catálogo-progresivo). Casos 5–9, 41. Depende de CR-1. → `feat(core): scan the author catalog in bounded chunks`
 - [ ] **CR-3: Núcleo: commits de un autor.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-3-núcleo-commits-de-un-autor). Casos 10–11. Depende de CR-1. → `feat(core): page the commits of one author`
-- [ ] **CR-4: IPC y bindings de autores.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-4-ipc-y-bindings-de-autores). Caso 35. Depende de CR-2 y CR-3. → `feat(ipc): expose the author catalog and author commits`
-- [ ] **CR-5: Estado frontend de autores.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-5-estado-frontend-de-autores). Casos 6 y 13. Depende de CR-4. → `feat(authors): add author catalog and navigation queries`
-- [ ] **CR-6: Panel de autores, énfasis y navegación.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-6-panel-de-autores-énfasis-y-navegación). Casos 12, 13 y 36. Depende de CR-5. → `feat(authors): add the author panel, emphasis and navigation`
-- [ ] **CR-7: Núcleo: exclusión de escrituras por directorio común.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-7-núcleo-exclusión-de-escrituras-por-directorio-común). Caso 18. Depende de CR-0. → `feat(core): serialize writes per git common directory`
-- [ ] **CR-8: Núcleo: `fetch_tag` y `pull` sin tags indiscriminados.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-8-núcleo-fetch_tag-y-pull-sin-tags-indiscriminados). Casos 14–17, 19 y 38. Depende de CR-7. CR-D15 confirmada por David. → `feat(core): fetch one tag explicitly and stop pull from fetching all tags`
-- [ ] **CR-9: Núcleo: fuente y listado de releases.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-9-núcleo-fuente-y-listado-de-releases). Casos 20–23, 27 y 28. Depende de CR-0. → `feat(core): list github releases with typed access errors`
-- [ ] **CR-10: Núcleo: caché de releases.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-10-núcleo-caché-de-releases). Casos 25 y 26. Depende de CR-9. → `feat(core): cache release listings apart from clones`
-- [ ] **CR-11: Núcleo: descarga de adjuntos.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-11-núcleo-descarga-de-adjuntos). Casos 29–34. Depende de CR-9 y CR-7. → `feat(core): download release assets to a chosen destination`
-- [ ] **CR-12: IPC y bindings de releases, tags y descargas.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-12-ipc-y-bindings-de-releases-tags-y-descargas). Caso 35. Depende de CR-8, CR-10 y CR-11. → `feat(ipc): expose releases, tag fetch and asset downloads`
-- [ ] **CR-13: Estado frontend de releases y acción pendiente.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-13-estado-frontend-de-releases-y-acción-pendiente). Caso 27. Depende de CR-12. → `feat(releases): add release queries and resumable pending actions`
-- [ ] **CR-14: Panel de tags y releases.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-14-panel-de-tags-y-releases). Casos 22, 24 y 36. Depende de CR-13. → `feat(releases): add the tags and releases panel`
-- [ ] **CR-15: Accesibilidad, i18n y E2E.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-15-accesibilidad-i18n-y-e2e). Casos 36 y 37. Depende de CR-6 y CR-14. → `test(e2e): cover authors and releases across themes and languages`
-- [ ] **CR-16: Verificación final y documentación.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-16-verificación-final-y-documentación). Todos los casos. Depende de CR-15. Sin bump ni release. → `docs(plan): record v0.9 verification and update product docs`
+- [ ] **CR-4: IPC y bindings de autores.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-4-ipc-y-bindings-de-autores). Casos 35 (autores). Depende de CR-2, CR-3. → `feat(ipc): expose the author catalog and author commits`
+- [ ] **CR-5: Estado frontend de autores.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-5-estado-frontend-de-autores). Casos 13 (estado). Depende de CR-4. → `feat(authors): add author catalog and navigation queries`
+- [ ] **CR-6a: Panel de autores y navegación.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-6a-panel-de-autores-y-navegación). Casos 13, 36. Depende de CR-5. → `feat(authors): add the author panel and navigation`
+- [ ] **CR-6b: Atenuado en el gráfico y la tabla.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-6b-atenuado-en-el-gráfico-y-la-tabla). Casos 12, 36. Depende de CR-6a. → `feat(authors): dim non-selected authors in the graph and table`
+- [ ] **CR-7: Núcleo: cerrojo por directorio común y puerta de transferencia.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-7-núcleo-cerrojo-por-directorio-común-y-puerta-de-transferencia). Casos 18, 39, 40. Depende de CR-0. → `feat(core): serialize writes per git common directory and add a transfer gate`
+- [ ] **CR-9a: Núcleo: fuente de releases, remoto y errores tipados.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-9a-núcleo-fuente-de-releases-remoto-y-errores-tipados). Casos 20, 49, 50, 56. Depende de CR-0. → `feat(core): identify the github release source and type access errors`
+- [ ] **CR-8: Núcleo: `fetch_tag` y `pull` sin tags indiscriminados.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-8-núcleo-fetch_tag-y-pull-sin-tags-indiscriminados). Casos 14–17, 19, 38, 45, 46. Depende de CR-7, CR-9a. → `feat(core): fetch one tag explicitly and stop pull from fetching all tags`
+- [ ] **CR-9b: Núcleo: listado REST de releases.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-9b-núcleo-listado-rest-de-releases). Casos 21, 22 (núcleo), 23, 27, 28, 51–53. Depende de CR-9a. → `feat(core): list github releases with bounded pagination`
+- [ ] **CR-10: Núcleo: caché de releases.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-10-núcleo-caché-de-releases). Casos 25, 26, 28. Depende de CR-9b. → `feat(core): cache release listings apart from clones`
+- [ ] **CR-11a: Núcleo: descarga, destino y cancelación.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-11a-núcleo-descarga-destino-y-cancelación). Casos 29–31, 34, 47, 48. Depende de CR-7, CR-9b. → `feat(core): download release assets to a chosen destination`
+- [ ] **CR-11b: Núcleo: redirecciones, hosts y `sha256`.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-11b-núcleo-redirecciones-hosts-y-sha256). Casos 32, 33. Depende de CR-11a. → `feat(core): validate download redirects and verify digests`
+- [ ] **CR-12: IPC y bindings de releases, tags y descargas.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-12-ipc-y-bindings-de-releases-tags-y-descargas). Casos 35, 43, 44. Depende de CR-8, CR-10, CR-11b. → `feat(ipc): expose releases, tag fetch and asset downloads`
+- [ ] **CR-13: Estado frontend de releases y acción pendiente.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-13-estado-frontend-de-releases-y-acción-pendiente). Casos 27, 55. Depende de CR-12. → `feat(releases): add release queries and resumable pending actions`
+- [ ] **CR-14a: Lista única de tags y releases con notas.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-14a-lista-única-de-tags-y-releases-con-notas). Casos 22, 24, 36, 51, 54. Depende de CR-13. → `feat(releases): add the unified tags and releases list`
+- [ ] **CR-14b: Acciones: traer tag, descargar, acceso y sin conexión.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-14b-acciones-traer-tag-descargar-acceso-y-sin-conexión). Casos 25, 36. Depende de CR-14a. → `feat(releases): add tag fetch, downloads and access recovery to the panel`
+- [ ] **CR-15: Accesibilidad, i18n y E2E.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-15-accesibilidad-i18n-y-e2e). Casos 36, 37. Depende de CR-6b, CR-14b. → `test(e2e): cover authors and releases across themes and languages`
+- [ ] **CR-16: Verificación final y documentación.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-16-verificación-final-y-documentación). Casos Todos, 38, 54. Depende de CR-15. → `docs(plan): record v0.9 verification and update product docs`
 
 ### Gates externos y seguimiento histórico (sin evidencia)
 
