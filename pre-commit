@@ -42,6 +42,12 @@ while IFS= read -r -d '' path; do
     STAGED_FILES+=("${path}")
 done < <(git diff --cached --name-only --diff-filter=ACMR -z)
 
+# A commit that only deletes or renames-away files has nothing left to lint, and
+# expanding an empty array trips `set -u` on the bash 3.2 that macOS ships.
+if ((${#STAGED_FILES[@]} == 0)); then
+    exit 0
+fi
+
 ESLINT_FILES=()
 PRETTIER_FILES=()
 for path in "${STAGED_FILES[@]}"; do
