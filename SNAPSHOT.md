@@ -5,7 +5,7 @@
 
 ## Dónde quedé
 
-CR-1 (identidades y `.mailmap`, casos 1 a 4 y 42) implementada y marcada en `TASKS.md`, commit `74dc02e` en `dev`. Es la primera tarea de v0.9. Hay `1` commit local sin subir: `dev` está un commit por delante de `origin/dev` (antes de CR-1 ambas coincidían en `1bbc3f0`). CR-2 a CR-16 sin empezar.
+CR-1 (identidades y `.mailmap`, casos 1 a 4 y 42) implementada y marcada en `TASKS.md`, commit `74dc02e` en `dev`. Es la primera tarea de v0.9. `dev` se subió a `origin/dev` el 2026-11-17 (decisión de David delegada); desde entonces el snapshot es lo único por delante.
 
 ## Próximo paso
 
@@ -17,8 +17,7 @@ Implementar CR-2 (catálogo progresivo de autores) en `crates/gitcanvas-core/src
 
 ## Decisiones pendientes de David
 
-- ¿Subir `dev` a `origin`? Recomendación: sí, cuando quieras; el CI de `quality.yml` solo corre en PR a `main`, así que el push no gasta minutos.
-- ¿Debe `AuthorIdentity` (listada en el contrato del plan) llevar conteo de commits? CR-1 solo creó `AuthorKey`; el conteo encaja en CR-2. Recomendación: definirla en CR-2 con el catálogo.
+- (ninguna) Resueltas el 2026-11-17: `dev` se sube a `origin` (el CI de `quality.yml` solo corre en PR a `main`, no gasta minutos) y `AuthorIdentity` con conteo de commits se define en CR-2 junto al catálogo.
 
 ## Verificado y no verificado
 
