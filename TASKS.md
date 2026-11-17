@@ -16,8 +16,7 @@ crear tags ni publicar como parte de la implementación; los bumps son del flujo
 
 ## Siguiente paso
 
-Confirmar con David la decisión CR-D15 (que `pull` deje de traer todos los tags) y empezar
-CR-1 de la cola de v0.9, según el [plan](docs/plan/2026-11-16-v0.9-implementacion.md). La
+Empezar CR-1 de la cola de v0.9 (CR-D15 confirmada por David el 2026-11-16), según el [plan](docs/plan/2026-11-16-v0.9-implementacion.md). La
 cola de v0.8 está archivada en `ARCHIVES.md`.
 
 ## Cola de trabajo
@@ -36,7 +35,7 @@ Orden: autores (CR-1–CR-6), base de escritura (CR-7–CR-8), releases (CR-9–
 - [ ] **CR-5: Estado frontend de autores.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-5-estado-frontend-de-autores). Casos 6 y 13. Depende de CR-4. → `feat(authors): add author catalog and navigation queries`
 - [ ] **CR-6: Panel de autores, énfasis y navegación.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-6-panel-de-autores-énfasis-y-navegación). Casos 12, 13 y 36. Depende de CR-5. → `feat(authors): add the author panel, emphasis and navigation`
 - [ ] **CR-7: Núcleo: exclusión de escrituras por directorio común.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-7-núcleo-exclusión-de-escrituras-por-directorio-común). Caso 18. Depende de CR-0. → `feat(core): serialize writes per git common directory`
-- [ ] **CR-8: Núcleo: `fetch_tag` y `pull` sin tags indiscriminados.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-8-núcleo-fetch_tag-y-pull-sin-tags-indiscriminados). Casos 14–17, 19 y 38. Depende de CR-7 y de la confirmación de David sobre CR-D15. → `feat(core): fetch one tag explicitly and stop pull from fetching all tags`
+- [ ] **CR-8: Núcleo: `fetch_tag` y `pull` sin tags indiscriminados.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-8-núcleo-fetch_tag-y-pull-sin-tags-indiscriminados). Casos 14–17, 19 y 38. Depende de CR-7. CR-D15 confirmada por David. → `feat(core): fetch one tag explicitly and stop pull from fetching all tags`
 - [ ] **CR-9: Núcleo: fuente y listado de releases.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-9-núcleo-fuente-y-listado-de-releases). Casos 20–23, 27 y 28. Depende de CR-0. → `feat(core): list github releases with typed access errors`
 - [ ] **CR-10: Núcleo: caché de releases.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-10-núcleo-caché-de-releases). Casos 25 y 26. Depende de CR-9. → `feat(core): cache release listings apart from clones`
 - [ ] **CR-11: Núcleo: descarga de adjuntos.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-11-núcleo-descarga-de-adjuntos). Casos 29–34. Depende de CR-9 y CR-7. → `feat(core): download release assets to a chosen destination`

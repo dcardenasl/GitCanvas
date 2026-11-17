@@ -3,8 +3,8 @@
 ## Status
 
 Proposed — 2026-11-16. Decisions, bounds, acceptance matrix and task order are in the
-[v0.9 implementation plan](../plan/2026-11-16-v0.9-implementacion.md). Decision D15 of that
-plan changes existing behavior and waits for David's confirmation.
+[v0.9 implementation plan](../plan/2026-11-16-v0.9-implementacion.md). Decision CR-D15 of that
+plan changes existing behavior; David confirmed it on 2026-11-16.
 
 ## Context
 
@@ -35,7 +35,7 @@ network use, the remote must be the identified GitHub repository, the command go
 the write gate and is serialized per Git common directory so tabs and worktrees of one
 repository cannot write at once.
 
-**Pull.** Subject to David's confirmation, `pull` stops fetching every tag and uses
+**Pull.** Confirmed by David on 2026-11-16, `pull` stops fetching every tag and uses
 `AutotagOption::Auto`, Git's default: only tags that point at what was just fetched.
 
 **Downloads.** The asset URL comes only from the validated REST response. Redirects are
@@ -56,4 +56,4 @@ memory and resumed after the token is stored; nothing about it is persisted.
 The product gains a second, clearly labeled data source without weakening the single-path
 rule for Git data. Releases work offline from a bounded cache. Tags and downloads happen only
 when the user asks. The cost is a new write command, a per-directory write lock, a hosts
-allowlist to maintain and a visible behavior change in `pull` if confirmed.
+allowlist to maintain and a visible behavior change in `pull`.
