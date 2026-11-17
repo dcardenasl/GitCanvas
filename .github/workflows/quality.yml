@@ -158,6 +158,18 @@ jobs:
             exit 1
           fi
 
+  process-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Check the process documents
+        run: python .dcl/dcl.py doc-check
+
   dependency-security:
     runs-on: ubuntu-latest
     steps:
