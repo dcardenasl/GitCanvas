@@ -36,6 +36,9 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Check the process documents
+        run: python .dcl/dcl.py doc-check
+
       - name: Install the Rust toolchain
         run: python scripts/install-rust-toolchain.py
 
