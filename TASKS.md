@@ -28,7 +28,7 @@ Arquitectura: [ADR 0011](docs/adr/0011-author-identities-and-catalog.md) y [ADR 
 Orden de ejecución: autores (CR-1–CR-6b), cerrojo (CR-7), fuente (CR-9a), tags (CR-8), releases (CR-9b–CR-14b), cierre (CR-15–CR-16).
 
 - [x] **CR-0: Plan, contrato y ADR.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-0-plan-contrato-y-adr). Plan v0.9, ADR 0011 y 0012 propuestos, decisiones CR-D01–D30, matriz de 56 casos y tareas; reordenado tras la revisión del Arquitecto. Sin código. → `docs(plan): add v0.9 implementation plan and adr 0011 and 0012`
-- [ ] **CR-1: Núcleo: identidades y `.mailmap`.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-1-núcleo-identidades-y-mailmap). Casos 1–4, 42. Depende de CR-0. → `feat(core): resolve author identities through mailmap`
+- [x] **CR-1: Núcleo: identidades y `.mailmap`.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-1-núcleo-identidades-y-mailmap). Casos 1–4, 42. Depende de CR-0. → `feat(core): resolve author identities through mailmap`
 - [ ] **CR-2: Núcleo: catálogo progresivo.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-2-núcleo-catálogo-progresivo). Casos 5–9, 41. Depende de CR-1. → `feat(core): scan the author catalog in bounded chunks`
 - [ ] **CR-3: Núcleo: commits de un autor.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-3-núcleo-commits-de-un-autor). Casos 10–11. Depende de CR-1. → `feat(core): page the commits of one author`
 - [ ] **CR-4: IPC y bindings de autores.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-4-ipc-y-bindings-de-autores). Casos 35 (autores). Depende de CR-2, CR-3. → `feat(ipc): expose the author catalog and author commits`

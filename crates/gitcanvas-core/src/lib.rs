@@ -20,6 +20,7 @@
 //! that means `tauri::async_runtime::spawn_blocking`.
 
 pub mod actions;
+pub mod authors;
 pub mod blob;
 pub mod commit_tree;
 pub mod diff;
