@@ -179,6 +179,9 @@ Documented on purpose rather than discovered later:
 - Stashes are **read-only**: you can inspect them, but not create, apply or discard them
   from GitCanvas yet. Stashes do not appear as nodes in the graph, only as markers on
   their base commits.
+- Use with a real screen reader (VoiceOver, NVDA, Orca) and the manual walkthroughs of v0.4
+  are **not verified**; native E2E runs in CI on Linux, macOS and Windows. Accepted on
+  2026-11-16, tracked as `A11Y-LECTOR` in `TASKS.md`.
 - Image reads share the existing 2 MiB initial and 32 MiB expanded byte limits and a
   40 megapixel metadata limit. SVG is displayed through an isolated image element without
   parsing or running markup; decoding depends on the system WebView. ICO dimensions use

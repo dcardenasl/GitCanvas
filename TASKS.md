@@ -7,8 +7,8 @@
 
 **Estado al 2026-11-16:** v0.4–v0.8 publicadas; v0.8.0 está etiquetada y `main` contiene el
 merge del PR #23. Crear commits permanece al final de la secuencia (objetivo v0.13). El
-roadmap vigente prevalece sobre asignaciones de versiones de planes anteriores. Los gates externos
-sin evidencia (abajo) siguen abiertos y no se dan por cerrados.
+roadmap vigente prevalece sobre asignaciones de versiones de planes anteriores. El único gate
+externo abierto es `A11Y-LECTOR` (abajo), aceptado como no verificado.
 
 **Estado de trabajo:** rama `dev`. Se preservan sin seguimiento `docs/audits/evidence/`,
 `docs/media/`, `install-backups/` y `tools/demo/record-v05*`; no agregarlos a commits. No
@@ -26,26 +26,14 @@ Preparar el plan de v0.9 (contribuyentes y releases) según el [roadmap](ROADMAP
 Verificaciones que no se pudieron ejecutar o documentar; conservan su plan de origen y no
 bloquean el desarrollo de v0.9.
 
-- [ ] **GRF-5 — Verificación de v0.4 (gate externo).** Origen:
-      [roadmap, v0.4](ROADMAP.md#entrega-de-referencia-v04-plan-histórico)
-      (GRF-5) y [verificación v0.4](docs/verification/v0.4.md). Verificado en macOS (807 pruebas
-      frontend, 220 Rust, siete specs/dieciséis pruebas E2E, ambos temas e idiomas a 940×600,
-      fixture de 10.000 commits). **Pendiente, sin evidencia:** Linux y Windows nativos, lector
-      de pantalla real y recorridos manuales. No se declaran verificados.
-- [ ] **V05-VERIFY — Verificación y cierre documental (seguimiento de gates externos).** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#v05-verify--verificacion-y-documentacion-de-cierre), [evidencia v0.5](docs/verification/v0.5.md), [verificación v0.4](docs/verification/v0.4.md), [`CLAUDE.md`](CLAUDE.md). v0.5.0 ya está publicada. Verificado localmente: macOS (831 pruebas frontend, ocho specs E2E nativos), Linux arm64 (830 pruebas frontend, ocho specs/20 recorridos E2E, Rust, Clippy y build), compilación cruzada MSVC (check, Clippy estricto, tests `--no-run` y enlace release), temas, idiomas, 940×600 e indicador del diff. **Pendiente, sin evidencia:** E2E en Windows nativo y prueba con lector de pantalla real; los intentos con VoiceOver solo confirmaron árbol de accesibilidad y foco de teclado, no anuncios. No se declaran verificados.
-- [ ] **V07-VERIFY — Gates externos de v0.7 (stash de solo lectura).** Origen:
-      [plan v0.7](docs/plan/2026-11-08-v0.7-implementacion.md) (ST-7/ST-8),
-      [ADR 0009](docs/adr/0009-read-only-stash.md) y [verificación v0.7](docs/verification/v0.7.md).
-      Verificado en macOS (909 pruebas frontend, Rust, lint, tipos, formato, auditorías, build y
-      cinco recorridos E2E). **Pendiente, sin evidencia:** E2E nativo en Linux y Windows y lector
-      de pantalla real. La etiqueta `v0.7.0` existe y `main` contiene el merge del PR #22; esta
-      tarea no verifica la publicación remota.
-- [ ] **V08-VERIFY — Gates externos de v0.8 (vista de imágenes).** Origen:
-      [plan v0.8](docs/plan/2026-11-15-v0.8-implementacion.md) (IMG-7/IMG-8),
-      [ADR 0010](docs/adr/0010-image-viewing.md) y [verificación v0.8](docs/verification/v0.8.md).
-      Verificado en macOS (927 pruebas frontend, Rust, lint, tipos, formato, auditorías, build y
-      E2E nativo de historial de imágenes). **Pendiente, sin evidencia:** E2E nativo en Linux y
-      Windows y lector de pantalla real. La etiqueta `v0.8.0` existe y la release está publicada.
+- [ ] **A11Y-LECTOR — Lector de pantalla real y recorridos manuales (decisión de David).**
+      Origen: GRF-5 (v0.4), V05-VERIFY, V07-VERIFY y V08-VERIFY, cerrados el 2026-11-16 (ver
+      [`ARCHIVES.md`](ARCHIVES.md#gates-externos-cerrados-2026-11-16)). El E2E nativo de Linux,
+      macOS y Windows tiene evidencia en
+      [`docs/verification/ci-plataformas.md`](docs/verification/ci-plataformas.md). Queda sin
+      verificar el uso con un lector de pantalla real (VoiceOver, NVDA, Orca) y los recorridos
+      manuales de v0.4. *Decisión de David, 2026-11-16:* se acepta como no verificado y consta
+      en «Known limitations» del README. Se reabre con evidencia cuando haya un lector real.
 - [ ] **WS-17 — Conciliar verificación y publicación de v0.3.0 (seguimiento histórico).**
       *Actualización 2026-10-19:* v0.3.0 y v0.3.1 ya publicadas; CI de v0.3.1 verde.
       GRF-0 debe conciliar evidencia y comprobaciones manuales antes de cerrar el ID.

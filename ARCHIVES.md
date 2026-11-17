@@ -8,6 +8,7 @@
 
 > Se regenera al archivar una versión; ver el [protocolo de trabajo](docs/protocolo-trabajo.md#2-archivesmd-lo-completado-con-su-evidencia).
 
+- [Gates externos cerrados (2026-11-16)](#gates-externos-cerrados-2026-11-16)
 - [Colas cerradas movidas desde TASKS.md (2026-11-15)](#colas-cerradas-movidas-desde-tasksmd-2026-11-15)
   - [v0.8 — Vista de imágenes (IMG-0–IMG-8; publicada como v0.8.0)](#v08--vista-de-imágenes-img-0img-8-publicada-como-v080)
   - [v0.7 — Stash de solo lectura (ST-0–ST-9; publicada como v0.7.0)](#v07--stash-de-solo-lectura-st-0st-9-publicada-como-v070)
@@ -31,6 +32,36 @@
 - [✅ Fase H2 — Endurecimiento post-auditoría (46/46; 38 cierres con commit; H2-34–41 en `437ff07`)](#-fase-h2--endurecimiento-post-auditoría-4646-38-cierres-con-commit-h2-3441-en-437ff07)
 - [✅ Fase I18N — Internacionalización (6/6)](#-fase-i18n--internacionalización-66)
 - [✅ Auditoría posterior a v0.2.0 (8/8)](#-auditoría-posterior-a-v020-88)
+
+## Gates externos cerrados (2026-11-16)
+
+> Cierre de GRF-5, V05-VERIFY, V07-VERIFY y V08-VERIFY. La parte de plataformas queda
+> respaldada por la corrida de CI de cada release
+> ([evidencia](docs/verification/ci-plataformas.md)). El lector de pantalla real y los
+> recorridos manuales de v0.4 se aceptaron como no verificados por decisión de David y
+> continúan en `TASKS.md` como `A11Y-LECTOR` y en «Known limitations» del README. Texto
+> original de los cuatro gates, sin cambios:
+
+- [ ] **GRF-5 — Verificación de v0.4 (gate externo).** Origen:
+      [roadmap, v0.4](ROADMAP.md#entrega-de-referencia-v04-plan-histórico)
+      (GRF-5) y [verificación v0.4](docs/verification/v0.4.md). Verificado en macOS (807 pruebas
+      frontend, 220 Rust, siete specs/dieciséis pruebas E2E, ambos temas e idiomas a 940×600,
+      fixture de 10.000 commits). **Pendiente, sin evidencia:** Linux y Windows nativos, lector
+      de pantalla real y recorridos manuales. No se declaran verificados.
+- [ ] **V05-VERIFY — Verificación y cierre documental (seguimiento de gates externos).** [Plan](docs/plan/2026-10-26-v0.5-implementacion.md#v05-verify--verificacion-y-documentacion-de-cierre), [evidencia v0.5](docs/verification/v0.5.md), [verificación v0.4](docs/verification/v0.4.md), [`CLAUDE.md`](CLAUDE.md). v0.5.0 ya está publicada. Verificado localmente: macOS (831 pruebas frontend, ocho specs E2E nativos), Linux arm64 (830 pruebas frontend, ocho specs/20 recorridos E2E, Rust, Clippy y build), compilación cruzada MSVC (check, Clippy estricto, tests `--no-run` y enlace release), temas, idiomas, 940×600 e indicador del diff. **Pendiente, sin evidencia:** E2E en Windows nativo y prueba con lector de pantalla real; los intentos con VoiceOver solo confirmaron árbol de accesibilidad y foco de teclado, no anuncios. No se declaran verificados.
+- [ ] **V07-VERIFY — Gates externos de v0.7 (stash de solo lectura).** Origen:
+      [plan v0.7](docs/plan/2026-11-08-v0.7-implementacion.md) (ST-7/ST-8),
+      [ADR 0009](docs/adr/0009-read-only-stash.md) y [verificación v0.7](docs/verification/v0.7.md).
+      Verificado en macOS (909 pruebas frontend, Rust, lint, tipos, formato, auditorías, build y
+      cinco recorridos E2E). **Pendiente, sin evidencia:** E2E nativo en Linux y Windows y lector
+      de pantalla real. La etiqueta `v0.7.0` existe y `main` contiene el merge del PR #22; esta
+      tarea no verifica la publicación remota.
+- [ ] **V08-VERIFY — Gates externos de v0.8 (vista de imágenes).** Origen:
+      [plan v0.8](docs/plan/2026-11-15-v0.8-implementacion.md) (IMG-7/IMG-8),
+      [ADR 0010](docs/adr/0010-image-viewing.md) y [verificación v0.8](docs/verification/v0.8.md).
+      Verificado en macOS (927 pruebas frontend, Rust, lint, tipos, formato, auditorías, build y
+      E2E nativo de historial de imágenes). **Pendiente, sin evidencia:** E2E nativo en Linux y
+      Windows y lector de pantalla real. La etiqueta `v0.8.0` existe y la release está publicada.
 
 ## Colas cerradas movidas desde TASKS.md (2026-11-15)
 
