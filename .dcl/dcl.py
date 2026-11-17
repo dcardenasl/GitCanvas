@@ -51,15 +51,23 @@ STATE_OK = re.compile(r"^(planificada|publicada v\d+\.\d+\.\d+)$", re.I)
 
 
 # ----------------------------------------------------------------- utilidades
+def load_yaml(text: str):
+    """Lee YAML. PyYAML solo hace falta en dcl-os (perfiles y portfolio), nunca en un proyecto instalado."""
+    try:
+        import yaml  # type: ignore
+    except ModuleNotFoundError:
+        sys.exit("falta PyYAML. En dcl-os usa el lanzador `./dcl ...` (crea .venv con requirements.txt) "
+                 "o ejecuta `scripts/bootstrap.sh`.")
+    return yaml.safe_load(text)
+
+
 def load_config(root: Path, config_path: str | None) -> dict:
     p = Path(config_path) if config_path else root / ".dcl" / "config.json"
     cfg: dict = {}
     if p.exists():
         text = p.read_text(encoding="utf-8")
         if p.suffix in (".yaml", ".yml"):
-            import yaml  # type: ignore
-
-            cfg = yaml.safe_load(text) or {}
+            cfg = load_yaml(text) or {}
         else:
             cfg = json.loads(text)
     doc = dict(DEFAULT_DOC)
@@ -132,6 +140,12 @@ class Report:
 
 
 # ------------------------------------------------------------------ doc-check
+SNAPSHOT_SECTIONS = (
+    "Dónde quedé", "Próximo paso", "Bloqueos", "Decisiones pendientes de David",
+    "Verificado y no verificado", "Comandos para retomar",
+)
+
+
 def doc_check(root: Path, cfg: dict) -> Report:
     d = cfg["doc_check"]
     first = int(d.get("primera_version_con_plantilla", 1))
@@ -258,6 +272,13 @@ def doc_check(root: Path, cfg: dict) -> Report:
         if n != 1:
             rep.err("R6", f"README.md: se esperaba una sola sección '## Latest', hay {n}")
 
+    # R7: SNAPSHOT.md, si existe, con las secciones del contrato (K2-D17)
+    if (root / "SNAPSHOT.md").exists():
+        titulos = {m.group(1).strip().lower() for m in re.finditer(r"^#{1,4}\s+(.+)$", read(root / "SNAPSHOT.md"), re.M)}
+        for sec in SNAPSHOT_SECTIONS:
+            if sec.lower() not in titulos:
+                rep.err("R7", f"SNAPSHOT.md: falta la sección '{sec}'")
+
     return rep
 
 
@@ -374,13 +395,11 @@ def release_check(root: Path, cfg: dict, tag: str, skip_git: bool = False) -> Re
 
 
 # --------------------------------------------------------------- process-init
-def process_init(kit: Path, profile_name: str, target: Path, project: str, today: str):
+def process_init(kit: Path, profile_name: str, target: Path, project: str, today: str, hooks: bool = True, protocols: bool = True):
     prof_file = kit / "perfiles" / f"{profile_name}.yaml"
     if not prof_file.exists():
         sys.exit(f"perfil no encontrado: {prof_file}")
-    import yaml  # type: ignore
-
-    prof = yaml.safe_load(prof_file.read_text(encoding="utf-8"))
+    prof = load_yaml(prof_file.read_text(encoding="utf-8"))
     created, skipped = [], []
 
     def put(rel: str, content: str, mode: int | None = None):
@@ -395,6 +414,8 @@ def process_init(kit: Path, profile_name: str, target: Path, project: str, today
         created.append(rel)
 
     subs = {"{{PROYECTO}}": project, "{{FECHA}}": today, "{{ULTIMA_PUBLICADA}}": "ninguna",
+            "{{DONDE_QUEDE}}": "Proyecto recién incorporado al kit; sin trabajo de sesión todavía.",
+            "{{PROXIMO_PASO}}": "Definir la primera entrega con David (ROADMAP.md).",
             "{{PROXIMA}}": "v0.1", "{{PRIMERA_ENTREGA}}": "(por definir)",
             "{{DESCRIPCION_UNA_LINEA}}": "(describe el proyecto en una línea)",
             "{{COMANDOS_DEL_PERFIL}}": "\n".join(f"- {k}: `{v}`" for k, v in (prof.get("comandos") or {}).items() if v)}
@@ -406,15 +427,19 @@ def process_init(kit: Path, profile_name: str, target: Path, project: str, today
 
     for name in ["ROADMAP.md", "TASKS.md", "ARCHIVES.md", "CHANGELOG.md", "CLAUDE.md"]:
         put(name, render(read(kit / "plantillas" / name)))
-    for pf in sorted((kit / "protocolos").glob("*.md")):
-        put(f"docs/protocols/{pf.name}", read(pf))
+    put("SNAPSHOT.md", render(read(kit / "plantillas" / "SNAPSHOT.md")))  # K2-D17
+    if protocols:  # --no-protocols: el proyecto ya tiene sus propios protocolos de trabajo
+        for pf in sorted((kit / "protocolos").glob("*.md")):
+            put(f"docs/protocols/{pf.name}", read(pf))
     for sub in ("plan", "adr", "verification"):
         put(f"docs/{sub}/.gitkeep", "")
-    for h in prof.get("hooks", []):
-        put(f".dcl/hooks/{h}", read(kit / "hooks" / h), 0o755)
-    put(".dcl/install-git-hooks.sh", read(kit / "hooks" / "install-git-hooks.sh"), 0o755)
+    if hooks:  # --no-hooks: el proyecto ya gestiona sus propios hooks y no se instalan los del kit
+        for h in prof.get("hooks", []):
+            put(f".dcl/hooks/{h}", read(kit / "hooks" / h), 0o755)
+        put(".dcl/install-git-hooks.sh", read(kit / "hooks" / "install-git-hooks.sh"), 0o755)
     put(".dcl/dcl.py", read(kit / "dcl.py"), 0o755)
     cfg = {k: prof[k] for k in ("nombre", "doc_check", "manifiestos", "comandos", "changelog", "readme_latest") if k in prof}
+    cfg["kit_version"] = (kit / "VERSION").read_text(encoding="utf-8").strip()  # K2-D18
     put(".dcl/config.json", json.dumps(cfg, indent=2, ensure_ascii=False) + "\n")
     for wf in prof.get("workflows", []):
         src = kit / "workflows" / profile_name / wf
@@ -453,12 +478,14 @@ def main(argv=None) -> int:
     p.add_argument("--profile", required=True); p.add_argument("--target", required=True)
     p.add_argument("--name", required=True); p.add_argument("--kit", default=str(Path(__file__).parent))
     p.add_argument("--date", default=None)
+    p.add_argument("--no-protocols", action="store_true", help="no copia los protocolos del kit (el proyecto tiene los suyos)")
+    p.add_argument("--no-hooks", action="store_true", help="no instala los hooks del kit (el proyecto gestiona los suyos)")
 
     a = ap.parse_args(argv)
     if a.cmd == "process-init":
         import datetime
         today = a.date or datetime.date.today().isoformat()
-        created, skipped = process_init(Path(a.kit), a.profile, Path(a.target), a.name, today)
+        created, skipped = process_init(Path(a.kit), a.profile, Path(a.target), a.name, today, hooks=not a.no_hooks, protocols=not a.no_protocols)
         print(f"creados: {len(created)}")
         for c in created:
             print("  +", c)

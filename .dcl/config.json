@@ -32,5 +32,6 @@
     "build": "npm run tauri build"
   },
   "changelog": "CHANGELOG.md",
-  "readme_latest": true
+  "readme_latest": true,
+  "kit_version": "0.2"
 }
