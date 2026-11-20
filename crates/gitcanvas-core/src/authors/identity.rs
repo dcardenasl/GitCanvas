@@ -6,12 +6,13 @@
 //! are never consulted, so no arbitrary path is read.
 
 use std::{
+    fmt::Write as _,
     fs::{self, File},
     io::Read,
 };
 
 use git2::{Mailmap, Repository, Signature};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use specta::Type;
 
@@ -21,7 +22,7 @@ pub const MAX_MAILMAP_BYTES: usize = 1024 * 1024;
 const MAILMAP_NAME: &str = ".mailmap";
 
 /// The identity of one author after `.mailmap` resolution.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Type)]
 pub struct AuthorKey {
     /// Canonical display name.
     pub name: String,
@@ -89,6 +90,16 @@ impl LoadedMailmap {
         }
     }
 
+    pub(crate) fn resolve_bytes(&self, name: &[u8], email: &[u8]) -> AuthorKey {
+        match (std::str::from_utf8(name), std::str::from_utf8(email)) {
+            (Ok(name), Ok(email)) => self.resolve(name, email),
+            _ => AuthorKey {
+                name: encode_signature_field(name),
+                email: encode_signature_field(email),
+            },
+        }
+    }
+
     /// SHA-256 (hex) of the effective content; empty content when there is none.
     /// Part of the cursor scope: when it changes, cursors are stale.
     #[must_use]
@@ -101,6 +112,19 @@ impl LoadedMailmap {
     pub fn warning(&self) -> Option<MailmapWarning> {
         self.warning
     }
+}
+
+fn encode_signature_field(bytes: &[u8]) -> String {
+    if let Ok(text) = std::str::from_utf8(bytes) {
+        return text.to_owned();
+    }
+    // A Git signature cannot contain NUL. Prefixing hex with NUL preserves
+    // malformed identities without colliding with a valid signature.
+    let mut encoded = String::from("\0");
+    for byte in bytes {
+        let _ = write!(encoded, "{byte:02x}");
+    }
+    encoded
 }
 
 /// Loads the effective `.mailmap`. Never fails: problems become a warning and

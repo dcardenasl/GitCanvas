@@ -100,6 +100,7 @@ struct Snapshot {
 pub struct HistoryReader {
     snapshots: Mutex<VecDeque<Snapshot>>,
     pub(crate) catalog_cache: crate::authors::CatalogCache,
+    pub(crate) author_commit_cache: crate::authors::commits::AuthorCommitCache,
     max_commits: usize,
 }
 
@@ -118,6 +119,7 @@ impl HistoryReader {
         Self {
             snapshots: Mutex::default(),
             catalog_cache: crate::authors::CatalogCache::default(),
+            author_commit_cache: crate::authors::commits::AuthorCommitCache::default(),
             max_commits,
         }
     }

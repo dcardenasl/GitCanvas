@@ -2,7 +2,6 @@
 
 use std::{
     collections::{BTreeMap, HashSet, VecDeque},
-    fmt::Write as _,
     path::PathBuf,
     sync::{Arc, Mutex},
 };
@@ -241,34 +240,7 @@ fn author_at(
 ) -> Result<AuthorKey, AppError> {
     let commit = repo.find_commit(id)?;
     let signature = commit.author();
-    Ok(resolve_author(
-        mailmap,
-        signature.name_bytes(),
-        signature.email_bytes(),
-    ))
-}
-
-fn resolve_author(mailmap: &crate::authors::LoadedMailmap, name: &[u8], email: &[u8]) -> AuthorKey {
-    match (std::str::from_utf8(name), std::str::from_utf8(email)) {
-        (Ok(name), Ok(email)) => mailmap.resolve(name, email),
-        _ => AuthorKey {
-            name: encode_signature_field(name),
-            email: encode_signature_field(email),
-        },
-    }
-}
-
-fn encode_signature_field(bytes: &[u8]) -> String {
-    if let Ok(text) = std::str::from_utf8(bytes) {
-        return text.to_owned();
-    }
-    // A Git signature cannot contain NUL. Prefixing hex with NUL preserves
-    // malformed identities without colliding with a valid signature.
-    let mut encoded = String::from("\0");
-    for byte in bytes {
-        let _ = write!(encoded, "{byte:02x}");
-    }
-    encoded
+    Ok(mailmap.resolve_bytes(signature.name_bytes(), signature.email_bytes()))
 }
 
 fn counts(authors: BTreeMap<AuthorKey, u64>) -> Vec<AuthorCount> {
@@ -392,9 +364,9 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let repo = Repository::init(directory.path()).unwrap();
         let mailmap = load_mailmap(&repo);
-        let a = resolve_author(&mailmap, b"\xff", b"author@example.test");
-        let b = resolve_author(&mailmap, b"\xfe", b"author@example.test");
-        let literal = resolve_author(&mailmap, b"ff", b"author@example.test");
+        let a = mailmap.resolve_bytes(b"\xff", b"author@example.test");
+        let b = mailmap.resolve_bytes(b"\xfe", b"author@example.test");
+        let literal = mailmap.resolve_bytes(b"ff", b"author@example.test");
         assert_ne!(a, b);
         assert_ne!(a, literal);
     }

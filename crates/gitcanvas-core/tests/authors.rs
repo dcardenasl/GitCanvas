@@ -16,7 +16,8 @@ use git2::{Oid, Signature, Time};
 use gitcanvas_core::authors::{load_mailmap, MailmapWarning, MAX_MAILMAP_BYTES};
 use gitcanvas_core::{
     authors::{
-        get_author_catalog_chunk, AuthorCatalogRequest, IncompleteReason, AUTHOR_CATALOG_CHUNK_SIZE,
+        get_author_catalog_chunk, get_author_commit_ids, AuthorCatalogRequest,
+        AuthorCommitIdsRequest, AuthorKey, IncompleteReason, AUTHOR_CATALOG_CHUNK_SIZE,
     },
     history::{HistoryReader, MAX_PAGE_SIZE},
     repository::ActiveRepo,
@@ -35,6 +36,181 @@ fn commit_as(fixture: &Fixture, name: &str, email: &str, files: &[(&str, &[u8])]
         .repo
         .commit(Some("HEAD"), &signature, &signature, "c", &tree, &[])
         .unwrap()
+}
+
+#[test]
+fn author_commit_ids_page_across_the_visible_history_without_gaps_or_duplicates() {
+    let fixture = Fixture::new();
+    let tree_id = fixture.repo.treebuilder(None).unwrap().write().unwrap();
+    let tree = fixture.repo.find_tree(tree_id).unwrap();
+    let mut parent = fixture.repo.head().ok().and_then(|head| head.target());
+    let mut selected = Vec::new();
+    for index in 0..1_002 {
+        let (name, email) = if index % 2 == 0 {
+            ("Selected", "selected@example.test")
+        } else {
+            ("Other", "other@example.test")
+        };
+        let signature = Signature::new(name, email, &Time::new(i64::from(index), 0)).unwrap();
+        let parents = parent
+            .map(|id| vec![fixture.repo.find_commit(id).unwrap()])
+            .unwrap_or_default();
+        let parent_refs: Vec<_> = parents.iter().collect();
+        parent = Some(
+            fixture
+                .repo
+                .commit(
+                    Some("HEAD"),
+                    &signature,
+                    &signature,
+                    "mixed",
+                    &tree,
+                    &parent_refs,
+                )
+                .unwrap(),
+        );
+        if index % 2 == 0 {
+            selected.push(parent.unwrap().to_string());
+        }
+    }
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let reader = HistoryReader::default();
+    let visible = reader
+        .get_commits(
+            &active,
+            &gitcanvas_core::history::HistoryRequest {
+                limit: 20,
+                cursor: None,
+                roots: None,
+                references: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(visible.commits.len(), 20);
+    let author = AuthorKey {
+        name: "Selected".into(),
+        email: "selected@example.test".into(),
+    };
+    let first = get_author_commit_ids(
+        &active,
+        &AuthorCommitIdsRequest {
+            author: author.clone(),
+            cursor: None,
+        },
+        &reader,
+    )
+    .unwrap();
+    assert_eq!(first.commit_ids.len(), 500);
+    let cursor = first.next_cursor.clone().unwrap();
+    let second = get_author_commit_ids(
+        &active,
+        &AuthorCommitIdsRequest {
+            author,
+            cursor: Some(cursor),
+        },
+        &reader,
+    )
+    .unwrap();
+    assert_eq!(second.commit_ids.len(), 1);
+    assert!(second.next_cursor.is_none());
+    let actual: Vec<_> = first
+        .commit_ids
+        .into_iter()
+        .chain(second.commit_ids)
+        .collect();
+    selected.reverse();
+    assert_eq!(actual, selected);
+    assert!(actual
+        .iter()
+        .any(|id| !visible.commits.iter().any(|commit| commit.id == *id)));
+}
+
+#[test]
+fn author_commit_ids_for_absent_author_returns_empty_page() {
+    let fixture = Fixture::new();
+    commit_as(&fixture, "Existing", "existing@example.test", &[]);
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let page = get_author_commit_ids(
+        &active,
+        &AuthorCommitIdsRequest {
+            author: AuthorKey {
+                name: "Absent".into(),
+                email: "absent@example.test".into(),
+            },
+            cursor: None,
+        },
+        &HistoryReader::default(),
+    )
+    .unwrap();
+    assert!(page.commit_ids.is_empty());
+    assert!(page.next_cursor.is_none());
+}
+
+#[test]
+fn author_commit_cursor_is_stale_after_mailmap_or_roots_change() {
+    let fixture = Fixture::new();
+    let tree_id = fixture.repo.treebuilder(None).unwrap().write().unwrap();
+    let tree = fixture.repo.find_tree(tree_id).unwrap();
+    let mut parent = fixture.repo.head().ok().and_then(|head| head.target());
+    for index in 0..502 {
+        let signature = Signature::new(
+            "Selected",
+            "selected@example.test",
+            &Time::new(i64::from(index), 0),
+        )
+        .unwrap();
+        let parents = parent
+            .map(|id| vec![fixture.repo.find_commit(id).unwrap()])
+            .unwrap_or_default();
+        let parent_refs: Vec<_> = parents.iter().collect();
+        parent = Some(
+            fixture
+                .repo
+                .commit(
+                    Some("HEAD"),
+                    &signature,
+                    &signature,
+                    "selected",
+                    &tree,
+                    &parent_refs,
+                )
+                .unwrap(),
+        );
+    }
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let reader = HistoryReader::default();
+    let author = AuthorKey {
+        name: "Selected".into(),
+        email: "selected@example.test".into(),
+    };
+    let first = get_author_commit_ids(
+        &active,
+        &AuthorCommitIdsRequest {
+            author: author.clone(),
+            cursor: None,
+        },
+        &reader,
+    )
+    .unwrap();
+    let cursor = first.next_cursor.unwrap();
+    let request = AuthorCommitIdsRequest {
+        author,
+        cursor: Some(cursor),
+    };
+    let path = fixture.dir.path().join(".mailmap");
+    std::fs::write(&path, "Canonical <selected@example.test>\n").unwrap();
+    assert!(matches!(
+        get_author_commit_ids(&active, &request, &reader),
+        Err(gitcanvas_core::error::AppError::StaleCursor(_))
+    ));
+
+    std::fs::remove_file(path).unwrap();
+    assert!(get_author_commit_ids(&active, &request, &reader).is_ok());
+    add_catalog_commits(&fixture, 1);
+    assert!(matches!(
+        get_author_commit_ids(&active, &request, &reader),
+        Err(gitcanvas_core::error::AppError::StaleCursor(_))
+    ));
 }
 
 fn key(
