@@ -1,29 +1,28 @@
 # GitCanvas: Snapshot
 
-> Actualizado: 2026-11-17 · Lo escribe `cerrar-sesion`; lo lee `abrir-sesion` y `./dcl hoy`.
+> Actualizado: 2026-11-20 · Lo escribe `cerrar-sesion`; lo lee `abrir-sesion` y `./dcl hoy`.
 > Mantenerlo corto: esto no es un registro, es la forma de retomar en frío.
 
 ## Dónde quedé
 
-CR-1 (identidades y `.mailmap`, casos 1 a 4 y 42) implementada y marcada en `TASKS.md`, commit `74dc02e` en `dev`. Es la primera tarea de v0.9. `dev` se subió a `origin/dev` el 2026-11-17 (decisión de David delegada); desde entonces el snapshot es lo único por delante.
+CR-4a (pruebas IPC de cursores y caché de autores) quedó implementada en `dev`, commit `f86f64b`, después de CR-4 (`e18ae05`); el commit de CR-4a está subido a `origin/dev`. Ocho grupos de archivos locales sin seguimiento siguen preservados; su lista está en `TASKS.md` y no deben agregarse a commits.
 
 ## Próximo paso
 
-Implementar CR-2 (catálogo progresivo de autores) en `crates/gitcanvas-core/src/authors/catalog.rs`, según [el plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-2-núcleo-catálogo-progresivo): casos 5 a 9 y 41. Reutiliza `load_mailmap` y su `content_hash` para el cursor.
+Implementar CR-5 (estado frontend de autores) según `docs/plan/2026-11-16-v0.9-implementacion.md#cr-5-estado-frontend-de-autores`; mantener el cambio acotado a esa tarea y actualizar `TASKS.md` en el mismo commit.
 
 ## Bloqueos
 
-- (ninguno)
+- (ninguno para CR-5)
 
 ## Decisiones pendientes de David
 
-- (ninguna) Resueltas el 2026-11-17: `dev` se sube a `origin` (el CI de `quality.yml` solo corre en PR a `main`, no gasta minutos) y `AuthorIdentity` con conteo de commits se define en CR-2 junto al catálogo.
+- (ninguna nueva para CR-5). Siguen vigentes las decisiones ya registradas en `TASKS.md` y en el plan v0.9.
 
 ## Verificado y no verificado
 
-- Verificado el 2026-11-17: `cargo test -p gitcanvas-core --test authors` con 11 pruebas en verde; `cargo test -p gitcanvas-core` completo en verde; `cargo clippy -p gitcanvas-core --all-targets` sin avisos; `npm test` (946 pruebas) y `npm run lint` en verde; `python3 .dcl/dcl.py doc-check` en verde.
-- No verificado: Windows (la prueba del `.mailmap` simbólico solo corre en Unix; el CI en Windows no se ha ejecutado para CR-1); lector de pantalla real (`A11Y-LECTOR`, aceptado como no verificado); el job `process-docs` aún no ha corrido en GitHub.
-- Ojo local: en esta máquina `npm` es un alias de shell a `pnpm`, y el proyecto exige npm; ejecuta `command npm test` y `command npm run lint` para saltarte el alias.
+- Verificado para CR-4a: `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace` (61 IPC, 88 core, 1 ignorado y suites de integración), `npm test` (946), `npm run lint`, `python3 .dcl/dcl.py doc-check` y `git diff --check`; QA Haiku 5.5 aprobó sin bloqueantes.
+- No verificado: Windows, lector de pantalla real (aceptado como no verificado) y job `process-docs` en GitHub. La suite completa de CR-5 aún no se ha ejecutado.
 
 ## Comandos para retomar
 
