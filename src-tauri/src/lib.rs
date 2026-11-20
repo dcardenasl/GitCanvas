@@ -64,6 +64,8 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::repository::get_commits,
             commands::repository::get_commit,
             commands::repository::get_file_history,
+            commands::authors::get_author_catalog_chunk,
+            commands::authors::get_author_commit_ids,
             commands::stash::get_stashes,
             commands::stash::get_stash_anchors,
             commands::stash::get_stash_files,

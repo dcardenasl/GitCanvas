@@ -39,6 +39,7 @@ pub struct AuthorCount {
     /// Identity after `.mailmap` resolution.
     pub author: AuthorKey,
     /// Number of commits by this author in the returned chunk.
+    #[specta(type = u32)]
     pub commits: u64,
 }
 
@@ -59,9 +60,10 @@ pub enum IncompleteReason {
 pub struct AuthorCatalogChunk {
     /// Identities and commit counts discovered in this chunk only.
     pub authors: Vec<AuthorCount>,
-    /// Cursor for the next chunk, absent when complete or incomplete without continuation.
+    /// Cursor for the next chunk; null when complete or incomplete without continuation.
     pub cursor: Option<String>,
     /// Number of commits scanned across all chunks.
+    #[specta(type = u32)]
     pub scanned: u64,
     /// Whether the complete history was scanned.
     pub complete: bool,

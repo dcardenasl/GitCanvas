@@ -49,6 +49,10 @@ export const commands = {
 	getCommit: (path: string, commitId: string) => typedError<CommitInfo, AppError>(__TAURI_INVOKE("get_commit", { path, commitId })),
 	/**  Reads one bounded page of a file's history, following renames from a start commit. */
 	getFileHistory: (path: string, request: FileHistoryRequest) => typedError<FileHistoryPage, AppError>(__TAURI_INVOKE("get_file_history", { path, request })),
+	/**  Reads one bounded delta from the repository's complete author catalog. */
+	getAuthorCatalogChunk: (path: string, request: AuthorCatalogRequest) => typedError<AuthorCatalogChunk, AppError>(__TAURI_INVOKE("get_author_catalog_chunk", { path, request })),
+	/**  Reads one bounded page of commit IDs attributed to an author. */
+	getAuthorCommitIds: (path: string, request: AuthorCommitIdsRequest) => typedError<AuthorCommitIdsPage, AppError>(__TAURI_INVOKE("get_author_commit_ids", { path, request })),
 	/**  Reads bounded stash data through the canonical repository authorization boundary. */
 	getStashes: (path: string, request: StashListRequest) => typedError<StashPage, AppError>(__TAURI_INVOKE("get_stashes", { path, request })),
 	/**  Reads the bounded stash-to-base index through the canonical authorization boundary. */
@@ -191,6 +195,60 @@ export type AppError =
 { kind: "ResourceExhausted"; message: string } |
 /**  Background work could not complete. */
 { kind: "Internal"; message: string };
+
+/**  A delta of the full author catalog plus continuation and progress metadata. */
+export type AuthorCatalogChunk = {
+	/**  Identities and commit counts discovered in this chunk only. */
+	authors: AuthorCount[],
+	/**  Cursor for the next chunk; null when complete or incomplete without continuation. */
+	cursor: string | null,
+	/**  Number of commits scanned across all chunks. */
+	scanned: number,
+	/**  Whether the complete history was scanned. */
+	complete: boolean,
+	/**  Present when scanning stopped before completion. */
+	incomplete_reason: IncompleteReason | null,
+};
+
+/**  A requested continuation of the complete author catalog. */
+export type AuthorCatalogRequest = {
+	/**  Opaque cursor from the previous chunk. */
+	cursor: string | null,
+	/**  Cancellation is observed between requests, never during a libgit2 walk. */
+	cancelled: boolean,
+};
+
+/**  A bounded page of commit IDs, in the repository's topological history order. */
+export type AuthorCommitIdsPage = {
+	/**  Commit object IDs in this page. */
+	commit_ids: string[],
+	/**  Continuation for the next page; null at the end. */
+	next_cursor: string | null,
+};
+
+/**  Request for one page of an author's matching commit IDs. */
+export type AuthorCommitIdsRequest = {
+	/**  Resolved identity selected by the caller. */
+	author: AuthorKey,
+	/**  Opaque continuation returned by the previous page. */
+	cursor: string | null,
+};
+
+/**  One author and the number of commits attributed to that identity in this delta. */
+export type AuthorCount = {
+	/**  Identity after `.mailmap` resolution. */
+	author: AuthorKey,
+	/**  Number of commits by this author in the returned chunk. */
+	commits: number,
+};
+
+/**  The identity of one author after `.mailmap` resolution. */
+export type AuthorKey = {
+	/**  Canonical display name. */
+	name: string,
+	/**  Canonical email, exactly as written (case is preserved). */
+	email: string,
+};
 
 /**  A branch uses its full ref name as identity; short names are display only. */
 export type BranchInfo = {
@@ -668,6 +726,15 @@ export type ImageVersion =
 "previous" |
 /**  The version after the selected change. */
 "saved";
+
+/**  Why the catalog could not be completed. */
+export type IncompleteReason =
+/**  The history is larger than the cache budget, so resumable chunks are too expensive. */
+"history_too_large" |
+/**  More than the supported number of distinct author identities exists. */
+"too_many_authors" |
+/**  The caller cancelled between chunks. */
+"cancelled";
 
 /**  What loading produced. */
 export type LoadedWorkspace = {

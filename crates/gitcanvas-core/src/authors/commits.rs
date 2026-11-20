@@ -38,7 +38,7 @@ pub struct AuthorCommitIdsRequest {
 pub struct AuthorCommitIdsPage {
     /// Commit object IDs in this page.
     pub commit_ids: Vec<String>,
-    /// Continuation for the next page, absent at the end.
+    /// Continuation for the next page; null at the end.
     pub next_cursor: Option<String>,
 }
 

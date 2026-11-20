@@ -116,6 +116,106 @@ fn repository_history_and_refs_round_trip_with_real_payloads() {
 }
 
 #[test]
+fn author_commands_are_authorized_and_isolated_by_repository() {
+    let first_dir = tempfile::tempdir().unwrap();
+    let second_dir = tempfile::tempdir().unwrap();
+    let first_repo = git2::Repository::init(first_dir.path()).unwrap();
+    let second_repo = git2::Repository::init(second_dir.path()).unwrap();
+    let identity = git2::Signature::now("Shared Author", "shared@example.test").unwrap();
+    let second_identity = git2::Signature::now("Second Author", "second@example.test").unwrap();
+    let first_tree = first_repo
+        .find_tree(first_repo.treebuilder(None).unwrap().write().unwrap())
+        .unwrap();
+    let second_tree = second_repo
+        .find_tree(second_repo.treebuilder(None).unwrap().write().unwrap())
+        .unwrap();
+    let first_id = first_repo
+        .commit(
+            Some("HEAD"),
+            &identity,
+            &identity,
+            "first repository",
+            &first_tree,
+            &[],
+        )
+        .unwrap();
+    let second_id = second_repo
+        .commit(
+            Some("HEAD"),
+            &second_identity,
+            &second_identity,
+            "second repository",
+            &second_tree,
+            &[],
+        )
+        .unwrap();
+    let webview = test_webview();
+    let first_path = first_dir.path().to_str().unwrap();
+    let second_path = second_dir.path().to_str().unwrap();
+    let identity_payload = json!({"name": "Shared Author", "email": "shared@example.test"});
+
+    let denied = invoke(
+        &webview,
+        "get_author_catalog_chunk",
+        json!({"path": first_path, "request": {"cursor": null, "cancelled": false}}),
+    )
+    .unwrap_err();
+    assert_eq!(denied["kind"], "InvalidRepository");
+    let denied_ids = invoke(
+        &webview,
+        "get_author_commit_ids",
+        json!({
+            "path": first_path,
+            "request": {"author": identity_payload.clone(), "cursor": null}
+        }),
+    )
+    .unwrap_err();
+    assert_eq!(denied_ids["kind"], "InvalidRepository");
+
+    invoke(&webview, "open_repository", json!({"path": first_path})).unwrap();
+    invoke(&webview, "open_repository", json!({"path": second_path})).unwrap();
+
+    let first_catalog = invoke(
+        &webview,
+        "get_author_catalog_chunk",
+        json!({"path": first_path, "request": {"cursor": null, "cancelled": false}}),
+    )
+    .unwrap();
+    let second_catalog = invoke(
+        &webview,
+        "get_author_catalog_chunk",
+        json!({"path": second_path, "request": {"cursor": null, "cancelled": false}}),
+    )
+    .unwrap();
+    assert_eq!(first_catalog["authors"][0]["commits"], 1);
+    assert_eq!(second_catalog["authors"][0]["commits"], 1);
+    assert_eq!(
+        first_catalog["authors"][0]["author"]["name"],
+        "Shared Author"
+    );
+    assert_eq!(
+        second_catalog["authors"][0]["author"]["name"],
+        "Second Author"
+    );
+
+    let first_page = invoke(
+        &webview,
+        "get_author_commit_ids",
+        json!({"path": first_path, "request": {"author": identity_payload.clone(), "cursor": null}}),
+    )
+    .unwrap();
+    let second_page = invoke(
+        &webview,
+        "get_author_commit_ids",
+        json!({"path": second_path, "request": {"author": identity_payload, "cursor": null}}),
+    )
+    .unwrap();
+    assert_eq!(first_page["commit_ids"][0], first_id.to_string());
+    assert!(second_page["commit_ids"].as_array().unwrap().is_empty());
+    assert_ne!(first_id, second_id);
+}
+
+#[test]
 fn file_history_is_authorized_before_it_reads_anything() {
     let dir = tempfile::tempdir().unwrap();
     let repo = git2::Repository::init(dir.path()).unwrap();

@@ -13,6 +13,8 @@
 
 pub mod actions;
 
+pub mod authors;
+
 pub mod diff;
 
 pub mod github;
