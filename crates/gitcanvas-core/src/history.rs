@@ -75,7 +75,7 @@ pub struct HistoryPage {
 /// wanted. Caching the ordered IDs turns every later page into a slice; a
 /// history longer than this still works, but each of its pages repeats the
 /// traversal. The budget covers the largest repositories in common use.
-const MAX_CACHED_COMMITS: usize = 2_000_000;
+pub(crate) const MAX_CACHED_COMMITS: usize = 2_000_000;
 const MAX_CACHED_SNAPSHOTS: usize = 8;
 /// Walk roots a continuation may carry. Roots are branches, tags and HEAD, so
 /// this is far above any real repository while still bounding a hostile request.
@@ -99,6 +99,7 @@ struct Snapshot {
 /// cache. At most 2,000,000 IDs and eight snapshots are retained across repositories.
 pub struct HistoryReader {
     snapshots: Mutex<VecDeque<Snapshot>>,
+    pub(crate) catalog_cache: crate::authors::CatalogCache,
     max_commits: usize,
 }
 
@@ -116,8 +117,13 @@ impl HistoryReader {
     pub fn with_budget(max_commits: usize) -> Self {
         Self {
             snapshots: Mutex::default(),
+            catalog_cache: crate::authors::CatalogCache::default(),
             max_commits,
         }
+    }
+
+    pub(crate) fn budget(&self) -> usize {
+        self.max_commits
     }
 
     /// Reads a bounded page, reusing only immutable commit IDs from prior walks.
@@ -279,16 +285,34 @@ pub(crate) fn with_walk<T>(
     reader: Option<&HistoryReader>,
     consume: impl FnOnce(&mut dyn Iterator<Item = Result<Oid, git2::Error>>) -> Result<T, AppError>,
 ) -> Result<T, AppError> {
+    with_walk_count(active, repo, roots, reader, |walk, _| consume(walk))
+}
+
+/// Provides the exact count for a bounded history snapshot. An unbounded walk
+/// streams with no count and is not cached.
+pub(crate) fn with_walk_count<T>(
+    active: &ActiveRepo,
+    repo: &Repository,
+    roots: &[Oid],
+    reader: Option<&HistoryReader>,
+    consume: impl FnOnce(
+        &mut dyn Iterator<Item = Result<Oid, git2::Error>>,
+        Option<usize>,
+    ) -> Result<T, AppError>,
+) -> Result<T, AppError> {
     let cached = reader
         .map(|reader| reader.find(active, roots))
         .transpose()?
         .flatten();
     if let Some(ids) = cached {
-        return consume(&mut ids.iter().copied().map(Ok::<Oid, git2::Error>));
+        return consume(
+            &mut ids.iter().copied().map(Ok::<Oid, git2::Error>),
+            Some(ids.len()),
+        );
     }
     let mut walk = topological_walk(repo, roots)?;
     let Some(reader) = reader else {
-        return consume(&mut walk);
+        return consume(&mut walk, None);
     };
     let prefix = walk
         .by_ref()
@@ -297,9 +321,12 @@ pub(crate) fn with_walk<T>(
     if prefix.len() <= reader.max_commits {
         let ids: WalkIds = prefix.into();
         reader.insert(active, roots, Arc::clone(&ids))?;
-        return consume(&mut ids.iter().copied().map(Ok::<Oid, git2::Error>));
+        return consume(
+            &mut ids.iter().copied().map(Ok::<Oid, git2::Error>),
+            Some(ids.len()),
+        );
     }
-    consume(&mut prefix.into_iter().map(Ok).chain(walk))
+    consume(&mut prefix.into_iter().map(Ok).chain(walk), None)
 }
 
 fn page_from_walk(
@@ -358,7 +385,7 @@ fn parse_cursor(cursor: &str) -> Result<(String, Oid), AppError> {
     Ok((scope.to_ascii_lowercase(), parse_commit_id(id)?))
 }
 
-fn scope_id(references: &[String], roots: &[Oid]) -> Result<String, AppError> {
+pub(crate) fn scope_id(references: &[String], roots: &[Oid]) -> Result<String, AppError> {
     let roots: Vec<String> = roots.iter().map(ToString::to_string).collect();
     let encoded = serde_json::to_vec(&(references, roots))
         .map_err(|error| AppError::Internal(format!("could not encode history scope: {error}")))?;
@@ -404,7 +431,7 @@ fn normalize_references(mut references: Vec<String>) -> Result<Vec<String>, AppE
     Ok(references)
 }
 
-fn resolve_history_scope(
+pub(crate) fn resolve_history_scope(
     repo: &Repository,
     selected: Option<&[String]>,
 ) -> Result<(Vec<Oid>, Vec<String>), AppError> {

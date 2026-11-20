@@ -14,6 +14,13 @@ use std::fs;
 
 use git2::{Oid, Signature, Time};
 use gitcanvas_core::authors::{load_mailmap, MailmapWarning, MAX_MAILMAP_BYTES};
+use gitcanvas_core::{
+    authors::{
+        get_author_catalog_chunk, AuthorCatalogRequest, IncompleteReason, AUTHOR_CATALOG_CHUNK_SIZE,
+    },
+    history::{HistoryReader, MAX_PAGE_SIZE},
+    repository::ActiveRepo,
+};
 use support::Fixture;
 
 fn commit_as(fixture: &Fixture, name: &str, email: &str, files: &[(&str, &[u8])]) -> Oid {
@@ -212,4 +219,218 @@ fn content_hash_changes_with_the_effective_content() {
     assert_ne!(one, none);
     fs::write(&path, "A <a@a.test> <c@a.test>\n").unwrap();
     assert_ne!(load_mailmap(&fixture.repo).content_hash(), one);
+}
+
+fn add_catalog_commits(fixture: &Fixture, count: usize) {
+    let tree_id = fixture.repo.treebuilder(None).unwrap().write().unwrap();
+    let tree = fixture.repo.find_tree(tree_id).unwrap();
+    let mut parent = fixture.repo.head().ok().and_then(|head| head.target());
+    for index in 0..count {
+        let signature = Signature::new(
+            &format!("Author {index}"),
+            &format!("author-{index}@example.test"),
+            &Time::new(i64::try_from(index).unwrap(), 0),
+        )
+        .unwrap();
+        let parents = parent
+            .map(|id| vec![fixture.repo.find_commit(id).unwrap()])
+            .unwrap_or_default();
+        let parent_refs: Vec<_> = parents.iter().collect();
+        parent = Some(
+            fixture
+                .repo
+                .commit(
+                    Some("HEAD"),
+                    &signature,
+                    &signature,
+                    "catalog",
+                    &tree,
+                    &parent_refs,
+                )
+                .unwrap(),
+        );
+    }
+}
+
+fn load_unfiltered_history(active: &ActiveRepo, reader: &HistoryReader) -> Vec<String> {
+    let history = reader
+        .get_commits(
+            active,
+            &gitcanvas_core::history::HistoryRequest {
+                limit: MAX_PAGE_SIZE,
+                cursor: None,
+                roots: None,
+                references: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(history.commits.len(), usize::from(MAX_PAGE_SIZE));
+    let next_page = reader
+        .get_commits(
+            active,
+            &gitcanvas_core::history::HistoryRequest {
+                limit: MAX_PAGE_SIZE,
+                cursor: history.next_cursor.clone(),
+                roots: Some(history.roots.clone()),
+                references: Some(history.references.clone()),
+            },
+        )
+        .unwrap();
+    assert_eq!(next_page.roots, history.roots);
+    assert_eq!(next_page.commits.len(), usize::from(MAX_PAGE_SIZE));
+
+    history.roots
+}
+
+#[test]
+fn author_catalog_returns_delta_chunks_and_detects_stale_mailmap_cursor() {
+    let fixture = Fixture::new();
+    add_catalog_commits(&fixture, AUTHOR_CATALOG_CHUNK_SIZE + 1);
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let reader = HistoryReader::default();
+    let tree = fixture
+        .repo
+        .find_tree(fixture.repo.treebuilder(None).unwrap().write().unwrap())
+        .unwrap();
+    let side = Signature::new("Only on side", "side@example.test", &Time::new(10_000, 0)).unwrap();
+    fixture
+        .repo
+        .commit(
+            Some("refs/heads/catalog-side"),
+            &side,
+            &side,
+            "side",
+            &tree,
+            &[],
+        )
+        .unwrap();
+    let before_filters = get_author_catalog_chunk(
+        &active,
+        &AuthorCatalogRequest::default(),
+        &HistoryReader::default(),
+    )
+    .unwrap();
+    let unfiltered_roots = load_unfiltered_history(&active, &reader);
+    // Loading graph history first does not affect the complete catalog scope.
+    let filtered = reader
+        .get_commits(
+            &active,
+            &gitcanvas_core::history::HistoryRequest {
+                limit: MAX_PAGE_SIZE,
+                cursor: None,
+                roots: None,
+                references: Some(vec!["HEAD".into()]),
+            },
+        )
+        .unwrap();
+
+    assert_ne!(filtered.roots, unfiltered_roots);
+    let first =
+        get_author_catalog_chunk(&active, &AuthorCatalogRequest::default(), &reader).unwrap();
+    assert_eq!(first.authors, before_filters.authors);
+    assert!(first
+        .authors
+        .iter()
+        .any(|entry| entry.author.email == "side@example.test"));
+    assert!(!filtered.roots.contains(
+        &fixture
+            .repo
+            .find_reference("refs/heads/catalog-side")
+            .unwrap()
+            .target()
+            .unwrap()
+            .to_string()
+    ));
+    assert_eq!(first.authors.len(), AUTHOR_CATALOG_CHUNK_SIZE);
+    assert_eq!(first.scanned, AUTHOR_CATALOG_CHUNK_SIZE as u64);
+    assert!(!first.complete);
+    let cursor = first.cursor.unwrap();
+
+    std::fs::write(
+        fixture.dir.path().join(".mailmap"),
+        "Canonical <x@example.test>\n",
+    )
+    .unwrap();
+    let stale = get_author_catalog_chunk(
+        &active,
+        &AuthorCatalogRequest {
+            cursor: Some(cursor.clone()),
+            cancelled: false,
+        },
+        &reader,
+    );
+    assert!(matches!(
+        stale,
+        Err(gitcanvas_core::error::AppError::StaleCursor(_))
+    ));
+    std::fs::remove_file(fixture.dir.path().join(".mailmap")).unwrap();
+    add_catalog_commits(&fixture, 1);
+    let stale_roots = get_author_catalog_chunk(
+        &active,
+        &AuthorCatalogRequest {
+            cursor: Some(cursor),
+            cancelled: false,
+        },
+        &reader,
+    );
+    assert!(matches!(
+        stale_roots,
+        Err(gitcanvas_core::error::AppError::StaleCursor(_))
+    ));
+}
+
+#[test]
+fn author_catalog_finishes_last_delta_and_cancellation_is_between_chunks() {
+    let fixture = Fixture::new();
+    add_catalog_commits(&fixture, AUTHOR_CATALOG_CHUNK_SIZE + 1);
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let reader = HistoryReader::default();
+    let first =
+        get_author_catalog_chunk(&active, &AuthorCatalogRequest::default(), &reader).unwrap();
+    let cursor = first.cursor.unwrap();
+    let cancelled = get_author_catalog_chunk(
+        &active,
+        &AuthorCatalogRequest {
+            cursor: Some(cursor.clone()),
+            cancelled: true,
+        },
+        &reader,
+    )
+    .unwrap();
+    assert!(!cancelled.complete);
+    assert_eq!(
+        cancelled.incomplete_reason,
+        Some(IncompleteReason::Cancelled)
+    );
+    assert_eq!(cancelled.scanned, AUTHOR_CATALOG_CHUNK_SIZE as u64);
+
+    let final_chunk = get_author_catalog_chunk(
+        &active,
+        &AuthorCatalogRequest {
+            cursor: Some(cursor),
+            cancelled: false,
+        },
+        &reader,
+    )
+    .unwrap();
+    assert!(final_chunk.complete);
+    assert_eq!(final_chunk.scanned, (AUTHOR_CATALOG_CHUNK_SIZE + 1) as u64);
+    assert_eq!(final_chunk.authors.len(), 1);
+}
+
+#[test]
+fn author_catalog_stops_without_chunks_when_history_exceeds_reader_budget() {
+    let fixture = Fixture::new();
+    add_catalog_commits(&fixture, AUTHOR_CATALOG_CHUNK_SIZE + 2);
+    let active = ActiveRepo::validate(fixture.dir.path()).unwrap();
+    let reader = HistoryReader::with_budget(AUTHOR_CATALOG_CHUNK_SIZE + 1);
+    let chunk =
+        get_author_catalog_chunk(&active, &AuthorCatalogRequest::default(), &reader).unwrap();
+    assert!(!chunk.complete);
+    assert_eq!(
+        chunk.incomplete_reason,
+        Some(IncompleteReason::HistoryTooLarge)
+    );
+    assert!(chunk.authors.is_empty());
+    assert!(chunk.cursor.is_none());
 }
