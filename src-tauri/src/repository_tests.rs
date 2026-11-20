@@ -122,7 +122,6 @@ fn author_commands_are_authorized_and_isolated_by_repository() {
     let first_repo = git2::Repository::init(first_dir.path()).unwrap();
     let second_repo = git2::Repository::init(second_dir.path()).unwrap();
     let identity = git2::Signature::now("Shared Author", "shared@example.test").unwrap();
-    let second_identity = git2::Signature::now("Second Author", "second@example.test").unwrap();
     let first_tree = first_repo
         .find_tree(first_repo.treebuilder(None).unwrap().write().unwrap())
         .unwrap();
@@ -139,14 +138,25 @@ fn author_commands_are_authorized_and_isolated_by_repository() {
             &[],
         )
         .unwrap();
+    let second_root_id = second_repo
+        .commit(
+            Some("HEAD"),
+            &identity,
+            &identity,
+            "second repository root",
+            &second_tree,
+            &[],
+        )
+        .unwrap();
+    let second_root = second_repo.find_commit(second_root_id).unwrap();
     let second_id = second_repo
         .commit(
             Some("HEAD"),
-            &second_identity,
-            &second_identity,
-            "second repository",
+            &identity,
+            &identity,
+            "second repository tip",
             &second_tree,
-            &[],
+            &[&second_root],
         )
         .unwrap();
     let webview = test_webview();
@@ -154,23 +164,7 @@ fn author_commands_are_authorized_and_isolated_by_repository() {
     let second_path = second_dir.path().to_str().unwrap();
     let identity_payload = json!({"name": "Shared Author", "email": "shared@example.test"});
 
-    let denied = invoke(
-        &webview,
-        "get_author_catalog_chunk",
-        json!({"path": first_path, "request": {"cursor": null, "cancelled": false}}),
-    )
-    .unwrap_err();
-    assert_eq!(denied["kind"], "InvalidRepository");
-    let denied_ids = invoke(
-        &webview,
-        "get_author_commit_ids",
-        json!({
-            "path": first_path,
-            "request": {"author": identity_payload.clone(), "cursor": null}
-        }),
-    )
-    .unwrap_err();
-    assert_eq!(denied_ids["kind"], "InvalidRepository");
+    assert_author_commands_reject_unopened_repository(&webview, first_path);
 
     invoke(&webview, "open_repository", json!({"path": first_path})).unwrap();
     invoke(&webview, "open_repository", json!({"path": second_path})).unwrap();
@@ -188,14 +182,14 @@ fn author_commands_are_authorized_and_isolated_by_repository() {
     )
     .unwrap();
     assert_eq!(first_catalog["authors"][0]["commits"], 1);
-    assert_eq!(second_catalog["authors"][0]["commits"], 1);
+    assert_eq!(second_catalog["authors"][0]["commits"], 2);
     assert_eq!(
         first_catalog["authors"][0]["author"]["name"],
         "Shared Author"
     );
     assert_eq!(
         second_catalog["authors"][0]["author"]["name"],
-        "Second Author"
+        "Shared Author"
     );
 
     let first_page = invoke(
@@ -211,8 +205,183 @@ fn author_commands_are_authorized_and_isolated_by_repository() {
     )
     .unwrap();
     assert_eq!(first_page["commit_ids"][0], first_id.to_string());
-    assert!(second_page["commit_ids"].as_array().unwrap().is_empty());
+    assert_eq!(second_page["commit_ids"].as_array().unwrap().len(), 2);
     assert_ne!(first_id, second_id);
+
+    assert_author_cache_reads_are_isolated_after_return(
+        &webview,
+        first_path,
+        second_path,
+        first_id,
+        second_id,
+    );
+}
+
+fn assert_author_commands_reject_unopened_repository(
+    webview: &tauri::WebviewWindow<MockRuntime>,
+    path: &str,
+) {
+    let catalog_error = invoke(
+        webview,
+        "get_author_catalog_chunk",
+        json!({"path": path, "request": {"cursor": null, "cancelled": false}}),
+    )
+    .unwrap_err();
+    let commits_error = invoke(
+        webview,
+        "get_author_commit_ids",
+        json!({
+            "path": path,
+            "request": {"author": {"name": "Shared Author", "email": "shared@example.test"}, "cursor": null}
+        }),
+    )
+    .unwrap_err();
+    assert_eq!(catalog_error["kind"], "InvalidRepository");
+    assert_eq!(commits_error["kind"], "InvalidRepository");
+}
+
+fn assert_author_cache_reads_are_isolated_after_return(
+    webview: &tauri::WebviewWindow<MockRuntime>,
+    first_path: &str,
+    second_path: &str,
+    first_commit_id: git2::Oid,
+    second_commit_id: git2::Oid,
+) {
+    // Re-read B after its caches are populated, then return to A with the same author query.
+    let second_catalog = invoke(
+        webview,
+        "get_author_catalog_chunk",
+        json!({"path": second_path, "request": {"cursor": null, "cancelled": false}}),
+    )
+    .unwrap();
+    let second_page = invoke(
+        webview,
+        "get_author_commit_ids",
+        json!({
+            "path": second_path,
+            "request": {"author": {"name": "Shared Author", "email": "shared@example.test"}, "cursor": null}
+        }),
+    )
+    .unwrap();
+    assert_eq!(second_catalog["authors"][0]["commits"], 2);
+    assert_eq!(second_page["commit_ids"].as_array().unwrap().len(), 2);
+    assert!(second_page["commit_ids"]
+        .as_array()
+        .unwrap()
+        .contains(&json!(second_commit_id.to_string())));
+
+    let first_catalog = invoke(
+        webview,
+        "get_author_catalog_chunk",
+        json!({"path": first_path, "request": {"cursor": null, "cancelled": false}}),
+    )
+    .unwrap();
+    let first_page = invoke(
+        webview,
+        "get_author_commit_ids",
+        json!({
+            "path": first_path,
+            "request": {"author": {"name": "Shared Author", "email": "shared@example.test"}, "cursor": null}
+        }),
+    )
+    .unwrap();
+    assert_eq!(first_catalog["authors"][0]["commits"], 1);
+    assert_ne!(
+        first_catalog["authors"][0]["commits"],
+        second_catalog["authors"][0]["commits"]
+    );
+    assert_eq!(first_page["commit_ids"].as_array().unwrap().len(), 1);
+    assert_eq!(first_page["commit_ids"][0], first_commit_id.to_string());
+    assert_ne!(first_commit_id, second_commit_id);
+}
+
+#[test]
+fn author_commit_cursor_is_stale_across_repositories_with_different_roots() {
+    let first_dir = tempfile::tempdir().unwrap();
+    let second_dir = tempfile::tempdir().unwrap();
+    let first_repo = git2::Repository::init(first_dir.path()).unwrap();
+    let second_repo = git2::Repository::init(second_dir.path()).unwrap();
+    let identity = git2::Signature::now("Paged Author", "paged@example.test").unwrap();
+    let tree_id = first_repo.treebuilder(None).unwrap().write().unwrap();
+    let tree = first_repo.find_tree(tree_id).unwrap();
+    let mut parent = None;
+    for number in 0..501 {
+        let parents = parent
+            .as_ref()
+            .map(|id| vec![first_repo.find_commit(*id).unwrap()])
+            .unwrap_or_default();
+        let parent_refs = parents.iter().collect::<Vec<_>>();
+        parent = Some(
+            first_repo
+                .commit(
+                    Some("HEAD"),
+                    &identity,
+                    &identity,
+                    &format!("commit {number}"),
+                    &tree,
+                    &parent_refs,
+                )
+                .unwrap(),
+        );
+    }
+    let other_tree_id = second_repo.treebuilder(None).unwrap().write().unwrap();
+    let other_tree = second_repo.find_tree(other_tree_id).unwrap();
+    second_repo
+        .commit(
+            Some("HEAD"),
+            &identity,
+            &identity,
+            "different history root",
+            &other_tree,
+            &[],
+        )
+        .unwrap();
+
+    let webview = test_webview();
+    let first_path = first_dir.path().to_str().unwrap();
+    let second_path = second_dir.path().to_str().unwrap();
+    invoke(&webview, "open_repository", json!({"path": first_path})).unwrap();
+    invoke(&webview, "open_repository", json!({"path": second_path})).unwrap();
+    let author = json!({"name": "Paged Author", "email": "paged@example.test"});
+    let second_page_without_cursor = invoke(
+        &webview,
+        "get_author_commit_ids",
+        json!({"path": second_path, "request": {"author": author.clone(), "cursor": null}}),
+    )
+    .unwrap();
+    assert_eq!(
+        second_page_without_cursor["commit_ids"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert!(second_page_without_cursor["next_cursor"].is_null());
+
+    let first_page = invoke(
+        &webview,
+        "get_author_commit_ids",
+        json!({"path": first_path, "request": {"author": author.clone(), "cursor": null}}),
+    )
+    .unwrap();
+    assert_eq!(first_page["commit_ids"].as_array().unwrap().len(), 500);
+    let cursor = first_page["next_cursor"].as_str().unwrap();
+    let continuation = invoke(
+        &webview,
+        "get_author_commit_ids",
+        json!({"path": first_path, "request": {"author": author.clone(), "cursor": cursor}}),
+    )
+    .unwrap();
+    assert_eq!(continuation["commit_ids"].as_array().unwrap().len(), 1);
+    assert!(continuation["next_cursor"].is_null());
+
+    let stale = invoke(
+        &webview,
+        "get_author_commit_ids",
+        json!({"path": second_path, "request": {"author": author, "cursor": cursor}}),
+    )
+    .unwrap_err();
+    assert_eq!(stale["kind"], "StaleCursor");
 }
 
 #[test]
