@@ -119,6 +119,89 @@ describe("AuthorPanel", () => {
     });
   });
 
+  it("uses Alt+Left to reveal the previous commit for the selected author", async () => {
+    mocks.selectedAuthor = AUTHOR;
+    mocks.adjacentAuthorCommit.mockResolvedValue("previous");
+    render(<AuthorPanel />);
+    const previous = screen.getByRole("button", { name: "Anterior" });
+    previous.focus();
+    fireEvent.keyDown(previous, { key: "ArrowLeft", altKey: true });
+
+    await waitFor(() => {
+      expect(mocks.adjacentAuthorCommit).toHaveBeenCalledWith(
+        expect.objectContaining({ commitIds: ["current"] }),
+        "current",
+        "previous",
+      );
+      expect(mocks.revealCommit).toHaveBeenCalledWith("previous");
+    });
+  });
+
+  it("does not intercept Alt+Left or Alt+Right while the author search has focus", () => {
+    mocks.selectedAuthor = AUTHOR;
+    render(<AuthorPanel />);
+    const search = screen.getByRole("searchbox", { name: "Buscar autores" });
+    search.focus();
+
+    for (const key of ["ArrowLeft", "ArrowRight"] as const) {
+      const event = new KeyboardEvent("keydown", {
+        key,
+        altKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      search.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+    }
+    expect(mocks.adjacentAuthorCommit).not.toHaveBeenCalled();
+    expect(mocks.revealCommit).not.toHaveBeenCalled();
+  });
+
+  it("exposes labelled controls and a complete keyboard tab sequence", async () => {
+    const user = userEvent.setup();
+    mocks.catalogComplete = false;
+    mocks.catalogHasNextPage = true;
+    mocks.selectedAuthor = AUTHOR;
+    render(<AuthorPanel />);
+
+    const search = screen.getByRole("searchbox", { name: "Buscar autores" });
+    const ada = screen.getByRole("button", {
+      name: /Ada Lovelace.*ada@example.test/,
+    });
+    const grace = screen.getByRole("button", {
+      name: /Grace Hopper.*grace@example.test/,
+    });
+    const pause = screen.getByRole("button", { name: "Pausar análisis" });
+    const previous = screen.getByRole("button", { name: "Anterior" });
+    const next = screen.getByRole("button", { name: "Siguiente" });
+    const progress = screen.getByText(
+      "Leyendo catálogo de autores: 20 commits leídos",
+    );
+
+    expect(progress.getAttribute("aria-live")).toBe("polite");
+    expect(progress.getAttribute("role")).toBe("status");
+    expect(ada.getAttribute("aria-pressed")).toBe("true");
+    expect(grace.getAttribute("aria-pressed")).toBe("false");
+    expect(previous.getAttribute("aria-keyshortcuts")).toBe("Alt+ArrowLeft");
+    expect(next.getAttribute("aria-keyshortcuts")).toBe("Alt+ArrowRight");
+
+    await user.tab();
+    expect(document.activeElement).toBe(search);
+    await user.tab();
+    expect(document.activeElement).toBe(pause);
+    await user.keyboard("{Enter}");
+    const resume = screen.getByRole("button", { name: "Seguir analizando" });
+    expect(document.activeElement).toBe(resume);
+    await user.tab();
+    expect(document.activeElement).toBe(ada);
+    await user.tab();
+    expect(document.activeElement).toBe(grace);
+    await user.tab();
+    expect(document.activeElement).toBe(previous);
+    await user.tab();
+    expect(document.activeElement).toBe(next);
+  });
+
   it("pauses and resumes catalog scanning between chunks", async () => {
     const user = userEvent.setup();
     mocks.catalogComplete = false;
