@@ -22,6 +22,11 @@ const APP_ERROR_KINDS: Record<AppError["kind"], true> = {
   WorktreeFileUnavailable: true,
   ResourceLimitExceeded: true,
   RepositoryBusy: true,
+  AccessRequired: true,
+  RateLimited: true,
+  Offline: true,
+  NotFound: true,
+  UnsupportedSource: true,
   WatchDegraded: true,
   StaleCursor: true,
   ResourceExhausted: true,
@@ -31,7 +36,7 @@ const APP_ERROR_KINDS: Record<AppError["kind"], true> = {
 /** A failure as the backend reports it: a category and an English diagnostic. */
 export interface StructuredError {
   readonly kind: AppError["kind"];
-  readonly message: string;
+  readonly message?: unknown;
 }
 
 /** An error ready to show: a translated summary and the original diagnostic. */
@@ -43,6 +48,13 @@ export interface ErrorDescription {
    * `null` when there is nothing beyond the summary.
    */
   readonly detail: string | null;
+}
+
+/** A string diagnostic when the backend error variant carries one. */
+export function errorMessage(error: AppError): string {
+  if (!("message" in error)) return "";
+  const message: unknown = error.message;
+  return typeof message === "string" ? message : "";
 }
 
 /** Whether a value is one of the backend's known, user-facing error kinds. */
@@ -65,9 +77,7 @@ function isStructuredError(error: unknown): error is StructuredError {
     typeof error === "object" &&
     error !== null &&
     "kind" in error &&
-    "message" in error &&
-    isAppErrorKind(error.kind) &&
-    typeof error.message === "string"
+    isAppErrorKind(error.kind)
   );
 }
 
@@ -85,7 +95,10 @@ export function describeError(error: unknown): ErrorDescription {
   if (isStructuredError(error)) {
     return {
       summary: i18n.t(`errors:kind.${error.kind}`),
-      detail: error.message === "" ? null : error.message,
+      detail:
+        typeof error.message === "string" && error.message !== ""
+          ? error.message
+          : null,
     };
   }
   // A `kind` this build does not know is a backend newer than the interface;

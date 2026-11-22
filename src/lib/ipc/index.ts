@@ -1,5 +1,6 @@
 /** Typed application boundary over the generated Rust contract. */
 import { commands, events } from "../../bindings";
+import { errorMessage } from "../errors";
 import type {
   AppError,
   SaveWorkspaceRequest,
@@ -62,7 +63,7 @@ export class IpcError extends Error {
   readonly kind: AppError["kind"];
 
   constructor(error: AppError) {
-    super(error.message);
+    super(errorMessage(error));
     this.name = "IpcError";
     this.kind = error.kind;
   }

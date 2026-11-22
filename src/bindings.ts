@@ -186,6 +186,19 @@ export type AppError =
 { kind: "ResourceLimitExceeded"; message: string } |
 /**  Another Git write currently holds the lock for this repository. */
 { kind: "RepositoryBusy"; message: string } |
+/**  A private release requires a GitHub token. */
+{ kind: "AccessRequired" } |
+/**  GitHub's API rate limit has been reached. */
+{ kind: "RateLimited"; message: {
+	/**  Unix timestamp in decimal seconds when GitHub's rate limit resets. */
+	reset: string | null,
+} } |
+/**  The remote service cannot currently be reached because the device is offline. */
+{ kind: "Offline" } |
+/**  The requested release or asset does not exist. */
+{ kind: "NotFound" } |
+/**  No supported GitHub HTTPS remote is configured for releases. */
+{ kind: "UnsupportedSource" } |
 /**  The filesystem watcher is not available for this repository. */
 { kind: "WatchDegraded"; message: string } |
 /**  The history represented by a pagination cursor is no longer available. */

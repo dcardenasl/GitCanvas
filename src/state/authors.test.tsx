@@ -10,6 +10,7 @@ import type {
   AuthorCommitIdsPage,
   AuthorKey,
 } from "../bindings";
+import { errorMessage } from "../lib/errors";
 import { createQueryClientWrapper } from "../test/test-utils";
 import {
   adjacentAuthorCommit,
@@ -53,7 +54,7 @@ vi.mock("../lib/ipc", () => ({
     readonly kind: AppError["kind"];
 
     constructor(error: AppError) {
-      super(error.message);
+      super(errorMessage(error));
       this.kind = error.kind;
     }
   },

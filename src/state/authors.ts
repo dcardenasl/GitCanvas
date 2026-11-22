@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { commands } from "../bindings";
 import type { AppError, AuthorCount, AuthorKey } from "../bindings";
 import { queryKeys } from "./queryKeys";
+import { errorMessage } from "../lib/errors";
 
 interface AuthorSelectionState {
   readonly selected: Readonly<Record<string, AuthorKey | null>>;
@@ -22,7 +23,7 @@ class AuthorQueryError extends Error {
   readonly kind: AppError["kind"];
 
   constructor(error: AppError) {
-    super(error.message);
+    super(errorMessage(error));
     this.name = "AuthorQueryError";
     this.kind = error.kind;
   }

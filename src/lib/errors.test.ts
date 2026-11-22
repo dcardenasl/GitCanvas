@@ -53,6 +53,19 @@ describe("describeError", () => {
     expect(describeError(error).detail).toBeNull();
   });
 
+  it("summarizes typed release errors without string payloads", () => {
+    expect(describeError({ kind: "Offline" })).toEqual({
+      summary: "El dispositivo está sin conexión",
+      detail: null,
+    });
+    expect(
+      describeError({ kind: "RateLimited", message: { reset: 123 } }),
+    ).toEqual({
+      summary: "GitHub está limitando las solicitudes temporalmente",
+      detail: null,
+    });
+  });
+
   it("shows an error the code raised for itself as it is", () => {
     expect(describeError(new Error("boom"))).toEqual({
       summary: "boom",

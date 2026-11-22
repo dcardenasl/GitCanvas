@@ -32,6 +32,7 @@ pub mod history;
 pub mod image;
 mod pagination;
 pub mod refs;
+pub mod releases;
 pub mod repository;
 pub mod retry;
 pub mod stash;
