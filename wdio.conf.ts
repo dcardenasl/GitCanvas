@@ -185,7 +185,8 @@ function createFixtureRepository(
     | "graph-performance"
     | "file-history"
     | "images"
-    | "stash",
+    | "stash"
+    | "authors-releases",
 ): OwnedFixture {
   const repository = fs.mkdtempSync(path.join(os.tmpdir(), "gitcanvas-e2e-"));
   const token = randomUUID();
@@ -323,6 +324,58 @@ function createFixtureRepository(
       return { repository: fs.realpathSync(repository), token };
     }
 
+    if (kind === "authors-releases") {
+      const commitAs = (
+        name: string,
+        email: string,
+        message: string,
+        file: string,
+        content: string,
+      ) => {
+        fs.writeFileSync(path.join(repository, file), content);
+        git("add", file);
+        execFileSync(
+          "git",
+          [
+            "-C",
+            repository,
+            "-c",
+            `user.name=${name}`,
+            "-c",
+            `user.email=${email}`,
+            "commit",
+            "-m",
+            message,
+          ],
+          { stdio: "pipe" },
+        );
+      };
+
+      commitAs(
+        "Ada Lovelace",
+        "ada@example.test",
+        "Ada first",
+        "ada.txt",
+        "one\n",
+      );
+      commitAs(
+        "Grace Hopper",
+        "grace@example.test",
+        "Grace commit",
+        "grace.txt",
+        "two\n",
+      );
+      commitAs(
+        "Ada Lovelace",
+        "ada@example.test",
+        "Ada latest",
+        "ada.txt",
+        "three\n",
+      );
+      git("tag", "-a", "v1.0-local", "HEAD", "-m", "local release fixture");
+      return { repository: fs.realpathSync(repository), token };
+    }
+
     if (kind === "local-changes" || kind === "workspace") {
       fs.writeFileSync(path.join(repository, "base.txt"), "base\n");
       git("add", "base.txt");
@@ -386,7 +439,8 @@ if (
   fixtureKind !== "graph-performance" &&
   fixtureKind !== "file-history" &&
   fixtureKind !== "images" &&
-  fixtureKind !== "stash"
+  fixtureKind !== "stash" &&
+  fixtureKind !== "authors-releases"
 ) {
   throw new Error(`Unsupported E2E fixture kind: ${fixtureKind}`);
 }

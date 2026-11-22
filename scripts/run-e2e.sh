@@ -42,6 +42,10 @@ for spec in e2e/*.spec.ts; do
         if ! GITCANVAS_E2E_FIXTURE_KIND=workspace npx wdio run ./wdio.conf.ts --spec "${spec}"; then
             status=1
         fi
+    elif [[ "${spec}" == "e2e/authors-releases.spec.ts" ]]; then
+        if ! GITCANVAS_E2E_FIXTURE_KIND=authors-releases npx wdio run ./wdio.conf.ts --spec "${spec}"; then
+            status=1
+        fi
     elif ! npx wdio run ./wdio.conf.ts --spec "${spec}"; then
         status=1
     fi
