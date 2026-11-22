@@ -40,3 +40,4 @@ pub mod watch;
 pub mod workspace;
 pub mod worktree;
 pub mod worktrees;
+pub mod write_lock;

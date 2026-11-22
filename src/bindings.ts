@@ -184,6 +184,8 @@ export type AppError =
 { kind: "WorktreeFileUnavailable"; message: string } |
 /**  The operation would exceed an explicit resource budget. */
 { kind: "ResourceLimitExceeded"; message: string } |
+/**  Another Git write currently holds the lock for this repository. */
+{ kind: "RepositoryBusy"; message: string } |
 /**  The filesystem watcher is not available for this repository. */
 { kind: "WatchDegraded"; message: string } |
 /**  The history represented by a pagination cursor is no longer available. */

@@ -21,6 +21,7 @@ const APP_ERROR_KINDS: Record<AppError["kind"], true> = {
   WorktreeChanged: true,
   WorktreeFileUnavailable: true,
   ResourceLimitExceeded: true,
+  RepositoryBusy: true,
   WatchDegraded: true,
   StaleCursor: true,
   ResourceExhausted: true,

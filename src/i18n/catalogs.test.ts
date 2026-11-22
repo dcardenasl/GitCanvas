@@ -175,6 +175,7 @@ describe("backend error summaries", () => {
     WorktreeChanged: true,
     WorktreeFileUnavailable: true,
     ResourceLimitExceeded: true,
+    RepositoryBusy: true,
     WatchDegraded: true,
     StaleCursor: true,
     ResourceExhausted: true,

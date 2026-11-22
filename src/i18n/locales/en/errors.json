@@ -17,6 +17,7 @@
     "PathOutsideRepository": "The path is outside the repository",
     "ResourceExhausted": "The system ran out of open files",
     "ResourceLimitExceeded": "A resource limit was exceeded",
+    "RepositoryBusy": "Another Git operation is using this repository",
     "StaleCursor": "The history changed while it was being read",
     "WatchDegraded": "Repository watching is degraded",
     "WorktreeChanged": "Local changes were modified while they were being read",

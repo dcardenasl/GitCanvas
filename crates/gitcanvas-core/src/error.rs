@@ -40,6 +40,9 @@ pub enum AppError {
     /// The operation would exceed an explicit resource budget.
     #[error("Resource limit exceeded: {0}")]
     ResourceLimitExceeded(String),
+    /// Another Git write currently holds the lock for this repository.
+    #[error("Repository is busy: {0}")]
+    RepositoryBusy(String),
     /// The filesystem watcher is not available for this repository.
     #[error("Repository watcher is degraded: {0}")]
     WatchDegraded(String),

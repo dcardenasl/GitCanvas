@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Author panel** — search repository authors and navigate their commits with keyboard controls.
 - **Author emphasis** — focus the commit graph and table on one contributor without hiding history.
 
+### Changed
+
+- **Repository writes** — serialize checkout, pull and push across linked worktrees and report when another write holds the repository lock.
+
 ## [0.8.0] — 2026-11-15
 
 ### Added

@@ -7,6 +7,7 @@
 use gitcanvas_core::{
     actions::{self, CheckoutOutcome, PullOutcome, PushOutcome},
     error::AppError,
+    write_lock::with_repository_write_lock,
 };
 
 use super::{
@@ -26,7 +27,7 @@ pub async fn checkout_branch(
     let allowed = allowed.inner().clone();
     write("checkout_branch", move || {
         with_repo(&allowed, &path, |active| {
-            actions::checkout_branch(active, &branch, force)
+            with_repository_write_lock(active, || actions::checkout_branch(active, &branch, force))
         })
     })
     .await
@@ -41,7 +42,9 @@ pub async fn pull_fast_forward(
 ) -> Result<PullOutcome, AppError> {
     let allowed = allowed.inner().clone();
     write("pull_fast_forward", move || {
-        with_repo(&allowed, &path, actions::pull_fast_forward)
+        with_repo(&allowed, &path, |active| {
+            with_repository_write_lock(active, || actions::pull_fast_forward(active))
+        })
     })
     .await
 }
@@ -55,7 +58,9 @@ pub async fn push_current_branch(
 ) -> Result<PushOutcome, AppError> {
     let allowed = allowed.inner().clone();
     write("push_current_branch", move || {
-        with_repo(&allowed, &path, actions::push_current_branch)
+        with_repo(&allowed, &path, |active| {
+            with_repository_write_lock(active, || actions::push_current_branch(active))
+        })
     })
     .await
 }
