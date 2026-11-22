@@ -1,0 +1,15 @@
+{
+  "title": "Tags and releases",
+  "listLabel": "Tags and releases",
+  "loading": "Loading releases…",
+  "empty": "No tags or releases found.",
+  "availableLocally": "Available locally",
+  "availableToFetch": "Available to fetch",
+  "localTag": "Local tag",
+  "localStatusUnavailable": "Local status unavailable",
+  "prerelease": "Prerelease",
+  "localTagsUnavailable": "Local tags are unavailable; releases are still shown.",
+  "cached": "Showing saved release data from {{date}}",
+  "rateLimit": "GitHub rate limit resets at {{date}}.",
+  "truncated": "Only the first 1,000 releases are shown."
+}

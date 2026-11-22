@@ -6,10 +6,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
   BranchInfo,
+  ReleaseListIpc,
   RepositoryWorktreesSnapshot,
   TagInfo,
 } from "../../bindings";
 import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
+
+const releaseQuery = vi.hoisted(() => ({
+  data: null as ReleaseListIpc | null,
+}));
+
+vi.mock("../../state/releases", () => ({
+  useReleases: () => ({
+    data: releaseQuery.data,
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
+}));
 
 const getBranches = vi.fn<() => Promise<BranchInfo[]>>();
 const getTags = vi.fn<() => Promise<TagInfo[]>>();
@@ -53,6 +67,7 @@ function renderSidebar(onCheckout?: (branch: string) => void) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  releaseQuery.data = null;
   mockIpc.getStashes.mockResolvedValue(stashPage());
   mockIpc.getRepositoryRefs.mockImplementation(async () => {
     const branches = await getBranches();
@@ -124,6 +139,49 @@ function deferred<T>() {
 }
 
 describe("Sidebar", () => {
+  it("includes the unified tags and releases section", async () => {
+    renderSidebar();
+
+    expect(
+      await screen.findByRole("button", { name: "Etiquetas y releases" }),
+    ).toBeInstanceOf(HTMLElement);
+  });
+
+  it("keeps release entries out of Git reference and navigation state", async () => {
+    releaseQuery.data = {
+      source: { github: { owner: "example", name: "repo" } },
+      entries: [
+        {
+          kind: "release",
+          release: {
+            id: "7",
+            tag_name: "release-only",
+            name: "GitHub release only",
+            notes: "Notes",
+            html_url:
+              "https://github.com/example/repo/releases/tag/release-only",
+            prerelease: false,
+            published_at: null,
+          },
+          local_tag: null,
+        },
+      ],
+      truncated: false,
+      local_tags_available: true,
+      cached_at: null,
+      rate_limit_reset: null,
+    };
+    const selectionBefore = activeNavigation().selection;
+    const filtersBefore = useWorkspace.getState().referenceFilters;
+
+    renderSidebar();
+
+    expect(await screen.findByText("GitHub release only")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /release-only/ })).toBeNull();
+    expect(activeNavigation().selection).toEqual(selectionBefore);
+    expect(useWorkspace.getState().referenceFilters).toEqual(filtersBefore);
+  });
+
   it("announces and disables the worktree inventory while it refreshes", async () => {
     renderSidebar();
 

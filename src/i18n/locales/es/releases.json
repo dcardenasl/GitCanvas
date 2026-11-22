@@ -1,0 +1,15 @@
+{
+  "title": "Etiquetas y releases",
+  "listLabel": "Etiquetas y releases",
+  "loading": "Cargando releases…",
+  "empty": "No se encontraron etiquetas ni releases.",
+  "availableLocally": "Disponible en el repositorio local",
+  "availableToFetch": "Disponible para traer",
+  "localTag": "Etiqueta local",
+  "localStatusUnavailable": "Estado local no disponible",
+  "prerelease": "Versión preliminar",
+  "localTagsUnavailable": "No se pudieron leer las etiquetas locales; se muestran los releases.",
+  "cached": "Se muestran datos guardados de releases del {{date}}",
+  "rateLimit": "El límite de GitHub se reinicia a las {{date}}.",
+  "truncated": "Se muestran solo los primeros 1.000 releases."
+}

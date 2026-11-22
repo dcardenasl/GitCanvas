@@ -10,6 +10,7 @@ import history from "./history.json";
 import image from "./image.json";
 import menu from "./menu.json";
 import refs from "./refs.json";
+import releases from "./releases.json";
 import shell from "./shell.json";
 
 /** Every namespace of the `es` catalog, keyed by namespace name. */
@@ -26,5 +27,6 @@ export const es = {
   image,
   menu,
   refs,
+  releases,
   shell,
 };
