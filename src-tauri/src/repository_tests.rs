@@ -80,6 +80,97 @@ pub(super) fn invoke(
 }
 
 #[test]
+fn git_action_commands_return_repository_busy_without_side_effects() {
+    use git2::{Repository, Signature};
+    use gitcanvas_core::{repository::ActiveRepo, write_lock::with_repository_write_lock};
+
+    let local_dir = tempfile::tempdir().unwrap();
+    let remote_dir = tempfile::tempdir().unwrap();
+    let local = Repository::init(local_dir.path()).unwrap();
+    let remote = Repository::init_bare(remote_dir.path()).unwrap();
+    remote.set_head("refs/heads/main").unwrap();
+    let signature = Signature::now("Test", "test@example.com").unwrap();
+    let tree_id = local.treebuilder(None).unwrap().write().unwrap();
+    let tree = local.find_tree(tree_id).unwrap();
+    let main_id = local
+        .commit(
+            Some("refs/heads/main"),
+            &signature,
+            &signature,
+            "initial",
+            &tree,
+            &[],
+        )
+        .unwrap();
+    local.set_head("refs/heads/main").unwrap();
+    local
+        .branch("topic", &local.find_commit(main_id).unwrap(), false)
+        .unwrap();
+    local
+        .remote("origin", remote_dir.path().to_str().unwrap())
+        .unwrap();
+    let active = ActiveRepo::validate(local_dir.path()).unwrap();
+    gitcanvas_core::actions::push_current_branch(&active).unwrap();
+    local
+        .find_remote("origin")
+        .unwrap()
+        .fetch(&["main"], None, None)
+        .unwrap();
+    local
+        .find_branch("main", git2::BranchType::Local)
+        .unwrap()
+        .set_upstream(Some("origin/main"))
+        .unwrap();
+
+    let webview = test_webview();
+    let path = local_dir.path().to_str().unwrap();
+    invoke(&webview, "open_repository", json!({"path": path})).unwrap();
+    let busy = with_repository_write_lock(&active, || {
+        let checkout = invoke(
+            &webview,
+            "checkout_branch",
+            json!({"path": path, "branch": "topic", "force": false}),
+        )
+        .unwrap_err();
+        let pull = invoke(&webview, "pull_fast_forward", json!({"path": path})).unwrap_err();
+        let push = invoke(&webview, "push_current_branch", json!({"path": path})).unwrap_err();
+
+        for error in [&checkout, &pull, &push] {
+            assert_eq!(error["kind"], "RepositoryBusy");
+        }
+        assert_eq!(local.head().unwrap().shorthand().unwrap(), "main");
+        assert_eq!(
+            Repository::open_bare(remote_dir.path())
+                .unwrap()
+                .refname_to_id("refs/heads/main")
+                .unwrap(),
+            main_id
+        );
+        Ok(())
+    });
+    busy.unwrap();
+
+    assert_eq!(
+        invoke(&webview, "pull_fast_forward", json!({"path": path})).unwrap()["kind"],
+        "UpToDate"
+    );
+    assert_eq!(
+        invoke(&webview, "push_current_branch", json!({"path": path})).unwrap()["kind"],
+        "Pushed"
+    );
+    assert_eq!(
+        invoke(
+            &webview,
+            "checkout_branch",
+            json!({"path": path, "branch": "topic", "force": false}),
+        )
+        .unwrap()["kind"],
+        "Switched"
+    );
+    assert_eq!(local.head().unwrap().shorthand().unwrap(), "topic");
+}
+
+#[test]
 fn repository_history_and_refs_round_trip_with_real_payloads() {
     let dir = tempfile::tempdir().unwrap();
     let repo = git2::Repository::init(dir.path()).unwrap();

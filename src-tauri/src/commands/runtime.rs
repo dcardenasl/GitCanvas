@@ -291,4 +291,58 @@ mod tests {
             9
         );
     }
+
+    #[test]
+    fn an_abandoned_started_blocking_write_keeps_its_lock_until_it_finishes() {
+        use git2::Repository;
+        use gitcanvas_core::{repository::ActiveRepo, write_lock::with_repository_write_lock};
+
+        let directory = tempfile::tempdir().unwrap();
+        Repository::init(directory.path()).unwrap();
+        let active = ActiveRepo::validate(directory.path()).unwrap();
+        let (started_sender, started_receiver) = mpsc::channel();
+        let (release_sender, release_receiver) = mpsc::channel();
+        let (finished_sender, finished_receiver) = mpsc::channel();
+        let operation = tauri::async_runtime::spawn_blocking(move || {
+            let result = with_repository_write_lock(&active, || {
+                started_sender
+                    .send(())
+                    .map_err(|error| AppError::Internal(error.to_string()))?;
+                release_receiver
+                    .recv()
+                    .map_err(|error| AppError::Internal(error.to_string()))?;
+                Ok(())
+            });
+            let _ = finished_sender.send(result.is_ok());
+            result
+        });
+
+        started_receiver
+            .recv_timeout(Duration::from_secs(5))
+            .expect("the blocking operation should hold the repository lock");
+        // Tokio cannot abort spawn_blocking work after it has started. Dropping
+        // the join handle abandons the result, not the running blocking closure.
+        operation.abort();
+        drop(operation);
+
+        let contender_active = ActiveRepo::validate(directory.path()).unwrap();
+        let (contender_sender, contender_receiver) = mpsc::channel();
+        let contender = std::thread::spawn(move || {
+            let result = with_repository_write_lock(&contender_active, || Ok(()));
+            let _ = contender_sender.send(result);
+        });
+        assert!(contender_receiver
+            .recv_timeout(Duration::from_millis(100))
+            .is_err());
+
+        release_sender.send(()).unwrap();
+        assert!(finished_receiver
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap());
+        contender_receiver
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap()
+            .unwrap();
+        contender.join().unwrap();
+    }
 }
