@@ -2,8 +2,8 @@
 
 ## Status
 
-Proposed — 2026-11-22. David chose a dedicated `get_release_assets` query for
-CR-12. This proposal supplements ADR 0012 and CR-D24 with the ownership and
+Accepted — 2026-11-22. David chose a dedicated `get_release_assets` query for
+CR-12. This decision supplements ADR 0012 and CR-D24 with the ownership and
 bounds of that query; it does not replace their accepted gate assignments.
 
 ## Context
