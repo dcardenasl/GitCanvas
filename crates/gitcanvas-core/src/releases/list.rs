@@ -1,6 +1,6 @@
 //! Bounded GitHub release listing joined with tags from the local repository.
 
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, path::Path};
 
 use git2::{ErrorCode, Repository};
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,7 @@ use crate::{
     error::AppError,
     github::api::GitHubClient,
     refs::TagInfo,
-    releases::{select_source_remote, ReleaseSource},
+    releases::{cache, select_source_remote, ReleaseSource},
     repository::ActiveRepo,
 };
 
@@ -70,6 +70,8 @@ pub struct ReleaseList {
     pub truncated: bool,
     /// False when the local repository exceeded the 10,000-tag read limit.
     pub local_tags_available: bool,
+    /// Capture time when this result came from cache; absent for a live response.
+    pub cached_at: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -92,14 +94,28 @@ struct RawRelease {
 /// # Errors
 ///
 /// Returns a typed API, source-selection, local-reference, or size-limit error.
-pub fn get_releases(active: &ActiveRepo) -> Result<ReleaseList, AppError> {
+pub fn get_releases(active: &ActiveRepo, data_dir: &Path) -> Result<ReleaseList, AppError> {
     let client = GitHubClient::from_optional_stored_token()?;
-    get_releases_with_client(active, &client)
+    get_releases_with_client_and_data_dir(active, &client, data_dir)
 }
 
+#[cfg(test)]
 fn get_releases_with_client(
     active: &ActiveRepo,
     client: &GitHubClient,
+) -> Result<ReleaseList, AppError> {
+    let data_dir = active
+        .path()
+        .parent()
+        .ok_or_else(|| AppError::InvalidRepository("repository has no parent directory".into()))?
+        .join("app-data");
+    get_releases_with_client_and_data_dir(active, client, &data_dir)
+}
+
+fn get_releases_with_client_and_data_dir(
+    active: &ActiveRepo,
+    client: &GitHubClient,
+    data_dir: &Path,
 ) -> Result<ReleaseList, AppError> {
     let repository = active.open()?;
     let (source, _) = select_source_remote(&repository)?;
@@ -107,8 +123,22 @@ fn get_releases_with_client(
         ReleaseSource::Github { owner, name } => (owner, name),
     };
 
-    let (releases, truncated) = collect_releases(client, owner, name)?;
-    let Some(mut local_tags) = read_local_tags(&repository)? else {
+    let (releases, truncated, cached_at) = match collect_releases(client, owner, name) {
+        Ok((releases, truncated)) => {
+            // A cache failure must not hide a fresh response from GitHub.
+            let _cache_write = cache::store(data_dir, &source, &releases, truncated);
+            (releases, truncated, None)
+        }
+        Err(error @ (AppError::Offline | AppError::RateLimited { .. })) => {
+            let Some(cached) = cache::load(data_dir, &source)? else {
+                return Err(error);
+            };
+            (cached.releases, cached.truncated, Some(cached.captured_at))
+        }
+        Err(error) => return Err(error),
+    };
+    let local_tags = read_local_tags(&repository)?;
+    let Some(mut local_tags) = local_tags else {
         return Ok(ReleaseList {
             source,
             entries: releases
@@ -120,6 +150,7 @@ fn get_releases_with_client(
                 .collect(),
             truncated,
             local_tags_available: false,
+            cached_at,
         });
     };
 
@@ -139,6 +170,7 @@ fn get_releases_with_client(
         entries,
         truncated,
         local_tags_available: true,
+        cached_at,
     })
 }
 
@@ -262,7 +294,8 @@ mod tests {
     };
 
     use super::{
-        get_releases_with_client, MAX_NOTES_BYTES, MAX_PAGES, MAX_RESPONSE_BYTES, PAGE_SIZE,
+        get_releases_with_client, get_releases_with_client_and_data_dir, MAX_NOTES_BYTES,
+        MAX_PAGES, MAX_RESPONSE_BYTES, PAGE_SIZE,
     };
 
     type FakeResponse = (u16, Vec<(String, String)>, Vec<u8>);
@@ -305,6 +338,17 @@ mod tests {
             self.requests
                 .recv_timeout(Duration::from_secs(5))
                 .expect("client should make the expected request")
+        }
+
+        fn finish(self) -> String {
+            let Self {
+                base_url,
+                requests,
+                _thread: thread,
+            } = self;
+            drop(requests);
+            thread.join().unwrap();
+            base_url
         }
     }
 
@@ -537,6 +581,75 @@ mod tests {
         assert!(request.starts_with("GET /repos/example/project/releases?"));
         assert!(!request.to_ascii_lowercase().contains("authorization:"));
         assert_eq!(result.entries.len(), 1);
+    }
+
+    #[test]
+    fn offline_and_rate_limited_queries_serve_cache_with_current_local_tags() {
+        let (dir, active, repo) = repository();
+        let data_dir = dir.path().join("app-data");
+        let server = FakeGitHub::start(vec![(
+            200,
+            Vec::new(),
+            release_json(2, "v2.0", "cached notes", false, false),
+        )]);
+        let live =
+            get_releases_with_client_and_data_dir(&active, &server.client(), &data_dir).unwrap();
+        let _request = server.next_request();
+        let offline_url = server.finish();
+        assert!(live.cached_at.is_none());
+
+        repo.tag_lightweight(
+            "v2.0",
+            repo.head().unwrap().peel_to_commit().unwrap().as_object(),
+            false,
+        )
+        .unwrap();
+        let offline_client =
+            GitHubClient::with_base_url("test-token".to_owned(), offline_url).unwrap();
+        let offline =
+            get_releases_with_client_and_data_dir(&active, &offline_client, &data_dir).unwrap();
+        assert!(offline.cached_at.is_some());
+        assert!(offline.entries.iter().any(|entry| matches!(
+            entry,
+            ReleaseListEntry::Release {
+                release,
+                local_tag: Some(tag)
+            } if release.tag_name == "v2.0" && tag.name == "v2.0"
+        )));
+        assert!(offline.entries.iter().any(|entry| matches!(
+            entry,
+            ReleaseListEntry::LocalTag { tag } if tag.name == "v1.0"
+        )));
+
+        let limited = FakeGitHub::start(vec![(
+            429,
+            vec![("X-RateLimit-Reset".to_owned(), "12345".to_owned())],
+            Vec::new(),
+        )]);
+        let cached =
+            get_releases_with_client_and_data_dir(&active, &limited.client(), &data_dir).unwrap();
+        let _request = limited.next_request();
+        assert!(cached.cached_at.is_some());
+        assert!(cached.entries.iter().any(|entry| matches!(
+            entry,
+            ReleaseListEntry::Release { local_tag: Some(tag), .. } if tag.name == "v2.0"
+        )));
+    }
+
+    #[test]
+    fn offline_without_a_cache_preserves_the_offline_error() {
+        let (dir, active, _repo) = repository();
+        let server = FakeGitHub::start(vec![]);
+        let offline_url = server.finish();
+        let client = GitHubClient::with_base_url("test-token".to_owned(), offline_url).unwrap();
+        let error = get_releases_with_client_and_data_dir(
+            &active,
+            &client,
+            &dir.path().join("empty-app-data"),
+        )
+        .unwrap_err();
+
+        assert_eq!(error, AppError::Offline);
     }
 
     #[test]

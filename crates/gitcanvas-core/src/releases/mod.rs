@@ -1,5 +1,6 @@
 //! GitHub release source selection and release operations.
 
+mod cache;
 pub mod list;
 mod source;
 
