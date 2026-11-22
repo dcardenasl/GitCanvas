@@ -17,12 +17,9 @@ const beta = path.basename(e2eSecondRepository);
 
 async function resizeWorkspace() {
   await browser.setWindowSize(940, 600);
-  // Resizing fires before layout settles. Wait through the next event-loop turn
-  // before opening a menu that deliberately closes if its anchor moves; WebKit
-  // may suspend animation frames while a native window is being resized.
-  await browser.executeAsync((done) => {
-    window.setTimeout(() => done(null), 50);
-  });
+  // WebKit may suspend page callbacks during native resizing. A short WDIO
+  // pause lets the layout settle without relying on executeAsync in the page.
+  await browser.pause(50);
 }
 
 /** Shows the start screen, with the favorites and recents, from the Home tab. */
