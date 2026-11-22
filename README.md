@@ -62,6 +62,11 @@ GitCanvas is the opposite trade: focused on reading history well.
   commit and the version before a deletion.
 - **Stash inspection.** Browse, search and read stashes (all, staged, unstaged and untracked
   changes) in read-only form, with markers on their base commits in the graph.
+- **Author navigation.** Search repository authors, emphasize one author without moving
+  graph geometry, and navigate that author's commits across unloaded history pages.
+- **GitHub releases.** Read bounded release notes, compare release tags with local tags,
+  explicitly fetch a tag, and download a release asset with progress and cancellation.
+  Asset destinations are chosen in the native save dialog.
 - **Reference explorer and worktrees.** Search branches and tags in a folder tree, choose
   which references shape the history, and move between linked worktrees in their own tabs.
 - **Live local changes.** Staged, unstaged and new files show up as a working-tree row and
@@ -179,9 +184,13 @@ Documented on purpose rather than discovered later:
 - Stashes are **read-only**: you can inspect them, but not create, apply or discard them
   from GitCanvas yet. Stashes do not appear as nodes in the graph, only as markers on
   their base commits.
+- GitHub releases and explicit tag fetching require an HTTPS GitHub remote. SSH remotes
+  and other providers are not supported in v0.9.
+- The v0.9 native authors/releases E2E and its screenshot review are **not verified**;
+  download rename/overwrite behavior has not been checked on macOS, Linux and Windows.
+  The native build attempt ran out of disk space; no release-data E2E result is claimed.
 - Use with a real screen reader (VoiceOver, NVDA, Orca) and the manual walkthroughs of v0.4
-  are **not verified**; native E2E runs in CI on Linux, macOS and Windows. Accepted on
-  2026-11-16, tracked as `A11Y-LECTOR` in `TASKS.md`.
+  are **not verified**. Accepted on 2026-11-16, tracked as `A11Y-LECTOR` in `TASKS.md`.
 - Image reads share the existing 2 MiB initial and 32 MiB expanded byte limits and a
   40 megapixel metadata limit. SVG is displayed through an isolated image element without
   parsing or running markup; decoding depends on the system WebView. ICO dimensions use

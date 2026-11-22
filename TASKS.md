@@ -5,10 +5,11 @@
 > [`ARCHIVES.md`](ARCHIVES.md). Secuencia de versiones:
 > [roadmap](ROADMAP.md).
 
-**Estado al 2026-11-16:** v0.4–v0.8 publicadas; v0.8.0 está etiquetada y `main` contiene el
-merge del PR #23. Crear commits permanece al final de la secuencia (objetivo v0.13). El
-roadmap vigente prevalece sobre asignaciones de versiones de planes anteriores. El único gate
-externo abierto es `A11Y-LECTOR` (abajo), aceptado como no verificado.
+**Estado al 2026-11-22:** v0.4–v0.8 publicadas; la implementación v0.9 está completa en
+`dev`, sin bump ni publicación. La verificación final es parcial: siguen abiertos los gates
+de lector real, native E2E/capturas, descarga multiplataforma y auditoría integral del caso
+38. Crear commits permanece al final de la secuencia (objetivo v0.13). El roadmap vigente
+prevalece sobre asignaciones de versiones de planes anteriores.
 
 **Estado de trabajo:** rama `dev`. Se preservan sin seguimiento `docs/audits/evidence/`,
 `docs/media/`, `install-backups/` y `tools/demo/record-v05*`; no agregarlos a commits. No
@@ -16,15 +17,16 @@ crear tags ni publicar como parte de la implementación; los bumps son del flujo
 
 ## Siguiente paso
 
-Empezar CR-1 de la cola de v0.9 (plan revisado por el Arquitecto; CR-D15 y CR-D23 confirmadas por David el 2026-11-16), según el [plan](docs/plan/2026-11-16-v0.9-implementacion.md). La
-cola de v0.8 está archivada en `ARCHIVES.md`.
+La cola de implementación v0.9 está completa. Consultar los gates de verificación abiertos
+antes de declarar completa la matriz o preparar la publicación. La versión y sus manifiestos
+siguen en 0.8 hasta el flujo de release autorizado por David.
 
 ## Cola de trabajo
 
 ### v0.9: Contribuyentes y releases (CR-0–CR-16)
 
-Plan: [decisiones CR-D01–D30, contrato, matriz de 56 casos y tareas](docs/plan/2026-11-16-v0.9-implementacion.md), con la revisión del Arquitecto incorporada.
-Arquitectura: [ADR 0011](docs/adr/0011-author-identities-and-catalog.md) y [ADR 0012](docs/adr/0012-releases-tag-fetch-and-downloads.md), propuestos.
+Plan: [decisiones CR-D01–D30, contrato, matriz de 65 casos y tareas](docs/plan/2026-11-16-v0.9-implementacion.md), con la revisión del Arquitecto incorporada.
+Arquitectura: [ADR 0011](docs/adr/0011-author-identities-and-catalog.md) y [ADR 0012](docs/adr/0012-releases-tag-fetch-and-downloads.md), aceptados para la implementación.
 Orden de ejecución: autores (CR-1–CR-6b), cerrojo (CR-7), fuente (CR-9a), tags (CR-8), releases (CR-9b–CR-14b), cierre (CR-15–CR-16).
 
 - [x] **CR-0: Plan, contrato y ADR.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-0-plan-contrato-y-adr). Plan v0.9, ADR 0011 y 0012 propuestos, decisiones CR-D01–D30, matriz de 56 casos y tareas; reordenado tras la revisión del Arquitecto. Sin código. → `docs(plan): add v0.9 implementation plan and adr 0011 and 0012`
@@ -68,7 +70,8 @@ Orden de ejecución: autores (CR-1–CR-6b), cerrojo (CR-7), fuente (CR-9a), tag
   *Evidencia:* el panel permite traer tags ofrecidos solo cuando pudo leer el estado local; distingue `Fetched`, `AlreadyPresent`, `Conflict` y `NotFoundOnRemote`, e invalida historial/lista al crear el tag. Los adjuntos se descubren por ID decimal exacto y la descarga entrega únicamente IDs y un transfer ID al comando Rust, que conserva el diálogo de destino. La UI presenta progreso acotado, estado textual y cancelación; guardar credenciales reanuda la acción pendiente de fetch en el mismo repositorio, mientras que descargas y contextos descartados requieren reintento explícito. Cambiar de repositorio u ocultar/plegar el panel desmonta o limpia el token en memoria. Los errores de lista/adjuntos conservan sus estados tipados sin inventar contenido offline. `TagsReleasesPanel.test.tsx` y `Sidebar.test.tsx` cubren estos flujos, IDs exactos, no replay de descarga ni de acción sin contexto, y que los releases no alteran referencias Git; suite focalizada: 40/40. Pasaron `npm test` (104 archivos, 986 pruebas), `npm run lint`, `npm run typecheck`, `npm run format:check` (`All matched files use Prettier code style!`), `python3 .dcl/dcl.py doc-check` (`doc-check: todo en orden`) y `git diff --check`. Se añadió guardia `isTauri()` al listener de progreso para que vistas de prueba/preview sin bridge nativo no provoquen rechazos no manejados; el test de estado confirma la suscripción con Tauri simulado. Sin cambios Rust; no se verificó el diálogo nativo ni una descarga contra GitHub real. La lectura con lector de pantalla real sigue pendiente en A11Y-LECTOR/CR-15. QA independiente: **PASS**, informe en [`docs/verification/cr-14b-qa.md`](docs/verification/cr-14b-qa.md); QA confirmó focused (40/40), frontend (104 archivos, 986 pruebas), lint, typecheck, formato, doc-check y diff-check. No se verificaron GitHub real, diálogo nativo ni lector de pantalla real.
 - [x] **CR-15: Accesibilidad, i18n y E2E.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-15-accesibilidad-i18n-y-e2e). Casos 36, 37. Depende de CR-6b, CR-14b. → `test(e2e): cover authors and releases across themes and languages`
   *Evidencia:* `e2e/authors-releases.spec.ts` agrega un recorrido nativo de búsqueda/selección de Ada, foco por Tab, nombres y estados ARIA, atajos declarados y navegación Alt+Left hasta su commit previo. Comprueba las cuatro combinaciones EN/ES y claro/oscuro a 940×600, ausencia de overflow horizontal y guarda capturas en `os.tmpdir()` (no versionadas). El fixture `authors-releases` crea en un repositorio temporal tres commits entre Ada y Grace y una etiqueta local; `scripts/run-e2e.sh` lo selecciona solo para este spec. `npm run build`, `npm test` (104 archivos, 986 pruebas), `npm run lint`, `npm run typecheck`, `npm run typecheck:e2e`, `npm run typecheck:node`, `npm run format:check`, `python3 .dcl/dcl.py doc-check` (`doc-check: todo en orden`) y `git diff --check` pasaron. *Gate E2E nativo:* el primer `/Users/davidcardenas/.cargo/bin/cargo build --release --features e2e,tauri/custom-protocol` falló al compilar `objc2-app-kit` con `No space left on device`; quedaban 162 MiB y `target/` ocupaba 12 GiB. Un reintento incremental con 483 MiB libres falló al escribir `target/release/.fingerprint/tauri-03128a4b80801d56/lib-tauri`, también por falta de espacio. No se limpió `target/` porque contiene artefactos compartidos. Por ello no se ejecutó `GITCANVAS_E2E_FIXTURE_KIND=authors-releases npx wdio run ./wdio.conf.ts --spec e2e/authors-releases.spec.ts`; no se generaron ni revisaron las capturas. El contrato mantiene el endpoint REST fijo en `api.github.com` y reserva el cambio de URL base a pruebas del crate, así que el E2E no introduce un mock HTTP ni toca GitHub real: el recorrido nativo verifica el error traducido de remoto incompatible; la UI con respuestas IPC simuladas ya tiene cobertura en pruebas de componente de CR-14a/b. Las pruebas Rust existentes `normal_download_reports_progress_and_atomically_writes_exact_bytes`, `cancellation_and_a_path_appearing_during_download_leaves_no_partial_file` y `confirmed_regular_destinations_can_be_replaced_but_symlinks_are_refused` cubren escritura/renombrado seguro; no se ejecutó Rust en esta tarea ni se afirma aquí evidencia de CI para los tres sistemas. El uso con lector real (VoiceOver/NVDA/Orca) y el recorrido E2E nativo quedan pendientes, sin declararse verificados. QA independiente: **PARTIAL**, informe en [`docs/verification/cr-15-qa.md`](docs/verification/cr-15-qa.md). QA repitió `npm run build`, tests frontend (104 archivos, 986 pruebas), lint, typechecks de frontend/E2E/Node, formato, doc-check y diff-check. El build frontend advierte que el chunk principal supera 500 kB. El WDIO no se ejecutó por espacio en disco; el spec comprueba autores y solo el estado de remoto incompatible para releases, no flujos E2E reales de releases.
-- [ ] **CR-16: Verificación final y documentación.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-16-verificación-final-y-documentación). Casos Todos, 38, 54. Depende de CR-15. → `docs(plan): record v0.9 verification and update product docs`
+- [x] **CR-16: Verificación final y documentación.** [Plan](docs/plan/2026-11-16-v0.9-implementacion.md#cr-16-verificación-final-y-documentación). Casos Todos, 38, 54. Depende de CR-15. → `docs(plan): record v0.9 verification and update product docs`
+  *Evidencia:* consolidación de 65 casos y límites en [`docs/verification/v0.9.md`](docs/verification/v0.9.md). Resultado global parcial: QA de CR-8 dejó el caso 38 parcial por falta de auditoría integral de efectos; QA de CR-15 dejó 36/37 parciales (WDIO y capturas no ejecutados/revisados; sin release E2E nativo) y renombrado multiplataforma sin verificar. Se documentaron SSH/no-GitHub como limitación, se actualizaron README/PRODUCT/CONTEXT y se aceptaron ADR 0011/0012 para implementación. No hubo bump ni release. Pasaron `npm test` (104 archivos, 986 pruebas; segunda corrida completa), `npm run lint`, `npm run typecheck`, `npm run typecheck:e2e`, `npm run typecheck:node`, `npm run format:check`, `npm run build`, `python3 .dcl/dcl.py doc-check` (`doc-check: todo en orden`) y `git diff --check`. El primer `npm test` falló únicamente porque el nuevo documento no tenía dos encabezados obligatorios; se corrigió y la corrida completa posterior pasó. El build avisó que el chunk principal pesa 564.68 kB (>500 kB). Cargo no se repite porque los intentos nativos CR-15 fallaron por falta de espacio; no se limpió `target/`.
 
 ### Gates externos y seguimiento histórico (sin evidencia)
 
@@ -90,6 +93,13 @@ bloquean el desarrollo de v0.9.
 - [ ] **V09-VERIFY-CR15-DOWNLOAD-PLATFORMS — Renombrado de descarga en tres sistemas.**
       Ejecutar y conservar evidencia del flujo de renombrado/confirmación en macOS, Linux y
       Windows; esta tarea no tiene resultados de plataforma ni evidencia de CI.
+- [ ] **V09-VERIFY-CR8-WRITES — Auditoría integral del caso 38.** Comparar el estado de Git y
+      archivos antes/después de todas las acciones fuera de las escrituras permitidas; la QA
+      de CR-8 verificó el protocolo de `fetch_tag`, pero no ese inventario global.
+- [ ] **V09-VERIFY-PLATFORM-MATRIX — Verificación nativa v0.9 en Linux y Windows.** Aportar
+      evidencia para las áreas que QA probó solo en macOS: CR-7, CR-9a, CR-9b, CR-10 y
+      CR-11a/b (incluida semántica de symlink/rename). Los IDs sugeridos por los informes
+      individuales están registrados allí; esta puerta los agrupa para el cierre de v0.9.
 - [ ] **WS-17 — Conciliar verificación y publicación de v0.3.0 (seguimiento histórico).**
       *Actualización 2026-10-19:* v0.3.0 y v0.3.1 ya publicadas; CI de v0.3.1 verde.
       GRF-0 debe conciliar evidencia y comprobaciones manuales antes de cerrar el ID.

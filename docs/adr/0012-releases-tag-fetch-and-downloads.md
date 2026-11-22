@@ -2,11 +2,12 @@
 
 ## Status
 
-Proposed — 2026-11-16. Reviewed by the Architect the same day. Decisions, bounds, acceptance
-matrix and task order are in the
-[v0.9 implementation plan](../plan/2026-11-16-v0.9-implementacion.md). David confirmed on
-2026-11-16 the two changes to existing behavior: `pull` no longer fetches every tag, and
-`checkout`, `pull` and `push` take the per-directory write lock.
+Accepted — 2026-11-22 (implemented; v0.9 not yet released). Reviewed by the Architect on
+2026-11-16. Decisions, bounds, acceptance matrix and task order are in the
+[v0.9 implementation plan](../plan/2026-11-16-v0.9-implementacion.md); verification
+evidence and open gates are in [`docs/verification/v0.9.md`](../verification/v0.9.md).
+David confirmed on 2026-11-16 the two changes to existing behavior: `pull` no longer
+fetches every tag, and `checkout`, `pull` and `push` take the per-directory write lock.
 
 ## Context
 

@@ -55,6 +55,25 @@ Image queries are per version and expire after 15 seconds. ICO dimensions come f
 first directory entry; final decoding support depends on the platform WebView. See ADR
 0010 and `docs/verification/v0.8.md`.
 
+## Authors and GitHub releases (v0.9 implementation)
+
+Author identity is `(name, email)` after the repository's bounded `.mailmap`; authors
+are not merged by name or similarity. The author catalog is a progressive delta walk
+independent of loaded history pages and filters. Per-author commit IDs are paginated and
+scoped to repository roots and the effective `.mailmap` hash. Frontend emphasis preserves
+all graph nodes, edges and geometry; navigation can reveal an author commit outside loaded
+pages. See ADR 0011.
+
+GitHub release metadata is provider data, not Git data. A dedicated bounded REST resolver
+lists published releases and fresh asset metadata; asset URLs, sizes, digests and save
+destinations are resolved/selected in Rust, not supplied by the webview. Notes are inert
+text, release cache v1 is separate from the clone cache, and only explicit `fetch_tag`
+creates a local tag. `checkout`, `pull`, `push` and `fetch_tag` share the common-directory
+write lock; long release reads/downloads use the transfer gate, while cancellation bypasses
+it. GitHub releases and tags do not feed graph/history state. Only HTTPS GitHub remotes
+are supported for releases and tag fetching; SSH remotes and other providers remain out of
+scope. See ADR 0012 and `docs/verification/v0.9.md`.
+
 ## Workspace
 
 Canonical worktree roots identify ordered tabs. Each keeps independent navigation and
