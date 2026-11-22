@@ -346,6 +346,7 @@ mod tests {
             "core:app:allow-version",
             "core:event:default",
             "dialog:allow-open",
+            "dialog:allow-save",
             "core:window:allow-destroy",
             "process:allow-restart",
             "updater:default",
