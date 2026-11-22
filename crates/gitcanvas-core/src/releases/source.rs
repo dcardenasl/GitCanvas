@@ -33,6 +33,13 @@ pub enum ReleaseSource {
 /// Returns [`AppError::UnsupportedSource`] if no eligible GitHub HTTPS remote
 /// exists, or [`AppError::Git`] if repository configuration cannot be read.
 pub fn select_source(repository: &Repository) -> Result<ReleaseSource, AppError> {
+    select_source_remote(repository).map(|(source, _)| source)
+}
+
+/// Selects the release source together with its configured remote name.
+pub(crate) fn select_source_remote(
+    repository: &Repository,
+) -> Result<(ReleaseSource, String), AppError> {
     let config = repository.config()?;
     let mut candidates = Vec::new();
     for name in repository
@@ -64,13 +71,13 @@ pub fn select_source(repository: &Repository) -> Result<ReleaseSource, AppError>
             candidates
                 .iter()
                 .find(|(name, _)| name == upstream_name)
-                .map(|(_, source)| source.clone())
+                .map(|(name, source)| (source.clone(), name.clone()))
         })
         .or_else(|| {
             candidates
                 .iter()
                 .find(|(name, _)| name == "origin")
-                .map(|(_, source)| source.clone())
+                .map(|(name, source)| (source.clone(), name.clone()))
         });
 
     selected.ok_or(AppError::UnsupportedSource)

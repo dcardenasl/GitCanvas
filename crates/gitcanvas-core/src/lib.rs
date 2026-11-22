@@ -25,6 +25,7 @@ pub mod blob;
 pub mod commit_tree;
 pub mod diff;
 pub mod error;
+pub mod fetch;
 pub mod file_history;
 mod file_identity;
 pub mod github;
