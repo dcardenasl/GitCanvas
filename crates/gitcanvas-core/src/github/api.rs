@@ -1,9 +1,10 @@
 //! The GitHub REST client.
 //!
-//! Used for exactly two things: confirming a token works and listing the
-//! repositories it can reach, so the user can pick one to clone. Nothing the
-//! graph displays comes from here — commits, branches and tags are always read
-//! from the local clone through libgit2. One data path, not two.
+//! Used for confirming a token, listing repositories to clone, and reading
+//! bounded GitHub release metadata. Release data is provider metadata; commits,
+//! branches and tags shown by the graph continue to come from the local clone
+//! through libgit2. [`crate::releases`] joins release metadata to local tags but
+//! never uses API data as Git history or fetches tags or assets while listing.
 
 use std::time::Duration;
 
@@ -74,7 +75,7 @@ struct RawRepository {
 
 /// A GitHub REST client bound to one token.
 pub struct GitHubClient {
-    token: String,
+    token: Option<String>,
     base_url: String,
     agent: Agent,
 }
@@ -84,7 +85,16 @@ impl GitHubClient {
     #[must_use]
     pub fn new(token: String) -> Self {
         Self {
-            token,
+            token: Some(token),
+            base_url: DEFAULT_BASE_URL.to_owned(),
+            agent: api_agent(),
+        }
+    }
+
+    /// Builds a client without credentials for public release endpoints.
+    pub(crate) fn anonymous() -> Self {
+        Self {
+            token: None,
             base_url: DEFAULT_BASE_URL.to_owned(),
             agent: api_agent(),
         }
@@ -101,6 +111,15 @@ impl GitHubClient {
         credentials::read_token().map(Self::new)
     }
 
+    /// Builds a client with the stored token when one exists, otherwise anonymously.
+    pub(crate) fn from_optional_stored_token() -> Result<Self, AppError> {
+        if credentials::has_token()? {
+            Self::from_stored_token()
+        } else {
+            Ok(Self::anonymous())
+        }
+    }
+
     /// Builds a client pointed at a specific HTTPS endpoint or loopback test server.
     ///
     /// The URL is validated before the token can be sent to it.
@@ -108,7 +127,18 @@ impl GitHubClient {
     pub fn with_base_url(token: String, base_url: String) -> Result<Self, AppError> {
         validate_base_url(&base_url)?;
         Ok(Self {
-            token,
+            token: Some(token),
+            base_url,
+            agent: api_agent(),
+        })
+    }
+
+    /// Builds an anonymous client against a validated local test endpoint.
+    #[cfg(test)]
+    pub(crate) fn anonymous_with_base_url(base_url: String) -> Result<Self, AppError> {
+        validate_base_url(&base_url)?;
+        Ok(Self {
+            token: None,
             base_url,
             agent: api_agent(),
         })
@@ -116,14 +146,16 @@ impl GitHubClient {
 
     fn get(&self, path: &str) -> Result<String, AppError> {
         let url = format!("{}{path}", self.base_url);
-        let response = self
+        let mut request = self
             .agent
             .get(&url)
-            .header("Authorization", &format!("Bearer {}", self.token))
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
-            .header("User-Agent", USER_AGENT)
-            .call();
+            .header("User-Agent", USER_AGENT);
+        if let Some(token) = &self.token {
+            request = request.header("Authorization", &format!("Bearer {token}"));
+        }
+        let response = request.call();
 
         match response {
             Ok(mut response) if response.status().is_success() => {
@@ -157,6 +189,56 @@ impl GitHubClient {
             Err(error) => Err(AppError::Network(format!(
                 "could not reach GitHub: {error}"
             ))),
+        }
+    }
+
+    /// Fetches a bounded release API response and maps release-specific errors.
+    pub(crate) fn get_release_body(&self, path: &str, max_bytes: u64) -> Result<Vec<u8>, AppError> {
+        let url = format!("{}{path}", self.base_url);
+        let mut request = self
+            .agent
+            .get(&url)
+            .header("Accept", "application/vnd.github+json")
+            .header("Accept-Encoding", "identity")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .header("User-Agent", USER_AGENT);
+        if let Some(token) = &self.token {
+            request = request.header("Authorization", &format!("Bearer {token}"));
+        }
+
+        match request.call() {
+            Ok(mut response) if response.status().is_success() => response
+                .body_mut()
+                .with_config()
+                .limit(max_bytes)
+                .read_to_vec()
+                .map_err(|error| match error {
+                    ureq::Error::BodyExceedsLimit(_) => AppError::ResourceLimitExceeded(
+                        "GitHub release response exceeds 8 MiB".to_owned(),
+                    ),
+                    error => AppError::Network(format!(
+                        "could not read the GitHub release response: {error}"
+                    )),
+                }),
+            Ok(response) => Err(release_status_error(
+                response.status().as_u16(),
+                response
+                    .headers()
+                    .get("x-ratelimit-remaining")
+                    .and_then(|value| value.to_str().ok()),
+                response
+                    .headers()
+                    .get("retry-after")
+                    .and_then(|value| value.to_str().ok()),
+                response
+                    .headers()
+                    .get("x-ratelimit-reset")
+                    .and_then(|value| value.to_str().ok()),
+            )),
+            Err(ureq::Error::StatusCode(status)) => {
+                Err(release_status_error(status, None, None, None))
+            }
+            Err(_) => Err(AppError::Offline),
         }
     }
 
@@ -318,6 +400,26 @@ fn status_error(status: u16, rate_remaining: Option<&str>, retry_after: Option<&
         429 => {
             AppError::Network("GitHub API rate limit exceeded; wait before trying again".to_owned())
         }
+        500..=599 => AppError::Network(format!("GitHub responded with status {status}")),
+        code => AppError::Internal(format!("GitHub responded with status {code}")),
+    }
+}
+
+fn release_status_error(
+    status: u16,
+    rate_remaining: Option<&str>,
+    retry_after: Option<&str>,
+    reset: Option<&str>,
+) -> AppError {
+    match status {
+        403 if rate_remaining == Some("0") || retry_after.is_some() => AppError::RateLimited {
+            reset: reset.map(str::to_owned),
+        },
+        401 | 403 => AppError::AccessRequired,
+        404 => AppError::NotFound,
+        429 => AppError::RateLimited {
+            reset: reset.map(str::to_owned),
+        },
         500..=599 => AppError::Network(format!("GitHub responded with status {status}")),
         code => AppError::Internal(format!("GitHub responded with status {code}")),
     }
