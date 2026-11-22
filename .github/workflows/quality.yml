@@ -68,10 +68,13 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          if apt-cache show webkit2gtk-driver >/dev/null 2>&1; then
-            webkit_driver=webkit2gtk-driver
-          elif apt-cache show webkitgtk-webdriver >/dev/null 2>&1; then
+          # Newer Ubuntu suites advertise the old package as a replacement
+          # even when it has no installable candidate. Select by candidate,
+          # preferring the replacement used by current suites.
+          if apt-cache policy webkitgtk-webdriver | grep -Eq 'Candidate: [0-9]'; then
             webkit_driver=webkitgtk-webdriver
+          elif apt-cache policy webkit2gtk-driver | grep -Eq 'Candidate: [0-9]'; then
+            webkit_driver=webkit2gtk-driver
           else
             echo "No WebKitGTK WebDriver package is available for this Ubuntu image." >&2
             exit 1
