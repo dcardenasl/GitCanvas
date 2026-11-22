@@ -38,4 +38,3 @@ No hay hallazgos pendientes para el estado frontend de CR-5. La última prueba c
 - No se probó que la UI seleccione el commit ni que lo muestre visualmente en el gráfico. CR-5 cubre el estado; la integración del panel/navegación y gráfico corresponde a CR-6a/CR-6b y debe verificarse en el QA de esas tareas.
 - No se verificaron plataformas, lector de pantalla ni dispositivos; no aplican al estado frontend aislado de CR-5.
 - Gate task-level `V09-VERIFY-CR5-AUTORES`: cerrado con la evidencia de navegación anterior, siguiente, paginación y selección por raíz de esta revisión. La verificación de la interfaz sigue pendiente para CR-6a/CR-6b.
-
