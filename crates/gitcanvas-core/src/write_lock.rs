@@ -117,7 +117,7 @@ fn acquire(repo: &ActiveRepo) -> Result<WritePermit, AppError> {
             .wait_timeout(state, remaining)
             .map_err(|_| poisoned())?;
         state = next;
-        if timeout.timed_out() && state.held {
+        if timeout.timed_out() && state.held && Instant::now() >= deadline {
             return Err(repository_busy());
         }
     }

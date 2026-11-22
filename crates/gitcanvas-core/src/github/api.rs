@@ -584,12 +584,12 @@ fn release_status_error(
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        io::{Read, Write},
-        net::TcpListener,
-        thread,
-        time::Duration,
-    };
+    use std::{io::Write, net::TcpListener, thread, time::Duration};
+
+    #[cfg(feature = "e2e")]
+    use std::io::Read;
+
+    use ureq::Agent;
 
     use super::{validate_base_url, GitHubClient, CONNECT_TIMEOUT, REQUEST_TIMEOUT};
     use crate::error::AppError;
@@ -688,13 +688,22 @@ mod tests {
             .unwrap();
             stream.write_all(body).unwrap();
         });
-        let client =
+        let mut client =
             GitHubClient::with_base_url("test-token".to_owned(), format!("http://{address}"))
                 .unwrap();
+        client.agent = Agent::new_with_config(
+            Agent::config_builder()
+                .proxy(None)
+                .http_status_as_error(false)
+                .build(),
+        );
         let error = client
             .get_release_metadata_body("/metadata", 4)
             .unwrap_err();
-        assert!(matches!(error, AppError::ResourceLimitExceeded(_)));
+        assert!(
+            matches!(error, AppError::ResourceLimitExceeded(_)),
+            "expected an oversized-response error, got {error:?}"
+        );
         server.join().unwrap();
     }
 }
