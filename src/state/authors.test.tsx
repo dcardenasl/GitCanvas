@@ -231,6 +231,16 @@ describe("adjacentAuthorCommit", () => {
     ).toBe("d");
   });
 
+  it("returns the preceding commit when navigating backward from a later page", async () => {
+    expect(
+      await navigate(
+        [commitPage(["a", "b"], "1"), commitPage(["c", "d"], null)],
+        "c",
+        "previous",
+      ),
+    ).toBe("b");
+  });
+
   it("fetches the page containing a next commit that is not loaded", async () => {
     expect(
       await navigate(
