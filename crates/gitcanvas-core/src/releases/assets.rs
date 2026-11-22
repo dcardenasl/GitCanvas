@@ -513,6 +513,24 @@ mod tests {
     }
 
     #[test]
+    fn published_release_with_no_assets_returns_an_empty_complete_list() {
+        let (_directory, active) = repository();
+        let server = FakeGitHub::start(vec![
+            response(200, release(18, false)),
+            response(200, serde_json::json!([])),
+        ]);
+        let list = get_release_assets_with_client(&active, 18, &server.client()).unwrap();
+        assert!(list.assets.is_empty());
+        assert!(!list.truncated);
+        assert!(server
+            .next_request()
+            .starts_with("GET /repos/example/project/releases/18 HTTP/1.1"));
+        assert!(server.next_request().starts_with(
+            "GET /repos/example/project/releases/18/assets?per_page=100&page=1 HTTP/1.1"
+        ));
+    }
+
+    #[test]
     fn release_metadata_redirect_is_rejected_without_following() {
         let (_directory, active) = repository();
         let mut redirect = response(302, serde_json::json!({}));
@@ -531,6 +549,72 @@ mod tests {
             .requests
             .recv_timeout(Duration::from_millis(100))
             .is_err());
+    }
+
+    #[test]
+    fn malformed_asset_urls_are_rejected_for_every_untrusted_component() {
+        let invalid_urls = [
+            "https://api.github.com/repos/example/project/releases/18/assets/19",
+            "https://api.github.com/repos/example/project/releases/assets/20",
+            "https://api.github.com/repos/other/project/releases/assets/19",
+            "https://api.github.com/repos/example/other/releases/assets/19",
+            "https://user@api.github.com/repos/example/project/releases/assets/19",
+            "https://api.github.com/repos/example/project/releases/assets/19?download=1",
+            "https://api.github.com/repos/example/project/releases/assets/19#fragment",
+            "http://api.github.com/repos/example/project/releases/assets/19",
+            "https://api.github.com:444/repos/example/project/releases/assets/19",
+        ];
+        for raw in invalid_urls {
+            assert!(
+                super::validate_asset_url(raw, "example/project", 19).is_err(),
+                "accepted invalid URL {raw}"
+            );
+        }
+    }
+
+    #[test]
+    fn metadata_offline_and_access_errors_are_typed_without_cache_fallback() {
+        let (directory, active) = repository();
+        let source = crate::releases::ReleaseSource::Github {
+            owner: "example".into(),
+            name: "project".into(),
+        };
+        let cached_notes = crate::releases::ReleaseInfo {
+            id: 18,
+            tag_name: "v1".into(),
+            name: Some("cached release".into()),
+            notes: "cached notes must never authorize assets".into(),
+            html_url: None,
+            prerelease: false,
+            published_at: None,
+        };
+        let data_dir = directory.path().join("app-data");
+        assert!(crate::releases::cache::store(&data_dir, &source, &[cached_notes], false).unwrap());
+        assert!(crate::releases::cache::load(&data_dir, &source)
+            .unwrap()
+            .is_some());
+        for (status, expected) in [
+            (401, AppError::AccessRequired),
+            (403, AppError::AccessRequired),
+            (429, AppError::RateLimited { reset: None }),
+        ] {
+            let server = FakeGitHub::start(vec![response(status, serde_json::json!({}))]);
+            let error = get_release_assets_with_client(&active, 18, &server.client()).unwrap_err();
+            assert_eq!(error, expected, "HTTP {status}");
+            assert!(server
+                .next_request()
+                .starts_with("GET /repos/example/project/releases/18 HTTP/1.1"));
+        }
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        drop(listener);
+        let offline =
+            GitHubClient::with_base_url("test-token".into(), format!("http://{address}")).unwrap();
+        assert_eq!(
+            get_release_assets_with_client(&active, 18, &offline).unwrap_err(),
+            AppError::Offline
+        );
     }
 
     #[test]
@@ -585,5 +669,53 @@ mod tests {
         let capped = get_release_assets_with_client(&active, 18, &cap_server.client()).unwrap();
         assert_eq!(capped.assets.len(), MAX_PAGES * PAGE_SIZE);
         assert!(capped.truncated);
+        assert!(cap_server
+            .next_request()
+            .starts_with("GET /repos/example/project/releases/18 HTTP/1.1"));
+        for expected_page in 1..=MAX_PAGES {
+            let request = cap_server.next_request();
+            assert!(request.starts_with(&format!(
+                "GET /repos/example/project/releases/18/assets?per_page=100&page={expected_page} HTTP/1.1"
+            )));
+        }
+        assert!(
+            cap_server
+                .requests
+                .recv_timeout(Duration::from_millis(100))
+                .is_err(),
+            "a full tenth page must not trigger an eleventh request"
+        );
+    }
+
+    #[test]
+    fn absent_asset_after_the_full_thousand_item_bound_is_a_resource_error() {
+        let (_directory, active) = repository();
+        let mut responses = vec![response(200, release(18, false))];
+        for page in 0..MAX_PAGES {
+            let page_assets = (0..PAGE_SIZE)
+                .map(|index| {
+                    let id = (page * PAGE_SIZE + index + 1) as u64;
+                    asset(
+                        id,
+                        &format!(
+                            "https://api.github.com/repos/example/project/releases/assets/{id}"
+                        ),
+                    )
+                })
+                .collect::<Vec<_>>();
+            responses.push(response(200, serde_json::Value::Array(page_assets)));
+        }
+        let server = FakeGitHub::start(responses);
+        assert!(matches!(
+            resolve_release_asset_with_client_impl(&active, 18, 1001, &server.client()),
+            Err(AppError::ResourceLimitExceeded(_))
+        ));
+        for _ in 0..=MAX_PAGES {
+            let _ = server.next_request();
+        }
+        assert!(server
+            .requests
+            .recv_timeout(Duration::from_millis(100))
+            .is_err());
     }
 }

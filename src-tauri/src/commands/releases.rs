@@ -296,6 +296,33 @@ fn validate_transfer_id(transfer_id: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+fn run_download_pipeline<T>(
+    cancelled: &AtomicBool,
+    resolve: impl FnOnce() -> Result<gitcanvas_core::releases::download::DownloadRequest, AppError>,
+    choose_destination: impl FnOnce(&str) -> Result<Option<PathBuf>, AppError>,
+    download: impl FnOnce(
+        &gitcanvas_core::releases::download::DownloadRequest,
+        &std::path::Path,
+    ) -> Result<T, AppError>,
+) -> Result<Option<T>, AppError> {
+    if cancelled.load(Ordering::Acquire) {
+        return Ok(None);
+    }
+    let request = resolve()?;
+    if cancelled.load(Ordering::Acquire) {
+        return Ok(None);
+    }
+    let suggested_name =
+        gitcanvas_core::releases::download::sanitize_suggested_filename(&request.file_name);
+    let Some(destination) = choose_destination(&suggested_name)? else {
+        return Ok(None);
+    };
+    if cancelled.load(Ordering::Acquire) {
+        return Ok(None);
+    }
+    download(&request, &destination).map(Some)
+}
+
 /// Queries release metadata through the independent network-transfer gate.
 #[tauri::command]
 #[specta::specta]
@@ -397,41 +424,37 @@ pub async fn download_release_asset(
     };
     let publish = Arc::clone(&emitter.0);
     transfer("download_release_asset", move || {
-        if cancelled.load(Ordering::Acquire) {
-            return Ok(DownloadOutcomeIpc::Cancelled);
-        }
-        let (_asset, request) = releases::resolve_release_asset(&active, release_id, asset_id)?;
-        if cancelled.load(Ordering::Acquire) {
-            return Ok(DownloadOutcomeIpc::Cancelled);
-        }
-        let suggested_name =
-            gitcanvas_core::releases::download::sanitize_suggested_filename(&request.file_name);
-        let Some(destination) = choose_destination(&suggested_name)? else {
-            return Ok(DownloadOutcomeIpc::Cancelled);
-        };
-        if cancelled.load(Ordering::Acquire) {
-            return Ok(DownloadOutcomeIpc::Cancelled);
-        }
-        let mut throttle = ProgressThrottle { last: None };
-        let outcome = gitcanvas_core::releases::download::download_asset_from_stored_token(
-            &request,
-            &destination,
-            true,
+        let prepared = run_download_pipeline(
             &cancelled,
-            |update: DownloadProgress| {
-                if throttle.admit(
-                    Instant::now(),
-                    update.downloaded_bytes >= update.total_bytes,
-                ) {
-                    publish(ReleaseDownloadProgressEvent {
-                        transfer_id: transfer_id.clone(),
-                        downloaded_bytes: update.downloaded_bytes.to_string(),
-                        total_bytes: update.total_bytes.to_string(),
-                    });
-                }
+            || {
+                releases::resolve_release_asset(&active, release_id, asset_id)
+                    .map(|(_asset, request)| request)
+            },
+            |suggested_name| choose_destination(suggested_name),
+            |request, destination| {
+                let mut throttle = ProgressThrottle { last: None };
+                gitcanvas_core::releases::download::download_asset_from_stored_token(
+                    request,
+                    destination,
+                    true,
+                    &cancelled,
+                    |update: DownloadProgress| {
+                        if throttle.admit(
+                            Instant::now(),
+                            update.downloaded_bytes >= update.total_bytes,
+                        ) {
+                            publish(ReleaseDownloadProgressEvent {
+                                transfer_id: transfer_id.clone(),
+                                downloaded_bytes: update.downloaded_bytes.to_string(),
+                                total_bytes: update.total_bytes.to_string(),
+                            });
+                        }
+                    },
+                )
+                .map(DownloadOutcomeIpc::from)
             },
         )?;
-        Ok(DownloadOutcomeIpc::from(outcome))
+        Ok(prepared.unwrap_or(DownloadOutcomeIpc::Cancelled))
     })
     .await
 }
@@ -455,10 +478,11 @@ pub async fn cancel_transfer(
 mod tests {
     use std::time::{Duration, Instant};
 
-    use std::sync::atomic::Ordering;
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
     use super::{
-        parse_canonical_id, ActiveTransfers, ProgressThrottle, ReleaseAssetInfoIpc, ReleaseInfoIpc,
+        parse_canonical_id, run_download_pipeline, ActiveTransfers, AppError, ProgressThrottle,
+        ReleaseAssetInfoIpc, ReleaseInfoIpc,
     };
 
     #[test]
@@ -522,6 +546,71 @@ mod tests {
         assert!(!throttle.admit(start + Duration::from_millis(99), false));
         assert!(throttle.admit(start + Duration::from_millis(100), false));
         assert!(throttle.admit(start + Duration::from_millis(101), true));
+    }
+
+    #[test]
+    fn cancellation_before_resolution_skips_network_dialog_and_binary_work() {
+        let cancelled = AtomicBool::new(true);
+        let resolved = AtomicUsize::new(0);
+        let dialog_calls = AtomicUsize::new(0);
+        let binary_calls = AtomicUsize::new(0);
+        let result = run_download_pipeline(
+            &cancelled,
+            || {
+                resolved.fetch_add(1, Ordering::SeqCst);
+                Ok(gitcanvas_core::releases::download::DownloadRequest {
+                    url: "https://api.github.com/example".into(),
+                    file_name: "asset.zip".into(),
+                    size: 1,
+                    sha256: None,
+                })
+            },
+            |_| {
+                dialog_calls.fetch_add(1, Ordering::SeqCst);
+                Ok(Some(std::path::PathBuf::from("unused")))
+            },
+            |_, _| {
+                binary_calls.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            },
+        )
+        .unwrap();
+
+        assert_eq!(result, None);
+        assert_eq!(resolved.load(Ordering::SeqCst), 0);
+        assert_eq!(dialog_calls.load(Ordering::SeqCst), 0);
+        assert_eq!(binary_calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn rejected_asset_resolution_skips_dialog_and_binary_work() {
+        let cancelled = AtomicBool::new(false);
+        let resolve_calls = AtomicUsize::new(0);
+        let dialog_calls = AtomicUsize::new(0);
+        let binary_calls = AtomicUsize::new(0);
+        let result = run_download_pipeline(
+            &cancelled,
+            || {
+                resolve_calls.fetch_add(1, Ordering::SeqCst);
+                Err(AppError::InvalidInput("asset API URL rejected".into()))
+            },
+            |_| {
+                dialog_calls.fetch_add(1, Ordering::SeqCst);
+                Ok(Some(std::path::PathBuf::from("unused")))
+            },
+            |_, _| {
+                binary_calls.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            },
+        );
+
+        assert_eq!(
+            result,
+            Err(AppError::InvalidInput("asset API URL rejected".into()))
+        );
+        assert_eq!(resolve_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(dialog_calls.load(Ordering::SeqCst), 0);
+        assert_eq!(binary_calls.load(Ordering::SeqCst), 0);
     }
 
     #[test]
