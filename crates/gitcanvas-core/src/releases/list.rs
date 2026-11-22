@@ -72,6 +72,8 @@ pub struct ReleaseList {
     pub local_tags_available: bool,
     /// Capture time when this result came from cache; absent for a live response.
     pub cached_at: Option<String>,
+    /// Rate-limit reset time when a cached result is serving a rate-limited request.
+    pub rate_limit_reset: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -123,20 +125,31 @@ fn get_releases_with_client_and_data_dir(
         ReleaseSource::Github { owner, name } => (owner, name),
     };
 
-    let (releases, truncated, cached_at) = match collect_releases(client, owner, name) {
-        Ok((releases, truncated)) => {
-            // A cache failure must not hide a fresh response from GitHub.
-            let _cache_write = cache::store(data_dir, &source, &releases, truncated);
-            (releases, truncated, None)
-        }
-        Err(error @ (AppError::Offline | AppError::RateLimited { .. })) => {
-            let Some(cached) = cache::load(data_dir, &source)? else {
-                return Err(error);
-            };
-            (cached.releases, cached.truncated, Some(cached.captured_at))
-        }
-        Err(error) => return Err(error),
-    };
+    let (releases, truncated, cached_at, rate_limit_reset) =
+        match collect_releases(client, owner, name) {
+            Ok((releases, truncated)) => {
+                // A cache failure must not hide a fresh response from GitHub.
+                let _cache_write = cache::store(data_dir, &source, &releases, truncated);
+                (releases, truncated, None, None)
+            }
+            Err(error @ (AppError::Offline | AppError::RateLimited { .. })) => {
+                let rate_limit_reset = match &error {
+                    AppError::RateLimited { reset } => reset.clone(),
+                    AppError::Offline => None,
+                    _ => unreachable!("the match arm only accepts offline and rate-limit errors"),
+                };
+                let Some(cached) = cache::load(data_dir, &source)? else {
+                    return Err(error);
+                };
+                (
+                    cached.releases,
+                    cached.truncated,
+                    Some(cached.captured_at),
+                    rate_limit_reset,
+                )
+            }
+            Err(error) => return Err(error),
+        };
     let local_tags = read_local_tags(&repository)?;
     let Some(mut local_tags) = local_tags else {
         return Ok(ReleaseList {
@@ -151,6 +164,7 @@ fn get_releases_with_client_and_data_dir(
             truncated,
             local_tags_available: false,
             cached_at,
+            rate_limit_reset,
         });
     };
 
@@ -171,6 +185,7 @@ fn get_releases_with_client_and_data_dir(
         truncated,
         local_tags_available: true,
         cached_at,
+        rate_limit_reset,
     })
 }
 
@@ -609,6 +624,7 @@ mod tests {
         let offline =
             get_releases_with_client_and_data_dir(&active, &offline_client, &data_dir).unwrap();
         assert!(offline.cached_at.is_some());
+        assert!(offline.rate_limit_reset.is_none());
         assert!(offline.entries.iter().any(|entry| matches!(
             entry,
             ReleaseListEntry::Release {
@@ -630,6 +646,7 @@ mod tests {
             get_releases_with_client_and_data_dir(&active, &limited.client(), &data_dir).unwrap();
         let _request = limited.next_request();
         assert!(cached.cached_at.is_some());
+        assert_eq!(cached.rate_limit_reset.as_deref(), Some("12345"));
         assert!(cached.entries.iter().any(|entry| matches!(
             entry,
             ReleaseListEntry::Release { local_tag: Some(tag), .. } if tag.name == "v2.0"
