@@ -107,13 +107,23 @@ describe("stable branch graph preferences", () => {
     await waitForHistory(3);
     await browser.setWindowSize(940, 600);
     await browser.waitUntil(
-      async () =>
-        browser.execute(
-          () =>
-            window.innerWidth === 940 &&
-            document.querySelector(".app-shell")?.getBoundingClientRect()
-              .height === document.documentElement.clientHeight,
-        ),
+      async () => {
+        const windowSize = await browser.getWindowSize();
+        return (
+          windowSize.width === 940 &&
+          windowSize.height === 600 &&
+          (await browser.execute(() => {
+            const shell = document.querySelector(".app-shell");
+            return (
+              shell !== null &&
+              Math.abs(
+                shell.getBoundingClientRect().height -
+                  document.documentElement.clientHeight,
+              ) < 1
+            );
+          }))
+        );
+      },
       {
         timeout: 5_000,
         timeoutMsg: "the minimum window layout did not settle",
