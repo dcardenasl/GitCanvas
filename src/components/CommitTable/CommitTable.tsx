@@ -34,6 +34,8 @@ interface CommitTableProps {
   readonly selectedId: string | null;
   /** Commits by the selected author; null leaves author emphasis inactive. */
   readonly authorCommitIds?: ReadonlySet<string> | null;
+  /** Whether the author ID list has reached its final page. */
+  readonly authorCommitIdsComplete?: boolean;
   readonly onSelect: (id: string) => void;
   /** Widest lane count seen so far; sizes the graph column. */
   readonly maxLanes: number;
@@ -122,6 +124,7 @@ export function CommitTable({
   commitIndexById: suppliedCommitIndex,
   selectedId,
   authorCommitIds = null,
+  authorCommitIdsComplete = false,
   onSelect,
   maxLanes,
   renderGraph,
@@ -403,7 +406,9 @@ export function CommitTable({
 
             const selected = commit.id === selectedId;
             const authorDimmed =
-              authorCommitIds !== null && !authorCommitIds.has(commit.id);
+              authorCommitIdsComplete &&
+              authorCommitIds !== null &&
+              !authorCommitIds.has(commit.id);
 
             return (
               <div

@@ -39,6 +39,8 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
     () => (author === null ? null : new Set(authorCommits.commitIds)),
     [author, authorCommits.commitIds],
   );
+  const authorCommitIdsComplete =
+    author !== null && authorCommits.isSuccess && !authorCommits.hasNextPage;
   const selection = useNavigation((navigation) => navigation.selection);
   const selectedCommitId = useNavigation(getSelectedCommitId);
 
@@ -233,6 +235,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
         commitIndexById={history.commitIndexById}
         selectedId={selectedCommitId}
         authorCommitIds={authorCommitIds}
+        authorCommitIdsComplete={authorCommitIdsComplete}
         onSelect={selectCommit}
         maxLanes={history.maxLanes}
         onReachEnd={fetchNextPage}
@@ -252,6 +255,7 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
             maxLanes={history.maxLanes}
             selectedId={selectedCommitId}
             authorCommitIds={authorCommitIds}
+            authorCommitIdsComplete={authorCommitIdsComplete}
           />
         )}
       />

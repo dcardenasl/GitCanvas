@@ -161,6 +161,22 @@ describe("GraphCanvas", () => {
     );
 
     expect(geometry()).toEqual(before);
+    expect(
+      container.querySelectorAll(".graph-canvas__author-dimmed"),
+    ).toHaveLength(0);
+
+    rerender(
+      <GraphCanvas
+        rows={rows}
+        window={graphWindow}
+        maxLanes={state.maxLanes}
+        selectedId={null}
+        authorCommitIds={new Set(["c2"])}
+        authorCommitIdsComplete
+      />,
+    );
+
+    expect(geometry()).toEqual(before);
     expect(container.querySelectorAll("circle")).toHaveLength(5);
     expect(container.querySelectorAll("path.graph-canvas__edge")).toHaveLength(
       before.paths.length,

@@ -106,7 +106,7 @@ describe("CommitTable", () => {
     if (selectedAuthorCommit === undefined)
       throw new Error("missing selected author fixture");
 
-    render(
+    const { rerender } = render(
       <CommitTable
         commits={commits}
         selectedId={null}
@@ -118,11 +118,33 @@ describe("CommitTable", () => {
 
     const rows = screen.getAllByRole("row");
     expect(rows).toHaveLength(3);
-    expect(rows[0]?.classList.contains("commit-row--author-dimmed")).toBe(true);
-    expect(rows[1]?.classList.contains("commit-row--author-dimmed")).toBe(
+    expect(rows[0]?.classList.contains("commit-row--author-dimmed")).toBe(
       false,
     );
-    expect(rows[0]?.getAttribute("aria-label")).toContain("otro autor");
+    expect(screen.queryByText("otro autor")).toBeNull();
+
+    rerender(
+      <CommitTable
+        commits={commits}
+        selectedId={null}
+        onSelect={() => undefined}
+        maxLanes={1}
+        authorCommitIds={new Set([selectedAuthorCommit.id])}
+        authorCommitIdsComplete
+      />,
+    );
+
+    const completedRows = screen.getAllByRole("row");
+    expect(completedRows).toHaveLength(3);
+    expect(
+      completedRows[0]?.classList.contains("commit-row--author-dimmed"),
+    ).toBe(true);
+    expect(
+      completedRows[1]?.classList.contains("commit-row--author-dimmed"),
+    ).toBe(false);
+    expect(completedRows[0]?.getAttribute("aria-label")).toContain(
+      "otro autor",
+    );
     expect(screen.getAllByText("otro autor")).toHaveLength(2);
   });
 

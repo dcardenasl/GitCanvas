@@ -27,6 +27,8 @@ export interface GraphCanvasProps {
   readonly selectedId: string | null;
   /** Commits by the selected author; null leaves author emphasis inactive. */
   readonly authorCommitIds?: ReadonlySet<string> | null;
+  /** Whether the author ID list has reached its final page. */
+  readonly authorCommitIdsComplete?: boolean;
   readonly colors?: ReadonlyMap<string, GraphColorId>;
 }
 
@@ -48,6 +50,7 @@ export function GraphCanvas({
   maxLanes,
   selectedId,
   authorCommitIds = null,
+  authorCommitIdsComplete = false,
   colors,
 }: GraphCanvasProps) {
   const theme = useThemePreferences((state) => state.resolvedTheme);
@@ -69,7 +72,10 @@ export function GraphCanvas({
     connectionSegments(row, rows[row.index - 1], rows[row.index + 1]).map(
       (segment) => ({
         ...segment,
-        dimmed: authorCommitIds !== null && !authorCommitIds.has(row.id),
+        dimmed:
+          authorCommitIdsComplete &&
+          authorCommitIds !== null &&
+          !authorCommitIds.has(row.id),
       }),
     ),
   );
@@ -115,7 +121,10 @@ export function GraphCanvas({
       </g>
       {visible.map((row) => {
         const selected = row.id === selectedId;
-        const dimmed = authorCommitIds !== null && !authorCommitIds.has(row.id);
+        const dimmed =
+          authorCommitIdsComplete &&
+          authorCommitIds !== null &&
+          !authorCommitIds.has(row.id);
         return (
           <g key={row.id} className="graph-canvas__row">
             <circle
