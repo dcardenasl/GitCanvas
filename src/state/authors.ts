@@ -3,8 +3,7 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { create } from "zustand";
 
 import { commands } from "../bindings";
-import type { AuthorCount, AuthorKey } from "../bindings";
-import { IpcError } from "../lib/ipc";
+import type { AppError, AuthorCount, AuthorKey } from "../bindings";
 import { queryKeys } from "./queryKeys";
 
 interface AuthorSelectionState {
@@ -19,17 +18,27 @@ const useAuthorSelectionStore = create<AuthorSelectionState>((set) => ({
   },
 }));
 
+class AuthorQueryError extends Error {
+  readonly kind: AppError["kind"];
+
+  constructor(error: AppError) {
+    super(error.message);
+    this.name = "AuthorQueryError";
+    this.kind = error.kind;
+  }
+}
+
 async function unwrap<T>(
   response: Promise<
     | { readonly status: "ok"; readonly data: T }
     | {
         readonly status: "error";
-        readonly error: ConstructorParameters<typeof IpcError>[0];
+        readonly error: AppError;
       }
   >,
 ): Promise<T> {
   const result = await response;
-  if (result.status === "error") throw new IpcError(result.error);
+  if (result.status === "error") throw new AuthorQueryError(result.error);
   return result.data;
 }
 
@@ -66,7 +75,7 @@ export function useAuthorCatalog(root: string | null) {
   const last = query.data?.pages.at(-1);
   useEffect(() => {
     if (
-      !(query.error instanceof IpcError) ||
+      !(query.error instanceof AuthorQueryError) ||
       query.error.kind !== "StaleCursor"
     )
       return;

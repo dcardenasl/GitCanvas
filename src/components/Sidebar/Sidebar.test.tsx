@@ -730,7 +730,9 @@ it("displays help popover with rules, search clear button, empty state, and opti
   expect(screen.queryByText(/Flecha \(▾ \/ ▸\)/)).toBeNull();
 
   // 2. Search and clear button
-  const searchInput = screen.getByRole("searchbox");
+  const searchInput = screen.getByRole("searchbox", {
+    name: "Filtrar referencias",
+  });
   await userEvent.type(searchInput, "xyznomatch");
 
   // Empty state should be visible
@@ -945,7 +947,9 @@ it("renders large reference sets efficiently with correct counts and sorting", a
   expect(teamAEye.getAttribute("aria-checked")).toBe("true");
 
   // Filter with search: only bugfix-05 matches
-  const searchInput = screen.getByRole("searchbox");
+  const searchInput = screen.getByRole("searchbox", {
+    name: "Filtrar referencias",
+  });
   await userEvent.type(searchInput, "bugfix-05");
 
   const bugfixBtn = screen.getByRole("button", { name: "team-b/bugfix-05" });

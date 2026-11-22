@@ -1,4 +1,5 @@
 import { StashSection } from "../StashView/StashSection";
+import { AuthorPanel } from "../AuthorPanel";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -513,6 +514,7 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
           toggleCollapsed("section:stashes");
         }}
       />
+      <AuthorPanel />
       {palette !== null && (
         <BranchColorPicker
           branch={palette.name}

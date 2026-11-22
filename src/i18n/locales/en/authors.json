@@ -1,0 +1,39 @@
+{
+  "title": "Authors",
+  "search": {
+    "label": "Search authors",
+    "placeholder": "Name or email"
+  },
+  "catalog": {
+    "progress": "Scanning author catalog: {{scanned, number}} commits read",
+    "complete": "Author catalog complete: {{scanned, number}} commits scanned",
+    "paused": "Author catalog paused after {{scanned, number}} commits.",
+    "continue": "Continue scanning",
+    "cancel": "Pause scanning",
+    "failed": "Could not load the author catalog.",
+    "incomplete": {
+      "history_too_large": "The repository history is too large to finish the author catalog.",
+      "too_many_authors": "The author catalog reached its identity limit.",
+      "cancelled": "Author catalog scanning was cancelled."
+    }
+  },
+  "list": {
+    "label": "Repository authors",
+    "commits_one": "{{count, number}} commit",
+    "commits_many": "{{count, number}} commits",
+    "commits_other": "{{count, number}} commits",
+    "empty": "No authors were found.",
+    "noMatches": "No authors match this search."
+  },
+  "navigation": {
+    "label": "Author commit navigation",
+    "statusLabel": "Author navigation",
+    "previous": "Previous",
+    "next": "Next",
+    "keyboardHint": "Use Alt+← and Alt+→ to move between this author's commits.",
+    "first": "This is the first commit by this author.",
+    "last": "This is the last commit by this author.",
+    "moved": "Moved to the {{direction}} commit by this author.",
+    "failed": "Could not navigate this author's commits."
+  }
+}
