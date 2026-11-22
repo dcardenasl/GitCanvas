@@ -28,7 +28,7 @@
   position: relative;
   display: flex;
   min-inline-size: 0;
-  flex: 0 1 180px;
+  flex: 0 0 180px;
   align-items: center;
   border: 1px solid transparent;
   border-block-end: 0;

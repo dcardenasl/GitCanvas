@@ -23,7 +23,7 @@
 .tags-releases-panel__list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
   max-height: 360px;
   overflow: auto;
   margin: 0;
@@ -33,10 +33,19 @@
 
 .tags-releases-panel__item {
   min-width: 0;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.tags-releases-panel__item + .tags-releases-panel__item {
+  border-top: 1px solid var(--divider);
+}
+
+.tags-releases-panel__heading .sidebar__section-toggle {
+  font-size: var(--font-size-caption-wide);
+  line-height: 1.4;
 }
 
 .tags-releases-panel__name,
@@ -109,7 +118,7 @@
 .tags-releases-panel__asset-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -120,9 +129,9 @@
   flex-direction: column;
   gap: 4px;
   min-width: 0;
-  padding: 6px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-hover);
+  padding: 6px 4px;
+  border-top: 1px solid var(--divider);
+  background: transparent;
 }
 
 .tags-releases-panel__asset-name {

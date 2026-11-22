@@ -43,6 +43,23 @@ describe("workspace projects", () => {
   it("keeps thirty restored tabs reachable through a bounded, scrollable menu", async () => {
     await waitForHistory();
     await resizeWorkspace();
+    const tabLayout = await browser.execute(() => {
+      const strip = document.querySelector<HTMLElement>(".tab-bar__tabs");
+      const tabs = Array.from(
+        strip?.querySelectorAll<HTMLElement>(
+          ".tab-bar__tab:not(.tab-bar__tab--home)",
+        ) ?? [],
+      );
+      return {
+        stripOverflows: strip !== null && strip.scrollWidth > strip.clientWidth,
+        projectTabWidths: tabs.map((tab) => tab.getBoundingClientRect().width),
+      };
+    });
+    expect(tabLayout.stripOverflows).toBe(true);
+    expect(tabLayout.projectTabWidths.length).toBe(30);
+    expect(tabLayout.projectTabWidths.every((width) => width >= 180)).toBe(
+      true,
+    );
     await $('[aria-label="Todos los proyectos abiertos"]').click();
     await expect($$('[role="menuitem"]')).toBeElementsArrayOfSize(30);
     await browser.keys("End");
@@ -65,7 +82,40 @@ describe("workspace projects", () => {
     await browser.saveScreenshot(
       path.join(os.tmpdir(), "gitcanvas-workspace-overflow.png"),
     );
-    await browser.keys("Escape");
+    await browser.execute(() => {
+      const items = document.querySelectorAll<HTMLElement>('[role="menuitem"]');
+      items.item(items.length - 1)?.click();
+    });
+    await browser.waitUntil(
+      () =>
+        browser.execute(() => {
+          const strip = document.querySelector<HTMLElement>(".tab-bar__tabs");
+          const selected = strip?.querySelector<HTMLElement>(
+            '[role="tab"][aria-selected="true"]:not([data-home])',
+          );
+          if (strip === null || selected === undefined || selected === null)
+            return false;
+          const stripBounds = strip.getBoundingClientRect();
+          const tabBounds = selected.getBoundingClientRect();
+          return (
+            tabBounds.left >= stripBounds.left &&
+            tabBounds.right <= stripBounds.right &&
+            selected.getAttribute("title")?.endsWith("remembered-tab-29")
+          );
+        }),
+      { timeout: 5_000, timeoutMsg: "selected tab did not scroll into view" },
+    );
+    await browser.execute((name) => {
+      const tab = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '.tab-bar__tabs [role="tab"]:not([data-home])',
+        ),
+      ).find((candidate) => candidate.getAttribute("title")?.endsWith(name));
+      tab?.click();
+    }, alpha);
+    await expect(
+      $('[role="tab"][aria-selected="true"]:not([data-home])'),
+    ).toHaveAttribute("title", expect.stringContaining(alpha));
     // Close only the inactive remembered tabs through the application's controls.
     await browser.execute((name) => {
       for (const tab of document.querySelectorAll(

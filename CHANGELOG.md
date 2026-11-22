@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Repository writes** — serialize checkout, pull and push across linked worktrees and report when another write holds the repository lock.
 
+### Fixed
+
+- **Workspace tabs** — keep project tabs readable when many projects are open and reveal the selected project in the tab row.
+- **Release panel** — use compact rows and matching sidebar headings for releases and assets.
+
 ## [0.8.0] — 2026-11-15
 
 ### Added

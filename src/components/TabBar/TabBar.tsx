@@ -1,4 +1,10 @@
-import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 
@@ -127,6 +133,18 @@ export function TabBar({
   // Home is selected whenever it is asked for, and when there is no project to
   // be selected instead.
   const atHome = homeOpen || tabs.length === 0;
+
+  // A project can be selected from the all-tabs menu even when it is outside
+  // the strip's horizontal viewport. Keep the selected tab visible after that
+  // navigation, without squeezing every tab into the available width.
+  useEffect(() => {
+    const selectedTab = tablist.current?.querySelector<HTMLElement>(
+      '[role="tab"][aria-selected="true"]',
+    );
+    if (typeof selectedTab?.scrollIntoView === "function") {
+      selectedTab.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+  }, [activeRoot, atHome]);
 
   /** Every tab in the row, Home first: what the arrow keys walk. */
   const rowElements = (): HTMLElement[] =>
