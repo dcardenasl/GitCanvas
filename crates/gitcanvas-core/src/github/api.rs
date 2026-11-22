@@ -584,10 +584,12 @@ fn release_status_error(
 
 #[cfg(test)]
 mod tests {
-    use std::{io::Write, net::TcpListener, thread, time::Duration};
-
-    #[cfg(feature = "e2e")]
-    use std::io::Read;
+    use std::{
+        io::{Read, Write},
+        net::TcpListener,
+        thread,
+        time::Duration,
+    };
 
     use ureq::Agent;
 
@@ -679,6 +681,18 @@ mod tests {
         let address = listener.local_addr().unwrap();
         let server = thread::spawn(move || {
             let (mut stream, _) = listener.accept().unwrap();
+            let mut request = Vec::new();
+            let mut chunk = [0_u8; 1024];
+            loop {
+                let read = stream.read(&mut chunk).unwrap();
+                if read == 0 {
+                    break;
+                }
+                request.extend_from_slice(&chunk[..read]);
+                if request.windows(4).any(|window| window == b"\r\n\r\n") {
+                    break;
+                }
+            }
             let body = b"{\"payload\":\"too large\"}";
             write!(
                 stream,
