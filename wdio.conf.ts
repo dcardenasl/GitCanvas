@@ -172,7 +172,12 @@ function removeOwnedFixture(fixture: OwnedFixture): void {
     current?.repository === fixture.repository &&
     current.token === fixture.token
   ) {
-    fs.rmSync(fixture.repository, { recursive: true, force: true });
+    fs.rmSync(fixture.repository, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 200,
+    });
   }
 }
 
@@ -325,6 +330,12 @@ function createFixtureRepository(
     }
 
     if (kind === "authors-releases") {
+      git(
+        "remote",
+        "add",
+        "origin",
+        "https://github.com/e2e-owner/e2e-repo.git",
+      );
       const commitAs = (
         name: string,
         email: string,
@@ -473,6 +484,7 @@ if (ownedFixture !== null) {
   process.env[FIXTURE_TOKEN_ENV] = ownedFixture.token;
 }
 export const e2eRepository = fixture;
+export const e2eApiBaseUrl = process.env.GITCANVAS_E2E_API_BASE_URL ?? null;
 
 // The default history fixture also has one real linked worktree. Create it only
 // in the launcher process and only for a repository this run owns; a supplied
@@ -562,6 +574,10 @@ export const e2eDataDir = path.join(
 );
 if (process.env.WDIO_WORKER_ID === undefined) {
   fs.rmSync(e2eDataDir, { recursive: true, force: true });
+  fs.mkdirSync(e2eDataDir, { recursive: true });
+  fs.writeFileSync(path.join(e2eDataDir, ".gitcanvas-e2e-owner"), "wdio\n", {
+    flag: "wx",
+  });
   if (secondFixture !== null) {
     const restoredRoot = e2eRepositoryRoot;
     fs.mkdirSync(e2eDataDir, { recursive: true });
@@ -634,6 +650,9 @@ export const config: WebdriverIO.Config = {
         env: {
           GITCANVAS_REPOSITORY: fixture,
           GITCANVAS_DATA_DIR: e2eDataDir,
+          ...(e2eApiBaseUrl === null
+            ? {}
+            : { GITCANVAS_E2E_API_BASE_URL: e2eApiBaseUrl }),
         },
       },
     ],

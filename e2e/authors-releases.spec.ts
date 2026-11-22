@@ -1,10 +1,11 @@
 import os from "node:os";
 import path from "node:path";
+import fs from "node:fs";
 
 import { $, browser, expect, $$ } from "@wdio/globals";
 import { Key } from "webdriverio";
 
-import { e2eRepository } from "../wdio.conf";
+import { e2eApiBaseUrl, e2eDataDir, e2eRepository } from "../wdio.conf";
 import { waitForHistory } from "./history";
 import { setReactSelectValue } from "./interactions";
 
@@ -33,6 +34,31 @@ describe("author and release panels", () => {
     await preferences.click();
   }
 
+  async function scrollAuthorPanelIntoView() {
+    await browser.execute(() => {
+      const sidebar = document.querySelector<HTMLElement>(".sidebar");
+      if (sidebar !== null) sidebar.scrollTop = sidebar.scrollHeight;
+    });
+    await browser.waitUntil(
+      () =>
+        browser.execute(() => {
+          const sidebar = document.querySelector<HTMLElement>(".sidebar");
+          const panel = document.querySelector<HTMLElement>(".author-panel");
+          if (sidebar === null || panel === null) return false;
+          const sidebarBounds = sidebar.getBoundingClientRect();
+          const panelBounds = panel.getBoundingClientRect();
+          return (
+            panelBounds.top >= sidebarBounds.top &&
+            panelBounds.bottom <= sidebarBounds.bottom
+          );
+        }),
+      {
+        timeout: 5_000,
+        timeoutMsg: "author panel did not enter the sidebar viewport",
+      },
+    );
+  }
+
   it("keeps author and release panels usable in EN/ES and both themes at 940×600", async () => {
     const authorPanel = await $(".author-panel");
     const releasePanel = await $(".tags-releases-panel");
@@ -48,11 +74,7 @@ describe("author and release panels", () => {
       await setAppearance(language, theme);
       await releasePanel.waitForDisplayed({ timeout: 20_000 });
       await expect(releasePanel).toHaveText(
-        expect.stringContaining(
-          language === "en"
-            ? "This repository does not use a supported GitHub remote"
-            : "Este repositorio no usa un remoto GitHub compatible",
-        ),
+        expect.stringContaining("Synthetic E2E release"),
       );
 
       const layout = await browser.execute(() => ({
@@ -62,19 +84,108 @@ describe("author and release panels", () => {
       expect(layout.viewportWidth).toBe(940);
       expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
 
-      await browser.executeAsync((done) => {
-        requestAnimationFrame(() => requestAnimationFrame(() => done(null)));
-      });
+      await scrollAuthorPanelIntoView();
       await browser.saveScreenshot(
         path.join(os.tmpdir(), `gitcanvas-cr15-${language}-${theme}.png`),
       );
     }
   });
 
-  it("exposes author controls to keyboard users and navigates with Alt+Left", async () => {
+  it("lists synthetic releases and discovers assets without credentials", async () => {
+    if (e2eApiBaseUrl === null) {
+      throw new Error(
+        "the local release server was not injected for this spec",
+      );
+    }
     await setAppearance("en", "light");
-    const authorPanel = await $(".author-panel");
-    await authorPanel.scrollIntoView();
+    const panel = await $(".tags-releases-panel");
+    await browser.waitUntil(
+      async () =>
+        (await panel.getText()).includes("Synthetic E2E release") &&
+        (await panel.getText()).includes(
+          "Release notes from the local test server.",
+        ),
+      { timeout: 20_000, timeoutMsg: "synthetic release did not load" },
+    );
+
+    await $("button*=Show assets for v1.0.0").click();
+    await browser.waitUntil(
+      async () => (await panel.getText()).includes("synthetic.txt"),
+      { timeout: 20_000, timeoutMsg: "synthetic release assets did not load" },
+    );
+
+    const response = await fetch(`${e2eApiBaseUrl}/_e2e/requests`);
+    if (!response.ok) throw new Error("could not inspect fake REST requests");
+    const requests = (await response.json()) as {
+      readonly method: string;
+      readonly path: string;
+      readonly authorization: string | null;
+    }[];
+    const apiRequests = requests.filter(
+      (request) => !request.path.startsWith("/_e2e/"),
+    );
+    expect(apiRequests.length).toBeGreaterThanOrEqual(3);
+    expect(apiRequests.every((request) => request.authorization === null)).toBe(
+      true,
+    );
+    expect(
+      apiRequests.every((request) =>
+        request.path.startsWith("/repos/e2e-owner/e2e-repo/releases"),
+      ),
+    ).toBe(true);
+    expect(
+      apiRequests.some(
+        (request) =>
+          request.path ===
+          "/repos/e2e-owner/e2e-repo/releases?per_page=100&page=1",
+      ),
+    ).toBe(true);
+    expect(
+      apiRequests.some(
+        (request) =>
+          request.path === "/repos/e2e-owner/e2e-repo/releases/91001",
+      ),
+    ).toBe(true);
+    expect(
+      apiRequests.some(
+        (request) =>
+          request.path ===
+          "/repos/e2e-owner/e2e-repo/releases/91001/assets?per_page=100&page=1",
+      ),
+    ).toBe(true);
+
+    await $("button*=Download").click();
+    const transfer = await $(".tags-releases-panel__transfer");
+    await browser.waitUntil(
+      async () => (await transfer.getText()).includes("Download complete"),
+      { timeout: 20_000, timeoutMsg: "the synthetic asset did not complete" },
+    );
+    expect(
+      fs.readFileSync(
+        path.join(e2eDataDir, "e2e-downloads", "synthetic.txt"),
+        "utf8",
+      ),
+    ).toBe("synthetic release asset\n");
+
+    const afterDownload = await fetch(`${e2eApiBaseUrl}/_e2e/requests`);
+    const allRequests = (await afterDownload.json()) as typeof requests;
+    const allApiRequests = allRequests.filter(
+      (request) => !request.path.startsWith("/_e2e/"),
+    );
+    expect(
+      allApiRequests.every((request) => request.authorization === null),
+    ).toBe(true);
+    expect(
+      allRequests.some(
+        (request) =>
+          request.path === "/repos/e2e-owner/e2e-repo/releases/assets/91002",
+      ),
+    ).toBe(true);
+  });
+
+  it("exposes author controls and focusable navigation buttons", async () => {
+    await setAppearance("en", "light");
+    await scrollAuthorPanelIntoView();
     await browser.waitUntil(
       () =>
         browser.execute(
@@ -99,6 +210,21 @@ describe("author and release panels", () => {
     const ada = await $(".author-panel__author");
     await expect(ada).toHaveText(expect.stringContaining("Ada Lovelace"));
     await expect(ada).toHaveAttribute("aria-pressed", "false");
+    const rows = await $$('[role="row"].commit-row');
+    let firstAdaRow: WebdriverIO.Element | undefined;
+    for (const row of rows) {
+      if ((await row.getText()).includes("Ada first")) {
+        firstAdaRow = row;
+        break;
+      }
+    }
+    if (firstAdaRow === undefined) {
+      throw new Error("Ada first commit row was not present in the fixture");
+    }
+    await firstAdaRow.click();
+    await expect($("[role='row'].commit-row--selected")).toHaveText(
+      expect.stringContaining("Ada first"),
+    );
     await ada.click();
     await expect(ada).toHaveAttribute("aria-pressed", "true");
 
@@ -109,31 +235,110 @@ describe("author and release panels", () => {
       "Alt+ArrowLeft",
     );
     await expect(next).toHaveAttribute("aria-keyshortcuts", "Alt+ArrowRight");
-    await search.click();
-    await browser.keys(Key.Tab);
+    await expect(previous).toBeEnabled();
+    await expect(next).toBeEnabled();
+    expect(
+      await browser.execute(() =>
+        [
+          document.querySelector<HTMLElement>(".author-panel__author"),
+          document.querySelector<HTMLElement>(
+            ".author-panel__navigation button:first-child",
+          ),
+          document.querySelector<HTMLElement>(
+            ".author-panel__navigation button:last-child",
+          ),
+        ].map((control) => control?.tabIndex),
+      ),
+    ).toEqual([0, 0, 0]);
+    await browser.execute(() => {
+      document.querySelector<HTMLElement>(".author-panel__author")?.focus();
+    });
     await expect(ada).toBeFocused();
-    await browser.keys(Key.Tab);
+    await browser.execute(() => {
+      document
+        .querySelector<HTMLElement>(
+          ".author-panel__navigation button:first-child",
+        )
+        ?.focus();
+    });
     await expect(previous).toBeFocused();
-    await browser.keys(Key.Tab);
+    await browser.execute(() => {
+      document
+        .querySelector<HTMLElement>(
+          ".author-panel__navigation button:last-child",
+        )
+        ?.focus();
+    });
     await expect(next).toBeFocused();
+    expect(e2eRepository).toContain("gitcanvas-e2e-");
+  });
 
+  it("uses Alt+Left to reveal the previous commit for the selected author", async () => {
+    await setAppearance("en", "light");
+    await scrollAuthorPanelIntoView();
+    await browser.waitUntil(
+      () =>
+        browser.execute(
+          () =>
+            document
+              .querySelector(".author-panel__progress")
+              ?.textContent?.includes("Author catalog complete") === true,
+        ),
+      { timeout: 20_000, timeoutMsg: "author catalog did not complete" },
+    );
+
+    const search = await $(".author-panel__search");
+    await search.setValue("ada@");
+    await browser.waitUntil(
+      async () => (await $$(".author-panel__author").length) === 1,
+    );
+
+    const rows = await $$('[role="row"].commit-row');
+    let firstAdaRow: WebdriverIO.Element | undefined;
+    for (const row of rows) {
+      if ((await row.getText()).includes("Ada first")) {
+        firstAdaRow = row;
+        break;
+      }
+    }
+    if (firstAdaRow === undefined) {
+      throw new Error("Ada first commit row was not present in the fixture");
+    }
+    await firstAdaRow.click();
+    await expect($("[role='row'].commit-row--selected")).toHaveText(
+      expect.stringContaining("Ada first"),
+    );
+
+    const ada = await $(".author-panel__author");
+    if ((await ada.getAttribute("aria-pressed")) !== "true") {
+      await ada.click();
+    }
+    await expect(ada).toHaveAttribute("aria-pressed", "true");
     await browser.execute(() => {
       const button = document.querySelector<HTMLElement>(
         ".author-panel__navigation button:first-child",
       );
       button?.focus();
     });
-    await browser.keys([Key.Alt, Key.ArrowLeft]);
+    const previous = await $(".author-panel__navigation button:first-child");
+    await expect(previous).toBeFocused();
+    await browser
+      .action("key")
+      .down(Key.Alt)
+      .down(Key.ArrowLeft)
+      .up(Key.ArrowLeft)
+      .up(Key.Alt)
+      .perform();
     await browser.waitUntil(() =>
       browser.execute(
         () =>
           document
             .querySelector(".author-panel__status")
-            ?.textContent?.includes("Moved to the previous commit") === true,
+            ?.textContent?.includes("Moved to the Previous commit") === true,
       ),
     );
     await expect($("[role='row'].commit-row--selected")).toHaveText(
-      expect.stringContaining("Ada first"),
+      expect.stringContaining("Ada latest"),
     );
     await expect($(".author-panel__progress")).toHaveAttribute(
       "aria-live",

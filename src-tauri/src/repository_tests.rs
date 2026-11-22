@@ -12,6 +12,7 @@ pub(super) fn test_webview() -> tauri::WebviewWindow<MockRuntime> {
         .manage(crate::commands::releases::ReleaseDataRoot(
             std::env::temp_dir().join("gitcanvas-test-data"),
         ))
+        .manage(crate::commands::releases::ReleaseApiBaseUrl(None))
         .manage(crate::commands::releases::ActiveTransfers::default())
         .manage(crate::commands::releases::SaveDialog(std::sync::Arc::new(
             |_| Ok(None),

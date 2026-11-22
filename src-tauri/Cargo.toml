@@ -46,7 +46,7 @@ objc2-foundation.workspace = true
 [features]
 # Builds with an embedded WebDriver server, for `npm run test:e2e`. Never
 # enabled for a release build.
-e2e = ["dep:tauri-plugin-wdio-webdriver"]
+e2e = ["dep:tauri-plugin-wdio-webdriver", "gitcanvas-core/e2e"]
 
 [dev-dependencies]
 git2.workspace = true

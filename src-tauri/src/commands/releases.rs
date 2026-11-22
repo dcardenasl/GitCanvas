@@ -33,6 +33,9 @@ use super::{
 #[derive(Clone)]
 pub struct ReleaseDataRoot(pub PathBuf);
 
+/// Explicit native E2E REST origin, absent from ordinary application builds.
+pub struct ReleaseApiBaseUrl(pub Option<String>);
+
 type SaveDialogCallback = dyn Fn(&str) -> Result<Option<PathBuf>, AppError> + Send + Sync;
 
 /// Rust-owned native save-dialog capability, injected by application setup.
@@ -330,11 +333,24 @@ pub async fn get_releases(
     path: String,
     allowed: tauri::State<'_, AllowedRepos>,
     data_root: tauri::State<'_, ReleaseDataRoot>,
+    api_base_url: tauri::State<'_, ReleaseApiBaseUrl>,
 ) -> Result<ReleaseListIpc, AppError> {
     let allowed = allowed.inner().clone();
     let data_root = data_root.0.clone();
+    let api_base_url = api_base_url.0.clone();
     let active = with_repo(&allowed, &path, |active| Ok(active.clone()))?;
     transfer("get_releases", move || {
+        if let Some(base_url) = api_base_url {
+            #[cfg(feature = "e2e")]
+            {
+                let client =
+                    gitcanvas_core::github::api::GitHubClient::for_e2e_loopback(&base_url)?;
+                return releases::get_releases_with_e2e_client(&active, &client, &data_root)
+                    .map(ReleaseListIpc::from);
+            }
+            #[cfg(not(feature = "e2e"))]
+            let _ = base_url;
+        }
         releases::get_releases(&active, &data_root).map(ReleaseListIpc::from)
     })
     .await
@@ -366,11 +382,24 @@ pub async fn get_release_assets(
     path: String,
     release_id: String,
     allowed: tauri::State<'_, AllowedRepos>,
+    api_base_url: tauri::State<'_, ReleaseApiBaseUrl>,
 ) -> Result<ReleaseAssetListIpc, AppError> {
     let release_id = parse_canonical_id(&release_id, "release ID")?;
     let allowed = allowed.inner().clone();
+    let api_base_url = api_base_url.0.clone();
     let active = with_repo(&allowed, &path, |active| Ok(active.clone()))?;
     transfer("get_release_assets", move || {
+        if let Some(base_url) = api_base_url {
+            #[cfg(feature = "e2e")]
+            {
+                let client =
+                    gitcanvas_core::github::api::GitHubClient::for_e2e_loopback(&base_url)?;
+                return releases::get_release_assets_with_e2e_client(&active, release_id, &client)
+                    .map(ReleaseAssetListIpc::from);
+            }
+            #[cfg(not(feature = "e2e"))]
+            let _ = base_url;
+        }
         releases::get_release_assets(&active, release_id).map(ReleaseAssetListIpc::from)
     })
     .await
@@ -409,6 +438,7 @@ pub async fn download_release_asset(
     transfers: tauri::State<'_, ActiveTransfers>,
     emitter: tauri::State<'_, DownloadProgressEmitter>,
     dialog: tauri::State<'_, SaveDialog>,
+    api_base_url: tauri::State<'_, ReleaseApiBaseUrl>,
 ) -> Result<DownloadOutcomeIpc, AppError> {
     let release_id = parse_canonical_id(&release_id, "release ID")?;
     let asset_id = parse_canonical_id(&asset_id, "asset ID")?;
@@ -423,33 +453,60 @@ pub async fn download_release_asset(
         transfer_id: transfer_id.clone(),
     };
     let publish = Arc::clone(&emitter.0);
+    let api_base_url = api_base_url.0.clone();
     transfer("download_release_asset", move || {
         let prepared = run_download_pipeline(
             &cancelled,
             || {
+                if let Some(base_url) = api_base_url.as_deref() {
+                    #[cfg(feature = "e2e")]
+                    {
+                        let client =
+                            gitcanvas_core::github::api::GitHubClient::for_e2e_loopback(base_url)?;
+                        return releases::resolve_release_asset_with_e2e_client(
+                            &active, release_id, asset_id, &client,
+                        )
+                        .map(|(_asset, request)| request);
+                    }
+                    #[cfg(not(feature = "e2e"))]
+                    let _ = base_url;
+                }
                 releases::resolve_release_asset(&active, release_id, asset_id)
                     .map(|(_asset, request)| request)
             },
             |suggested_name| choose_destination(suggested_name),
             |request, destination| {
                 let mut throttle = ProgressThrottle { last: None };
+                let progress = |update: DownloadProgress| {
+                    if throttle.admit(
+                        Instant::now(),
+                        update.downloaded_bytes >= update.total_bytes,
+                    ) {
+                        publish(ReleaseDownloadProgressEvent {
+                            transfer_id: transfer_id.clone(),
+                            downloaded_bytes: update.downloaded_bytes.to_string(),
+                            total_bytes: update.total_bytes.to_string(),
+                        });
+                    }
+                };
+                #[cfg(feature = "e2e")]
+                if let Some(base_url) = api_base_url.as_deref() {
+                    return gitcanvas_core::releases::download::download_asset_from_e2e_loopback(
+                        request,
+                        destination,
+                        true,
+                        base_url,
+                        &cancelled,
+                        progress,
+                    )
+                    .map(DownloadOutcomeIpc::from);
+                }
                 gitcanvas_core::releases::download::download_asset_from_stored_token(
                     request,
                     destination,
                     true,
                     &cancelled,
-                    |update: DownloadProgress| {
-                        if throttle.admit(
-                            Instant::now(),
-                            update.downloaded_bytes >= update.total_bytes,
-                        ) {
-                            publish(ReleaseDownloadProgressEvent {
-                                transfer_id: transfer_id.clone(),
-                                downloaded_bytes: update.downloaded_bytes.to_string(),
-                                total_bytes: update.total_bytes.to_string(),
-                            });
-                        }
-                    },
+                    progress,
                 )
                 .map(DownloadOutcomeIpc::from)
             },

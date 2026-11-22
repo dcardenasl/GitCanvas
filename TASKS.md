@@ -86,10 +86,19 @@ bloquean el desarrollo de v0.9.
       verificar el uso con un lector de pantalla real (VoiceOver, NVDA, Orca) y los recorridos
       manuales de v0.4. *Decisión de David, 2026-11-16:* se acepta como no verificado y consta
       en «Known limitations» del README. Se reabre con evidencia cuando haya un lector real.
-- [ ] **V09-VERIFY-CR15-NATIVE-E2E — WDIO y capturas de CR-15.** Reintentar el build nativo
-      cuando haya espacio suficiente; ejecutar el spec, revisar las cuatro capturas y añadir
-      cobertura nativa de flujos reales de releases mediante un harness local adecuado. El spec
-      actual espera `UnsupportedSource` y no verifica listados/acciones de releases.
+- [ ] **V09-VERIFY-CR15-NATIVE-E2E — WDIO y capturas de CR-15.** *Actualización 2026-11-22:*
+      `npm run test:e2e` compiló el binario release E2E; autores/releases pasó 4/4 con servidor
+      fake loopback, listó metadata/notas, descubrió assets y descargó bytes por IPC usando IDs,
+      sin `Authorization`. Las cuatro capturas EN/ES × claro/oscuro a 940×600 se generaron y
+      revisaron. Pasaron `cargo test --release -p gitcanvas-core --features e2e` (144 passed,
+      1 ignored), `cargo build --release --features e2e,tauri/custom-protocol`,
+      `cargo build --release -p gitcanvas --no-default-features`, `npm run typecheck:e2e` y
+      `cargo fmt --all --check`. La corrida completa `npm run test:e2e` terminó exit 1 por
+      graph-performance, graph, local-changes, stash y workspace; informe exacto en
+      [`docs/verification/cr-15-native-followup.md`](docs/verification/cr-15-native-followup.md).
+      El spec usa stub de diálogo restringido al directorio temporal E2E, no el diálogo macOS;
+      VoiceOver y Tab nativo tampoco se verificaron. Gate abierto hasta cerrar los fallos de
+      suites y aportar esas verificaciones externas/nativas.
 - [ ] **V09-VERIFY-CR15-DOWNLOAD-PLATFORMS — Renombrado de descarga en tres sistemas.**
       Ejecutar y conservar evidencia del flujo de renombrado/confirmación en macOS, Linux y
       Windows; esta tarea no tiene resultados de plataforma ni evidencia de CI.

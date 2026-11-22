@@ -240,6 +240,21 @@ fn get_releases_with_client_and_data_dir(
     })
 }
 
+/// Lists releases with an explicitly injected anonymous E2E client.
+///
+/// Available only in opt-in native E2E builds; no environment or keychain is read.
+///
+/// # Errors
+/// Returns source-selection, provider, pagination, or local-reference errors.
+#[cfg(feature = "e2e")]
+pub fn get_releases_with_e2e_client(
+    active: &ActiveRepo,
+    client: &GitHubClient,
+    data_dir: &Path,
+) -> Result<ReleaseList, AppError> {
+    get_releases_with_client_and_data_dir(active, client, data_dir)
+}
+
 fn collect_releases(
     client: &GitHubClient,
     owner: &str,

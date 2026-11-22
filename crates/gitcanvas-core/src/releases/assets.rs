@@ -68,6 +68,19 @@ pub fn get_release_assets(
     get_release_assets_with_client(active, release_id, &client)
 }
 
+/// Lists assets with an explicitly injected anonymous E2E client.
+///
+/// # Errors
+/// Returns repository, provider, access, pagination, or resource-limit errors.
+#[cfg(feature = "e2e")]
+pub fn get_release_assets_with_e2e_client(
+    active: &ActiveRepo,
+    release_id: u64,
+    client: &GitHubClient,
+) -> Result<ReleaseAssetList, AppError> {
+    get_release_assets_with_client(active, release_id, client)
+}
+
 /// Re-resolves an asset from the selected published release before download.
 ///
 /// # Errors
@@ -79,6 +92,20 @@ pub fn resolve_release_asset(
 ) -> Result<(ReleaseAssetInfo, DownloadRequest), AppError> {
     let client = GitHubClient::from_optional_stored_token()?;
     resolve_release_asset_with_client_impl(active, release_id, asset_id, &client)
+}
+
+/// Resolves an asset with an explicitly injected anonymous E2E client.
+///
+/// # Errors
+/// Returns repository, provider, access, membership, URL-validation, or size-limit errors.
+#[cfg(feature = "e2e")]
+pub fn resolve_release_asset_with_e2e_client(
+    active: &ActiveRepo,
+    release_id: u64,
+    asset_id: u64,
+    client: &GitHubClient,
+) -> Result<(ReleaseAssetInfo, DownloadRequest), AppError> {
+    resolve_release_asset_with_client_impl(active, release_id, asset_id, client)
 }
 
 fn get_release_assets_with_client(
@@ -124,7 +151,11 @@ fn resolve_release_asset_with_client_impl(
             Err(AppError::NotFound)
         };
     };
-    validate_asset_url(&raw.url, &owner_name, asset_id)?;
+    #[cfg(feature = "e2e")]
+    let e2e_origin = client.e2e_origin();
+    #[cfg(not(feature = "e2e"))]
+    let e2e_origin = None;
+    validate_asset_url(&raw.url, &owner_name, asset_id, e2e_origin)?;
     if info.size > crate::releases::download::MAX_DOWNLOAD_BYTES {
         return Err(AppError::ResourceLimitExceeded(
             "release asset exceeds the 1 GiB download limit".to_owned(),
@@ -233,17 +264,36 @@ fn collect_assets_for_target(
     Ok((found, truncated))
 }
 
-fn validate_asset_url(raw: &str, owner_name: &str, asset_id: u64) -> Result<(), AppError> {
+fn validate_asset_url(
+    raw: &str,
+    owner_name: &str,
+    asset_id: u64,
+    e2e_origin: Option<&url::Url>,
+) -> Result<(), AppError> {
     let (owner, name) = split_owner_name(owner_name)?;
-    let expected =
-        format!("https://api.github.com/repos/{owner}/{name}/releases/assets/{asset_id}");
+    let expected = match e2e_origin {
+        Some(origin) => format!(
+            "{}repos/{owner}/{name}/releases/assets/{asset_id}",
+            origin.as_str()
+        ),
+        None => format!("https://api.github.com/repos/{owner}/{name}/releases/assets/{asset_id}"),
+    };
     let url = url::Url::parse(raw)
         .map_err(|_| AppError::InvalidInput("invalid release asset API URL".to_owned()))?;
+    let expected_origin = e2e_origin.map(url::Url::origin);
+    let origin_valid = match e2e_origin {
+        Some(_) => {
+            url.scheme() == "http" && expected_origin.is_some_and(|origin| url.origin() == origin)
+        }
+        None => {
+            url.scheme() == "https"
+                && url.host_str() == Some("api.github.com")
+                && url.port_or_known_default() == Some(443)
+        }
+    };
     if raw != expected
         || url.as_str() != expected
-        || url.scheme() != "https"
-        || url.host_str() != Some("api.github.com")
-        || url.port_or_known_default() != Some(443)
+        || !origin_valid
         || !url.username().is_empty()
         || url.password().is_some()
         || url.query().is_some()
@@ -566,8 +616,38 @@ mod tests {
         ];
         for raw in invalid_urls {
             assert!(
-                super::validate_asset_url(raw, "example/project", 19).is_err(),
+                super::validate_asset_url(raw, "example/project", 19, None).is_err(),
                 "accepted invalid URL {raw}"
+            );
+        }
+    }
+
+    #[cfg(feature = "e2e")]
+    #[test]
+    fn e2e_asset_api_url_must_match_the_exact_pinned_loopback_origin_and_path() {
+        let origin = url::Url::parse("http://127.0.0.1:4321").unwrap();
+        assert!(super::validate_asset_url(
+            "http://127.0.0.1:4321/repos/example/project/releases/assets/19",
+            "example/project",
+            19,
+            Some(&origin),
+        )
+        .is_ok());
+
+        for raw in [
+            "http://127.0.0.1:4322/repos/example/project/releases/assets/19",
+            "http://[::1]:4321/repos/example/project/releases/assets/19",
+            "http://localhost:4321/repos/example/project/releases/assets/19",
+            "http://user@127.0.0.1:4321/repos/example/project/releases/assets/19",
+            "http://127.0.0.1:4321/repos/other/project/releases/assets/19",
+            "http://127.0.0.1:4321/repos/example/project/releases/assets/20",
+            "http://127.0.0.1:4321/repos/example/project/releases/assets/19?download=1",
+            "http://127.0.0.1:4321/repos/example/project/releases/assets/19#fragment",
+            "https://127.0.0.1:4321/repos/example/project/releases/assets/19",
+        ] {
+            assert!(
+                super::validate_asset_url(raw, "example/project", 19, Some(&origin)).is_err(),
+                "accepted invalid loopback asset URL {raw}"
             );
         }
     }

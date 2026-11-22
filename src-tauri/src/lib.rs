@@ -168,6 +168,28 @@ fn report_early_startup_error(message: &str) {
     eprintln!("{message}");
 }
 
+#[cfg(feature = "e2e")]
+fn configure_e2e_release_transport(
+    data_dir: &std::path::Path,
+) -> Result<(Option<String>, Option<std::path::PathBuf>), Box<dyn std::error::Error>> {
+    let base_url = match std::env::var("GITCANVAS_E2E_API_BASE_URL") {
+        Ok(base_url) => base_url,
+        Err(std::env::VarError::NotPresent) => return Ok((None, None)),
+        Err(error) => {
+            return Err(format!("invalid E2E REST transport configuration: {error}").into())
+        }
+    };
+    if std::env::var_os(data_dir::DATA_DIR_ENV).is_none()
+        || !data_dir.join(".gitcanvas-e2e-owner").is_file()
+    {
+        return Err("E2E REST transport requires an owned temporary data directory".into());
+    }
+    let _validated = gitcanvas_core::github::api::GitHubClient::for_e2e_loopback(&base_url)?;
+    let download_dir = data_dir.join("e2e-downloads");
+    std::fs::create_dir_all(&download_dir)?;
+    Ok((Some(base_url), Some(download_dir)))
+}
+
 fn setup_app(
     app: &mut tauri::App<tauri::Wry>,
     builder: &tauri_specta::Builder<tauri::Wry>,
@@ -177,6 +199,10 @@ fn setup_app(
         std::env::var_os(data_dir::DATA_DIR_ENV),
         app.path().app_data_dir()?,
     )?;
+    #[cfg(feature = "e2e")]
+    let (e2e_api_base_url, e2e_download_dir) = configure_e2e_release_transport(&data_dir)?;
+    #[cfg(not(feature = "e2e"))]
+    let e2e_api_base_url = None;
     let guard = logging::initialize(&data_dir.join("logs"))?;
     app.manage(guard);
 
@@ -185,10 +211,24 @@ fn setup_app(
     // them without a runtime parameter.
     app.manage(commands::github::CacheRoot(data_dir.join("clones")));
     app.manage(commands::releases::ReleaseDataRoot(data_dir.clone()));
+    app.manage(commands::releases::ReleaseApiBaseUrl(e2e_api_base_url));
     app.manage(commands::releases::ActiveTransfers::default());
     let dialog_handle = app.handle().clone();
     app.manage(commands::releases::SaveDialog(std::sync::Arc::new(
         move |suggested_name| {
+            #[cfg(feature = "e2e")]
+            if let Some(directory) = &e2e_download_dir {
+                let suggested_path = std::path::Path::new(suggested_name);
+                if suggested_path.components().count() != 1
+                    || suggested_path.file_name().and_then(|name| name.to_str())
+                        != Some(suggested_name)
+                {
+                    return Err(gitcanvas_core::error::AppError::InvalidInput(
+                        "E2E download filename is invalid".into(),
+                    ));
+                }
+                return Ok(Some(directory.join(suggested_path)));
+            }
             use tauri_plugin_dialog::DialogExt as _;
             let Some(file_path) = dialog_handle
                 .dialog()

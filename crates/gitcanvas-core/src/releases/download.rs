@@ -35,7 +35,7 @@ struct DownloadEnvironment<'a> {
     max_bytes: u64,
     space_available: &'a dyn Fn(&Path) -> Result<u64, AppError>,
     agent: &'a Agent,
-    allow_loopback_http: bool,
+    e2e_origin: Option<&'a Url>,
     token: Option<&'a str>,
 }
 
@@ -107,7 +107,7 @@ pub fn download_asset(
         max_bytes: MAX_DOWNLOAD_BYTES,
         space_available: &space_available,
         agent: &agent,
-        allow_loopback_http: false,
+        e2e_origin: None,
         token,
     };
     download_asset_with(
@@ -118,6 +118,74 @@ pub fn download_asset(
         &mut progress,
         &environment,
     )
+}
+
+/// Downloads with the pinned anonymous loopback policy used by native E2E only.
+///
+/// # Errors
+/// Returns URL, size, disk-space, network, cancellation, digest, or filesystem errors.
+#[cfg(feature = "e2e")]
+pub fn download_asset_from_e2e_loopback(
+    request: &DownloadRequest,
+    destination: &Path,
+    overwrite_confirmed: bool,
+    raw_origin: &str,
+    cancelled: &AtomicBool,
+    mut progress: impl FnMut(DownloadProgress),
+) -> Result<DownloadOutcome, AppError> {
+    let origin = validate_e2e_origin(raw_origin)?;
+    let space_available = |path: &Path| {
+        available_space(path)
+            .map_err(|error| AppError::Io(format!("could not inspect free space: {error}")))
+    };
+    let agent = Agent::new_with_config(
+        Agent::config_builder()
+            .proxy(None)
+            .max_redirects(0)
+            .timeout_global(Some(REQUEST_TIMEOUT))
+            .timeout_connect(Some(CONNECT_TIMEOUT))
+            .build(),
+    );
+    let environment = DownloadEnvironment {
+        max_bytes: MAX_DOWNLOAD_BYTES,
+        space_available: &space_available,
+        agent: &agent,
+        e2e_origin: Some(&origin),
+        token: None,
+    };
+    download_asset_with(
+        request,
+        destination,
+        overwrite_confirmed,
+        cancelled,
+        &mut progress,
+        &environment,
+    )
+}
+
+#[cfg(feature = "e2e")]
+fn validate_e2e_origin(raw: &str) -> Result<Url, AppError> {
+    use url::Host;
+
+    let invalid = || AppError::InvalidInput("invalid E2E loopback asset origin".to_owned());
+    let origin = Url::parse(raw).map_err(|_| invalid())?;
+    let loopback = match origin.host() {
+        Some(Host::Ipv4(address)) => address.octets() == [127, 0, 0, 1],
+        Some(Host::Ipv6(address)) => address.segments() == [0, 0, 0, 0, 0, 0, 0, 1],
+        _ => false,
+    };
+    if origin.scheme() != "http"
+        || !loopback
+        || origin.port().is_none_or(|port| port == 0)
+        || !matches!(origin.path(), "" | "/")
+        || !origin.username().is_empty()
+        || origin.password().is_some()
+        || origin.query().is_some()
+        || origin.fragment().is_some()
+    {
+        return Err(invalid());
+    }
+    Ok(origin)
 }
 
 /// Downloads an asset using credentials held in the OS keychain, never supplied by IPC.
@@ -163,7 +231,7 @@ fn download_asset_with(
         return Ok(DownloadOutcome::Cancelled);
     }
 
-    let url = validate_download_url(&request.url, environment.allow_loopback_http)?;
+    let url = validate_download_url(&request.url, environment.e2e_origin)?;
     let expected_sha256 = request.sha256.as_deref().map(parse_sha256).transpose()?;
     let parent = prepare_destination(destination, overwrite_confirmed)?;
     let available = (environment.space_available)(parent)?;
@@ -186,7 +254,7 @@ fn download_asset_with(
         environment.agent,
         url,
         environment.token,
-        environment.allow_loopback_http,
+        environment.e2e_origin,
     )?;
     let content_length = response
         .headers()
@@ -410,21 +478,15 @@ fn inspect_destination(path: &Path) -> Result<Option<fs::Metadata>, AppError> {
     }
 }
 
-fn validate_download_url(raw: &str, allow_loopback_http: bool) -> Result<Url, AppError> {
+fn validate_download_url(raw: &str, e2e_origin: Option<&Url>) -> Result<Url, AppError> {
     let url = Url::parse(raw)
         .map_err(|error| AppError::InvalidInput(format!("invalid asset URL: {error}")))?;
-    validate_download_target(&url, allow_loopback_http)?;
+    validate_download_target(&url, e2e_origin)?;
     Ok(url)
 }
 
-fn validate_download_target(url: &Url, allow_loopback_http: bool) -> Result<(), AppError> {
-    let loopback_test_url = allow_loopback_http
-        && url.scheme() == "http"
-        && url.host().is_some_and(|host| match host {
-            url::Host::Ipv4(address) => address.is_loopback(),
-            url::Host::Ipv6(address) => address.is_loopback(),
-            url::Host::Domain(domain) => domain.eq_ignore_ascii_case("localhost"),
-        });
+fn validate_download_target(url: &Url, e2e_origin: Option<&Url>) -> Result<(), AppError> {
+    let loopback_test_url = e2e_origin.is_some_and(|origin| url.origin() == origin.origin());
     let allowed_host = url.host_str().is_some_and(|host| {
         ALLOWED_DOWNLOAD_HOSTS
             .iter()
@@ -448,7 +510,7 @@ fn open_asset_response(
     agent: &Agent,
     initial_url: Url,
     token: Option<&str>,
-    allow_loopback_http: bool,
+    e2e_origin: Option<&Url>,
 ) -> Result<ureq::http::Response<ureq::Body>, AppError> {
     let mut current_url = initial_url;
     let mut redirects = 0_usize;
@@ -461,7 +523,8 @@ fn open_asset_response(
         let is_github_api = current_url
             .host_str()
             .is_some_and(|host| host.eq_ignore_ascii_case("api.github.com"));
-        let is_loopback_test = allow_loopback_http && current_url.scheme() == "http";
+        let is_loopback_test =
+            e2e_origin.is_some_and(|origin| current_url.origin() == origin.origin());
         if is_first_request && (is_github_api || is_loopback_test) {
             if let Some(token) = token {
                 request = request.header("Authorization", &format!("Bearer {token}"));
@@ -491,7 +554,7 @@ fn open_asset_response(
         let next_url = current_url.join(location).map_err(|error| {
             AppError::InvalidInput(format!("invalid release asset redirect URL: {error}"))
         })?;
-        validate_download_target(&next_url, allow_loopback_http)?;
+        validate_download_target(&next_url, e2e_origin)?;
         current_url = next_url;
         redirects = redirects.checked_add(1).ok_or_else(|| {
             AppError::Internal("release asset redirect counter overflowed".to_owned())
@@ -705,11 +768,13 @@ mod tests {
     ) -> Result<DownloadOutcome, AppError> {
         let space_available = move |_path: &std::path::Path| Ok::<u64, AppError>(available);
         let agent = download_agent();
+        let parsed_url = url::Url::parse(&request.url).unwrap();
+        let local_origin = (parsed_url.scheme() == "http").then(|| parsed_url.clone());
         let environment = DownloadEnvironment {
             max_bytes,
             space_available: &space_available,
             agent: &agent,
-            allow_loopback_http: true,
+            e2e_origin: local_origin.as_ref(),
             token,
         };
         download_asset_with(
@@ -1031,6 +1096,38 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "e2e")]
+    #[test]
+    fn e2e_redirect_must_remain_on_the_exact_pinned_loopback_port() {
+        use std::net::SocketAddr;
+
+        let target = TcpListener::bind("127.0.0.1:0").unwrap();
+        let target_address: SocketAddr = target.local_addr().unwrap();
+        drop(target);
+        let directory = tempfile::tempdir().unwrap();
+        let (url, server_thread) = serve_sequence(vec![(
+            "302 Found",
+            vec![("Location", format!("http://{target_address}/asset.zip"))],
+            vec![],
+        )]);
+        let error = run_test_download(
+            &request(url, 1),
+            &directory.path().join("release.zip"),
+            false,
+            &AtomicBool::new(false),
+            &mut |_| {},
+            MAX_DOWNLOAD_BYTES,
+            u64::MAX,
+        )
+        .unwrap_err();
+        assert!(matches!(error, AppError::InvalidInput(_)));
+        assert_eq!(server_thread.join().unwrap().len(), 1);
+        assert!(std::fs::read_dir(directory.path())
+            .unwrap()
+            .next()
+            .is_none());
+    }
+
     #[test]
     fn redirect_limit_allows_five_hops_and_rejects_the_sixth() {
         let directory = tempfile::tempdir().unwrap();
@@ -1111,10 +1208,10 @@ mod tests {
             "objects.githubusercontent.com",
             "release-assets.githubusercontent.com",
         ] {
-            assert!(validate_download_url(&format!("https://{host}/asset"), false).is_ok());
+            assert!(validate_download_url(&format!("https://{host}/asset"), None).is_ok());
         }
-        assert!(validate_download_url("https://github.com.evil.example/asset", false).is_err());
-        assert!(validate_download_url("https://github.com:444/asset", false).is_err());
+        assert!(validate_download_url("https://github.com.evil.example/asset", None).is_err());
+        assert!(validate_download_url("https://github.com:444/asset", None).is_err());
         assert!(parse_sha256("sha256:00").is_err());
     }
 }
