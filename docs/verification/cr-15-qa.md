@@ -36,6 +36,20 @@ El build Vite pasó y produjo el aviso ya conocido de chunk principal de 564.68 
 
 Este seguimiento reemplaza la afirmación histórica de que el WDIO completo no había pasado: en estas corridas pasó. El gate `V09-VERIFY-CR15-NATIVE-E2E` quedó marcado PASS en `TASKS.md`; los límites externos (diálogo/Tab nativos y lector) permanecen separados. El veredicto de CR-15 permanece **PARTIAL** hasta resolver los gates externos indicados.
 
+### Addendum QA: refinación visual de workspace y releases (2026-11-22)
+
+**Veredicto de esta refinación: APPROVED. Veredicto global de CR-15: PARTIAL.** Se revisaron los cambios de `TabBar`, `TagsReleasesPanel` y el escenario de workspace. Se inspeccionaron las cuatro capturas EN/ES × light/dark a 940×600 de authors/releases; tipografía, paleta y filas de lista son coherentes en las combinaciones revisadas.
+
+| Suite o criterio | Resultado | Evidencia |
+| --- | --- | --- |
+| Workspace: tabs desbordadas y selección | PASS | WDIO focal `workspace.spec.ts`: 3/3; incluye 30 tabs, menú y selección con auto-scroll. |
+| WDIO completo | PASS | 13 specs/41 tests, completado sin fallos visibles en macOS/WebKit. |
+| `npm run typecheck:e2e` | PASS | Exit 0. |
+| `npm run format:check` | PASS | Exit 0. |
+| Impeccable layout detector | PASS | Ejecutado sobre `TabBar.tsx` y `TagsReleasesPanel.tsx`; resultado `[]`. |
+
+Siguen pendientes el uso con lector de pantalla real y el diálogo/renombrado real en macOS, Linux y Windows. El E2E local observado corresponde a macOS/WebKit y no se atribuye a Linux ni Windows. Estos límites mantienen **PARTIAL** el QA global de CR-15.
+
 ## Revisión inicial: alcance y estado a la fecha del primer dictamen
 
 **Veredicto inicial: PARTIAL.** Este dictamen refleja el momento en que se emitió:

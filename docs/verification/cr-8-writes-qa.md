@@ -1,6 +1,6 @@
 # QA del gate V09-VERIFY-CR8-WRITES
 
-**Veredicto técnico: PASS bajo la interpretación de CR-D22 documentada aquí.** La auditoría reproducible compara el estado Git y el árbol de trabajo alrededor de las rutas de inspección de v0.9 y verifica la lista cerrada de escrituras de caché. Las acciones con escritura intencional tienen pruebas propias y quedan fuera del subcaso de no mutación. El Validador pidió confirmación explícita de David sobre esta delimitación; el cierre formal de `V09-VERIFY-CR8-WRITES` permanece pendiente hasta recibirla.
+**Veredicto técnico: PASS bajo CR-D22; alcance confirmado por David el 2026-11-22.** La auditoría reproducible compara el estado Git y el árbol de trabajo alrededor de las rutas de inspección de v0.9 y verifica la lista cerrada de escrituras de caché. Las acciones con escritura intencional tienen pruebas propias y quedan fuera del subcaso de no mutación. El gate `V09-VERIFY-CR8-WRITES` queda cerrado para este alcance.
 
 ## Alcance y evidencia
 
