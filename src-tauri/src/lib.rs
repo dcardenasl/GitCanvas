@@ -216,6 +216,7 @@ fn setup_app(
     let dialog_handle = app.handle().clone();
     app.manage(commands::releases::SaveDialog(std::sync::Arc::new(
         move |suggested_name| {
+            use tauri_plugin_dialog::DialogExt as _;
             #[cfg(feature = "e2e")]
             if let Some(directory) = &e2e_download_dir {
                 let suggested_path = std::path::Path::new(suggested_name);
@@ -229,7 +230,6 @@ fn setup_app(
                 }
                 return Ok(Some(directory.join(suggested_path)));
             }
-            use tauri_plugin_dialog::DialogExt as _;
             let Some(file_path) = dialog_handle
                 .dialog()
                 .file()
