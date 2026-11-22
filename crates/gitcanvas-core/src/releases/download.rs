@@ -10,6 +10,7 @@ use std::{
 
 use fs2::available_space;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use specta::Type;
 use tempfile::NamedTempFile;
 use ureq::{http::StatusCode, Agent};
@@ -22,12 +23,26 @@ pub const MAX_DOWNLOAD_BYTES: u64 = 1024 * 1024 * 1024;
 const CHUNK_BYTES: usize = 64 * 1024;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+const MAX_REDIRECTS: usize = 5;
+const ALLOWED_DOWNLOAD_HOSTS: [&str; 4] = [
+    "api.github.com",
+    "github.com",
+    "objects.githubusercontent.com",
+    "release-assets.githubusercontent.com",
+];
 
 struct DownloadEnvironment<'a> {
     max_bytes: u64,
     space_available: &'a dyn Fn(&Path) -> Result<u64, AppError>,
     agent: &'a Agent,
     allow_loopback_http: bool,
+    token: Option<&'a str>,
+}
+
+#[derive(Debug)]
+struct CopiedBody {
+    downloaded_bytes: u64,
+    sha256: [u8; 32],
 }
 
 /// A release asset supplied by the validated GitHub release response.
@@ -39,6 +54,8 @@ pub struct DownloadRequest {
     pub file_name: String,
     /// API-reported size, checked before making a request.
     pub size: u64,
+    /// Optional GitHub `sha256:<hex>` digest from the asset API.
+    pub sha256: Option<String>,
 }
 
 /// Transfer progress in bytes. The API size remains the stable total.
@@ -77,6 +94,7 @@ pub fn download_asset(
     request: &DownloadRequest,
     destination: &Path,
     overwrite_confirmed: bool,
+    token: Option<&str>,
     cancelled: &AtomicBool,
     mut progress: impl FnMut(DownloadProgress),
 ) -> Result<DownloadOutcome, AppError> {
@@ -90,6 +108,7 @@ pub fn download_asset(
         space_available: &space_available,
         agent: &agent,
         allow_loopback_http: false,
+        token,
     };
     download_asset_with(
         request,
@@ -119,6 +138,7 @@ fn download_asset_with(
     }
 
     let url = validate_download_url(&request.url, environment.allow_loopback_http)?;
+    let expected_sha256 = request.sha256.as_deref().map(parse_sha256).transpose()?;
     let parent = prepare_destination(destination, overwrite_confirmed)?;
     let available = (environment.space_available)(parent)?;
     if available < request.size {
@@ -136,12 +156,12 @@ fn download_asset_with(
         return Ok(DownloadOutcome::Cancelled);
     }
 
-    let mut response = environment
-        .agent
-        .get(url.as_str())
-        .header("Accept-Encoding", "identity")
-        .call()
-        .map_err(map_request_error)?;
+    let mut response = open_asset_response(
+        environment.agent,
+        url,
+        environment.token,
+        environment.allow_loopback_http,
+    )?;
     let content_length = response
         .headers()
         .get("content-length")
@@ -159,7 +179,7 @@ fn download_asset_with(
         ))
     })?;
     let mut reader = response.body_mut().as_reader();
-    let Some(downloaded) = copy_body(
+    let Some(copied_body) = copy_body(
         &mut reader,
         &mut temporary,
         request.size,
@@ -170,11 +190,16 @@ fn download_asset_with(
     else {
         return Ok(DownloadOutcome::Cancelled);
     };
-    if downloaded != request.size {
+    if copied_body.downloaded_bytes != request.size {
         return Err(AppError::Network(format!(
-            "release asset size changed: expected {} bytes, received {downloaded}",
-            request.size
+            "release asset size changed: expected {} bytes, received {}",
+            request.size, copied_body.downloaded_bytes
         )));
+    }
+    if expected_sha256.is_some_and(|expected| expected != copied_body.sha256) {
+        return Err(AppError::Conflict(
+            "release asset sha256 digest does not match the API".to_owned(),
+        ));
     }
     if cancelled.load(Ordering::Acquire) {
         return Ok(DownloadOutcome::Cancelled);
@@ -183,7 +208,7 @@ fn download_asset_with(
     commit_destination(temporary, destination, overwrite_confirmed)?;
 
     Ok(DownloadOutcome::Completed {
-        downloaded_bytes: downloaded,
+        downloaded_bytes: copied_body.downloaded_bytes,
     })
 }
 
@@ -264,9 +289,10 @@ fn copy_body(
     max_bytes: u64,
     cancelled: &AtomicBool,
     progress: &mut impl FnMut(DownloadProgress),
-) -> Result<Option<u64>, AppError> {
+) -> Result<Option<CopiedBody>, AppError> {
     let mut buffer = vec![0_u8; CHUNK_BYTES].into_boxed_slice();
     let mut downloaded = 0_u64;
+    let mut hasher = Sha256::new();
     loop {
         if cancelled.load(Ordering::Acquire) {
             return Ok(None);
@@ -291,13 +317,17 @@ fn copy_body(
                 "could not write the temporary download file: {error}"
             ))
         })?;
+        hasher.update(chunk);
         downloaded = next;
         progress(DownloadProgress {
             downloaded_bytes: downloaded,
             total_bytes: expected_size,
         });
     }
-    Ok(Some(downloaded))
+    Ok(Some(CopiedBody {
+        downloaded_bytes: downloaded,
+        sha256: hasher.finalize().into(),
+    }))
 }
 
 /// Sanitizes a provider filename for use as a native save-dialog suggestion.
@@ -357,23 +387,137 @@ fn inspect_destination(path: &Path) -> Result<Option<fs::Metadata>, AppError> {
 fn validate_download_url(raw: &str, allow_loopback_http: bool) -> Result<Url, AppError> {
     let url = Url::parse(raw)
         .map_err(|error| AppError::InvalidInput(format!("invalid asset URL: {error}")))?;
-    let is_loopback_http = allow_loopback_http
+    validate_download_target(&url, allow_loopback_http)?;
+    Ok(url)
+}
+
+fn validate_download_target(url: &Url, allow_loopback_http: bool) -> Result<(), AppError> {
+    let loopback_test_url = allow_loopback_http
         && url.scheme() == "http"
         && url.host().is_some_and(|host| match host {
             url::Host::Ipv4(address) => address.is_loopback(),
             url::Host::Ipv6(address) => address.is_loopback(),
             url::Host::Domain(domain) => domain.eq_ignore_ascii_case("localhost"),
         });
-    if (url.scheme() != "https" && !is_loopback_http)
+    let allowed_host = url.host_str().is_some_and(|host| {
+        ALLOWED_DOWNLOAD_HOSTS
+            .iter()
+            .any(|allowed| host.eq_ignore_ascii_case(allowed))
+    });
+    let allowed_https =
+        url.scheme() == "https" && url.port_or_known_default() == Some(443) && allowed_host;
+    if (!loopback_test_url && !allowed_https)
         || !url.username().is_empty()
         || url.password().is_some()
-        || url.host_str().is_none()
+        || url.fragment().is_some()
     {
         return Err(AppError::InvalidInput(
-            "asset URL must use HTTPS without embedded credentials".to_owned(),
+            "asset URL must use an allowed HTTPS host on port 443 without credentials".to_owned(),
         ));
     }
-    Ok(url)
+    Ok(())
+}
+
+fn open_asset_response(
+    agent: &Agent,
+    initial_url: Url,
+    token: Option<&str>,
+    allow_loopback_http: bool,
+) -> Result<ureq::http::Response<ureq::Body>, AppError> {
+    let mut current_url = initial_url;
+    let mut redirects = 0_usize;
+    loop {
+        let is_first_request = redirects == 0;
+        let mut request = agent
+            .get(current_url.as_str())
+            .header("Accept", "application/octet-stream")
+            .header("Accept-Encoding", "identity");
+        let is_github_api = current_url
+            .host_str()
+            .is_some_and(|host| host.eq_ignore_ascii_case("api.github.com"));
+        let is_loopback_test = allow_loopback_http && current_url.scheme() == "http";
+        if is_first_request && (is_github_api || is_loopback_test) {
+            if let Some(token) = token {
+                request = request.header("Authorization", &format!("Bearer {token}"));
+            }
+        }
+
+        let response = request.call().map_err(map_request_error)?;
+        if response.status().is_success() {
+            return Ok(response);
+        }
+        if !is_redirect_status(response.status()) {
+            return Err(map_response_status(response.status()));
+        }
+        if redirects >= MAX_REDIRECTS {
+            return Err(AppError::ResourceLimitExceeded(
+                "release asset exceeded the 5 redirect limit".to_owned(),
+            ));
+        }
+
+        let location = response
+            .headers()
+            .get("location")
+            .and_then(|value| value.to_str().ok())
+            .ok_or_else(|| {
+                AppError::Network("release asset redirect did not include a Location".to_owned())
+            })?;
+        let next_url = current_url.join(location).map_err(|error| {
+            AppError::InvalidInput(format!("invalid release asset redirect URL: {error}"))
+        })?;
+        validate_download_target(&next_url, allow_loopback_http)?;
+        current_url = next_url;
+        redirects = redirects.checked_add(1).ok_or_else(|| {
+            AppError::Internal("release asset redirect counter overflowed".to_owned())
+        })?;
+    }
+}
+
+fn is_redirect_status(status: StatusCode) -> bool {
+    matches!(
+        status,
+        StatusCode::MOVED_PERMANENTLY
+            | StatusCode::FOUND
+            | StatusCode::SEE_OTHER
+            | StatusCode::TEMPORARY_REDIRECT
+            | StatusCode::PERMANENT_REDIRECT
+    )
+}
+
+fn map_response_status(status: StatusCode) -> AppError {
+    match status.as_u16() {
+        401 | 403 => AppError::AccessRequired,
+        404 => AppError::NotFound,
+        code => AppError::Network(format!("release asset request failed with status {code}")),
+    }
+}
+
+fn parse_sha256(value: &str) -> Result<[u8; 32], AppError> {
+    let digest = value.strip_prefix("sha256:").ok_or_else(|| {
+        AppError::InvalidInput("release asset digest must use the sha256 algorithm".to_owned())
+    })?;
+    if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(AppError::InvalidInput(
+            "release asset sha256 digest must contain 64 hexadecimal digits".to_owned(),
+        ));
+    }
+
+    let mut parsed = [0_u8; 32];
+    let (pairs, _remainder) = digest.as_bytes().as_chunks::<2>();
+    for (target, [high_byte, low_byte]) in parsed.iter_mut().zip(pairs) {
+        let high = hex_nibble(*high_byte)
+            .ok_or_else(|| AppError::InvalidInput("invalid release asset sha256".to_owned()))?;
+        let low = hex_nibble(*low_byte)
+            .ok_or_else(|| AppError::InvalidInput("invalid release asset sha256".to_owned()))?;
+        *target = (high << 4) | low;
+    }
+    Ok(parsed)
+}
+
+fn hex_nibble(byte: u8) -> Option<u8> {
+    char::from(byte)
+        .to_digit(16)
+        .and_then(|digit| u8::try_from(digit).ok())
 }
 
 fn download_agent() -> Agent {
@@ -387,6 +531,7 @@ fn download_agent() -> Agent {
 
 fn map_request_error(error: ureq::Error) -> AppError {
     match error {
+        ureq::Error::StatusCode(401 | 403) => AppError::AccessRequired,
         ureq::Error::StatusCode(status) if status == StatusCode::NOT_FOUND.as_u16() => {
             AppError::NotFound
         }
@@ -400,6 +545,7 @@ fn map_request_error(error: ureq::Error) -> AppError {
 #[cfg(test)]
 mod tests {
     use std::{
+        fmt::Write as FmtWrite,
         io::{Read, Write},
         net::TcpListener,
         sync::atomic::{AtomicBool, Ordering},
@@ -411,12 +557,16 @@ mod tests {
         DownloadOutcome, DownloadProgress, DownloadRequest, MAX_DOWNLOAD_BYTES,
     };
     use crate::error::AppError;
+    use sha2::{Digest, Sha256};
+
+    use super::{parse_sha256, validate_download_url, MAX_REDIRECTS};
 
     fn request(url: String, body_size: usize) -> DownloadRequest {
         DownloadRequest {
             url,
             file_name: "release.zip".to_owned(),
             size: body_size as u64,
+            sha256: None,
         }
     }
 
@@ -455,10 +605,69 @@ mod tests {
         (url, thread)
     }
 
+    type TestResponse = (&'static str, Vec<(&'static str, String)>, Vec<u8>);
+
+    fn serve_sequence(responses: Vec<TestResponse>) -> (String, thread::JoinHandle<Vec<String>>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let url = format!("http://{address}/asset.zip");
+        let thread = thread::spawn(move || {
+            let mut requests = Vec::new();
+            for (status, headers, body) in responses {
+                let (mut stream, _) = listener.accept().unwrap();
+                let mut request_bytes = Vec::new();
+                let mut byte = [0_u8; 1];
+                while stream.read_exact(&mut byte).is_ok() {
+                    request_bytes.push(byte[0]);
+                    if request_bytes.ends_with(b"\r\n\r\n") {
+                        break;
+                    }
+                }
+                requests.push(String::from_utf8(request_bytes).unwrap());
+                let mut response = format!("HTTP/1.1 {status}\r\nConnection: close\r\n");
+                for (name, value) in &headers {
+                    response.push_str(name);
+                    response.push_str(": ");
+                    response.push_str(value);
+                    response.push_str("\r\n");
+                }
+                let _ = write!(response, "Content-Length: {}\r\n\r\n", body.len());
+                stream.write_all(response.as_bytes()).unwrap();
+                stream.write_all(&body).unwrap();
+                stream.flush().unwrap();
+            }
+            requests
+        });
+        (url, thread)
+    }
+
     fn run_test_download(
         request: &DownloadRequest,
         destination: &std::path::Path,
         overwrite_confirmed: bool,
+        cancelled: &AtomicBool,
+        progress: &mut impl FnMut(DownloadProgress),
+        max_bytes: u64,
+        available: u64,
+    ) -> Result<DownloadOutcome, AppError> {
+        run_test_download_with_token(
+            request,
+            destination,
+            overwrite_confirmed,
+            None,
+            cancelled,
+            progress,
+            max_bytes,
+            available,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn run_test_download_with_token(
+        request: &DownloadRequest,
+        destination: &std::path::Path,
+        overwrite_confirmed: bool,
+        token: Option<&str>,
         cancelled: &AtomicBool,
         progress: &mut impl FnMut(DownloadProgress),
         max_bytes: u64,
@@ -471,6 +680,7 @@ mod tests {
             space_available: &space_available,
             agent: &agent,
             allow_loopback_http: true,
+            token,
         };
         download_asset_with(
             request,
@@ -534,6 +744,7 @@ mod tests {
             url: "https://api.github.com/asset".to_owned(),
             file_name: "release.zip".to_owned(),
             size: 5,
+            sha256: None,
         };
         let error = run_test_download(
             &oversized,
@@ -719,5 +930,161 @@ mod tests {
         assert_eq!(sanitize_suggested_filename("CON.txt"), "_CON.txt");
         assert_eq!(sanitize_suggested_filename("   "), "release-asset");
         assert!(sanitize_suggested_filename(&"a".repeat(500)).len() <= 180);
+    }
+
+    #[test]
+    fn redirect_chain_strips_token_after_first_hop_and_verifies_sha256() {
+        let directory = tempfile::tempdir().unwrap();
+        let body = b"verified release";
+        let (url, server_thread) = serve_sequence(vec![
+            (
+                "302 Found",
+                vec![("Location", "/download".to_owned())],
+                vec![],
+            ),
+            ("200 OK", vec![], body.to_vec()),
+        ]);
+        let mut request = request(url, body.len());
+        request.sha256 = Some(format!("sha256:{:x}", Sha256::digest(body)));
+        let destination = directory.path().join("release.zip");
+        run_test_download_with_token(
+            &request,
+            &destination,
+            false,
+            Some("secret-test-token"),
+            &AtomicBool::new(false),
+            &mut |_| {},
+            MAX_DOWNLOAD_BYTES,
+            u64::MAX,
+        )
+        .unwrap();
+        let captured = server_thread.join().unwrap();
+        assert!(captured[0]
+            .to_ascii_lowercase()
+            .contains("authorization: bearer secret-test-token"));
+        assert!(!captured[1].to_ascii_lowercase().contains("authorization:"));
+        assert_eq!(std::fs::read(destination).unwrap(), body);
+    }
+
+    #[test]
+    fn disallowed_redirect_hosts_schemes_and_ports_are_rejected_before_following() {
+        for location in [
+            "https://evil.example/asset",
+            "http://evil.example/asset",
+            "https://github.com:444/asset",
+        ] {
+            let directory = tempfile::tempdir().unwrap();
+            let (url, server_thread) = serve_sequence(vec![(
+                "302 Found",
+                vec![("Location", location.to_owned())],
+                vec![],
+            )]);
+            let error = run_test_download(
+                &request(url, 1),
+                &directory.path().join("release.zip"),
+                false,
+                &AtomicBool::new(false),
+                &mut |_| {},
+                MAX_DOWNLOAD_BYTES,
+                u64::MAX,
+            )
+            .unwrap_err();
+            assert!(
+                matches!(error, AppError::InvalidInput(_)),
+                "{location}: {error:?}"
+            );
+            assert_eq!(server_thread.join().unwrap().len(), 1);
+            assert!(std::fs::read_dir(directory.path())
+                .unwrap()
+                .next()
+                .is_none());
+        }
+    }
+
+    #[test]
+    fn redirect_limit_allows_five_hops_and_rejects_the_sixth() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut allowed = Vec::new();
+        for index in 0..MAX_REDIRECTS {
+            allowed.push((
+                "302 Found",
+                vec![("Location", format!("/hop-{}", index + 1))],
+                vec![],
+            ));
+        }
+        allowed.push(("200 OK", vec![], b"x".to_vec()));
+        let (url, server_thread) = serve_sequence(allowed);
+        run_test_download(
+            &request(url, 1),
+            &directory.path().join("allowed.zip"),
+            false,
+            &AtomicBool::new(false),
+            &mut |_| {},
+            MAX_DOWNLOAD_BYTES,
+            u64::MAX,
+        )
+        .unwrap();
+        assert_eq!(server_thread.join().unwrap().len(), MAX_REDIRECTS + 1);
+
+        let mut rejected = Vec::new();
+        for index in 0..=MAX_REDIRECTS {
+            rejected.push((
+                "302 Found",
+                vec![("Location", format!("/hop-{}", index + 1))],
+                vec![],
+            ));
+        }
+        let (url, server_thread) = serve_sequence(rejected);
+        let error = run_test_download(
+            &request(url, 1),
+            &directory.path().join("rejected.zip"),
+            false,
+            &AtomicBool::new(false),
+            &mut |_| {},
+            MAX_DOWNLOAD_BYTES,
+            u64::MAX,
+        )
+        .unwrap_err();
+        assert!(matches!(error, AppError::ResourceLimitExceeded(_)));
+        assert_eq!(server_thread.join().unwrap().len(), MAX_REDIRECTS + 1);
+        assert!(!directory.path().join("rejected.zip").exists());
+    }
+
+    #[test]
+    fn mismatched_digest_rejects_and_removes_temporary_download() {
+        let directory = tempfile::tempdir().unwrap();
+        let (url, server_thread) = serve("200 OK", &[], b"actual bytes");
+        let mut request = request(url, b"actual bytes".len());
+        request.sha256 = Some(format!("sha256:{:x}", Sha256::digest(b"different bytes")));
+        let destination = directory.path().join("release.zip");
+        let error = run_test_download(
+            &request,
+            &destination,
+            false,
+            &AtomicBool::new(false),
+            &mut |_| {},
+            MAX_DOWNLOAD_BYTES,
+            u64::MAX,
+        )
+        .unwrap_err();
+        assert!(matches!(error, AppError::Conflict(_)));
+        assert!(!destination.exists());
+        assert!(temporary_files(directory.path()).is_empty());
+        server_thread.join().unwrap();
+    }
+
+    #[test]
+    fn only_documented_github_hosts_and_https_port_443_are_accepted() {
+        for host in [
+            "api.github.com",
+            "github.com",
+            "objects.githubusercontent.com",
+            "release-assets.githubusercontent.com",
+        ] {
+            assert!(validate_download_url(&format!("https://{host}/asset"), false).is_ok());
+        }
+        assert!(validate_download_url("https://github.com.evil.example/asset", false).is_err());
+        assert!(validate_download_url("https://github.com:444/asset", false).is_err());
+        assert!(parse_sha256("sha256:00").is_err());
     }
 }
