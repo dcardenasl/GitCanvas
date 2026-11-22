@@ -57,6 +57,7 @@
     "rowBy": "por {{author}}",
     "rowCommit": "commit {{id}}",
     "rowOn": "en {{refs}}",
+    "authorNotSelected": "otro autor",
     "moreRefs": "Mostrar {{count, number}} referencias más",
     "copyRef": "Copiar nombre"
   }

@@ -47,6 +47,10 @@
   background: var(--surface-selected);
 }
 
+.commit-row--author-dimmed {
+  opacity: 0.55;
+}
+
 .commit-row:focus-visible {
   outline: var(--focus-ring);
   outline-offset: -2px;
@@ -270,6 +274,12 @@
   color: var(--ink-muted);
   font-size: var(--font-size-small-wide);
   white-space: nowrap;
+}
+
+.commit-row__author-filter {
+  color: var(--ink-muted);
+  font-size: var(--font-size-small);
+  font-style: italic;
 }
 
 .commit-row__avatar {

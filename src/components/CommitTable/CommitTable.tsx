@@ -32,6 +32,8 @@ interface CommitTableProps {
   readonly commits: readonly CommitInfo[];
   readonly commitIndexById?: ReadonlyMap<string, number>;
   readonly selectedId: string | null;
+  /** Commits by the selected author; null leaves author emphasis inactive. */
+  readonly authorCommitIds?: ReadonlySet<string> | null;
   readonly onSelect: (id: string) => void;
   /** Widest lane count seen so far; sizes the graph column. */
   readonly maxLanes: number;
@@ -94,6 +96,7 @@ function rowLabel(
   t: TFunction<"history">,
   commit: CommitInfo,
   refs: readonly RefBadge[] | undefined,
+  authorDimmed: boolean,
 ): string {
   const parts = [commit.summary];
   if (refs !== undefined && refs.length > 0) {
@@ -102,6 +105,7 @@ function rowLabel(
     );
   }
   parts.push(t("table.rowBy", { author: commit.author_name }));
+  if (authorDimmed) parts.push(t("table.authorNotSelected"));
   parts.push(formatCommitTime(commit.commit_time));
   parts.push(t("table.rowCommit", { id: shortId(commit.id) }));
   return parts.join(". ");
@@ -117,6 +121,7 @@ export function CommitTable({
   commits,
   commitIndexById: suppliedCommitIndex,
   selectedId,
+  authorCommitIds = null,
   onSelect,
   maxLanes,
   renderGraph,
@@ -397,13 +402,19 @@ export function CommitTable({
             if (commit === undefined) return null;
 
             const selected = commit.id === selectedId;
+            const authorDimmed =
+              authorCommitIds !== null && !authorCommitIds.has(commit.id);
 
             return (
               <div
                 key={item.key}
-                className={
-                  selected ? "commit-row commit-row--selected" : "commit-row"
-                }
+                className={[
+                  "commit-row",
+                  selected ? "commit-row--selected" : "",
+                  authorDimmed ? "commit-row--author-dimmed" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 role="row"
                 aria-rowindex={item.index + 1}
                 aria-selected={selected}
@@ -413,7 +424,12 @@ export function CommitTable({
                  * the hash straight into the date. Naming the row explicitly
                  * puts the separators a listener needs.
                  */
-                aria-label={rowLabel(t, commit, refsByCommit?.get(commit.id))}
+                aria-label={rowLabel(
+                  t,
+                  commit,
+                  refsByCommit?.get(commit.id),
+                  authorDimmed,
+                )}
                 tabIndex={
                   selected ||
                   item.index === (selectedIndex < 0 ? 0 : selectedIndex)
@@ -469,6 +485,11 @@ export function CommitTable({
                   <span className="commit-row__author-name">
                     {commit.author_name}
                   </span>
+                  {authorDimmed && (
+                    <span className="commit-row__author-filter">
+                      {t("table.authorNotSelected")}
+                    </span>
+                  )}
                 </span>
                 <span className="commit-row__sha" role="cell">
                   {shortId(commit.id)}

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Author panel** — search repository authors and navigate their commits with keyboard controls.
+- **Author emphasis** — focus the commit graph and table on one contributor without hiding history.
 
 ## [0.8.0] — 2026-11-15
 

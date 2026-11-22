@@ -25,6 +25,8 @@ export interface GraphCanvasProps {
   /** Widest lane count seen so far; sizes the drawing surface. */
   readonly maxLanes: number;
   readonly selectedId: string | null;
+  /** Commits by the selected author; null leaves author emphasis inactive. */
+  readonly authorCommitIds?: ReadonlySet<string> | null;
   readonly colors?: ReadonlyMap<string, GraphColorId>;
 }
 
@@ -45,6 +47,7 @@ export function GraphCanvas({
   window,
   maxLanes,
   selectedId,
+  authorCommitIds = null,
   colors,
 }: GraphCanvasProps) {
   const theme = useThemePreferences((state) => state.resolvedTheme);
@@ -63,7 +66,12 @@ export function GraphCanvas({
 
   const width = graphWidth(maxLanes);
   const segments = visible.flatMap((row) =>
-    connectionSegments(row, rows[row.index - 1], rows[row.index + 1]),
+    connectionSegments(row, rows[row.index - 1], rows[row.index + 1]).map(
+      (segment) => ({
+        ...segment,
+        dimmed: authorCommitIds !== null && !authorCommitIds.has(row.id),
+      }),
+    ),
   );
 
   return (
@@ -80,8 +88,13 @@ export function GraphCanvas({
         {segments.map((segment) => (
           <path
             key={segment.key}
-            className="graph-canvas__outline"
+            className={
+              segment.dimmed
+                ? "graph-canvas__outline graph-canvas__author-dimmed"
+                : "graph-canvas__outline"
+            }
             d={segment.path}
+            strokeDasharray={segment.dimmed ? "2 3" : undefined}
           />
         ))}
       </g>
@@ -89,27 +102,36 @@ export function GraphCanvas({
         {segments.map((segment) => (
           <path
             key={segment.key}
-            className="graph-canvas__edge"
+            className={
+              segment.dimmed
+                ? "graph-canvas__edge graph-canvas__author-dimmed"
+                : "graph-canvas__edge"
+            }
             d={segment.path}
             stroke={color(segment.trajectory)}
+            strokeDasharray={segment.dimmed ? "2 3" : undefined}
           />
         ))}
       </g>
       {visible.map((row) => {
         const selected = row.id === selectedId;
+        const dimmed = authorCommitIds !== null && !authorCommitIds.has(row.id);
         return (
           <g key={row.id} className="graph-canvas__row">
             <circle
               className={
                 selected
-                  ? "graph-canvas__node graph-canvas__node--selected"
-                  : "graph-canvas__node"
+                  ? `graph-canvas__node graph-canvas__node--selected${dimmed ? " graph-canvas__author-dimmed" : ""}`
+                  : dimmed
+                    ? "graph-canvas__node graph-canvas__author-dimmed"
+                    : "graph-canvas__node"
               }
               cx={laneCenterX(row.lane)}
               cy={rowCenterY(row.index)}
               r={selected ? SELECTED_RADIUS : NODE_RADIUS}
               fill={selected ? "var(--surface)" : color(row.trajectory)}
               stroke={color(row.trajectory)}
+              strokeDasharray={dimmed ? "2 2" : undefined}
             />
           </g>
         );
