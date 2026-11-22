@@ -16,7 +16,7 @@ use tempfile::NamedTempFile;
 use ureq::{http::StatusCode, Agent};
 use url::Url;
 
-use crate::error::AppError;
+use crate::{error::AppError, github::credentials};
 
 /// Maximum release-asset size accepted by the downloader.
 pub const MAX_DOWNLOAD_BYTES: u64 = 1024 * 1024 * 1024;
@@ -117,6 +117,32 @@ pub fn download_asset(
         cancelled,
         &mut progress,
         &environment,
+    )
+}
+
+/// Downloads an asset using credentials held in the OS keychain, never supplied by IPC.
+///
+/// # Errors
+/// Returns credential, network, validation, cancellation, or filesystem errors.
+pub fn download_asset_from_stored_token(
+    request: &DownloadRequest,
+    destination: &Path,
+    overwrite_confirmed: bool,
+    cancelled: &AtomicBool,
+    progress: impl FnMut(DownloadProgress),
+) -> Result<DownloadOutcome, AppError> {
+    let token = if credentials::has_token()? {
+        Some(credentials::read_token()?)
+    } else {
+        None
+    };
+    download_asset(
+        request,
+        destination,
+        overwrite_confirmed,
+        token.as_deref(),
+        cancelled,
+        progress,
     )
 }
 
@@ -490,6 +516,10 @@ fn map_response_status(status: StatusCode) -> AppError {
         404 => AppError::NotFound,
         code => AppError::Network(format!("release asset request failed with status {code}")),
     }
+}
+
+pub(crate) fn validate_sha256_digest(value: &str) -> Result<(), AppError> {
+    parse_sha256(value).map(|_| ())
 }
 
 fn parse_sha256(value: &str) -> Result<[u8; 32], AppError> {

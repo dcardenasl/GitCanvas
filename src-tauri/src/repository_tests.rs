@@ -9,6 +9,16 @@ pub(super) fn test_webview() -> tauri::WebviewWindow<MockRuntime> {
         .manage(crate::commands::github::CacheRoot(
             std::env::temp_dir().join("gitcanvas-test-cache"),
         ))
+        .manage(crate::commands::releases::ReleaseDataRoot(
+            std::env::temp_dir().join("gitcanvas-test-data"),
+        ))
+        .manage(crate::commands::releases::ActiveTransfers::default())
+        .manage(crate::commands::releases::SaveDialog(std::sync::Arc::new(
+            |_| Ok(None),
+        )))
+        .manage(crate::commands::releases::DownloadProgressEmitter(
+            std::sync::Arc::new(|_| {}),
+        ))
         .manage(std::sync::Arc::new(
             gitcanvas_core::history::HistoryReader::default(),
         ))
@@ -77,6 +87,119 @@ pub(super) fn invoke(
         },
     )
     .map(|response| response.deserialize().unwrap())
+}
+
+#[test]
+fn release_commands_reject_an_unopened_repository_before_provider_or_dialog_work() {
+    use git2::Repository;
+
+    let directory = tempfile::tempdir().unwrap();
+    Repository::init(directory.path()).unwrap();
+    let path = directory.path().to_str().unwrap();
+    let webview = test_webview();
+
+    for (command, body) in [
+        ("get_releases", json!({"path": path})),
+        ("get_cached_releases", json!({"path": path})),
+        ("fetch_tag", json!({"path": path, "tagName": "v1.0.0"})),
+        (
+            "get_release_assets",
+            json!({"path": path, "releaseId": "18"}),
+        ),
+        (
+            "download_release_asset",
+            json!({
+                "path": path,
+                "releaseId": "18",
+                "assetId": "19",
+                "transferId": "test-transfer"
+            }),
+        ),
+        (
+            "cancel_transfer",
+            json!({"path": path, "transferId": "test-transfer"}),
+        ),
+    ] {
+        let error = invoke(&webview, command, body).unwrap_err();
+        assert_eq!(error["kind"], "InvalidRepository", "{command}: {error}");
+    }
+}
+
+#[test]
+fn cancel_transfer_returns_while_both_transfer_permits_are_occupied() {
+    use std::{
+        sync::mpsc,
+        time::{Duration, Instant},
+    };
+
+    use git2::Repository;
+    use gitcanvas_core::repository::ActiveRepo;
+    use tauri::Manager;
+
+    let directory = tempfile::tempdir().unwrap();
+    Repository::init(directory.path()).unwrap();
+    let active = ActiveRepo::validate(directory.path()).unwrap();
+    let path = active.path().to_str().unwrap().to_owned();
+    let webview = test_webview();
+    let app = webview.app_handle();
+    app.state::<crate::commands::repo_access::AllowedRepos>()
+        .allow(&active)
+        .unwrap();
+    let transfers = app.state::<crate::commands::releases::ActiveTransfers>();
+    let cancelled = transfers
+        .register(active.path(), "cancel-me".to_owned())
+        .unwrap();
+    let _other = transfers
+        .register(active.path(), "also-active".to_owned())
+        .unwrap();
+
+    let (first_started_tx, first_started_rx) = mpsc::channel();
+    let (first_release_tx, first_release_rx) = mpsc::channel();
+    let first = tauri::async_runtime::spawn(async move {
+        crate::commands::runtime::transfer("case43-first", move || {
+            first_started_tx.send(()).unwrap();
+            first_release_rx.recv().unwrap();
+            Ok(())
+        })
+        .await
+        .unwrap();
+    });
+    let (second_started_tx, second_started_rx) = mpsc::channel();
+    let (second_release_tx, second_release_rx) = mpsc::channel();
+    let second = tauri::async_runtime::spawn(async move {
+        crate::commands::runtime::transfer("case43-second", move || {
+            second_started_tx.send(()).unwrap();
+            second_release_rx.recv().unwrap();
+            Ok(())
+        })
+        .await
+        .unwrap();
+    });
+    first_started_rx
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
+    second_started_rx
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
+
+    let start = Instant::now();
+    let result = tauri::async_runtime::block_on(crate::commands::releases::cancel_transfer(
+        path,
+        "cancel-me".to_owned(),
+        app.state::<crate::commands::repo_access::AllowedRepos>(),
+        transfers,
+    ))
+    .unwrap();
+    assert!(result);
+    assert!(cancelled.load(std::sync::atomic::Ordering::Acquire));
+    assert!(start.elapsed() < Duration::from_secs(1));
+
+    first_release_tx.send(()).unwrap();
+    second_release_tx.send(()).unwrap();
+    tauri::async_runtime::block_on(async {
+        first.await.unwrap();
+        second.await.unwrap();
+    });
 }
 
 #[test]

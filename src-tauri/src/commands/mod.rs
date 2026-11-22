@@ -25,6 +25,7 @@ pub mod menu;
 
 pub mod open_repos;
 
+pub mod releases;
 pub mod repo_access;
 pub mod repository;
 

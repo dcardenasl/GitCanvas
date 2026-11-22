@@ -159,9 +159,8 @@ pub(crate) async fn write<T: Send + 'static>(
 
 /// Runs long network work through its independent two-permit, 30-second gate.
 ///
-/// Release operations are wired here by CR-12; keeping this separate lets
-/// ordinary repository writes and reads proceed while a transfer is active.
-#[allow(dead_code, reason = "release commands are wired to this gate in CR-12")]
+/// Release metadata and downloads use this independent gate so ordinary
+/// repository writes and reads can proceed while a transfer is active.
 pub(crate) async fn transfer<T: Send + 'static>(
     operation: &'static str,
     work: impl FnOnce() -> Result<T, AppError> + Send + 'static,

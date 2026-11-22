@@ -92,6 +92,12 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::actions::checkout_branch,
             commands::actions::pull_fast_forward,
             commands::actions::push_current_branch,
+            commands::releases::get_releases,
+            commands::releases::get_cached_releases,
+            commands::releases::get_release_assets,
+            commands::releases::fetch_tag,
+            commands::releases::download_release_asset,
+            commands::releases::cancel_transfer,
             commands::watch::watch_repository,
             commands::menu::set_menu_labels,
             commands::watch::unwatch_repository,
@@ -102,7 +108,8 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
         .events(collect_events![
             commands::github::CloneProgressEvent,
             commands::menu::MenuActionEvent,
-            commands::watch::RepositoryChangedEvent
+            commands::watch::RepositoryChangedEvent,
+            commands::releases::ReleaseDownloadProgressEvent,
         ])
 }
 
@@ -177,6 +184,27 @@ fn setup_app(
     // themselves stay free of `AppHandle`, which lets the typed builder collect
     // them without a runtime parameter.
     app.manage(commands::github::CacheRoot(data_dir.join("clones")));
+    app.manage(commands::releases::ReleaseDataRoot(data_dir.clone()));
+    app.manage(commands::releases::ActiveTransfers::default());
+    let dialog_handle = app.handle().clone();
+    app.manage(commands::releases::SaveDialog(std::sync::Arc::new(
+        move |suggested_name| {
+            use tauri_plugin_dialog::DialogExt as _;
+            let Some(file_path) = dialog_handle
+                .dialog()
+                .file()
+                .set_file_name(suggested_name)
+                .blocking_save_file()
+            else {
+                return Ok(None);
+            };
+            file_path.into_path().map(Some).map_err(|error| {
+                gitcanvas_core::error::AppError::InvalidInput(format!(
+                    "save dialog returned an unsupported path: {error}"
+                ))
+            })
+        },
+    )));
     app.manage(std::sync::Arc::new(
         gitcanvas_core::workspace::store::WorkspaceStore::new(data_dir),
     ));
@@ -204,6 +232,15 @@ fn setup_app(
             let _ = event.emit(&handle);
         },
     )));
+    app.manage(commands::releases::DownloadProgressEmitter(
+        std::sync::Arc::new({
+            let handle = app.handle().clone();
+            move |event: commands::releases::ReleaseDownloadProgressEvent| {
+                use tauri_specta::Event as _;
+                let _ = event.emit(&handle);
+            }
+        }),
+    ));
 
     // The menu bar exists only on macOS. Elsewhere the applier accepts the
     // labels and does nothing, so the interface asks the same way everywhere.

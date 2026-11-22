@@ -120,6 +120,25 @@ export const commands = {
 	pullFastForward: (path: string) => typedError<PullOutcome, AppError>(__TAURI_INVOKE("pull_fast_forward", { path })),
 	/**  Pushes the current branch to its remote. */
 	pushCurrentBranch: (path: string) => typedError<PushOutcome, AppError>(__TAURI_INVOKE("push_current_branch", { path })),
+	/**  Queries release metadata through the independent network-transfer gate. */
+	getReleases: (path: string) => typedError<ReleaseListIpc, AppError>(__TAURI_INVOKE("get_releases", { path })),
+	/**  Reads the release cache on the normal, retryable read gate without network access. */
+	getCachedReleases: (path: string) => typedError<{
+	source: ReleaseSource,
+	entries: ReleaseListEntryIpc[],
+	truncated: boolean,
+	local_tags_available: boolean,
+	cached_at: string | null,
+	rate_limit_reset: string | null,
+} | null, AppError>(__TAURI_INVOKE("get_cached_releases", { path })),
+	/**  Discovers fresh metadata for assets belonging to one published release. */
+	getReleaseAssets: (path: string, releaseId: string) => typedError<ReleaseAssetListIpc, AppError>(__TAURI_INVOKE("get_release_assets", { path, releaseId })),
+	/**  Fetches one selected tag under the write gate and common-directory lock. */
+	fetchTag: (path: string, tagName: string) => typedError<FetchTagOutcome, AppError>(__TAURI_INVOKE("fetch_tag", { path, tagName })),
+	/**  Resolves fresh asset metadata, prompts in Rust, then downloads under one transfer permit. */
+	downloadReleaseAsset: (path: string, releaseId: string, assetId: string, transferId: string) => typedError<DownloadOutcomeIpc, AppError>(__TAURI_INVOKE("download_release_asset", { path, releaseId, assetId, transferId })),
+	/**  Requests cancellation without waiting for any runtime gate. */
+	cancelTransfer: (path: string, transferId: string) => typedError<boolean, AppError>(__TAURI_INVOKE("cancel_transfer", { path, transferId })),
 	/**
 	 *  Starts watching a repository, replacing any previous watch.
 	 *
@@ -156,6 +175,7 @@ export const commands = {
 export const events = {
 	cloneProgressEvent: makeEvent<CloneProgressEvent>("clone-progress-event"),
 	menuActionEvent: makeEvent<MenuActionEvent>("menu-action-event"),
+	releaseDownloadProgressEvent: makeEvent<ReleaseDownloadProgressEvent>("release-download-progress-event"),
 	repositoryChangedEvent: makeEvent<RepositoryChangedEvent>("repository-changed-event"),
 };
 
@@ -427,6 +447,24 @@ export type DirtyPath = {
 	/**  True when the change is staged, false when it is only in the worktree. */
 	staged: boolean,
 };
+
+/**  Download outcome serialized without JavaScript-unsafe integer fields. */
+export type DownloadOutcomeIpc = { kind: "completed"; downloaded_bytes: string } | { kind: "cancelled" };
+
+/**  The result of explicitly fetching one tag. */
+export type FetchTagOutcome =
+/**  The remote tag was fetched and installed locally. */
+{ kind: "Fetched" } |
+/**  The remote and local tag already point at the same Git object. */
+{ kind: "AlreadyPresent" } |
+/**  The tag exists both locally and remotely but points at different objects. */
+{ kind: "Conflict";
+/**  Object id currently named by the local tag. */
+local_target: string;
+/**  Object id advertised by the remote tag. */
+remote_target: string } |
+/**  The selected remote does not advertise this tag. */
+{ kind: "NotFoundOnRemote" };
 
 /**  How a path changed between two trees. */
 export type FileChange =
@@ -884,6 +922,63 @@ export type ReferenceTreePreferences = {
 	/**  Stable group and folder keys that should remain collapsed. */
 	collapsed: string[],
 };
+
+/**  Descriptor returned by the metadata-only release asset query. */
+export type ReleaseAssetInfoIpc = {
+	id: string,
+	name: string,
+	size: string,
+	sha256: string | null,
+};
+
+/**  Bounded asset descriptors for one published release. */
+export type ReleaseAssetListIpc = {
+	source: ReleaseSource,
+	release_id: string,
+	assets: ReleaseAssetInfoIpc[],
+	truncated: boolean,
+};
+
+/**  Bounded transfer progress event delivered to the interface. */
+export type ReleaseDownloadProgressEvent = {
+	transfer_id: string,
+	downloaded_bytes: string,
+	total_bytes: string,
+};
+
+/**  IPC representation of one release; provider IDs remain exact decimal strings in JavaScript. */
+export type ReleaseInfoIpc = {
+	id: string,
+	tag_name: string,
+	name: string | null,
+	notes: string,
+	html_url: string | null,
+	prerelease: boolean,
+	published_at: string | null,
+};
+
+/**  One release or unmatched local tag in the IPC response. */
+export type ReleaseListEntryIpc = { kind: "release"; release: ReleaseInfoIpc; local_tag: TagInfo | null } | { kind: "local_tag"; tag: TagInfo };
+
+/**  Typed Tauri payload for release metadata, separate from the persisted cache model. */
+export type ReleaseListIpc = {
+	source: ReleaseSource,
+	entries: ReleaseListEntryIpc[],
+	truncated: boolean,
+	local_tags_available: boolean,
+	cached_at: string | null,
+	rate_limit_reset: string | null,
+};
+
+/**  The provider and repository that supply release metadata. */
+export type ReleaseSource =
+/**  A repository hosted by GitHub. */
+{ github: {
+	/**  Repository owner, normalized to lowercase. */
+	owner: string,
+	/**  Repository name, normalized to lowercase. */
+	name: string,
+} };
 
 export type RepositoryChangedEvent = {
 	path: string,

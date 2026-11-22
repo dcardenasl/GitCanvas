@@ -242,6 +242,61 @@ impl GitHubClient {
         }
     }
 
+    /// Fetches a bounded release metadata response with automatic redirects disabled.
+    pub(crate) fn get_release_metadata_body(
+        &self,
+        path: &str,
+        max_bytes: u64,
+    ) -> Result<Vec<u8>, AppError> {
+        let url = format!("{}{path}", self.base_url);
+        let mut request = metadata_agent()
+            .get(&url)
+            .header("Accept", "application/vnd.github+json")
+            .header("Accept-Encoding", "identity")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .header("User-Agent", USER_AGENT);
+        if let Some(token) = &self.token {
+            request = request.header("Authorization", &format!("Bearer {token}"));
+        }
+        match request.call() {
+            Ok(mut response) if response.status().is_success() => response
+                .body_mut()
+                .with_config()
+                .limit(max_bytes)
+                .read_to_vec()
+                .map_err(|error| match error {
+                    ureq::Error::BodyExceedsLimit(_) => AppError::ResourceLimitExceeded(
+                        "GitHub release metadata response exceeds 8 MiB".to_owned(),
+                    ),
+                    error => AppError::Network(format!(
+                        "could not read the GitHub release metadata response: {error}"
+                    )),
+                }),
+            Ok(response) if response.status().is_redirection() => Err(AppError::Network(
+                "GitHub returned an unexpected release metadata redirect".to_owned(),
+            )),
+            Ok(response) => Err(release_status_error(
+                response.status().as_u16(),
+                response
+                    .headers()
+                    .get("x-ratelimit-remaining")
+                    .and_then(|value| value.to_str().ok()),
+                response
+                    .headers()
+                    .get("retry-after")
+                    .and_then(|value| value.to_str().ok()),
+                response
+                    .headers()
+                    .get("x-ratelimit-reset")
+                    .and_then(|value| value.to_str().ok()),
+            )),
+            Err(ureq::Error::StatusCode(status)) => {
+                Err(release_status_error(status, None, None, None))
+            }
+            Err(_) => Err(AppError::Offline),
+        }
+    }
+
     /// Confirms the token works and reports who it belongs to.
     ///
     /// # Errors
@@ -366,6 +421,17 @@ fn api_agent() -> Agent {
     )
 }
 
+fn metadata_agent() -> Agent {
+    Agent::new_with_config(
+        Agent::config_builder()
+            .max_redirects(0)
+            .timeout_global(Some(REQUEST_TIMEOUT))
+            .timeout_connect(Some(CONNECT_TIMEOUT))
+            .http_status_as_error(false)
+            .build(),
+    )
+}
+
 fn validate_base_url(base_url: &str) -> Result<(), AppError> {
     let parsed = Url::parse(base_url)
         .map_err(|_| AppError::InvalidInput("invalid GitHub API base URL".to_owned()))?;
@@ -427,7 +493,7 @@ fn release_status_error(
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::{io::Write, net::TcpListener, thread, time::Duration};
 
     use super::{validate_base_url, GitHubClient, CONNECT_TIMEOUT, REQUEST_TIMEOUT};
     use crate::error::AppError;
@@ -456,5 +522,30 @@ mod tests {
             validate_base_url("https://user:secret@example.com"),
             Err(AppError::InvalidInput(_))
         ));
+    }
+
+    #[test]
+    fn release_metadata_body_limit_is_enforced_before_deserialization() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let body = b"{\"payload\":\"too large\"}";
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: {}\r\n\r\n",
+                body.len()
+            )
+            .unwrap();
+            stream.write_all(body).unwrap();
+        });
+        let client =
+            GitHubClient::with_base_url("test-token".to_owned(), format!("http://{address}"))
+                .unwrap();
+        let error = client
+            .get_release_metadata_body("/metadata", 4)
+            .unwrap_err();
+        assert!(matches!(error, AppError::ResourceLimitExceeded(_)));
+        server.join().unwrap();
     }
 }

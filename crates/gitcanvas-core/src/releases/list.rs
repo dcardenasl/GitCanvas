@@ -101,6 +101,57 @@ pub fn get_releases(active: &ActiveRepo, data_dir: &Path) -> Result<ReleaseList,
     get_releases_with_client_and_data_dir(active, &client, data_dir)
 }
 
+/// Returns cached release data joined with current local tags, without network access.
+///
+/// # Errors
+/// Returns repository, source-selection, or local-reference errors.
+pub fn get_cached_releases(
+    active: &ActiveRepo,
+    data_dir: &Path,
+) -> Result<Option<ReleaseList>, AppError> {
+    let repository = active.open()?;
+    let (source, _) = select_source_remote(&repository)?;
+    let Some(cached) = cache::load(data_dir, &source)? else {
+        return Ok(None);
+    };
+    let local_tags = read_local_tags(&repository)?;
+    let (entries, local_tags_available) = match local_tags {
+        Some(mut local_tags) => {
+            let mut entries =
+                Vec::with_capacity(cached.releases.len().saturating_add(local_tags.len()));
+            for release in cached.releases {
+                let local_tag = local_tags.remove(&release.tag_name);
+                entries.push(ReleaseListEntry::Release { release, local_tag });
+            }
+            entries.extend(
+                local_tags
+                    .into_values()
+                    .map(|tag| ReleaseListEntry::LocalTag { tag }),
+            );
+            (entries, true)
+        }
+        None => (
+            cached
+                .releases
+                .into_iter()
+                .map(|release| ReleaseListEntry::Release {
+                    release,
+                    local_tag: None,
+                })
+                .collect(),
+            false,
+        ),
+    };
+    Ok(Some(ReleaseList {
+        source,
+        entries,
+        truncated: cached.truncated,
+        local_tags_available,
+        cached_at: Some(cached.captured_at),
+        rate_limit_reset: None,
+    }))
+}
+
 #[cfg(test)]
 fn get_releases_with_client(
     active: &ActiveRepo,
@@ -304,13 +355,13 @@ mod tests {
     use crate::{
         error::AppError,
         github::api::GitHubClient,
-        releases::{ReleaseListEntry, ReleaseSource},
+        releases::{cache, ReleaseInfo, ReleaseListEntry, ReleaseSource},
         repository::ActiveRepo,
     };
 
     use super::{
-        get_releases_with_client, get_releases_with_client_and_data_dir, MAX_NOTES_BYTES,
-        MAX_PAGES, MAX_RESPONSE_BYTES, PAGE_SIZE,
+        get_cached_releases, get_releases_with_client, get_releases_with_client_and_data_dir,
+        MAX_NOTES_BYTES, MAX_PAGES, MAX_RESPONSE_BYTES, PAGE_SIZE,
     };
 
     type FakeResponse = (u16, Vec<(String, String)>, Vec<u8>);
@@ -537,6 +588,41 @@ mod tests {
                 if release.tag_name == "v2.0"
         ));
         assert!(repo.find_reference("refs/tags/v2.0").is_err());
+    }
+
+    #[test]
+    fn cached_listing_uses_current_tags_without_network_access() {
+        let (directory, active, _repository) = repository();
+        let data_dir = directory.path().join("app-data");
+        let source = ReleaseSource::Github {
+            owner: "example".to_owned(),
+            name: "project".to_owned(),
+        };
+        cache::store(
+            &data_dir,
+            &source,
+            &[ReleaseInfo {
+                id: 1,
+                tag_name: "v1.0".to_owned(),
+                name: Some("Release v1.0".to_owned()),
+                notes: "cached".to_owned(),
+                html_url: None,
+                prerelease: false,
+                published_at: None,
+            }],
+            false,
+        )
+        .unwrap();
+
+        let cached = get_cached_releases(&active, &data_dir).unwrap().unwrap();
+
+        assert_eq!(cached.source, source);
+        assert!(cached.cached_at.is_some());
+        assert!(cached.local_tags_available);
+        assert!(matches!(
+            cached.entries.as_slice(),
+            [ReleaseListEntry::Release { local_tag: Some(tag), .. }] if tag.name == "v1.0"
+        ));
     }
 
     #[test]
