@@ -387,19 +387,31 @@ function createFixtureRepository(
       return { repository: fs.realpathSync(repository), token };
     }
 
-    if (kind === "local-changes" || kind === "workspace") {
+    if (kind === "local-changes") {
+      fs.writeFileSync(path.join(repository, "base.txt"), "base\n");
+      fs.writeFileSync(path.join(repository, "a.txt"), "one\n");
+      git("add", "base.txt", "a.txt");
+      git("commit", "-m", "base commit");
+
+      fs.writeFileSync(path.join(repository, "a.txt"), "one\ntwo\nthree\n");
+      fs.writeFileSync(path.join(repository, "untracked.txt"), "new\n");
+      fs.writeFileSync(
+        path.join(repository, "highlight.ts"),
+        "export const answer: number = 42;\n",
+      );
+      fs.writeFileSync(path.join(repository, "staged.txt"), "before\n");
+      git("add", "staged.txt");
+      return { repository: fs.realpathSync(repository), token };
+    }
+
+    if (kind === "workspace") {
       fs.writeFileSync(path.join(repository, "base.txt"), "base\n");
       git("add", "base.txt");
-      git(
-        "commit",
-        "-m",
-        kind === "workspace" ? "workspace alpha commit" : "base commit",
+      git("commit", "-m", "workspace alpha commit");
+      fs.writeFileSync(
+        path.join(repository, "alpha-local.txt"),
+        "alpha only\n",
       );
-      if (kind === "workspace")
-        fs.writeFileSync(
-          path.join(repository, "alpha-local.txt"),
-          "alpha only\n",
-        );
       return { repository: fs.realpathSync(repository), token };
     }
 
