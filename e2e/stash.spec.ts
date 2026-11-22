@@ -254,14 +254,148 @@ describe("read-only stash inspection", () => {
         await setReactSelectValue(".language-selector__select", language);
         await (await browser.$(".preferences-menu__toggle")).click();
         await browser.$("[data-stash-row]").waitForExist({ timeout: 20_000 });
-        const bounds = await browser.execute(() => ({
-          width: document.documentElement.scrollWidth,
-          height: document.documentElement.scrollHeight,
-          innerWidth,
-          innerHeight,
-        }));
+        await browser.execute(() => window.scrollTo(0, 0));
+        await browser.pause(100);
+        const windowYBeforeWheel = await browser.execute(() => window.scrollY);
+        await browser.performActions([
+          {
+            type: "wheel",
+            id: "page-scroll-probe",
+            actions: [
+              {
+                type: "scroll",
+                x: 800,
+                y: 450,
+                deltaX: 0,
+                deltaY: 100,
+                duration: 250,
+              },
+            ],
+          },
+        ]);
+        await browser.releaseActions();
+        const windowYAfterWheel = await browser.execute(() => window.scrollY);
+        const bounds = (await browser.execute(() => {
+          const sidebar = document.querySelector<HTMLElement>(".sidebar");
+          const shell = document.querySelector<HTMLElement>(".app-shell");
+          const detailPanel =
+            document.querySelector<HTMLElement>(".detail-panel");
+          const originalSidebarY = sidebar?.scrollTop ?? 0;
+          const originalDetailPanelY = detailPanel?.scrollTop ?? 0;
+          if (sidebar !== null) {
+            sidebar.scrollTop = 0;
+            sidebar.scrollTop = 100;
+          }
+          const sidebarYAfterAttempt = sidebar?.scrollTop ?? 0;
+          if (sidebar !== null) sidebar.scrollTop = originalSidebarY;
+          if (detailPanel !== null) {
+            detailPanel.scrollTop = 0;
+            detailPanel.scrollTop = 100;
+          }
+          const detailPanelYAfterAttempt = detailPanel?.scrollTop ?? 0;
+          if (detailPanel !== null)
+            detailPanel.scrollTop = originalDetailPanelY;
+          return {
+            width: document.documentElement.scrollWidth,
+            innerWidth,
+            innerHeight,
+            bodyHeight: document.body.getBoundingClientRect().height,
+            shellBottom: shell?.getBoundingClientRect().bottom ?? null,
+            sidebarCanScroll: sidebarYAfterAttempt > 0,
+            sidebarClientHeight: sidebar?.clientHeight ?? 0,
+            sidebarScrollHeight: sidebar?.scrollHeight ?? 0,
+            detailPanelCanScroll: detailPanelYAfterAttempt > 0,
+            detailPanelClientHeight: detailPanel?.clientHeight ?? 0,
+            detailPanelScrollHeight: detailPanel?.scrollHeight ?? 0,
+            scrollingElement: document.scrollingElement?.tagName ?? null,
+            html: {
+              overflowY: getComputedStyle(document.documentElement).overflowY,
+              height: document.documentElement.getBoundingClientRect().height,
+              clientHeight: document.documentElement.clientHeight,
+              scrollHeight: document.documentElement.scrollHeight,
+              scrollTop: document.documentElement.scrollTop,
+            },
+            body: {
+              overflowY: getComputedStyle(document.body).overflowY,
+              height: document.body.getBoundingClientRect().height,
+              clientHeight: document.body.clientHeight,
+              scrollHeight: document.body.scrollHeight,
+              scrollTop: document.body.scrollTop,
+            },
+            root: (() => {
+              const root = document.querySelector<HTMLElement>("#root");
+              return {
+                overflowY: root ? getComputedStyle(root).overflowY : null,
+                height: root?.getBoundingClientRect().height ?? null,
+                clientHeight: root?.clientHeight ?? null,
+                scrollHeight: root?.scrollHeight ?? null,
+                scrollTop: root?.scrollTop ?? null,
+              };
+            })(),
+            shell: {
+              height: shell?.getBoundingClientRect().height ?? null,
+              clientHeight: shell?.clientHeight ?? null,
+              scrollHeight: shell?.scrollHeight ?? null,
+              overflowY: shell ? getComputedStyle(shell).overflowY : null,
+            },
+          };
+        })) as {
+          width: number;
+          innerWidth: number;
+          innerHeight: number;
+          bodyHeight: number;
+          shellBottom: number | null;
+          sidebarCanScroll: boolean;
+          sidebarClientHeight: number;
+          sidebarScrollHeight: number;
+          detailPanelCanScroll: boolean;
+          detailPanelClientHeight: number;
+          detailPanelScrollHeight: number;
+          scrollingElement: string | null;
+          html: {
+            overflowY: string;
+            height: number;
+            clientHeight: number;
+            scrollHeight: number;
+            scrollTop: number;
+          };
+          body: {
+            overflowY: string;
+            height: number;
+            clientHeight: number;
+            scrollHeight: number;
+            scrollTop: number;
+          };
+          root: {
+            overflowY: string | null;
+            height: number | null;
+            clientHeight: number | null;
+            scrollHeight: number | null;
+            scrollTop: number | null;
+          };
+          shell: {
+            height: number | null;
+            clientHeight: number | null;
+            scrollHeight: number | null;
+            overflowY: string | null;
+          };
+        };
         expect(bounds.width).toBeLessThanOrEqual(bounds.innerWidth);
-        expect(bounds.height).toBeLessThanOrEqual(bounds.innerHeight);
+        expect(bounds.bodyHeight).toBeLessThanOrEqual(bounds.innerHeight);
+        expect(bounds.shellBottom).toBeLessThanOrEqual(bounds.innerHeight);
+        expect(windowYBeforeWheel).toBe(0);
+        expect(windowYAfterWheel).toBe(windowYBeforeWheel);
+        expect(bounds.html.overflowY).toBe("clip");
+        expect(bounds.body.overflowY).toBe("clip");
+        expect(bounds.root.overflowY).toBe("clip");
+        expect(bounds.sidebarScrollHeight).toBeGreaterThan(
+          bounds.sidebarClientHeight,
+        );
+        expect(bounds.sidebarCanScroll).toBe(true);
+        expect(bounds.detailPanelScrollHeight).toBeGreaterThan(
+          bounds.detailPanelClientHeight,
+        );
+        expect(bounds.detailPanelCanScroll).toBe(true);
         await browser.saveScreenshot(
           path.join(
             os.tmpdir(),
