@@ -515,7 +515,10 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
           toggleCollapsed("section:stashes");
         }}
       />
-      <TagsReleasesPanel />
+      <TagsReleasesPanel
+        key={`${path ?? "no-repository"}:${hidden ? "hidden" : "visible"}`}
+        panelOpen={!hidden}
+      />
       <AuthorPanel />
       {palette !== null && (
         <BranchColorPicker

@@ -44,7 +44,8 @@
 .tags-releases-panel__state,
 .tags-releases-panel__badge,
 .tags-releases-panel__notes,
-.tags-releases-panel__notice {
+.tags-releases-panel__notice,
+.tags-releases-panel__asset-size {
   margin: 0;
 }
 
@@ -80,4 +81,104 @@
   overflow: auto;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.tags-releases-panel__actions,
+.tags-releases-panel__asset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.tags-releases-panel__assets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.tags-releases-panel__assets h4 {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--font-size-small-wide);
+}
+
+.tags-releases-panel__asset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tags-releases-panel__asset {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+}
+
+.tags-releases-panel__asset-name {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: var(--font-size-small-wide);
+}
+
+.tags-releases-panel__asset-size {
+  color: var(--ink-faint);
+  font-size: var(--font-size-caption-wide);
+}
+
+.tags-releases-panel__transfer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--ink-muted);
+  font-size: var(--font-size-caption-wide);
+}
+
+.tags-releases-panel__transfer progress {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.tags-releases-panel__access {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.tags-releases-panel__access p,
+.tags-releases-panel__access label {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--font-size-small-wide);
+}
+
+.tags-releases-panel__access form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tags-releases-panel__access input {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
 }

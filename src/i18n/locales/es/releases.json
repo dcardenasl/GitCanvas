@@ -2,6 +2,8 @@
   "title": "Etiquetas y releases",
   "listLabel": "Etiquetas y releases",
   "loading": "Cargando releases…",
+  "retryReleases": "Reintentar lista de releases",
+  "retrying": "Reintentando…",
   "empty": "No se encontraron etiquetas ni releases.",
   "availableLocally": "Disponible en el repositorio local",
   "availableToFetch": "Disponible para traer",
@@ -11,5 +13,48 @@
   "localTagsUnavailable": "No se pudieron leer las etiquetas locales; se muestran los releases.",
   "cached": "Se muestran datos guardados de releases del {{date}}",
   "rateLimit": "El límite de GitHub se reinicia a las {{date}}.",
-  "truncated": "Se muestran solo los primeros 1.000 releases."
+  "truncated": "Se muestran solo los primeros 1.000 releases.",
+  "tag": {
+    "fetch": "Traer {{tag}}",
+    "fetching": "Trayendo etiqueta…",
+    "result": {
+      "Fetched": "Se trajo {{tag}} al repositorio local.",
+      "AlreadyPresent": "{{tag}} ya existe localmente y coincide con GitHub.",
+      "Conflict": "{{tag}} difiere entre el repositorio local y GitHub; la etiqueta local no cambió.",
+      "NotFoundOnRemote": "{{tag}} ya no está disponible en GitHub."
+    }
+  },
+  "assets": {
+    "show": "Ver adjuntos de {{tag}}",
+    "hide": "Ocultar adjuntos de {{tag}}",
+    "title": "Archivos del release",
+    "loading": "Cargando adjuntos…",
+    "retry": "Reintentar adjuntos",
+    "retrying": "Reintentando…",
+    "empty": "Este release no tiene archivos para descargar.",
+    "size": "{{bytes}} bytes",
+    "download": "Descargar",
+    "truncated": "Se muestran solo los primeros 1.000 adjuntos."
+  },
+  "transfer": {
+    "starting": "Abriendo el diálogo para guardar…",
+    "downloading": "Descargando",
+    "completed": "Descarga completa",
+    "cancelled": "Descarga cancelada",
+    "failed": "Falló la descarga",
+    "bytes": "{{downloaded}} de {{total}} bytes",
+    "progressLabel": "Progreso de descarga de {{asset}}",
+    "cancel": "Cancelar descarga"
+  },
+  "access": {
+    "title": "Se requiere acceso a GitHub",
+    "required": "Guarda un token de GitHub para reanudar esta acción.",
+    "requiredNoPending": "Guarda un token de GitHub y luego reintenta la acción explícitamente.",
+    "downloadRetry": "Guarda un token de GitHub y vuelve a elegir Descargar para seleccionar dónde guardar el archivo.",
+    "tokenLabel": "Token de acceso personal",
+    "save": "Guardar token",
+    "saving": "Verificando y guardando…",
+    "retryDownload": "Acceso restablecido. Elige Descargar de nuevo para seleccionar dónde guardar el archivo.",
+    "retryAction": "Acceso guardado. Reintenta la acción anterior de forma explícita."
+  }
 }

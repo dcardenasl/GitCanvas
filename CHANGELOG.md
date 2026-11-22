@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Tags and releases** — browse GitHub release notes and see which release tags are available in the local repository.
+- **Release actions** — fetch release tags and download assets with progress, cancellation and contextual access recovery.
 - **Author panel** — search repository authors and navigate their commits with keyboard controls.
 - **Author emphasis** — focus the commit graph and table on one contributor without hiding history.
 

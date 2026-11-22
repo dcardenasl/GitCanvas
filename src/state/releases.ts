@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { isTauri } from "@tauri-apps/api/core";
 import { useMutation, useQuery, type QueryClient } from "@tanstack/react-query";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
@@ -296,7 +297,7 @@ export function useReleaseDownloadProgress(
   repositoryPath: string | null,
 ): void {
   useEffect(() => {
-    if (repositoryPath === null) return;
+    if (repositoryPath === null || !isTauri()) return;
     let active = true;
     let stop: (() => void) | undefined;
     void events.releaseDownloadProgressEvent

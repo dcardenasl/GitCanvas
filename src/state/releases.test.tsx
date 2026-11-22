@@ -74,6 +74,8 @@ vi.mock("../bindings", () => ({
   events: { releaseDownloadProgressEvent: { listen: mocks.listen } },
 }));
 
+vi.mock("@tauri-apps/api/core", () => ({ isTauri: () => true }));
+
 function ok<T>(data: T): IpcResult<T> {
   return { status: "ok", data };
 }

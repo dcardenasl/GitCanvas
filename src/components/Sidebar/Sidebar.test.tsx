@@ -20,9 +20,37 @@ vi.mock("../../state/releases", () => ({
   useReleases: () => ({
     data: releaseQuery.data,
     isLoading: false,
+    isFetching: false,
     isError: false,
     error: null,
+    refetch: vi.fn(),
   }),
+  useReleaseAssets: () => ({
+    data: null,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  usePendingReleaseAction: () => null,
+  getPendingReleaseAction: () => null,
+  useReleaseDownloadProgress: vi.fn(),
+  useFetchReleaseTag: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+    error: null,
+    reset: vi.fn(),
+  }),
+  useDownloadReleaseAsset: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+    error: null,
+  }),
+  useCancelReleaseTransfer: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useReleaseTransfers: () => [],
+  resumePendingReleaseAction: vi.fn(),
+  releaseQueryKey: { releases: (root: string | null) => ["releases", root] },
 }));
 
 const getBranches = vi.fn<() => Promise<BranchInfo[]>>();
@@ -177,7 +205,9 @@ describe("Sidebar", () => {
     renderSidebar();
 
     expect(await screen.findByText("GitHub release only")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /release-only/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^release-only(?:\s|$)/ }),
+    ).toBeNull();
     expect(activeNavigation().selection).toEqual(selectionBefore);
     expect(useWorkspace.getState().referenceFilters).toEqual(filtersBefore);
   });
