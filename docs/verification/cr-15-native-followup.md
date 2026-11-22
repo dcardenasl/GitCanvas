@@ -25,12 +25,12 @@ convierte la matriz global de v0.9 en PASS.
   marcado como propiedad de WDIO. La ruta no llega por IPC. Esto permite probar
   resolver, descarga, digest, progreso y escritura a través del comando nativo,
   pero no equivale a probar el diálogo real del sistema.
-- `npm run test:e2e` pasó Vite, compilación E2E release y el spec autores/releases
-  (4/4). La corrida completa terminó con código 1 por fallos fuera de ese spec:
-  graph-performance (timeout de 120 s), graph (dos fallos de preferencias),
-  local-changes (tres fallos al cargar sus grupos), stash (altura de documento
-  2972 frente al máximo 568) y workspace (un timeout de 120 s). Los otros specs
-  que terminaron aparecen en la salida real de WDIO; no se atribuye un PASS global.
+- `npm run test:e2e` pasó Vite, compilación E2E release y las 13 specs/41 tests de WDIO
+  (exit 0). Pasaron graph-performance (1/1), graph (3/3), local-changes (3/3), stash
+  (6/6), workspace (3/3) y authors/releases (4/4), además de los demás specs. QA
+  independiente repitió la corrida completa y confirmó el resultado. Ejecuciones focales
+  anteriores tuvieron timeouts intermitentes bajo sesiones WebDriver concurrentes; no
+  reaparecieron en las corridas completas seriales.
 - Se regeneraron y revisaron visualmente estas capturas de 940×600, sin
   agregarlas al repositorio:
   `/var/folders/ln/y5fq9gts5jq4pwvszj8gvv0h0000gn/T/gitcanvas-cr15-en-light.png`,
@@ -55,9 +55,9 @@ convierte la matriz global de v0.9 en PASS.
   el stub aislado evita controlar o falsificar el diálogo del sistema. La
   verificación de rename en macOS, Linux y Windows sigue en
   `V09-VERIFY-CR15-DOWNLOAD-PLATFORMS`.
-- La suite WDIO completa no queda en verde por los fallos enumerados arriba.
-  Los screenshots y el spec focal pasan, pero no se infiere de ello que esas
-  suites ni toda la matriz de accesibilidad pasen.
+- La suite WDIO completa queda en verde en macOS/WebKit; no se infiere de ello que
+  pasen Linux/Windows, el diálogo real de guardar, navegación Tab nativa o lectores de
+  pantalla.
 
 ## Suites
 
@@ -69,5 +69,5 @@ Comandos ejecutados y resultado:
 | `cargo build --release --features e2e,tauri/custom-protocol` | PASS. |
 | `cargo build --release -p gitcanvas --no-default-features` | PASS. |
 | `npm run typecheck:e2e` | PASS. |
-| `npm run test:e2e` | PARTIAL — build y spec focal 4/4 pasan; full WDIO exit 1 por otros specs. |
+| `npm run test:e2e` | PASS en macOS/WebKit — full WDIO, 13 specs/41 tests, exit 0. |
 
