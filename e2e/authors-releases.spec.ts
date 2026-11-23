@@ -118,7 +118,9 @@ describe("author and release panels", () => {
         viewportWidth: window.innerWidth,
         documentWidth: document.documentElement.scrollWidth,
       }));
-      expect(habitualLayout.viewportWidth).toBe(1440);
+      // Windows includes native frame insets in setWindowSize, so its WebView
+      // viewport can be a few pixels narrower than the requested outer size.
+      expect(habitualLayout.viewportWidth).toBeGreaterThanOrEqual(1400);
       expect(habitualLayout.documentWidth).toBeLessThanOrEqual(
         habitualLayout.viewportWidth,
       );
