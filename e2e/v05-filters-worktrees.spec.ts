@@ -3,6 +3,7 @@ import { e2eRepositoryRoot } from "../wdio.conf";
 import { waitForHistory } from "./history";
 import {
   clickAndConfirm,
+  revealContextMenuItem,
   revealSidebarItem,
   setReactSelectValue,
 } from "./interactions";
@@ -162,6 +163,7 @@ describe("v0.5 reference filters and linked worktrees", () => {
           $('[role="menuitem"]*=Abrir el worktree que usa esta rama'),
         ).toBeDisplayed(),
     );
+    await revealContextMenuItem("Abrir el worktree que usa esta rama");
     await clickAndConfirm(
       '[role="menuitem"]*=Abrir el worktree que usa esta rama',
       async () => {

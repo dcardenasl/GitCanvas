@@ -31,6 +31,21 @@ export async function revealSidebarItem(selector: string): Promise<void> {
   );
 }
 
+/** Scroll a context-menu item inside its own scroller before WebDriver clicks it. */
+export async function revealContextMenuItem(label: string): Promise<void> {
+  await browser.execute((expectedLabel) => {
+    const item = Array.from(
+      document.querySelectorAll<HTMLElement>('.context-menu [role="menuitem"]'),
+    ).find(
+      (candidate) => candidate.textContent?.includes(expectedLabel) === true,
+    );
+    if (item === undefined) {
+      throw new Error(`context-menu item did not appear: ${expectedLabel}`);
+    }
+    item.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, label);
+}
+
 interface DiagnosticWindow extends Window {
   __gitcanvasE2eEvents?: string[];
   __gitcanvasE2eRecorderInstalled?: boolean;
@@ -89,6 +104,18 @@ async function visibleMenus(): Promise<
   );
 }
 
+/**
+ * WebDriver implementations word a detached element differently: the W3C text
+ * is "stale element reference", while the WebKitGTK driver reports "Element is
+ * no longer attached to the DOM". Both mean the same thing here.
+ */
+function isStaleElementError(message: string): boolean {
+  return (
+    message.includes("stale element reference") ||
+    message.includes("no longer attached to the DOM")
+  );
+}
+
 /** Confirms the user-visible result when an action removes its own element. */
 export async function clickAndConfirm(
   selector: string,
@@ -101,8 +128,7 @@ export async function clickAndConfirm(
     await $(selector).click();
   } catch (error) {
     const shouldReportClickFailure =
-      !(error instanceof Error) ||
-      !error.message.includes("stale element reference");
+      !(error instanceof Error) || !isStaleElementError(error.message);
     if (shouldReportClickFailure) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new Error(
