@@ -5,25 +5,26 @@
 
 ## Dónde quedé
 
-CR-D22 quedó confirmado y el caso 38 está cerrado PASS bajo ese alcance. CR-17 está implementado; la matriz `quality #45093960516` pasó en Ubuntu/macOS/Windows; tests, WDIO y capturas macOS/WebKit pasaron. Se instaló el candidato 0.9.0 en `/Applications/GitCanvas.app` y se probó GitHub real v0.8.0: notas, enlace Markdown, descarga y renombrado del asset con SHA-256 coincidente. El flujo encontró y corrigió la falta de asociación del diálogo nativo con la ventana principal. La verificación global v0.9 sigue parcial; conservar el backup `.GitCanvas.app.pre-v0.9.0-20261123` y todos los artefactos del usuario.
+v0.9.0 está publicada: PR #24 fusionado a `main` (`da54371`), tag anotado `v0.9.0` sobre ese commit y GitHub Release publicado (no draft, no prerelease). `latest.json` declara `darwin-aarch64`, `darwin-x86_64`, `linux-x86_64` y `windows-x86_64`. El job aarch64 se canceló tres veces a los 15 minutos sin pasos registrados; pasó al reintentarlo solo (run `45262501399`, intento 2). `dev` está por delante de `origin/dev` con tres commits que no están en el release: `720dc31` y `20a3df5` (e2e de Linux) y `97748c7` (test de Windows). `97748c7` no tiene CI todavía porque el CI solo corre en PR a `main`. El test `pull_fetches_tags_for_new_commits_but_not_unrelated_remote_tags` fallaba a veces en Windows; ya no reproduce en local (18/18, 15 repeticiones), pero no está validado en Windows.
 
 ## Próximo paso
 
-Completar el cierre documental de v0.9.0, verificar nuevamente los gates y preparar commit de release y PR `dev → main`; detenerse antes del merge. El gate de descargas queda parcial: falta probar confirmación de sobrescritura y los diálogos Linux/Windows.
+Cuando David lo indique, abrir el PR `dev → main` con el skill `release` para validar `97748c7` y los fixes de e2e en CI, junto con la siguiente versión.
 
 ## Bloqueos
 
-Siguen pendientes el aviso de sobrescritura y los diálogos Linux/Windows. VoiceOver/NVDA/Orca permanece aceptado por David como no verificado y documentado en README. La firma local de updater artifacts requiere `TAURI_SIGNING_PRIVATE_KEY`; no se generó updater firmado ni notarización.
+(ninguno)
 
 ## Decisiones pendientes de David
 
-- David confirmó v0.9.0 y aceptar A11Y-LECTOR como no verificado el 2026-11-23. No volver a pedir esta decisión.
-- El release fue autorizado para preparación; publicar requiere cerrar la revisión y aprobaciones del flujo de release. No hacer merge sin aprobación explícita.
+- ¿Se abre el PR `dev → main` ahora o con la siguiente versión? Recomendación: con la siguiente versión, para no gastar un ciclo de CI solo por el fix.
+- ¿Qué versión sigue, `0.9.1` (parche) o `0.10.0`? Recomendación: `0.9.1` si el alcance es solo estos fixes; `0.10.0` si entran funcionalidades nuevas.
+- ¿Se registra en el radar el riesgo del test flaky de Windows? Recomendación: sí, con dueño y fecha de revisión.
 
 ## Verificado y no verificado
 
-- `npm run test:coverage`: 108 archivos/999 tests; typechecks, lint, formato, build frontend, E2E 12/36, Cargo workspace/Clippy/deny y doc-check pasaron antes de la última corrección. `cargo fmt --all --check` y `cargo check --workspace` pasaron después de asociar el diálogo con la ventana principal. Evidencia instalada en `docs/verification/v0.9-macos-arm64-followup.md`.
-- El candidato local instalado es 0.9.0 y tiene firma ad-hoc válida. Se preservó la instalación previa y el candidato reemplazado. No hay updater firmado ni notarización. Los diálogos Linux/Windows, sobrescritura y lectores reales no se probaron. No hay tag, GitHub Release ni merge; preparar el release/PR de acuerdo con el flujo y detenerse antes del merge.
+- Verificado (salida real): `doc-check` en orden; `release-check v0.9.0 --skip-git` en orden; PR #24 con cinco checks en verde sobre `720dc31` (run `45245942517`, Windows en intento 2); release `v0.9.0` publicado con `latest.json` que incluye `darwin-aarch64`; `cargo test -p gitcanvas-core --test actions` 18/18 y 15/15 repeticiones en macOS; `cargo clippy -D warnings` y `cargo fmt --check` limpios.
+- No verificado: la firma del updater (`TAURI_SIGNING_PRIVATE_KEY` no está disponible en local y no se revisó su uso en el job); instalación y arranque de los instaladores en Linux y Windows; el test flaky en Windows con `97748c7`; el rechazo del validador sobre el cierre documental de v0.9.0 sigue citado en la descripción del PR y no tiene registro de cierre propio.
 
 ## Comandos para retomar
 
@@ -31,7 +32,7 @@ Siguen pendientes el aviso de sobrescritura y los diálogos Linux/Windows. Voice
 git branch --show-current
 git log --oneline -5
 git status -sb
+gh release view v0.9.0 --json isDraft,publishedAt,url
+gh run list --workflow quality.yml --limit 3
 python3 .dcl/dcl.py doc-check
-python3 .dcl/dcl.py gate-report
-sed -n '80,125p' TASKS.md
 ```
