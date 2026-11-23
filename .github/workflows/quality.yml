@@ -140,14 +140,19 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $env:EDGEDRIVER_CACHE_DIR = Join-Path $env:RUNNER_TEMP 'edgedriver'
-          $driverOutput = & node --input-type=module -e "import { download } from 'edgedriver'; console.log('DRIVER_PATH=' + await download())"
-          if ($LASTEXITCODE -ne 0) { throw 'EdgeDriver download failed' }
-          $driverLine = $driverOutput | Where-Object { $_ -like 'DRIVER_PATH=*' } | Select-Object -Last 1
-          if (-not $driverLine) { throw 'EdgeDriver download did not return a path' }
-          $driverPath = $driverLine.Substring('DRIVER_PATH='.Length).Trim()
-          if (-not (Test-Path $driverPath)) { throw "EdgeDriver was not found at $driverPath" }
-          Add-Content -Path $env:GITHUB_PATH -Value (Split-Path $driverPath -Parent)
+          $edgePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'
+          if (-not (Test-Path $edgePath)) { throw "Microsoft Edge was not found at $edgePath" }
+          $edgeVersion = [version](Get-Item $edgePath).VersionInfo.ProductVersion
+          $driverVersion = (Invoke-RestMethod "https://msedgedriver.microsoft.com/LATEST_RELEASE_$($edgeVersion.Major)_WINDOWS").Trim()
+          $archivePath = Join-Path $env:RUNNER_TEMP 'edgedriver.zip'
+          $driverDirectory = Join-Path $env:RUNNER_TEMP 'edgedriver'
+          New-Item -ItemType Directory -Force -Path $driverDirectory | Out-Null
+          Invoke-WebRequest "https://msedgedriver.microsoft.com/$driverVersion/edgedriver_win64.zip" -OutFile $archivePath
+          Expand-Archive -LiteralPath $archivePath -DestinationPath $driverDirectory -Force
+          if (-not (Test-Path (Join-Path $driverDirectory 'msedgedriver.exe'))) {
+            throw 'The Edge WebDriver archive did not contain msedgedriver.exe'
+          }
+          Add-Content -Path $env:GITHUB_PATH -Value $driverDirectory
 
       # --- End to end ---
       #

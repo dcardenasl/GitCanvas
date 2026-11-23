@@ -61,31 +61,10 @@ async function waitForMenuItem(label: string) {
 }
 
 async function clickMenuItemByText(label: string) {
-  const point = await browser.execute((expectedLabel) => {
-    const target = Array.from(
-      document.querySelectorAll<HTMLElement>("[role='menuitem']"),
-    ).find((item) => item.textContent?.includes(expectedLabel) === true);
-    if (target === undefined)
-      throw new Error(`context-menu item is missing: ${expectedLabel}`);
-    const bounds = target.getBoundingClientRect();
-    return {
-      x: Math.round(bounds.left + bounds.width / 2),
-      y: Math.round(bounds.top + bounds.height / 2),
-    };
-  }, label);
-  await browser.performActions([
-    {
-      type: "pointer",
-      id: "graph-spec-pointer",
-      parameters: { pointerType: "mouse" },
-      actions: [
-        { type: "pointerMove", origin: "viewport", x: point.x, y: point.y },
-        { type: "pointerDown", button: 0 },
-        { type: "pointerUp", button: 0 },
-      ],
-    },
-  ]);
-  await browser.releaseActions();
+  const selector = `//button[@role="menuitem" and normalize-space(.)="${label}"]`;
+  await clickAndConfirm(selector, async () => {
+    await expect($(".context-menu")).not.toExist();
+  });
 }
 
 /** Real native UI, Rust store and Git fixture, isolated from the user's projects. */
@@ -172,6 +151,7 @@ describe("stable branch graph preferences", () => {
     );
     await waitForMenuItem("Usar como principal visual");
     await clickMenuItemByText("Usar como principal visual");
+    await expect($('[aria-label="Rama principal visual"]')).toBeDisplayed();
     await browser.waitUntil(() =>
       browser.execute(() => {
         const node = document.querySelector(".graph-canvas__node");
