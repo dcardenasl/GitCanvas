@@ -15,6 +15,14 @@ E2E nativa en `ubuntu-latest` (con `xvfb`), `macos-latest` y `windows-latest`
 | v0.7.0  | `chore: release v0.7.0` | 42716393105 | `69923feb9` | éxito | éxito | éxito   |
 | v0.8.0  | `chore: release v0.8.0` | 43787989991 | `05694bfea` | éxito | éxito | éxito   |
 
+## Verificación previa a release v0.9
+
+La corrida [`quality #45093960516`](https://github.com/dcardenasl/GitCanvas/actions/runs/45093960516)
+se despachó sobre `dev` en el commit `5cdc6dd` (no fue una corrida de PR de release). Pasó
+tests Rust, Clippy, bundles y E2E nativo en Ubuntu, macOS y Windows. Se usa como evidencia de
+`V09-VERIFY-PLATFORM-MATRIX`; no prueba el diálogo nativo de guardar/renombrar ni lectores de
+pantalla reales.
+
 Reproducir una fila:
 
 ```bash

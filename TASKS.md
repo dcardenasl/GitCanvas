@@ -6,11 +6,11 @@
 > [roadmap](ROADMAP.md).
 
 **Estado al 2026-11-22:** v0.4–v0.8 publicadas; la implementación v0.9 está completa en
-`dev`, sin bump ni publicación. El WDIO nativo completo de macOS/WebKit y la auditoría
-snapshot del caso 38 ya pasaron. La verificación global sigue parcial: faltan lector de
-pantalla real y recorridos manuales, diálogo/renombrado de descarga en tres plataformas y
-la matriz v0.9 nativa de Linux/Windows. Crear commits permanece al final de la secuencia
-(objetivo v0.13). El roadmap vigente
+`dev`, sin bump ni publicación. El WDIO nativo completo de macOS/WebKit, la auditoría
+snapshot del caso 38 y la matriz automatizada de Ubuntu/macOS/Windows ya pasaron. La
+verificación global sigue parcial: faltan lector de pantalla real y recorridos manuales,
+y diálogo/renombrado de descarga en tres plataformas. Crear commits permanece al final de
+la secuencia (objetivo v0.13). El roadmap vigente
 prevalece sobre asignaciones de versiones de planes anteriores.
 
 **Estado de trabajo:** rama `dev`. Se preservan sin seguimiento `docs/audits/evidence/`,
@@ -19,9 +19,10 @@ crear tags ni publicar como parte de la implementación; los bumps son del flujo
 
 ## Siguiente paso
 
-La cola de implementación v0.9 está completa. Consultar los gates de verificación abiertos
-antes de declarar completa la matriz o preparar la publicación. La versión y sus manifiestos
-siguen en 0.8 hasta el flujo de release autorizado por David.
+La cola de implementación v0.9 está completa y la matriz automatizada pasó en tres sistemas.
+Resolver o mantener documentados los gates externos abiertos antes de declarar v0.9 completa
+o preparar publicación. La versión y sus manifiestos siguen en 0.8 hasta el flujo de release
+autorizado por David.
 
 ## Cola de trabajo
 
@@ -83,7 +84,8 @@ Verificaciones que no se pudieron ejecutar o documentar; conservan su plan de or
 bloquean el desarrollo de v0.9.
 
 - [ ] **A11Y-LECTOR — Lector de pantalla real y recorridos manuales (decisión de David).**
-      Origen: GRF-5 (v0.4), V05-VERIFY, V07-VERIFY y V08-VERIFY, cerrados el 2026-11-16 (ver
+      Pendiente, sin evidencia de una sesión con lector de pantalla real. Origen: GRF-5
+      (v0.4), V05-VERIFY, V07-VERIFY y V08-VERIFY, cerrados el 2026-11-16 (ver
       [`ARCHIVES.md`](ARCHIVES.md#gates-externos-cerrados-2026-11-16)). El E2E nativo de Linux,
       macOS y Windows tiene evidencia en
       [`docs/verification/ci-plataformas.md`](docs/verification/ci-plataformas.md). Queda sin
@@ -107,12 +109,15 @@ bloquean el desarrollo de v0.9.
       macOS. Este gate cierra WDIO/capturas en macOS; lector de pantalla, Tab nativo y
       diálogo/renombrado real siguen en sus gates externos separados.
 - [ ] **V09-VERIFY-CR15-DOWNLOAD-PLATFORMS — Renombrado de descarga en tres sistemas.**
-      Ejecutar y conservar evidencia del flujo de renombrado/confirmación en macOS, Linux y
-      Windows; esta tarea no tiene resultados de plataforma ni evidencia de CI.
-- [ ] **V09-VERIFY-PLATFORM-MATRIX — Verificación nativa v0.9 en Linux y Windows.** Aportar
-      evidencia para las áreas que QA probó solo en macOS: CR-7, CR-9a, CR-9b, CR-10 y
-      CR-11a/b (incluida semántica de symlink/rename). Los IDs sugeridos por los informes
-      individuales están registrados allí; esta puerta los agrupa para el cierre de v0.9.
+      Pendiente, sin evidencia del flujo con diálogo real. La matriz automatizada pasó en
+      Ubuntu, macOS y Windows (véase `V09-VERIFY-PLATFORM-MATRIX`); ejecutar y conservar
+      evidencia del diálogo/renombrado y confirmación de no sobrescritura en los tres sistemas.
+- [x] **V09-VERIFY-PLATFORM-MATRIX — Verificación nativa v0.9 en Linux y Windows.** **PASS**
+      en la corrida [`quality #45093960516`](https://github.com/dcardenasl/GitCanvas/actions/runs/45093960516)
+      sobre `dev` (`5cdc6dd`). Pasaron tests Rust, Clippy, bundles y WDIO nativo en Ubuntu,
+      macOS y Windows, aportando evidencia de CR-7, CR-9a/b, CR-10 y CR-11a/b (incluida
+      semántica symlink/rename). El gate de diálogo/renombrado real de CR-15 y el lector de
+      pantalla real siguen separados y pendientes.
 - [ ] **WS-17 — Conciliar verificación y publicación de v0.3.0 (seguimiento histórico).**
       *Actualización 2026-10-19:* v0.3.0 y v0.3.1 ya publicadas; CI de v0.3.1 verde.
       GRF-0 debe conciliar evidencia y comprobaciones manuales antes de cerrar el ID.

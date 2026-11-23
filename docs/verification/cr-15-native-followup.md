@@ -2,7 +2,7 @@
 
 Fecha: 2026-11-22. Plataforma: macOS, WebKit 605.1.15. Esta evidencia complementa
 el veredicto independiente de [`cr-15-qa.md`](cr-15-qa.md); no lo reemplaza ni
-convierte la matriz global de v0.9 en PASS.
+convierte por sí sola la matriz global de v0.9 en PASS.
 
 ## Alcance comprobado
 
@@ -55,9 +55,27 @@ convierte la matriz global de v0.9 en PASS.
   el stub aislado evita controlar o falsificar el diálogo del sistema. La
   verificación de rename en macOS, Linux y Windows sigue en
   `V09-VERIFY-CR15-DOWNLOAD-PLATFORMS`.
-- La suite WDIO completa queda en verde en macOS/WebKit; no se infiere de ello que
-  pasen Linux/Windows, el diálogo real de guardar, navegación Tab nativa o lectores de
-  pantalla.
+- La corrida local descrita arriba es macOS/WebKit. La matriz posterior de CI para
+  Ubuntu, macOS y Windows se registra en la actualización siguiente; ninguna de esas
+  corridas verifica por sí misma el diálogo real de guardar, navegación Tab nativa o
+  lectores de pantalla.
+
+## Actualización de matriz multiplataforma — 2026-11-22
+
+El workflow [`quality #45093960516`](https://github.com/dcardenasl/GitCanvas/actions/runs/45093960516),
+ejecutado en `dev` sobre `5cdc6dd`, pasó sus jobs de Ubuntu, macOS y Windows,
+incluidos WDIO y los bundles nativos. QA independiente revisó el diff de estabilización
+y aprobó la evidencia de ventana/viewport, reintentos ante elementos stale y provisión
+de EdgeDriver; su informe está en [QA de seguimiento de matriz](cr-15-platform-matrix-followup-qa.md).
+El Validador aprobó la corrección documental; el veredicto JSON está en
+[validación de seguimiento](cr-15-platform-matrix-followup-validator.json).
+
+Esto actualiza el estado de la matriz automática Linux/macOS/Windows. No cambia el
+veredicto histórico PARTIAL de CR-15 ni cierra `V09-VERIFY-CR15-DOWNLOAD-PLATFORMS`:
+el diálogo real y el renombrado/no sobrescritura todavía requieren comprobación manual
+en los tres sistemas. `A11Y-LECTOR` también sigue abierto hasta una sesión con
+VoiceOver, NVDA u Orca. QA señala además que no se probó la carrera en que una acción se
+aplica pero la confirmación del DOM expira.
 
 ## Suites
 
