@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-11-23
+
+### Added
+
+- **Release inspection** — browse compact release rows, read Markdown notes and inspect downloadable assets in the central view; mark the latest known stable release.
+- **Tags and releases** — browse GitHub release notes and see which release tags are available in the local repository.
+- **Release note links** — open explicitly selected HTTPS links from Markdown notes in the system browser, with native URL validation and no in-app navigation.
+- **Release actions** — fetch release tags and download assets with progress, cancellation and contextual access recovery.
+- **Author panel** — search repository authors and navigate their commits with keyboard controls.
+- **Author emphasis** — focus the commit graph and table on one contributor without hiding history.
+
+### Changed
+
+- **Sidebar sections** — fold Authors and Releases with per-worktree preferences and consistent controls.
+- **Repository writes** — serialize checkout, pull and push across linked worktrees and report when another write holds the repository lock.
+
+### Fixed
+
+- **Workspace tabs** — keep project tabs readable when many projects are open and reveal the selected project in the tab row.
+- **Release panel** — keep release rows compact and render notes, tag availability and assets in the central detail view.
+
 ## [0.8.0] — 2026-11-15
 
 ### Added

@@ -4,10 +4,30 @@ use serde_json::{json, Value};
 use tauri::test::{get_ipc_response, mock_builder, MockRuntime, INVOKE_KEY};
 
 pub(super) fn test_webview() -> tauri::WebviewWindow<MockRuntime> {
+    test_webview_with_external_opener(crate::commands::external_links::ExternalUrlOpener::new(
+        |_| Ok(()),
+    ))
+}
+
+fn test_webview_with_external_opener(
+    external_opener: crate::commands::external_links::ExternalUrlOpener,
+) -> tauri::WebviewWindow<MockRuntime> {
     let builder = super::specta_builder();
     let app = mock_builder()
+        .manage(external_opener)
         .manage(crate::commands::github::CacheRoot(
             std::env::temp_dir().join("gitcanvas-test-cache"),
+        ))
+        .manage(crate::commands::releases::ReleaseDataRoot(
+            std::env::temp_dir().join("gitcanvas-test-data"),
+        ))
+        .manage(crate::commands::releases::ReleaseApiBaseUrl(None))
+        .manage(crate::commands::releases::ActiveTransfers::default())
+        .manage(crate::commands::releases::SaveDialog(std::sync::Arc::new(
+            |_| Ok(None),
+        )))
+        .manage(crate::commands::releases::DownloadProgressEmitter(
+            std::sync::Arc::new(|_| {}),
         ))
         .manage(std::sync::Arc::new(
             gitcanvas_core::history::HistoryReader::default(),
@@ -80,6 +100,247 @@ pub(super) fn invoke(
 }
 
 #[test]
+fn release_commands_reject_an_unopened_repository_before_provider_or_dialog_work() {
+    use git2::Repository;
+
+    let directory = tempfile::tempdir().unwrap();
+    Repository::init(directory.path()).unwrap();
+    let path = directory.path().to_str().unwrap();
+    let webview = test_webview();
+
+    for (command, body) in [
+        ("get_releases", json!({"path": path})),
+        ("get_cached_releases", json!({"path": path})),
+        ("fetch_tag", json!({"path": path, "tagName": "v1.0.0"})),
+        (
+            "get_release_assets",
+            json!({"path": path, "releaseId": "18"}),
+        ),
+        (
+            "download_release_asset",
+            json!({
+                "path": path,
+                "releaseId": "18",
+                "assetId": "19",
+                "transferId": "test-transfer"
+            }),
+        ),
+        (
+            "cancel_transfer",
+            json!({"path": path, "transferId": "test-transfer"}),
+        ),
+    ] {
+        let error = invoke(&webview, command, body).unwrap_err();
+        assert_eq!(error["kind"], "InvalidRepository", "{command}: {error}");
+    }
+}
+
+#[test]
+fn external_link_command_validates_and_forwards_only_https_destinations() {
+    use std::sync::{Arc, Mutex};
+
+    let opened = Arc::new(Mutex::new(Vec::<String>::new()));
+    let captured = Arc::clone(&opened);
+    let webview = test_webview_with_external_opener(
+        crate::commands::external_links::ExternalUrlOpener::new(move |url| {
+            captured.lock().unwrap().push(url.to_owned());
+            Ok(())
+        }),
+    );
+
+    let result = invoke(
+        &webview,
+        "open_external_url",
+        json!({"url": "https://docs.example.test/path"}),
+    )
+    .unwrap();
+    assert_eq!(result, Value::Null);
+    assert_eq!(
+        *opened.lock().unwrap(),
+        vec!["https://docs.example.test/path"]
+    );
+
+    for url in [
+        "http://example.test",
+        "javascript:alert(1)",
+        "file:///etc/passwd",
+        "https://user:secret@example.test",
+    ] {
+        let error = invoke(&webview, "open_external_url", json!({"url": url})).unwrap_err();
+        assert_eq!(error["kind"], "InvalidInput", "{url}: {error}");
+    }
+    assert_eq!(opened.lock().unwrap().len(), 1);
+}
+
+#[test]
+fn cancel_transfer_returns_while_both_transfer_permits_are_occupied() {
+    use std::{
+        sync::mpsc,
+        time::{Duration, Instant},
+    };
+
+    use git2::Repository;
+    use gitcanvas_core::repository::ActiveRepo;
+    use tauri::Manager;
+
+    let directory = tempfile::tempdir().unwrap();
+    Repository::init(directory.path()).unwrap();
+    let active = ActiveRepo::validate(directory.path()).unwrap();
+    let path = active.path().to_str().unwrap().to_owned();
+    let webview = test_webview();
+    let app = webview.app_handle();
+    app.state::<crate::commands::repo_access::AllowedRepos>()
+        .allow(&active)
+        .unwrap();
+    let transfers = app.state::<crate::commands::releases::ActiveTransfers>();
+    let cancelled = transfers
+        .register(active.path(), "cancel-me".to_owned())
+        .unwrap();
+    let _other = transfers
+        .register(active.path(), "also-active".to_owned())
+        .unwrap();
+
+    let (first_started_tx, first_started_rx) = mpsc::channel();
+    let (first_release_tx, first_release_rx) = mpsc::channel();
+    let first = tauri::async_runtime::spawn(async move {
+        crate::commands::runtime::transfer("case43-first", move || {
+            first_started_tx.send(()).unwrap();
+            first_release_rx.recv().unwrap();
+            Ok(())
+        })
+        .await
+        .unwrap();
+    });
+    let (second_started_tx, second_started_rx) = mpsc::channel();
+    let (second_release_tx, second_release_rx) = mpsc::channel();
+    let second = tauri::async_runtime::spawn(async move {
+        crate::commands::runtime::transfer("case43-second", move || {
+            second_started_tx.send(()).unwrap();
+            second_release_rx.recv().unwrap();
+            Ok(())
+        })
+        .await
+        .unwrap();
+    });
+    first_started_rx
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
+    second_started_rx
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
+
+    let start = Instant::now();
+    let result = tauri::async_runtime::block_on(crate::commands::releases::cancel_transfer(
+        path,
+        "cancel-me".to_owned(),
+        app.state::<crate::commands::repo_access::AllowedRepos>(),
+        transfers,
+    ))
+    .unwrap();
+    assert!(result);
+    assert!(cancelled.load(std::sync::atomic::Ordering::Acquire));
+    assert!(start.elapsed() < Duration::from_secs(1));
+
+    first_release_tx.send(()).unwrap();
+    second_release_tx.send(()).unwrap();
+    tauri::async_runtime::block_on(async {
+        first.await.unwrap();
+        second.await.unwrap();
+    });
+}
+
+#[test]
+fn git_action_commands_return_repository_busy_without_side_effects() {
+    use git2::{Repository, Signature};
+    use gitcanvas_core::{repository::ActiveRepo, write_lock::with_repository_write_lock};
+
+    let local_dir = tempfile::tempdir().unwrap();
+    let remote_dir = tempfile::tempdir().unwrap();
+    let local = Repository::init(local_dir.path()).unwrap();
+    let remote = Repository::init_bare(remote_dir.path()).unwrap();
+    remote.set_head("refs/heads/main").unwrap();
+    let signature = Signature::now("Test", "test@example.com").unwrap();
+    let tree_id = local.treebuilder(None).unwrap().write().unwrap();
+    let tree = local.find_tree(tree_id).unwrap();
+    let main_id = local
+        .commit(
+            Some("refs/heads/main"),
+            &signature,
+            &signature,
+            "initial",
+            &tree,
+            &[],
+        )
+        .unwrap();
+    local.set_head("refs/heads/main").unwrap();
+    local
+        .branch("topic", &local.find_commit(main_id).unwrap(), false)
+        .unwrap();
+    local
+        .remote("origin", remote_dir.path().to_str().unwrap())
+        .unwrap();
+    let active = ActiveRepo::validate(local_dir.path()).unwrap();
+    gitcanvas_core::actions::push_current_branch(&active).unwrap();
+    local
+        .find_remote("origin")
+        .unwrap()
+        .fetch(&["main"], None, None)
+        .unwrap();
+    local
+        .find_branch("main", git2::BranchType::Local)
+        .unwrap()
+        .set_upstream(Some("origin/main"))
+        .unwrap();
+
+    let webview = test_webview();
+    let path = local_dir.path().to_str().unwrap();
+    invoke(&webview, "open_repository", json!({"path": path})).unwrap();
+    let busy = with_repository_write_lock(&active, || {
+        let checkout = invoke(
+            &webview,
+            "checkout_branch",
+            json!({"path": path, "branch": "topic", "force": false}),
+        )
+        .unwrap_err();
+        let pull = invoke(&webview, "pull_fast_forward", json!({"path": path})).unwrap_err();
+        let push = invoke(&webview, "push_current_branch", json!({"path": path})).unwrap_err();
+
+        for error in [&checkout, &pull, &push] {
+            assert_eq!(error["kind"], "RepositoryBusy");
+        }
+        assert_eq!(local.head().unwrap().shorthand().unwrap(), "main");
+        assert_eq!(
+            Repository::open_bare(remote_dir.path())
+                .unwrap()
+                .refname_to_id("refs/heads/main")
+                .unwrap(),
+            main_id
+        );
+        Ok(())
+    });
+    busy.unwrap();
+
+    assert_eq!(
+        invoke(&webview, "pull_fast_forward", json!({"path": path})).unwrap()["kind"],
+        "UpToDate"
+    );
+    assert_eq!(
+        invoke(&webview, "push_current_branch", json!({"path": path})).unwrap()["kind"],
+        "Pushed"
+    );
+    assert_eq!(
+        invoke(
+            &webview,
+            "checkout_branch",
+            json!({"path": path, "branch": "topic", "force": false}),
+        )
+        .unwrap()["kind"],
+        "Switched"
+    );
+    assert_eq!(local.head().unwrap().shorthand().unwrap(), "topic");
+}
+
+#[test]
 fn repository_history_and_refs_round_trip_with_real_payloads() {
     let dir = tempfile::tempdir().unwrap();
     let repo = git2::Repository::init(dir.path()).unwrap();
@@ -113,6 +374,275 @@ fn repository_history_and_refs_round_trip_with_real_payloads() {
     let tags = invoke(&webview, "get_repository_refs", json!({"path": path})).unwrap();
     assert_eq!(tags["tags"][0]["name"], "v1");
     assert_eq!(tags["tags"][0]["commit_id"], id.to_string());
+}
+
+#[test]
+fn author_commands_are_authorized_and_isolated_by_repository() {
+    let first_dir = tempfile::tempdir().unwrap();
+    let second_dir = tempfile::tempdir().unwrap();
+    let first_repo = git2::Repository::init(first_dir.path()).unwrap();
+    let second_repo = git2::Repository::init(second_dir.path()).unwrap();
+    let identity = git2::Signature::now("Shared Author", "shared@example.test").unwrap();
+    let first_tree = first_repo
+        .find_tree(first_repo.treebuilder(None).unwrap().write().unwrap())
+        .unwrap();
+    let second_tree = second_repo
+        .find_tree(second_repo.treebuilder(None).unwrap().write().unwrap())
+        .unwrap();
+    let first_id = first_repo
+        .commit(
+            Some("HEAD"),
+            &identity,
+            &identity,
+            "first repository",
+            &first_tree,
+            &[],
+        )
+        .unwrap();
+    let second_root_id = second_repo
+        .commit(
+            Some("HEAD"),
+            &identity,
+            &identity,
+            "second repository root",
+            &second_tree,
+            &[],
+        )
+        .unwrap();
+    let second_root = second_repo.find_commit(second_root_id).unwrap();
+    let second_id = second_repo
+        .commit(
+            Some("HEAD"),
+            &identity,
+            &identity,
+            "second repository tip",
+            &second_tree,
+            &[&second_root],
+        )
+        .unwrap();
+    let webview = test_webview();
+    let first_path = first_dir.path().to_str().unwrap();
+    let second_path = second_dir.path().to_str().unwrap();
+    let identity_payload = json!({"name": "Shared Author", "email": "shared@example.test"});
+
+    assert_author_commands_reject_unopened_repository(&webview, first_path);
+
+    invoke(&webview, "open_repository", json!({"path": first_path})).unwrap();
+    invoke(&webview, "open_repository", json!({"path": second_path})).unwrap();
+
+    let first_catalog = invoke(
+        &webview,
+        "get_author_catalog_chunk",
+        json!({"path": first_path, "request": {"cursor": null, "cancelled": false}}),
+    )
+    .unwrap();
+    let second_catalog = invoke(
+        &webview,
+        "get_author_catalog_chunk",
+        json!({"path": second_path, "request": {"cursor": null, "cancelled": false}}),
+    )
+    .unwrap();
+    assert_eq!(first_catalog["authors"][0]["commits"], 1);
+    assert_eq!(second_catalog["authors"][0]["commits"], 2);
+    assert_eq!(
+        first_catalog["authors"][0]["author"]["name"],
+        "Shared Author"
+    );
+    assert_eq!(
+        second_catalog["authors"][0]["author"]["name"],
+        "Shared Author"
+    );
+
+    let first_page = invoke(
+        &webview,
+        "get_author_commit_ids",
+        json!({"path": first_path, "request": {"author": identity_payload.clone(), "cursor": null}}),
+    )
+    .unwrap();
+    let second_page = invoke(
+        &webview,
+        "get_author_commit_ids",
+        json!({"path": second_path, "request": {"author": identity_payload, "cursor": null}}),
+    )
+    .unwrap();
+    assert_eq!(first_page["commit_ids"][0], first_id.to_string());
+    assert_eq!(second_page["commit_ids"].as_array().unwrap().len(), 2);
+    assert_ne!(first_id, second_id);
+
+    assert_author_cache_reads_are_isolated_after_return(
+        &webview,
+        first_path,
+        second_path,
+        first_id,
+        second_id,
+    );
+}
+
+fn assert_author_commands_reject_unopened_repository(
+    webview: &tauri::WebviewWindow<MockRuntime>,
+    path: &str,
+) {
+    let catalog_error = invoke(
+        webview,
+        "get_author_catalog_chunk",
+        json!({"path": path, "request": {"cursor": null, "cancelled": false}}),
+    )
+    .unwrap_err();
+    let commits_error = invoke(
+        webview,
+        "get_author_commit_ids",
+        json!({
+            "path": path,
+            "request": {"author": {"name": "Shared Author", "email": "shared@example.test"}, "cursor": null}
+        }),
+    )
+    .unwrap_err();
+    assert_eq!(catalog_error["kind"], "InvalidRepository");
+    assert_eq!(commits_error["kind"], "InvalidRepository");
+}
+
+fn assert_author_cache_reads_are_isolated_after_return(
+    webview: &tauri::WebviewWindow<MockRuntime>,
+    first_path: &str,
+    second_path: &str,
+    first_commit_id: git2::Oid,
+    second_commit_id: git2::Oid,
+) {
+    // Re-read B after its caches are populated, then return to A with the same author query.
+    let second_catalog = invoke(
+        webview,
+        "get_author_catalog_chunk",
+        json!({"path": second_path, "request": {"cursor": null, "cancelled": false}}),
+    )
+    .unwrap();
+    let second_page = invoke(
+        webview,
+        "get_author_commit_ids",
+        json!({
+            "path": second_path,
+            "request": {"author": {"name": "Shared Author", "email": "shared@example.test"}, "cursor": null}
+        }),
+    )
+    .unwrap();
+    assert_eq!(second_catalog["authors"][0]["commits"], 2);
+    assert_eq!(second_page["commit_ids"].as_array().unwrap().len(), 2);
+    assert!(second_page["commit_ids"]
+        .as_array()
+        .unwrap()
+        .contains(&json!(second_commit_id.to_string())));
+
+    let first_catalog = invoke(
+        webview,
+        "get_author_catalog_chunk",
+        json!({"path": first_path, "request": {"cursor": null, "cancelled": false}}),
+    )
+    .unwrap();
+    let first_page = invoke(
+        webview,
+        "get_author_commit_ids",
+        json!({
+            "path": first_path,
+            "request": {"author": {"name": "Shared Author", "email": "shared@example.test"}, "cursor": null}
+        }),
+    )
+    .unwrap();
+    assert_eq!(first_catalog["authors"][0]["commits"], 1);
+    assert_ne!(
+        first_catalog["authors"][0]["commits"],
+        second_catalog["authors"][0]["commits"]
+    );
+    assert_eq!(first_page["commit_ids"].as_array().unwrap().len(), 1);
+    assert_eq!(first_page["commit_ids"][0], first_commit_id.to_string());
+    assert_ne!(first_commit_id, second_commit_id);
+}
+
+#[test]
+fn author_commit_cursor_is_stale_across_repositories_with_different_roots() {
+    let first_dir = tempfile::tempdir().unwrap();
+    let second_dir = tempfile::tempdir().unwrap();
+    let first_repo = git2::Repository::init(first_dir.path()).unwrap();
+    let second_repo = git2::Repository::init(second_dir.path()).unwrap();
+    let identity = git2::Signature::now("Paged Author", "paged@example.test").unwrap();
+    let tree_id = first_repo.treebuilder(None).unwrap().write().unwrap();
+    let tree = first_repo.find_tree(tree_id).unwrap();
+    let mut parent = None;
+    for number in 0..501 {
+        let parents = parent
+            .as_ref()
+            .map(|id| vec![first_repo.find_commit(*id).unwrap()])
+            .unwrap_or_default();
+        let parent_refs = parents.iter().collect::<Vec<_>>();
+        parent = Some(
+            first_repo
+                .commit(
+                    Some("HEAD"),
+                    &identity,
+                    &identity,
+                    &format!("commit {number}"),
+                    &tree,
+                    &parent_refs,
+                )
+                .unwrap(),
+        );
+    }
+    let other_tree_id = second_repo.treebuilder(None).unwrap().write().unwrap();
+    let other_tree = second_repo.find_tree(other_tree_id).unwrap();
+    second_repo
+        .commit(
+            Some("HEAD"),
+            &identity,
+            &identity,
+            "different history root",
+            &other_tree,
+            &[],
+        )
+        .unwrap();
+
+    let webview = test_webview();
+    let first_path = first_dir.path().to_str().unwrap();
+    let second_path = second_dir.path().to_str().unwrap();
+    invoke(&webview, "open_repository", json!({"path": first_path})).unwrap();
+    invoke(&webview, "open_repository", json!({"path": second_path})).unwrap();
+    let author = json!({"name": "Paged Author", "email": "paged@example.test"});
+    let second_page_without_cursor = invoke(
+        &webview,
+        "get_author_commit_ids",
+        json!({"path": second_path, "request": {"author": author.clone(), "cursor": null}}),
+    )
+    .unwrap();
+    assert_eq!(
+        second_page_without_cursor["commit_ids"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert!(second_page_without_cursor["next_cursor"].is_null());
+
+    let first_page = invoke(
+        &webview,
+        "get_author_commit_ids",
+        json!({"path": first_path, "request": {"author": author.clone(), "cursor": null}}),
+    )
+    .unwrap();
+    assert_eq!(first_page["commit_ids"].as_array().unwrap().len(), 500);
+    let cursor = first_page["next_cursor"].as_str().unwrap();
+    let continuation = invoke(
+        &webview,
+        "get_author_commit_ids",
+        json!({"path": first_path, "request": {"author": author.clone(), "cursor": cursor}}),
+    )
+    .unwrap();
+    assert_eq!(continuation["commit_ids"].as_array().unwrap().len(), 1);
+    assert!(continuation["next_cursor"].is_null());
+
+    let stale = invoke(
+        &webview,
+        "get_author_commit_ids",
+        json!({"path": second_path, "request": {"author": author, "cursor": cursor}}),
+    )
+    .unwrap_err();
+    assert_eq!(stale["kind"], "StaleCursor");
 }
 
 #[test]

@@ -1,0 +1,1 @@
+export { AuthorPanel } from "./AuthorPanel";

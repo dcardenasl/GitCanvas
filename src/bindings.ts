@@ -49,6 +49,10 @@ export const commands = {
 	getCommit: (path: string, commitId: string) => typedError<CommitInfo, AppError>(__TAURI_INVOKE("get_commit", { path, commitId })),
 	/**  Reads one bounded page of a file's history, following renames from a start commit. */
 	getFileHistory: (path: string, request: FileHistoryRequest) => typedError<FileHistoryPage, AppError>(__TAURI_INVOKE("get_file_history", { path, request })),
+	/**  Reads one bounded delta from the repository's complete author catalog. */
+	getAuthorCatalogChunk: (path: string, request: AuthorCatalogRequest) => typedError<AuthorCatalogChunk, AppError>(__TAURI_INVOKE("get_author_catalog_chunk", { path, request })),
+	/**  Reads one bounded page of commit IDs attributed to an author. */
+	getAuthorCommitIds: (path: string, request: AuthorCommitIdsRequest) => typedError<AuthorCommitIdsPage, AppError>(__TAURI_INVOKE("get_author_commit_ids", { path, request })),
 	/**  Reads bounded stash data through the canonical repository authorization boundary. */
 	getStashes: (path: string, request: StashListRequest) => typedError<StashPage, AppError>(__TAURI_INVOKE("get_stashes", { path, request })),
 	/**  Reads the bounded stash-to-base index through the canonical authorization boundary. */
@@ -116,6 +120,33 @@ export const commands = {
 	pullFastForward: (path: string) => typedError<PullOutcome, AppError>(__TAURI_INVOKE("pull_fast_forward", { path })),
 	/**  Pushes the current branch to its remote. */
 	pushCurrentBranch: (path: string) => typedError<PushOutcome, AppError>(__TAURI_INVOKE("push_current_branch", { path })),
+	/**  Queries release metadata through the independent network-transfer gate. */
+	getReleases: (path: string) => typedError<ReleaseListIpc, AppError>(__TAURI_INVOKE("get_releases", { path })),
+	/**  Reads the release cache on the normal, retryable read gate without network access. */
+	getCachedReleases: (path: string) => typedError<{
+	source: ReleaseSource,
+	entries: ReleaseListEntryIpc[],
+	truncated: boolean,
+	local_tags_available: boolean,
+	cached_at: string | null,
+	rate_limit_reset: string | null,
+} | null, AppError>(__TAURI_INVOKE("get_cached_releases", { path })),
+	/**  Discovers fresh metadata for assets belonging to one published release. */
+	getReleaseAssets: (path: string, releaseId: string) => typedError<ReleaseAssetListIpc, AppError>(__TAURI_INVOKE("get_release_assets", { path, releaseId })),
+	/**  Fetches one selected tag under the write gate and common-directory lock. */
+	fetchTag: (path: string, tagName: string) => typedError<FetchTagOutcome, AppError>(__TAURI_INVOKE("fetch_tag", { path, tagName })),
+	/**  Resolves fresh asset metadata, prompts in Rust, then downloads under one transfer permit. */
+	downloadReleaseAsset: (path: string, releaseId: string, assetId: string, transferId: string) => typedError<DownloadOutcomeIpc, AppError>(__TAURI_INVOKE("download_release_asset", { path, releaseId, assetId, transferId })),
+	/**  Requests cancellation without waiting for any runtime gate. */
+	cancelTransfer: (path: string, transferId: string) => typedError<boolean, AppError>(__TAURI_INVOKE("cancel_transfer", { path, transferId })),
+	/**
+	 *  Opens a validated HTTPS URL in the operating system's default browser.
+	 *
+	 *  The caller must be an explicit user action. The URL is untrusted release
+	 *  content, so it is parsed and constrained again on the native side before it
+	 *  reaches the system opener.
+	 */
+	openExternalUrl: (url: string) => typedError<null, AppError>(__TAURI_INVOKE("open_external_url", { url })),
 	/**
 	 *  Starts watching a repository, replacing any previous watch.
 	 *
@@ -152,6 +183,7 @@ export const commands = {
 export const events = {
 	cloneProgressEvent: makeEvent<CloneProgressEvent>("clone-progress-event"),
 	menuActionEvent: makeEvent<MenuActionEvent>("menu-action-event"),
+	releaseDownloadProgressEvent: makeEvent<ReleaseDownloadProgressEvent>("release-download-progress-event"),
 	repositoryChangedEvent: makeEvent<RepositoryChangedEvent>("repository-changed-event"),
 };
 
@@ -180,6 +212,21 @@ export type AppError =
 { kind: "WorktreeFileUnavailable"; message: string } |
 /**  The operation would exceed an explicit resource budget. */
 { kind: "ResourceLimitExceeded"; message: string } |
+/**  Another Git write currently holds the lock for this repository. */
+{ kind: "RepositoryBusy"; message: string } |
+/**  A private release requires a GitHub token. */
+{ kind: "AccessRequired" } |
+/**  GitHub's API rate limit has been reached. */
+{ kind: "RateLimited"; message: {
+	/**  Unix timestamp in decimal seconds when GitHub's rate limit resets. */
+	reset: string | null,
+} } |
+/**  The remote service cannot currently be reached because the device is offline. */
+{ kind: "Offline" } |
+/**  The requested release or asset does not exist. */
+{ kind: "NotFound" } |
+/**  No supported GitHub HTTPS remote is configured for releases. */
+{ kind: "UnsupportedSource" } |
 /**  The filesystem watcher is not available for this repository. */
 { kind: "WatchDegraded"; message: string } |
 /**  The history represented by a pagination cursor is no longer available. */
@@ -191,6 +238,60 @@ export type AppError =
 { kind: "ResourceExhausted"; message: string } |
 /**  Background work could not complete. */
 { kind: "Internal"; message: string };
+
+/**  A delta of the full author catalog plus continuation and progress metadata. */
+export type AuthorCatalogChunk = {
+	/**  Identities and commit counts discovered in this chunk only. */
+	authors: AuthorCount[],
+	/**  Cursor for the next chunk; null when complete or incomplete without continuation. */
+	cursor: string | null,
+	/**  Number of commits scanned across all chunks. */
+	scanned: number,
+	/**  Whether the complete history was scanned. */
+	complete: boolean,
+	/**  Present when scanning stopped before completion. */
+	incomplete_reason: IncompleteReason | null,
+};
+
+/**  A requested continuation of the complete author catalog. */
+export type AuthorCatalogRequest = {
+	/**  Opaque cursor from the previous chunk. */
+	cursor: string | null,
+	/**  Cancellation is observed between requests, never during a libgit2 walk. */
+	cancelled: boolean,
+};
+
+/**  A bounded page of commit IDs, in the repository's topological history order. */
+export type AuthorCommitIdsPage = {
+	/**  Commit object IDs in this page. */
+	commit_ids: string[],
+	/**  Continuation for the next page; null at the end. */
+	next_cursor: string | null,
+};
+
+/**  Request for one page of an author's matching commit IDs. */
+export type AuthorCommitIdsRequest = {
+	/**  Resolved identity selected by the caller. */
+	author: AuthorKey,
+	/**  Opaque continuation returned by the previous page. */
+	cursor: string | null,
+};
+
+/**  One author and the number of commits attributed to that identity in this delta. */
+export type AuthorCount = {
+	/**  Identity after `.mailmap` resolution. */
+	author: AuthorKey,
+	/**  Number of commits by this author in the returned chunk. */
+	commits: number,
+};
+
+/**  The identity of one author after `.mailmap` resolution. */
+export type AuthorKey = {
+	/**  Canonical display name. */
+	name: string,
+	/**  Canonical email, exactly as written (case is preserved). */
+	email: string,
+};
 
 /**  A branch uses its full ref name as identity; short names are display only. */
 export type BranchInfo = {
@@ -354,6 +455,24 @@ export type DirtyPath = {
 	/**  True when the change is staged, false when it is only in the worktree. */
 	staged: boolean,
 };
+
+/**  Download outcome serialized without JavaScript-unsafe integer fields. */
+export type DownloadOutcomeIpc = { kind: "completed"; downloaded_bytes: string } | { kind: "cancelled" };
+
+/**  The result of explicitly fetching one tag. */
+export type FetchTagOutcome =
+/**  The remote tag was fetched and installed locally. */
+{ kind: "Fetched" } |
+/**  The remote and local tag already point at the same Git object. */
+{ kind: "AlreadyPresent" } |
+/**  The tag exists both locally and remotely but points at different objects. */
+{ kind: "Conflict";
+/**  Object id currently named by the local tag. */
+local_target: string;
+/**  Object id advertised by the remote tag. */
+remote_target: string } |
+/**  The selected remote does not advertise this tag. */
+{ kind: "NotFoundOnRemote" };
 
 /**  How a path changed between two trees. */
 export type FileChange =
@@ -669,6 +788,15 @@ export type ImageVersion =
 /**  The version after the selected change. */
 "saved";
 
+/**  Why the catalog could not be completed. */
+export type IncompleteReason =
+/**  The history is larger than the cache budget, so resumable chunks are too expensive. */
+"history_too_large" |
+/**  More than the supported number of distinct author identities exists. */
+"too_many_authors" |
+/**  The caller cancelled between chunks. */
+"cancelled";
+
 /**  What loading produced. */
 export type LoadedWorkspace = {
 	/**  The workspace to start from: empty when there was nothing usable. */
@@ -802,6 +930,63 @@ export type ReferenceTreePreferences = {
 	/**  Stable group and folder keys that should remain collapsed. */
 	collapsed: string[],
 };
+
+/**  Descriptor returned by the metadata-only release asset query. */
+export type ReleaseAssetInfoIpc = {
+	id: string,
+	name: string,
+	size: string,
+	sha256: string | null,
+};
+
+/**  Bounded asset descriptors for one published release. */
+export type ReleaseAssetListIpc = {
+	source: ReleaseSource,
+	release_id: string,
+	assets: ReleaseAssetInfoIpc[],
+	truncated: boolean,
+};
+
+/**  Bounded transfer progress event delivered to the interface. */
+export type ReleaseDownloadProgressEvent = {
+	transfer_id: string,
+	downloaded_bytes: string,
+	total_bytes: string,
+};
+
+/**  IPC representation of one release; provider IDs remain exact decimal strings in JavaScript. */
+export type ReleaseInfoIpc = {
+	id: string,
+	tag_name: string,
+	name: string | null,
+	notes: string,
+	html_url: string | null,
+	prerelease: boolean,
+	published_at: string | null,
+};
+
+/**  One release or unmatched local tag in the IPC response. */
+export type ReleaseListEntryIpc = { kind: "release"; release: ReleaseInfoIpc; local_tag: TagInfo | null } | { kind: "local_tag"; tag: TagInfo };
+
+/**  Typed Tauri payload for release metadata, separate from the persisted cache model. */
+export type ReleaseListIpc = {
+	source: ReleaseSource,
+	entries: ReleaseListEntryIpc[],
+	truncated: boolean,
+	local_tags_available: boolean,
+	cached_at: string | null,
+	rate_limit_reset: string | null,
+};
+
+/**  The provider and repository that supply release metadata. */
+export type ReleaseSource =
+/**  A repository hosted by GitHub. */
+{ github: {
+	/**  Repository owner, normalized to lowercase. */
+	owner: string,
+	/**  Repository name, normalized to lowercase. */
+	name: string,
+} };
 
 export type RepositoryChangedEvent = {
 	path: string,

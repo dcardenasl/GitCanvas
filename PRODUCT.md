@@ -42,6 +42,20 @@ PNG, JPEG, GIF, WebP, BMP, ICO and SVG. Reads share the 2 MiB initial / 32 MiB e
 limits and a 40 MP metadata ceiling; the platform WebView determines final decoding.
 See ADR 0010 and `docs/verification/v0.8.md`.
 
+Author inspection (v0.9) resolves identities through the repository's `.mailmap`, builds
+a bounded progressive author catalog, and navigates to that author's commits even when
+they are outside the loaded graph pages. Emphasis dims other known authors without
+removing commits or changing graph geometry. GitHub releases are listed separately from
+Git references; bounded notes render as Markdown, while HTTPS links open in the system
+browser only after explicit activation and native validation. Raw HTML and remote images
+remain inactive. Local tags are joined by the backend, and release metadata has its own
+bounded offline cache. Fetching a tag and downloading an asset are explicit actions. Asset
+IDs and metadata are resolved by Rust, and the native save dialog chooses the destination.
+See ADR 0011, ADR 0012, ADR 0015 and `docs/verification/v0.9.md`.
+
+Release/tag operations require an HTTPS GitHub remote. SSH and other providers are not
+supported in v0.9. Releases never create graph nodes, references or navigation state.
+
 ## Brand Commitments
 
 The user requested execution of the existing plan, whose design is already closed.

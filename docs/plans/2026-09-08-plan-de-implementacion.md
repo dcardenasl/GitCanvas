@@ -2,7 +2,7 @@
 
 ## Contexto
 
-`/Users/davidcardenas/Developer/Tauri/GitCanvas` hoy contiene **solo** `docs/` con cuatro archivos: [ASSET.md](docs/ASSET.md), [PLAN-DESARROLLO.md](docs/PLAN-DESARROLLO.md), [SNAPSHOT.md](docs/SNAPSHOT.md) y [mockup.html](docs/mockup.html). No hay código, no hay repositorio git, no hay remoto.
+`/Users/davidcardenas/Developer/Tauri/GitCanvas` hoy contiene **solo** `docs/` con cuatro archivos: [ASSET.md](../ASSET.md), [PLAN-DESARROLLO.md](../PLAN-DESARROLLO.md), [SNAPSHOT.md](../SNAPSHOT.md) y [mockup.html](../mockup.html). No hay código, no hay repositorio git, no hay remoto.
 
 El diseño está cerrado: cliente Git visual estilo GitKraken, con el **graph de branches y commits como núcleo de valor**. Stack decidido: Tauri v2 + Rust (`git2`) + React/TypeScript, layout del graph calculado en TS y renderizado en SVG con virtualización.
 
@@ -321,8 +321,8 @@ Cuando durante la ejecución aparece un hallazgo (algo que el plan no previó), 
 # TASKS — GitCanvas
 
 > Fuente de verdad de ejecución. El plan rector está en
-> [`docs/plans/2026-09-08-plan-de-implementacion.md`](docs/plans/2026-09-08-plan-de-implementacion.md).
-> Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](CLAUDE.md).
+> [`docs/plans/2026-09-08-plan-de-implementacion.md`](2026-09-08-plan-de-implementacion.md).
+> Convenciones de trabajo y contexto para sesiones nuevas: [`CLAUDE.md`](../../CLAUDE.md).
 
 **Estado:** Fase 0 · 0/51 tareas · última actualización 2026-09-08
 

@@ -6,10 +6,52 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
   BranchInfo,
+  ReleaseListIpc,
   RepositoryWorktreesSnapshot,
   TagInfo,
 } from "../../bindings";
 import { createIpcMocks, renderWithQueryClient } from "../../test/test-utils";
+
+const releaseQuery = vi.hoisted(() => ({
+  data: null as ReleaseListIpc | null,
+}));
+
+vi.mock("../../state/releases", () => ({
+  useReleases: () => ({
+    data: releaseQuery.data,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  useReleaseAssets: () => ({
+    data: null,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  usePendingReleaseAction: () => null,
+  getPendingReleaseAction: () => null,
+  useReleaseDownloadProgress: vi.fn(),
+  useFetchReleaseTag: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+    error: null,
+    reset: vi.fn(),
+  }),
+  useDownloadReleaseAsset: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+    error: null,
+  }),
+  useCancelReleaseTransfer: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useReleaseTransfers: () => [],
+  resumePendingReleaseAction: vi.fn(),
+  releaseQueryKey: { releases: (root: string | null) => ["releases", root] },
+}));
 
 const getBranches = vi.fn<() => Promise<BranchInfo[]>>();
 const getTags = vi.fn<() => Promise<TagInfo[]>>();
@@ -53,6 +95,7 @@ function renderSidebar(onCheckout?: (branch: string) => void) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  releaseQuery.data = null;
   mockIpc.getStashes.mockResolvedValue(stashPage());
   mockIpc.getRepositoryRefs.mockImplementation(async () => {
     const branches = await getBranches();
@@ -124,6 +167,51 @@ function deferred<T>() {
 }
 
 describe("Sidebar", () => {
+  it("includes the unified tags and releases section", async () => {
+    renderSidebar();
+
+    expect(
+      await screen.findByRole("button", { name: "Etiquetas y releases" }),
+    ).toBeInstanceOf(HTMLElement);
+  });
+
+  it("keeps release entries out of Git reference and navigation state", async () => {
+    releaseQuery.data = {
+      source: { github: { owner: "example", name: "repo" } },
+      entries: [
+        {
+          kind: "release",
+          release: {
+            id: "7",
+            tag_name: "release-only",
+            name: "GitHub release only",
+            notes: "Notes",
+            html_url:
+              "https://github.com/example/repo/releases/tag/release-only",
+            prerelease: false,
+            published_at: null,
+          },
+          local_tag: null,
+        },
+      ],
+      truncated: false,
+      local_tags_available: true,
+      cached_at: null,
+      rate_limit_reset: null,
+    };
+    const selectionBefore = activeNavigation().selection;
+    const filtersBefore = useWorkspace.getState().referenceFilters;
+
+    renderSidebar();
+
+    expect(await screen.findByText("GitHub release only")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: /^release-only(?:\s|$)/ }),
+    ).toBeNull();
+    expect(activeNavigation().selection).toEqual(selectionBefore);
+    expect(useWorkspace.getState().referenceFilters).toEqual(filtersBefore);
+  });
+
   it("announces and disables the worktree inventory while it refreshes", async () => {
     renderSidebar();
 
@@ -730,7 +818,9 @@ it("displays help popover with rules, search clear button, empty state, and opti
   expect(screen.queryByText(/Flecha \(▾ \/ ▸\)/)).toBeNull();
 
   // 2. Search and clear button
-  const searchInput = screen.getByRole("searchbox");
+  const searchInput = screen.getByRole("searchbox", {
+    name: "Filtrar referencias",
+  });
   await userEvent.type(searchInput, "xyznomatch");
 
   // Empty state should be visible
@@ -790,6 +880,19 @@ it("displays help popover with rules, search clear button, empty state, and opti
   // Group sections should now show collapsed indicator ▸
   const localToggle = screen.getByRole("button", { name: /^Local$/ });
   expect(localToggle.textContent).toContain("▸");
+  const releaseToggle = screen.getByRole("button", {
+    name: "Etiquetas y releases",
+  });
+  const authorToggle = screen.getByRole("button", { name: "Autores" });
+  expect(releaseToggle.getAttribute("aria-expanded")).toBe("false");
+  expect(authorToggle.getAttribute("aria-expanded")).toBe("false");
+  const collapsed = useWorkspace
+    .getState()
+    .referenceTreePreferences.find(
+      (preference) => preference.path === "/tmp/repo",
+    )?.collapsed;
+  expect(collapsed).toContain("section:releases");
+  expect(collapsed).toContain("section:authors");
 
   // Re-open options and expand all
   await userEvent.click(optionsBtn);
@@ -798,6 +901,15 @@ it("displays help popover with rules, search clear button, empty state, and opti
   });
   await userEvent.click(expandAllOption);
   expect(localToggle.textContent).toContain("▾");
+  expect(releaseToggle.getAttribute("aria-expanded")).toBe("true");
+  expect(authorToggle.getAttribute("aria-expanded")).toBe("true");
+  expect(
+    useWorkspace
+      .getState()
+      .referenceTreePreferences.find(
+        (preference) => preference.path === "/tmp/repo",
+      ),
+  ).toBeUndefined();
 });
 
 it("handles deep folder nesting and long branch names gracefully", async () => {
@@ -945,7 +1057,9 @@ it("renders large reference sets efficiently with correct counts and sorting", a
   expect(teamAEye.getAttribute("aria-checked")).toBe("true");
 
   // Filter with search: only bugfix-05 matches
-  const searchInput = screen.getByRole("searchbox");
+  const searchInput = screen.getByRole("searchbox", {
+    name: "Filtrar referencias",
+  });
   await userEvent.type(searchInput, "bugfix-05");
 
   const bugfixBtn = screen.getByRole("button", { name: "team-b/bugfix-05" });

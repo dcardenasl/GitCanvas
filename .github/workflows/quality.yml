@@ -68,10 +68,13 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          if apt-cache show webkit2gtk-driver >/dev/null 2>&1; then
-            webkit_driver=webkit2gtk-driver
-          elif apt-cache show webkitgtk-webdriver >/dev/null 2>&1; then
+          # Newer Ubuntu suites advertise the old package as a replacement
+          # even when it has no installable candidate. Select by candidate,
+          # preferring the replacement used by current suites.
+          if apt-cache policy webkitgtk-webdriver | grep -Eq 'Candidate: [0-9]'; then
             webkit_driver=webkitgtk-webdriver
+          elif apt-cache policy webkit2gtk-driver | grep -Eq 'Candidate: [0-9]'; then
+            webkit_driver=webkit2gtk-driver
           else
             echo "No WebKitGTK WebDriver package is available for this Ubuntu image." >&2
             exit 1
@@ -133,6 +136,31 @@ jobs:
         # Bundle the app for quality/E2E checks without producing that artifact.
         run: npm run tauri build -- --ci --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
+      - name: Install matching Edge WebDriver
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $edgePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'
+          if (-not (Test-Path $edgePath)) { throw "Microsoft Edge was not found at $edgePath" }
+          $edgeVersion = [version](Get-Item $edgePath).VersionInfo.ProductVersion
+          $versionPath = Join-Path $env:RUNNER_TEMP 'edgedriver-version.txt'
+          Invoke-WebRequest "https://msedgedriver.microsoft.com/LATEST_RELEASE_$($edgeVersion.Major)_WINDOWS" -OutFile $versionPath
+          # Microsoft serves this endpoint as UTF-16LE; decode it explicitly so
+          # PowerShell does not pass embedded null characters into the URL.
+          $driverVersion = (Get-Content -LiteralPath $versionPath -Raw -Encoding Unicode).Trim()
+          if ($driverVersion -notmatch '^\d+\.\d+\.\d+\.\d+$') {
+            throw "Microsoft returned an invalid Edge WebDriver version: $driverVersion"
+          }
+          $archivePath = Join-Path $env:RUNNER_TEMP 'edgedriver.zip'
+          $driverDirectory = Join-Path $env:RUNNER_TEMP 'edgedriver'
+          New-Item -ItemType Directory -Force -Path $driverDirectory | Out-Null
+          Invoke-WebRequest "https://msedgedriver.microsoft.com/$driverVersion/edgedriver_win64.zip" -OutFile $archivePath
+          Expand-Archive -LiteralPath $archivePath -DestinationPath $driverDirectory -Force
+          if (-not (Test-Path (Join-Path $driverDirectory 'msedgedriver.exe'))) {
+            throw 'The Edge WebDriver archive did not contain msedgedriver.exe'
+          }
+          Add-Content -Path $env:GITHUB_PATH -Value $driverDirectory
+
       # --- End to end ---
       #
       # Exercise the real app on every supported desktop OS. The suite launches
@@ -157,6 +185,18 @@ jobs:
             echo "::error::the default build pulls in the embedded WebDriver server"
             exit 1
           fi
+
+  process-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Check the process documents
+        run: python .dcl/dcl.py doc-check
 
   dependency-security:
     runs-on: ubuntu-latest

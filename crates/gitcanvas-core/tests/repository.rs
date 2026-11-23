@@ -80,4 +80,9 @@ fn errors_serialize_as_stable_tagged_values() {
         serde_json::to_value(error).unwrap(),
         serde_json::json!({"kind": "Git", "message": "fixture failure"})
     );
+
+    assert_eq!(
+        serde_json::to_value(AppError::RepositoryBusy("try again".into())).unwrap(),
+        serde_json::json!({"kind": "RepositoryBusy", "message": "try again"})
+    );
 }

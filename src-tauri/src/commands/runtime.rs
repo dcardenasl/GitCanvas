@@ -5,10 +5,9 @@
 //!
 //! - **How much runs at once.** libgit2 can hold object and pack descriptors for
 //!   as long as a `Repository` lives, so a burst of queries could exhaust the
-//!   process's descriptor budget. Work is admitted through a gate. Reads and
-//!   writes have *separate* gates: a clone or a push can take minutes, and if
-//!   it shared a gate with the history queries the whole window would stop
-//!   reading until it finished.
+//!   process's descriptor budget. Reads, writes and long transfers use separate
+//!   gates so a remote operation cannot starve history queries or ordinary Git
+//!   writes.
 //! - **What may be repeated.** Reads and watcher setup are idempotent, so a
 //!   transient failure is retried with backoff. A write — checkout, pull, push,
 //!   clone, a keychain change — runs exactly once: repeating it after a
@@ -23,6 +22,7 @@ use gitcanvas_core::{error::AppError, retry::retry_transient};
 
 const MAX_CONCURRENT_READS: usize = 2;
 const MAX_CONCURRENT_WRITES: usize = 2;
+const MAX_CONCURRENT_TRANSFERS: usize = 2;
 const READ_RETRIES: u32 = 3;
 const READ_BACKOFF: Duration = Duration::from_millis(100);
 const OPERATION_GATE_TIMEOUT: Duration = Duration::from_secs(30);
@@ -110,6 +110,11 @@ fn write_gate() -> &'static Gate {
     GATE.get_or_init(|| Gate::new(MAX_CONCURRENT_WRITES))
 }
 
+fn transfer_gate() -> &'static Gate {
+    static GATE: OnceLock<Gate> = OnceLock::new();
+    GATE.get_or_init(|| Gate::new(MAX_CONCURRENT_TRANSFERS))
+}
+
 async fn run<T: Send + 'static>(
     operation: &'static str,
     gate: fn() -> &'static Gate,
@@ -150,6 +155,17 @@ pub(crate) async fn write<T: Send + 'static>(
     work: impl FnOnce() -> Result<T, AppError> + Send + 'static,
 ) -> Result<T, AppError> {
     run(operation, write_gate, work).await
+}
+
+/// Runs long network work through its independent two-permit, 30-second gate.
+///
+/// Release metadata and downloads use this independent gate so ordinary
+/// repository writes and reads can proceed while a transfer is active.
+pub(crate) async fn transfer<T: Send + 'static>(
+    operation: &'static str,
+    work: impl FnOnce() -> Result<T, AppError> + Send + 'static,
+) -> Result<T, AppError> {
+    run(operation, transfer_gate, work).await
 }
 
 #[cfg(test)]
@@ -246,5 +262,86 @@ mod tests {
 
         assert!(matches!(error, AppError::ResourceLimitExceeded(_)));
         assert!(error.to_string().contains("timed out"));
+    }
+
+    #[test]
+    fn transfers_have_an_independent_two_permit_gate() {
+        let held: Vec<_> = (0..MAX_CONCURRENT_TRANSFERS)
+            .map(|_| transfer_gate().acquire().unwrap())
+            .collect();
+        let (sender, receiver) = mpsc::channel();
+        std::thread::spawn(move || {
+            let value = tauri::async_runtime::block_on(transfer("test_transfer", || Ok(9)));
+            let _ = sender.send(value);
+        });
+        assert!(receiver.recv_timeout(Duration::from_millis(100)).is_err());
+
+        let read_value = tauri::async_runtime::block_on(read("test_read", || Ok(7))).unwrap();
+        let write_value = tauri::async_runtime::block_on(write("test_write", || Ok(8))).unwrap();
+        assert_eq!(read_value, 7);
+        assert_eq!(write_value, 8);
+
+        drop(held);
+        assert_eq!(
+            receiver
+                .recv_timeout(Duration::from_secs(5))
+                .unwrap()
+                .unwrap(),
+            9
+        );
+    }
+
+    #[test]
+    fn an_abandoned_started_blocking_write_keeps_its_lock_until_it_finishes() {
+        use git2::Repository;
+        use gitcanvas_core::{repository::ActiveRepo, write_lock::with_repository_write_lock};
+
+        let directory = tempfile::tempdir().unwrap();
+        Repository::init(directory.path()).unwrap();
+        let active = ActiveRepo::validate(directory.path()).unwrap();
+        let (started_sender, started_receiver) = mpsc::channel();
+        let (release_sender, release_receiver) = mpsc::channel();
+        let (finished_sender, finished_receiver) = mpsc::channel();
+        let operation = tauri::async_runtime::spawn_blocking(move || {
+            let result = with_repository_write_lock(&active, || {
+                started_sender
+                    .send(())
+                    .map_err(|error| AppError::Internal(error.to_string()))?;
+                release_receiver
+                    .recv()
+                    .map_err(|error| AppError::Internal(error.to_string()))?;
+                Ok(())
+            });
+            let _ = finished_sender.send(result.is_ok());
+            result
+        });
+
+        started_receiver
+            .recv_timeout(Duration::from_secs(5))
+            .expect("the blocking operation should hold the repository lock");
+        // Tokio cannot abort spawn_blocking work after it has started. Dropping
+        // the join handle abandons the result, not the running blocking closure.
+        operation.abort();
+        drop(operation);
+
+        let contender_active = ActiveRepo::validate(directory.path()).unwrap();
+        let (contender_sender, contender_receiver) = mpsc::channel();
+        let contender = std::thread::spawn(move || {
+            let result = with_repository_write_lock(&contender_active, || Ok(()));
+            let _ = contender_sender.send(result);
+        });
+        assert!(contender_receiver
+            .recv_timeout(Duration::from_millis(100))
+            .is_err());
+
+        release_sender.send(()).unwrap();
+        assert!(finished_receiver
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap());
+        contender_receiver
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap()
+            .unwrap();
+        contender.join().unwrap();
     }
 }

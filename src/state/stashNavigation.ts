@@ -28,6 +28,7 @@ export function openStash(entry: StashEntry): Transition {
       : {
           ...navigation,
           fileHistory: null,
+          releaseView: null,
           sidebarTemporaryOpen: false,
           stash: {
             entry,

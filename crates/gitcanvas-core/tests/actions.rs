@@ -11,7 +11,13 @@
 
 mod support;
 
-use std::fs;
+use std::{
+    fs,
+    net::{TcpListener, TcpStream},
+    process::{Child, Command, Stdio},
+    thread,
+    time::Duration,
+};
 
 use gitcanvas_core::{
     actions::{
@@ -217,6 +223,52 @@ fn url(dir: &TempDir) -> String {
     dir.path().to_str().unwrap().to_owned()
 }
 
+struct GitDaemon(Child);
+
+impl Drop for GitDaemon {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+#[allow(
+    clippy::disallowed_methods,
+    reason = "Git is needed to expose a disposable bare fixture over smart transport"
+)]
+fn start_git_daemon(repository: &TempDir) -> (GitDaemon, String) {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    drop(listener);
+
+    let base = repository.path();
+    let child = Command::new("git")
+        .args([
+            "daemon",
+            "--reuseaddr",
+            "--export-all",
+            "--listen=127.0.0.1",
+            &format!("--port={port}"),
+            &format!("--base-path={}", base.to_str().unwrap()),
+        ])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    let mut daemon = GitDaemon(child);
+    for _ in 0..100 {
+        if TcpStream::connect(("127.0.0.1", port)).is_ok() {
+            return (daemon, format!("git://127.0.0.1:{port}/remote.git"));
+        }
+        assert!(
+            daemon.0.try_wait().unwrap().is_none(),
+            "git daemon exited early"
+        );
+        thread::sleep(Duration::from_millis(10));
+    }
+    panic!("git daemon did not listen before the test timeout");
+}
+
 fn checkout_force(repo: &Repository) {
     repo.checkout_head(Some(git2::build::CheckoutBuilder::default().force()))
         .unwrap();
@@ -235,6 +287,34 @@ fn commit_on_head(repo: &Repository, message: &str, time: i64, files: &[(&str, &
     let signature = Signature::new("Peer", "peer@example.com", &Time::new(time, 0)).unwrap();
     repo.commit(
         Some("HEAD"),
+        &signature,
+        &signature,
+        message,
+        &tree,
+        &[&parent],
+    )
+    .unwrap()
+}
+
+fn commit_on_ref(
+    repo: &Repository,
+    reference: &str,
+    parent: Oid,
+    message: &str,
+    time: i64,
+    files: &[(&str, &[u8])],
+) -> Oid {
+    let parent = repo.find_commit(parent).unwrap();
+    let mut builder = repo.treebuilder(Some(&parent.tree().unwrap())).unwrap();
+    for (path, contents) in files {
+        builder
+            .insert(path, repo.blob(contents).unwrap(), 0o100_644)
+            .unwrap();
+    }
+    let tree = repo.find_tree(builder.write().unwrap()).unwrap();
+    let signature = Signature::new("Peer", "peer@example.com", &Time::new(time, 0)).unwrap();
+    repo.commit(
+        Some(reference),
         &signature,
         &signature,
         message,
@@ -402,6 +482,100 @@ fn pull_fast_forwards_the_branch_and_the_files() {
         fs::read(remotes.local.dir.path().join("t.txt")).unwrap(),
         b"t\n"
     );
+}
+
+#[test]
+fn pull_fetches_tags_for_new_commits_but_not_unrelated_remote_tags() {
+    let remotes = remotes();
+    let fetched = commit_on_head(&remotes.peer, "theirs", 2_000, &[("t.txt", b"t\n")]);
+    let unrelated = commit_on_ref(
+        &remotes.peer,
+        "refs/heads/unrelated",
+        remotes.base,
+        "unrelated",
+        3_000,
+        &[("u.txt", b"u\n")],
+    );
+    remotes
+        .peer
+        .tag_lightweight(
+            "related-tag",
+            remotes.peer.find_commit(fetched).unwrap().as_object(),
+            false,
+        )
+        .unwrap();
+    remotes
+        .peer
+        .tag_lightweight(
+            "unrelated-tag",
+            remotes.peer.find_commit(unrelated).unwrap().as_object(),
+            false,
+        )
+        .unwrap();
+    push_from(&remotes.peer, "refs/heads/main:refs/heads/main");
+    push_from(&remotes.peer, "refs/tags/related-tag:refs/tags/related-tag");
+    push_from(
+        &remotes.peer,
+        "refs/tags/unrelated-tag:refs/tags/unrelated-tag",
+    );
+    let bare = Repository::open_bare(remotes.bare.path()).unwrap();
+    assert!(bare.find_reference("refs/heads/unrelated").is_err());
+    assert_eq!(
+        bare.refname_to_id("refs/tags/unrelated-tag").unwrap(),
+        unrelated
+    );
+    assert_ne!(unrelated, fetched);
+    assert!(remotes.local.repo.find_object(unrelated, None).is_err());
+    let daemon_root = tempfile::Builder::new()
+        .prefix("gitcanvas-daemon-")
+        .tempdir()
+        .unwrap();
+    let daemon_repository_path = daemon_root.path().join("remote.git");
+    let daemon_repository = Repository::init_bare(&daemon_repository_path).unwrap();
+    fs::write(daemon_repository_path.join("git-daemon-export-ok"), b"").unwrap();
+    daemon_repository.set_head("refs/heads/main").unwrap();
+    remotes
+        .peer
+        .remote("daemon", daemon_repository_path.to_str().unwrap())
+        .unwrap()
+        .push(
+            &[
+                "refs/heads/main:refs/heads/main",
+                "refs/tags/related-tag:refs/tags/related-tag",
+                "refs/tags/unrelated-tag:refs/tags/unrelated-tag",
+            ],
+            None,
+        )
+        .unwrap();
+    let (_daemon, remote_url) = start_git_daemon(&daemon_root);
+    remotes
+        .local
+        .repo
+        .remote_set_url("origin", &remote_url)
+        .unwrap();
+    assert!(remotes
+        .local
+        .repo
+        .find_reference("refs/tags/unrelated-tag")
+        .is_err());
+
+    assert!(matches!(
+        pull_fast_forward(&open(&remotes.local)).unwrap(),
+        PullOutcome::FastForwarded { .. }
+    ));
+    assert_eq!(
+        remotes
+            .local
+            .repo
+            .refname_to_id("refs/tags/related-tag")
+            .unwrap(),
+        fetched
+    );
+    assert!(remotes
+        .local
+        .repo
+        .find_reference("refs/tags/unrelated-tag")
+        .is_err());
 }
 
 #[test]

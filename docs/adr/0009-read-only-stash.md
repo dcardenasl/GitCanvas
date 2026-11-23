@@ -2,9 +2,9 @@
 
 ## Status
 
-Accepted and implemented in v0.7 — 2026-11-09. ST-0–ST-9 are implemented in `dev`.
+Accepted and implemented — 2026-11-09. Published in v0.7.0.
 Verification and remaining platform limits are recorded in
-[`docs/verification/v0.7.md`](../verification/v0.7.md). This does not represent a release.
+[`docs/verification/v0.7.md`](../verification/v0.7.md).
 See the [implementation plan](../plan/2026-11-08-v0.7-implementacion.md)
 for the decision record, task dependencies, bounds and acceptance matrix.
 

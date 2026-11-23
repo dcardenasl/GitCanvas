@@ -1,6 +1,7 @@
 import stash from "./stash.json";
 import common from "./common.json";
 import errors from "./errors.json";
+import authors from "./authors.json";
 import files from "./files.json";
 import fileHistory from "./fileHistory.json";
 import git from "./git.json";
@@ -9,10 +10,12 @@ import history from "./history.json";
 import image from "./image.json";
 import menu from "./menu.json";
 import refs from "./refs.json";
+import releases from "./releases.json";
 import shell from "./shell.json";
 
 /** Every namespace of the `es` catalog, keyed by namespace name. */
 export const es = {
+  authors,
   stash,
   common,
   errors,
@@ -24,5 +27,6 @@ export const es = {
   image,
   menu,
   refs,
+  releases,
   shell,
 };

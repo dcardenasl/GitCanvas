@@ -13,7 +13,7 @@ resolver = "2"
 members = ["src-tauri", "crates/gitcanvas-core"]
 
 [workspace.package]
-version = "0.8.0"
+version = "0.9.0"
 edition = "2021"
 rust-version = "1.98"
 authors = ["David Cardenas Lorca"]
@@ -103,6 +103,7 @@ tauri-plugin-updater = { version = "2", default-features = false, features = [
     "rustls-tls",
     "system-proxy",
 ] }
+tauri-plugin-opener = "2"
 
 # Embedded WebDriver, for the end-to-end suite only. Behind the `e2e` feature so
 # the shipped binary never carries a WebDriver server: a released application

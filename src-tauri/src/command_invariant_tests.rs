@@ -13,10 +13,20 @@ use syn::{
     Expr, ExprCall, ExprMacro, Item, ItemFn, Path, Token, TypePath, UseTree,
 };
 
-const COMMAND_GATE_EXCEPTIONS: &[(&str, &str)] = &[(
-    "acknowledge_shutdown",
-    "must answer while every write slot is held by a long clone or push; it only sets a flag",
-)];
+const COMMAND_GATE_EXCEPTIONS: &[(&str, &str)] = &[
+    (
+        "acknowledge_shutdown",
+        "must answer while every write slot is held by a long clone or push; it only sets a flag",
+    ),
+    (
+        "cancel_transfer",
+        "must set a cancellation flag without waiting behind active transfer permits",
+    ),
+    (
+        "open_external_url",
+        "only validates a user-selected URL before delegating to the operating system browser",
+    ),
+];
 
 fn command_sources() -> Vec<PathBuf> {
     let directory = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/commands");
@@ -61,11 +71,30 @@ struct GateCalls {
     called: BTreeSet<String>,
 }
 
+#[derive(Default)]
+struct NamedCalls {
+    called: BTreeSet<String>,
+}
+
+impl<'ast> Visit<'ast> for NamedCalls {
+    fn visit_expr_call(&mut self, expression: &'ast ExprCall) {
+        if let Expr::Path(path) = expression.func.as_ref() {
+            if let Some(segment) = path.path.segments.last() {
+                self.called.insert(segment.ident.to_string());
+            }
+        }
+        visit::visit_expr_call(self, expression);
+    }
+}
+
 impl<'ast> Visit<'ast> for GateCalls {
     fn visit_expr_call(&mut self, expression: &'ast ExprCall) {
         if let Expr::Path(path) = expression.func.as_ref() {
             if let Some(segment) = path.path.segments.last() {
-                if segment.ident == "read" || segment.ident == "write" {
+                if segment.ident == "read"
+                    || segment.ident == "write"
+                    || segment.ident == "transfer"
+                {
                     self.called.insert(segment.ident.to_string());
                 }
             }
@@ -84,7 +113,7 @@ fn runtime_gate_imports(tree: &UseTree, prefix: &mut Vec<String>, gates: &mut BT
         UseTree::Name(name) => {
             let gate = name.ident.to_string();
             if prefix.last().is_some_and(|segment| segment == "runtime")
-                && (gate == "read" || gate == "write")
+                && (gate == "read" || gate == "write" || gate == "transfer")
             {
                 gates.insert(gate);
             }
@@ -97,7 +126,7 @@ fn runtime_gate_imports(tree: &UseTree, prefix: &mut Vec<String>, gates: &mut BT
         UseTree::Rename(rename) => {
             let original = rename.ident.to_string();
             if prefix.last().is_some_and(|segment| segment == "runtime")
-                && (original == "read" || original == "write")
+                && (original == "read" || original == "write" || original == "transfer")
             {
                 gates.insert(rename.rename.to_string());
             }
@@ -199,12 +228,47 @@ fn every_tauri_command_runs_through_the_runtime_gate() {
             .find(|(command, _reason)| *command == name);
         assert!(
             gate.called.iter().any(|call| imports.contains(call)) || exception.is_some(),
-            "{name} must call runtime::read/write or have a named exception"
+            "{name} must call its runtime gate or have a named exception"
         );
         if let Some((_, reason)) = exception {
             assert!(!reason.trim().is_empty(), "{name} exception needs a reason");
         }
     }
+}
+
+#[test]
+fn release_commands_use_the_contract_gate_and_authorize_the_repository() {
+    let (commands, _) = command_functions();
+    for (name, expected_gate) in [
+        ("get_releases", "transfer"),
+        ("get_cached_releases", "read"),
+        ("get_release_assets", "transfer"),
+        ("fetch_tag", "write"),
+        ("download_release_asset", "transfer"),
+    ] {
+        let function = commands.get(name).expect("release command must exist");
+        let mut calls = GateCalls::default();
+        calls.visit_block(&function.block);
+        assert!(
+            calls.called.contains(expected_gate),
+            "{name} must use {expected_gate}"
+        );
+        let mut named_calls = NamedCalls::default();
+        named_calls.visit_block(&function.block);
+        assert!(
+            named_calls.called.contains("with_repo"),
+            "{name} must authorize with_repo"
+        );
+    }
+    let cancel = commands
+        .get("cancel_transfer")
+        .expect("cancel command must exist");
+    let mut calls = GateCalls::default();
+    calls.visit_block(&cancel.block);
+    assert!(calls.called.is_empty(), "cancel_transfer must bypass gates");
+    let mut named_calls = NamedCalls::default();
+    named_calls.visit_block(&cancel.block);
+    assert!(named_calls.called.contains("with_repo"));
 }
 
 #[test]

@@ -1,4 +1,5 @@
 import type { StashView } from "./stashNavigation";
+import type { ReleaseView } from "./releaseNavigation";
 /** Origin of the selected file and the kind of content shown for it. */
 export type FileSource = "commit" | "staged" | "unstaged";
 
@@ -63,6 +64,8 @@ export interface Navigation {
   readonly fileHistory: FileHistoryView | null;
   /** Session-only saved-state inspection over the underlying graph navigation. */
   readonly stash: StashView | null;
+  /** Session-only release inspection over the underlying Git selection. */
+  readonly releaseView: ReleaseView | null;
 }
 
 /** A project that has just been opened: history, nothing pending. */
@@ -78,6 +81,7 @@ export const EMPTY_NAVIGATION: Navigation = {
   sidebarTemporaryOpen: false,
   fileHistory: null,
   stash: null,
+  releaseView: null,
 };
 
 /** A change to a project's navigation. Returns the same value when nothing changes. */
@@ -86,8 +90,10 @@ export type Transition = (navigation: Navigation) => Navigation;
 /** Selects a commit, or returns to history when `id` is `null`. */
 export function selectCommit(id: string | null): Transition {
   return (navigation) => {
-    const inspecting = navigation.stash !== null;
-    if (inspecting) navigation = { ...navigation, stash: null };
+    const inspecting =
+      navigation.stash !== null || navigation.releaseView !== null;
+    if (inspecting)
+      navigation = { ...navigation, stash: null, releaseView: null };
     const { selection } = navigation;
     if (id === null) {
       return {
@@ -120,7 +126,8 @@ export function selectFile(
   mode: "diff" | "snapshot" = "diff",
 ): Transition {
   return (navigation) => {
-    if (navigation.stash !== null) navigation = { ...navigation, stash: null };
+    if (navigation.stash !== null || navigation.releaseView !== null)
+      navigation = { ...navigation, stash: null, releaseView: null };
     const { selection } = navigation;
     if (path === null) {
       return selection.kind === "commit"
@@ -184,6 +191,7 @@ export function revealCommit(id: string): Transition {
     ...navigation,
     selection: { kind: "commit", commitId: id, filePath: null },
     stash: null,
+    releaseView: null,
     expandedFilePath: null,
     revealCommitId: id,
     sidebarTemporaryOpen: false,
@@ -270,7 +278,8 @@ export function openFileHistory(
   followsHead: boolean,
 ): Transition {
   return (navigation) => {
-    if (navigation.stash !== null) navigation = { ...navigation, stash: null };
+    if (navigation.stash !== null || navigation.releaseView !== null)
+      navigation = { ...navigation, stash: null, releaseView: null };
     const current = navigation.fileHistory;
     if (
       current?.path === path &&
@@ -281,6 +290,7 @@ export function openFileHistory(
     }
     return {
       ...navigation,
+      releaseView: null,
       fileHistory: {
         path,
         startCommitId,

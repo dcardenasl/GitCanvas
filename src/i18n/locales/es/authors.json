@@ -1,0 +1,39 @@
+{
+  "title": "Autores",
+  "search": {
+    "label": "Buscar autores",
+    "placeholder": "Nombre o correo"
+  },
+  "catalog": {
+    "progress": "Leyendo catálogo de autores: {{scanned, number}} commits leídos",
+    "complete": "Catálogo completo: {{scanned, number}} commits revisados",
+    "paused": "Catálogo pausado después de {{scanned, number}} commits.",
+    "continue": "Seguir analizando",
+    "cancel": "Pausar análisis",
+    "failed": "No se pudo cargar el catálogo de autores.",
+    "incomplete": {
+      "history_too_large": "El historial del repositorio es demasiado grande para completar el catálogo.",
+      "too_many_authors": "El catálogo alcanzó su límite de identidades.",
+      "cancelled": "Se canceló el análisis del catálogo de autores."
+    }
+  },
+  "list": {
+    "label": "Autores del repositorio",
+    "commits_one": "{{count, number}} commit",
+    "commits_many": "{{count, number}} commits",
+    "commits_other": "{{count, number}} commits",
+    "empty": "No se encontraron autores.",
+    "noMatches": "Ningún autor coincide con la búsqueda."
+  },
+  "navigation": {
+    "label": "Navegación por commits del autor",
+    "statusLabel": "Navegación de autores",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "keyboardHint": "Usa Alt+← y Alt+→ para recorrer los commits de este autor.",
+    "first": "Este es el primer commit de este autor.",
+    "last": "Este es el último commit de este autor.",
+    "moved": "Se mostró el commit {{direction}} de este autor.",
+    "failed": "No se pudo navegar por los commits de este autor."
+  }
+}

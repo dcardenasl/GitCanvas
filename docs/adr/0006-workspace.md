@@ -1,121 +1,120 @@
-# ADR 0006: Workspace, pestañas y persistencia
+# ADR 0006: Workspace, tabs and persistence
 
-## Estado
+## Status
 
-Aceptado — 2026-10-14
+Accepted — 2026-10-14
 
-Ampliado por [ADR 0007](0007-stable-branch-graph.md), 2026-10-19: esquema 2 y
-preferencias del gráfico independientes del cierre de pestañas.
+Extended by [ADR 0007](0007-stable-branch-graph.md), 2026-10-19: schema 2 and graph
+preferences that outlive tab closure.
 
-## Decisión
+## Decision
 
-**Identidad y estado.** La raíz canónica del worktree (`RepositoryInfo.path`) identifica
-una pestaña. Alias de la misma raíz activan la pestaña existente; worktrees vinculados
-son proyectos distintos. `state/workspace.ts` compone el almacén con porciones de
-`state/workspaceStore/` (pestañas, biblioteca, vista, almacenamiento, límites y cerradas);
-cada porción actualiza el estado con un único `set` atómico y las reglas entre porciones
-son funciones puras. Coordina el orden, la activa y las sesiones;
-`navigation.ts` contiene transiciones puras. Cada sesión conserva selección, búsqueda,
-carpetas, ancla, expansión y estado de acciones. Los callbacks se atan a la raíz que
-los inició. Cambiar de pestaña no redirige respuestas ni avisos a otro proyecto. Una
-pestaña con una escritura en curso no se puede cerrar.
+**Identity and state.** The canonical worktree root (`RepositoryInfo.path`) identifies a
+tab. Aliases of the same root activate the existing tab; linked worktrees are distinct
+projects. `state/workspace.ts` composes the store from slices in `state/workspaceStore/`
+(tabs, library, view, storage, limits and closed tabs); each slice updates the state with
+a single atomic `set`, and the rules between slices are pure functions. It coordinates
+order, the active tab and sessions; `navigation.ts` holds pure transitions. Each session
+keeps its selection, search, folders, anchor, expansion and action state. Callbacks are
+bound to the root that started them, so switching tabs never redirects a response or a
+notice to another project. A tab with a write in progress cannot be closed.
 
-**Apertura y autorización.** Carpeta local, clon, recientes y favoritos pasan por
-`openProjectAt` y el comando de apertura; el argumento de arranque devuelve el mismo
-contrato validado. Lo leído del almacén solo restaura presentación: no autoriza Git.
-La activación bloquea escrituras de forma síncrona, antes de los efectos de React; el
-propio ejecutor rechaza callbacks sin verificación. Se reabre la raíz, se exige identidad
-estable y se leen referencias y la huella local antes de habilitar acciones.
-Si no cambiaron se conserva la paginación; si cambiaron se invalida. La vista espera
-antes de consultar un proyecto restaurado. Un fallo conserva una pestaña recuperable:
-Reintentar, Localizar o Cerrar. Localizar a otra pestaña abierta la reutiliza y elimina
-solo la inaccesible; al cambiar de raíz comienza navegación nueva para no atribuirle
-selecciones del proyecto anterior.
+**Opening and authorization.** A local folder, a clone, recents and favorites all go
+through `openProjectAt` and the open command; the startup argument returns the same
+validated contract. Whatever is read from the store only restores presentation: it does
+not authorize Git. Activation blocks writes synchronously, before React effects run, and
+the executor itself rejects callbacks that were not verified. The root is reopened, a
+stable identity is required, and the references and the local fingerprint are read before
+actions are enabled. If they did not change, pagination is kept; if they did, it is
+invalidated. The view waits before querying a restored project. A failure leaves a
+recoverable tab with Retry, Locate or Close. Locating onto another open tab reuses that
+tab and removes only the inaccessible one; changing root starts fresh navigation so the
+previous project's selections are never attributed to the new one.
 
-**Observación y recursos.** Solo la activa tiene watcher, poller y consultas observadas.
-Las inactivas muestran estado operativo, sin presentar ramas o cambios locales como
-actuales. `ProjectCache` conserva datos pesados de la activa y de las cinco inactivas
-usadas más recientemente, además del `gcTime` de consultas. Referencias y huella son
-ligeras; el cierre elimina todas las consultas de esa raíz. No cambia el presupuesto
-global de `HistoryReader`: ocho instantáneas y dos millones de ids.
+**Observation and resources.** Only the active tab has a watcher, a poller and observed
+queries. Inactive tabs show their operational state and never present branches or local
+changes as current. `ProjectCache` keeps the heavy data of the active tab and of the five
+most recently used inactive ones, in addition to the queries' `gcTime`. References and the
+fingerprint are lightweight; closing a tab removes every query for its root. The global
+`HistoryReader` budget is unchanged: eight snapshots and two million ids.
 
-**Almacén.** `gitcanvas-core/workspace` define esquema, validación y escritor exclusivo;
-Tauri solo autoriza y planifica IPC. `workspace.json`, versionado, reside en el directorio
-de datos. Se reemplaza atómicamente después de escribir y vaciar un temporal vecino.
-La revisión monotónica impide aplicar un guardado tardío sobre uno nuevo. Los límites
-los publica el backend: treinta pestañas, doscientos favoritos, veinte recientes;
-también valida rutas, ids, carpetas y cuatro MiB por archivo. Datos corruptos o de versión
-futura se apartan, conservando tres originales recientes, y se informa de su ubicación.
-Un fallo de lectura o guardado permite continuar en memoria y queda visible.
+**Store.** `gitcanvas-core/workspace` defines the schema, the validation and the exclusive
+writer; Tauri only authorizes and plans IPC. `workspace.json`, versioned, lives in the
+data directory. It is replaced atomically after writing and flushing a neighboring
+temporary file. A monotonic revision stops a late save from overwriting a newer one. The
+backend publishes the limits: thirty tabs, two hundred favorites, twenty recents; it also
+validates paths, ids, folders and four MiB per file. Corrupt or future-version data is set
+aside, keeping the three most recent originals, and its location is reported. A read or
+save failure lets the app continue in memory and stays visible.
 
-**Qué se recuerda.** Orden de pestañas, activa, selección de commit/archivo o lado local,
-ancla de historial, carpetas colapsadas, favoritos y recientes. No se guardan objetos Git,
-diffs, cachés, operaciones pendientes ni expansión de archivos. Búsqueda y controles de
-vista duran la sesión en memoria. Tema, idioma, tamaños de panel y modo de listado siguen
-en `localStorage`: el idioma se debe resolver síncronamente antes del primer render.
-La navegación se guarda con debounce de 300 ms; los cambios estructurales se encolan de
-inmediato. Un único escritor drena también cambios recibidos durante un guardado.
-El cierre y la salida normal del sistema pasan por el vaciado; si falla, la ventana
-permanece abierta para recuperar el guardado. La salida tiene plazo: el frontend confirma
-la solicitud de cierre (`acknowledge_shutdown`) antes de vaciar y, si no responde en tres
-segundos, un vigilante destruye la ventana para que un renderizador bloqueado no retenga
-la app. Una terminación forzada del proceso no puede ejecutar ese vaciado y conserva el
-último archivo completo.
+**What is remembered.** Tab order, the active tab, the selection of a commit/file or of
+the local side, the history anchor, collapsed folders, favorites and recents. Git objects,
+diffs, caches, pending operations and file expansion are not saved. Search and view
+controls last for the in-memory session. Theme, language, panel sizes and list mode stay
+in `localStorage`: the language has to be resolved synchronously before the first render.
+Navigation is saved with a 300 ms debounce; structural changes are queued immediately. A
+single writer also drains changes received during a save. Closing and a normal system exit
+go through the flush; if it fails, the window stays open so the save can be recovered.
+Exit has a deadline: the frontend acknowledges the close request
+(`acknowledge_shutdown`) before flushing and, if it does not respond within three seconds,
+a watchdog destroys the window so a blocked renderer cannot hold the app. A forced process
+termination cannot run that flush and keeps the last complete file.
 
-**Restauración y navegación.** Se carga el almacén antes de montar la interfaz y solo
-se valida inicialmente la pestaña activa. Las demás quedan «sin verificar» hasta usarse,
-pero todas sus rutas entran en el registro de protección de clones. El argumento de
-arranque se añade sin descartar la restauración; cede si la persona abrió otro proyecto
-mientras se resolvía. Un ancla no cargada no provoca lecturas ocultas de páginas. El detalle de un commit
-seleccionado fuera del walk se pide por id con el mismo flujo autorizado. Ante un fallo
-de render, el botón de recuperación reinicia el proceso nativo desde el último estado
-durable; recargar solo la página desalinearía las secuencias de solicitudes con Rust.
+**Restoration and navigation.** The store is loaded before the interface mounts, and only
+the active tab is validated initially. The others stay "unverified" until used, but all
+their paths enter the clone-protection registry. The startup argument is added without
+discarding the restoration; it yields if the person opened another project while it was
+being resolved. An anchor that is not loaded does not cause hidden page reads. The detail
+of a commit selected outside the walk is requested by id through the same authorized flow.
+After a render failure, the recovery button restarts the native process from the last
+durable state; reloading only the page would misalign the request sequences with Rust.
 
-**Favoritos y recientes.** Favoritos independientes de pestañas, ordenados por nombre,
-con carpeta o ruta para desambiguar. Recientes por último uso, sin repetir favoritos en
-la presentación y sin reordenamiento manual. Intentar abrir una ruta inaccesible muestra
-el error y permite quitar la entrada. Solo las pestañas abiertas protegen clones de la
-retención; un favorito expulsado conserva su ruta recuperable. Se protege también la
-entrada cuyo Git común usa un worktree externo y el contenedor de proyectos anidados.
-Mientras se sincroniza la protección o no puede resolverse una dependencia, no se hace
-limpieza. Una reparación tampoco reemplaza una entrada usada por un proyecto abierto.
-La retención y el reemplazo entregan el borrado al registro mediante `RemoveGuard`: la
-decisión «nadie la usa» y la eliminación son un solo paso, sin ventana para que una
-pestaña la abra entre ambos.
+**Favorites and recents.** Favorites are independent of tabs, sorted by name, with a
+folder or path to disambiguate. Recents are ordered by last use, never repeat favorites in
+the presentation and cannot be reordered by hand. Trying to open an inaccessible path shows
+the error and lets the person remove the entry. Only open tabs protect clones from
+retention; an evicted favorite keeps its recoverable path. The entry whose common Git
+directory is used by an external worktree and the container of nested projects are also
+protected. While the protection is being synchronized, or a dependency cannot be resolved,
+no cleanup happens. A repair also never replaces an entry used by an open project.
+Retention and replacement hand the deletion to the registry through `RemoveGuard`: the
+decision "nobody uses it" and the removal are a single step, with no window for a tab to
+open it in between.
 
-**Interfaz y menú.** Barra compacta sobre la toolbar; cada pestaña es un proyecto y el
-«+» abre carpeta, GitHub, favoritos o recientes. Arrastre por puntero, teclado con foco
-itinerante, Alt+flechas para reordenar y Supr para cerrar. Ctrl+Tab y ⌘/Ctrl+1–9 recorren
-pestañas; Ctrl+O/W en Windows y Linux respetan los campos de texto. En macOS un menú
-propio recibe ⌘O y ⌘W, con etiquetas del catálogo activo; la salida del sistema se dirige
-al cierre con guardado. Todo usa las mismas acciones del workspace.
+**Interface and menu.** A compact bar above the toolbar; each tab is a project, and the
+"+" opens a folder, GitHub, favorites or recents. Pointer drag, keyboard with roving
+focus, Alt+arrows to reorder and Delete to close. Ctrl+Tab and ⌘/Ctrl+1–9 cycle through
+tabs; Ctrl+O/W on Windows and Linux respect text fields. On macOS a custom menu receives
+⌘O and ⌘W, with labels from the active catalog; the system quit is routed to the close
+with save. Everything uses the same workspace actions.
 
-**Inicio.** La primera pestaña es siempre Inicio: la pantalla de apertura con favoritos y
-recientes. No es un proyecto, no se guarda, no se cierra ni se reordena; mostrarla no cambia
-la pestaña activa, a la que se vuelve al elegirla. Con ella visible, Ctrl+W no cierra nada y
-lo propio de un proyecto (nombre, actualizar, buscar, acciones) no se muestra. Reemplaza las
-vistas de favoritos y recientes con botón «Volver».
+**Home.** The first tab is always Home: the opening screen with favorites and recents. It
+is not a project; it is not saved, closed or reordered, and showing it does not change the
+active tab, which is restored when it is chosen. While it is visible, Ctrl+W closes nothing
+and whatever is specific to a project (name, refresh, search, actions) is not shown. It
+replaces the favorites and recents views that had a "Back" button.
 
-**Casos de uso de pestañas.** Un menú contextual (clic derecho o tecla de menú) cierra la
-pestaña, las demás o las de la derecha, y copia la ruta. Ctrl+Mayús+T (⇧⌘T en macOS)
-reabre la última cerrada con su selección y búsqueda; el historial de cerradas es de
-sesión y está acotado. Soltar una carpeta en la ventana usa el evento de arrastre del
-webview y pasa por `openProjectAt`: la ruta soltada no concede acceso por sí misma.
-«Mostrar en el explorador» queda fuera a propósito: exigiría lanzar procesos o ampliar
-los permisos del webview.
+**Tab use cases.** A context menu (right click or the menu key) closes the tab, the others
+or those to the right, and copies the path. Ctrl+Shift+T (⇧⌘T on macOS) reopens the last
+closed tab with its selection and search; the closed-tab history is per session and
+bounded. Dropping a folder onto the window uses the webview's drag event and goes through
+`openProjectAt`: the dropped path does not grant access by itself. "Show in file explorer"
+is left out on purpose: it would require launching processes or widening the webview's
+permissions.
 
-**Verificación aislada.** Los E2E usan repositorios con marcador de propiedad y un
-directorio de datos temporal. Las ventanas compiladas con `e2e` usan WebView privado:
-el directorio Rust por sí solo no aísla `localStorage`. No se reutilizan ni modifican
-sesiones o preferencias reales. Los instaladores de producción no incluyen el servidor
-WebDriver ni el modo privado de pruebas.
+**Isolated verification.** The E2E suite uses repositories with an ownership marker and a
+temporary data directory. Windows built with `e2e` use a private WebView: the Rust
+directory alone does not isolate `localStorage`. Real sessions or preferences are never
+reused or modified. Production installers include neither the WebDriver server nor the
+private test mode.
 
-## Consecuencias
+## Consequences
 
-Treinta pestañas pueden conservar sesiones ligeras, mientras la caché pesada tiene un
-límite explícito. El almacén no supone permisos ni disponibilidad futura; recuperar
-una ruta sigue siendo una apertura autorizada. La escritura serializada mantiene un
-estado final predecible, pero un fallo del sistema o disco puede impedir guardar y se
-reporta. El esquema permite una evolución futura validada, sin adaptar silenciosamente
-versiones desconocidas. Preparación y creación de commits, borradores y exclusión mutua
-entre worktrees pertenecen a v0.4; esta entrega no los introduce.
+Thirty tabs can keep lightweight sessions, while the heavy cache has an explicit limit.
+The store assumes neither future permissions nor availability; recovering a path is still
+an authorized open. Serialized writing keeps the final state predictable, but a system or
+disk failure can prevent saving and is reported. The schema allows validated future
+evolution, without silently adapting unknown versions. Staging and creating commits,
+drafts and mutual exclusion between worktrees were assigned to v0.4 when this was
+written and are now planned for v0.13 (see [ROADMAP.md](../../ROADMAP.md)); this delivery
+does not introduce them.

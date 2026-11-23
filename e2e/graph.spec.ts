@@ -5,7 +5,53 @@ import { $, browser, expect } from "@wdio/globals";
 import type { Workspace } from "../src/bindings";
 import { e2eDataDir, e2eRepository, e2eRepositoryRoot } from "../wdio.conf";
 import { waitForHistory } from "./history";
-import { clickAndConfirm, setReactSelectValue } from "./interactions";
+import {
+  clickAndConfirm,
+  revealSidebarItem,
+  setReactSelectValue,
+} from "./interactions";
+
+async function waitForMenuItem(label: string) {
+  await browser.waitUntil(
+    async () =>
+      browser.execute(
+        (expectedLabel) =>
+          Array.from(
+            document.querySelectorAll<HTMLElement>("[role='menuitem']"),
+          ).some(
+            (item) =>
+              item.textContent?.includes(expectedLabel) === true &&
+              item.getClientRects().length > 0,
+          ),
+        label,
+      ),
+    {
+      timeout: 5_000,
+      timeoutMsg: `context-menu item did not appear: ${label}`,
+    },
+  );
+}
+
+async function clickMenuItemByText(label: string) {
+  const selector = `//button[@role="menuitem" and contains(normalize-space(.), "${label}")]`;
+  // WebDriver otherwise scrolls the nearest ancestor (the sidebar) to reach a
+  // menu item near the bottom of a long context menu. Scrolling the anchored
+  // sidebar dismisses that menu, so reveal the item inside its own scroller.
+  await browser.execute((itemLabel) => {
+    const item = Array.from(
+      document.querySelectorAll<HTMLButtonElement>(
+        '.context-menu button[role="menuitem"]',
+      ),
+    ).find((button) => button.textContent?.includes(itemLabel) === true);
+    if (item === undefined) {
+      throw new Error(`context-menu item did not appear: ${itemLabel}`);
+    }
+    item.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, label);
+  await clickAndConfirm(selector, async () => {
+    await expect($(".context-menu")).not.toExist();
+  });
+}
 
 /** Real native UI, Rust store and Git fixture, isolated from the user's projects. */
 describe("stable branch graph preferences", () => {
@@ -25,24 +71,40 @@ describe("stable branch graph preferences", () => {
     );
     await waitForHistory(3);
     await browser.setWindowSize(940, 600);
-    await browser.executeAsync((done) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          done(null);
-        });
-      });
-    });
+    await browser.waitUntil(
+      async () => {
+        const windowSize = await browser.getWindowSize();
+        return (
+          windowSize.width === 940 &&
+          windowSize.height === 600 &&
+          (await browser.execute(() => {
+            const shell = document.querySelector(".app-shell");
+            return (
+              shell !== null &&
+              Math.abs(
+                shell.getBoundingClientRect().height -
+                  document.documentElement.clientHeight,
+              ) < 1
+            );
+          }))
+        );
+      },
+      {
+        timeout: 5_000,
+        timeoutMsg: "the minimum window layout did not settle",
+      },
+    );
+    // WebKit can deliver the native resize event after the first layout query;
+    // the context menu intentionally closes on resize, so let it settle first.
+    await browser.pause(250);
+    await revealSidebarItem('[aria-label="Acciones de main"]');
     await clickAndConfirm(
       '[aria-label="Acciones de main"]',
-      async () =>
-        await expect(
-          $('[role="menuitem"]*=Cambiar color de rama'),
-        ).toBeDisplayed(),
+      async () => await waitForMenuItem("Cambiar color de rama"),
     );
-    await clickAndConfirm(
-      '[role="menuitem"]*=Cambiar color de rama',
-      async () => await expect($(".sidebar__palette")).toBeDisplayed(),
-    );
+    await waitForMenuItem("Cambiar color de rama");
+    await clickMenuItemByText("Cambiar color de rama");
+    await expect($(".sidebar__palette")).toBeDisplayed();
     await clickAndConfirm(
       '//div[contains(@class,"sidebar__palette")]//button[normalize-space(.)="Azul"]',
       async () => await expect($(".sidebar__palette")).not.toExist(),
@@ -68,28 +130,24 @@ describe("stable branch graph preferences", () => {
       },
       { timeoutMsg: "the selected branch color was not persisted" },
     );
+    await revealSidebarItem('[aria-label="Acciones de main"]');
     await clickAndConfirm(
       '[aria-label="Acciones de main"]',
-      async () =>
-        await expect(
-          $('[role="menuitem"]*=Usar como principal visual'),
-        ).toBeDisplayed(),
+      async () => await waitForMenuItem("Usar como principal visual"),
     );
-    await clickAndConfirm(
-      '[role="menuitem"]*=Usar como principal visual',
-      async () => {
-        await browser.waitUntil(() =>
-          browser.execute(() => {
-            const node = document.querySelector(".graph-canvas__node");
-            return (
-              node?.getAttribute("cx") === "16" &&
-              document
-                .querySelector(".sidebar__item--head")
-                ?.textContent?.includes("main") === true
-            );
-          }),
+    await waitForMenuItem("Usar como principal visual");
+    await clickMenuItemByText("Usar como principal visual");
+    await expect($('[aria-label="Rama principal visual"]')).toBeDisplayed();
+    await browser.waitUntil(() =>
+      browser.execute(() => {
+        const node = document.querySelector(".graph-canvas__node");
+        return (
+          node?.getAttribute("cx") === "16" &&
+          document
+            .querySelector(".sidebar__item--head")
+            ?.textContent?.includes("main") === true
         );
-      },
+      }),
     );
     await browser.waitUntil(async () =>
       browser.execute(() => {

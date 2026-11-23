@@ -1,9 +1,10 @@
 //! The GitHub REST client.
 //!
-//! Used for exactly two things: confirming a token works and listing the
-//! repositories it can reach, so the user can pick one to clone. Nothing the
-//! graph displays comes from here — commits, branches and tags are always read
-//! from the local clone through libgit2. One data path, not two.
+//! Used for confirming a token, listing repositories to clone, and reading
+//! bounded GitHub release metadata. Release data is provider metadata; commits,
+//! branches and tags shown by the graph continue to come from the local clone
+//! through libgit2. [`crate::releases`] joins release metadata to local tags but
+//! never uses API data as Git history or fetches tags or assets while listing.
 
 use std::time::Duration;
 
@@ -74,9 +75,11 @@ struct RawRepository {
 
 /// A GitHub REST client bound to one token.
 pub struct GitHubClient {
-    token: String,
+    token: Option<String>,
     base_url: String,
     agent: Agent,
+    #[cfg(feature = "e2e")]
+    e2e_origin: Option<Url>,
 }
 
 impl GitHubClient {
@@ -84,9 +87,22 @@ impl GitHubClient {
     #[must_use]
     pub fn new(token: String) -> Self {
         Self {
-            token,
+            token: Some(token),
             base_url: DEFAULT_BASE_URL.to_owned(),
             agent: api_agent(),
+            #[cfg(feature = "e2e")]
+            e2e_origin: None,
+        }
+    }
+
+    /// Builds a client without credentials for public release endpoints.
+    pub(crate) fn anonymous() -> Self {
+        Self {
+            token: None,
+            base_url: DEFAULT_BASE_URL.to_owned(),
+            agent: api_agent(),
+            #[cfg(feature = "e2e")]
+            e2e_origin: None,
         }
     }
 
@@ -101,6 +117,49 @@ impl GitHubClient {
         credentials::read_token().map(Self::new)
     }
 
+    /// Builds a client with the stored token when one exists, otherwise anonymously.
+    pub(crate) fn from_optional_stored_token() -> Result<Self, AppError> {
+        if credentials::has_token()? {
+            Self::from_stored_token()
+        } else {
+            Ok(Self::anonymous())
+        }
+    }
+
+    /// Builds an anonymous client pinned to an exact loopback origin for native E2E.
+    ///
+    /// This constructor only exists when the application explicitly enables its
+    /// opt-in `e2e` feature. It never reads the environment or OS keychain.
+    ///
+    /// # Errors
+    /// Returns [`AppError::InvalidInput`] if the origin is not a literal IPv4 or
+    /// IPv6 loopback address with an explicit nonzero port and no extra URL parts.
+    #[cfg(feature = "e2e")]
+    pub fn for_e2e_loopback(base_url: &str) -> Result<Self, AppError> {
+        let origin = validate_e2e_base_url(base_url)?;
+        let normalized = origin.as_str().trim_end_matches('/').to_owned();
+        Ok(Self {
+            token: None,
+            base_url: normalized,
+            agent: Agent::new_with_config(
+                Agent::config_builder()
+                    .proxy(None)
+                    .max_redirects(0)
+                    .timeout_global(Some(REQUEST_TIMEOUT))
+                    .timeout_connect(Some(CONNECT_TIMEOUT))
+                    .http_status_as_error(false)
+                    .build(),
+            ),
+            e2e_origin: Some(origin),
+        })
+    }
+
+    /// Returns the pinned local origin only for an explicitly injected E2E client.
+    #[cfg(feature = "e2e")]
+    pub(crate) fn e2e_origin(&self) -> Option<&Url> {
+        self.e2e_origin.as_ref()
+    }
+
     /// Builds a client pointed at a specific HTTPS endpoint or loopback test server.
     ///
     /// The URL is validated before the token can be sent to it.
@@ -108,22 +167,39 @@ impl GitHubClient {
     pub fn with_base_url(token: String, base_url: String) -> Result<Self, AppError> {
         validate_base_url(&base_url)?;
         Ok(Self {
-            token,
+            token: Some(token),
             base_url,
             agent: api_agent(),
+            #[cfg(feature = "e2e")]
+            e2e_origin: None,
+        })
+    }
+
+    /// Builds an anonymous client against a validated local test endpoint.
+    #[cfg(test)]
+    pub(crate) fn anonymous_with_base_url(base_url: String) -> Result<Self, AppError> {
+        validate_base_url(&base_url)?;
+        Ok(Self {
+            token: None,
+            base_url,
+            agent: api_agent(),
+            #[cfg(feature = "e2e")]
+            e2e_origin: None,
         })
     }
 
     fn get(&self, path: &str) -> Result<String, AppError> {
         let url = format!("{}{path}", self.base_url);
-        let response = self
+        let mut request = self
             .agent
             .get(&url)
-            .header("Authorization", &format!("Bearer {}", self.token))
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
-            .header("User-Agent", USER_AGENT)
-            .call();
+            .header("User-Agent", USER_AGENT);
+        if let Some(token) = &self.token {
+            request = request.header("Authorization", &format!("Bearer {token}"));
+        }
+        let response = request.call();
 
         match response {
             Ok(mut response) if response.status().is_success() => {
@@ -157,6 +233,122 @@ impl GitHubClient {
             Err(error) => Err(AppError::Network(format!(
                 "could not reach GitHub: {error}"
             ))),
+        }
+    }
+
+    /// Fetches a bounded release API response and maps release-specific errors.
+    pub(crate) fn get_release_body(&self, path: &str, max_bytes: u64) -> Result<Vec<u8>, AppError> {
+        let url = format!("{}{path}", self.base_url);
+        let mut request = self
+            .agent
+            .get(&url)
+            .header("Accept", "application/vnd.github+json")
+            .header("Accept-Encoding", "identity")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .header("User-Agent", USER_AGENT);
+        if let Some(token) = &self.token {
+            request = request.header("Authorization", &format!("Bearer {token}"));
+        }
+
+        match request.call() {
+            Ok(mut response) if response.status().is_success() => response
+                .body_mut()
+                .with_config()
+                .limit(max_bytes)
+                .read_to_vec()
+                .map_err(|error| match error {
+                    ureq::Error::BodyExceedsLimit(_) => AppError::ResourceLimitExceeded(
+                        "GitHub release response exceeds 8 MiB".to_owned(),
+                    ),
+                    error => AppError::Network(format!(
+                        "could not read the GitHub release response: {error}"
+                    )),
+                }),
+            Ok(response) => Err(release_status_error(
+                response.status().as_u16(),
+                response
+                    .headers()
+                    .get("x-ratelimit-remaining")
+                    .and_then(|value| value.to_str().ok()),
+                response
+                    .headers()
+                    .get("retry-after")
+                    .and_then(|value| value.to_str().ok()),
+                response
+                    .headers()
+                    .get("x-ratelimit-reset")
+                    .and_then(|value| value.to_str().ok()),
+            )),
+            Err(ureq::Error::StatusCode(status)) => {
+                Err(release_status_error(status, None, None, None))
+            }
+            Err(_) => Err(AppError::Offline),
+        }
+    }
+
+    /// Fetches a bounded release metadata response with automatic redirects disabled.
+    pub(crate) fn get_release_metadata_body(
+        &self,
+        path: &str,
+        max_bytes: u64,
+    ) -> Result<Vec<u8>, AppError> {
+        let url = format!("{}{path}", self.base_url);
+        #[cfg(feature = "e2e")]
+        let local_metadata_agent;
+        #[cfg(feature = "e2e")]
+        let agent = if self.e2e_origin.is_some() {
+            local_metadata_agent = e2e_metadata_agent();
+            &local_metadata_agent
+        } else {
+            &metadata_agent()
+        };
+        #[cfg(not(feature = "e2e"))]
+        let agent = &metadata_agent();
+        let mut request = agent
+            .get(&url)
+            .header("Accept", "application/vnd.github+json")
+            .header("Accept-Encoding", "identity")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .header("User-Agent", USER_AGENT);
+        if let Some(token) = &self.token {
+            request = request.header("Authorization", &format!("Bearer {token}"));
+        }
+        match request.call() {
+            Ok(mut response) if response.status().is_success() => response
+                .body_mut()
+                .with_config()
+                .limit(max_bytes)
+                .read_to_vec()
+                .map_err(|error| match error {
+                    ureq::Error::BodyExceedsLimit(_) => AppError::ResourceLimitExceeded(
+                        "GitHub release metadata response exceeds 8 MiB".to_owned(),
+                    ),
+                    error => AppError::Network(format!(
+                        "could not read the GitHub release metadata response: {error}"
+                    )),
+                }),
+            Ok(response) if response.status().is_redirection() => Err(AppError::Network(
+                "GitHub returned an unexpected release metadata redirect".to_owned(),
+            )),
+            Ok(response) => Err(release_status_error(
+                response.status().as_u16(),
+                response
+                    .headers()
+                    .get("x-ratelimit-remaining")
+                    .and_then(|value| value.to_str().ok()),
+                response
+                    .headers()
+                    .get("retry-after")
+                    .and_then(|value| value.to_str().ok()),
+                response
+                    .headers()
+                    .get("x-ratelimit-reset")
+                    .and_then(|value| value.to_str().ok()),
+            )),
+            Err(ureq::Error::StatusCode(status)) => {
+                Err(release_status_error(status, None, None, None))
+            }
+            Err(_) => Err(AppError::Offline),
         }
     }
 
@@ -284,6 +476,30 @@ fn api_agent() -> Agent {
     )
 }
 
+fn metadata_agent() -> Agent {
+    Agent::new_with_config(
+        Agent::config_builder()
+            .max_redirects(0)
+            .timeout_global(Some(REQUEST_TIMEOUT))
+            .timeout_connect(Some(CONNECT_TIMEOUT))
+            .http_status_as_error(false)
+            .build(),
+    )
+}
+
+#[cfg(feature = "e2e")]
+fn e2e_metadata_agent() -> Agent {
+    Agent::new_with_config(
+        Agent::config_builder()
+            .proxy(None)
+            .max_redirects(0)
+            .timeout_global(Some(REQUEST_TIMEOUT))
+            .timeout_connect(Some(CONNECT_TIMEOUT))
+            .http_status_as_error(false)
+            .build(),
+    )
+}
+
 fn validate_base_url(base_url: &str) -> Result<(), AppError> {
     let parsed = Url::parse(base_url)
         .map_err(|_| AppError::InvalidInput("invalid GitHub API base URL".to_owned()))?;
@@ -308,6 +524,29 @@ fn validate_base_url(base_url: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+#[cfg(feature = "e2e")]
+fn validate_e2e_base_url(base_url: &str) -> Result<Url, AppError> {
+    let invalid = || AppError::InvalidInput("invalid E2E loopback API origin".to_owned());
+    let parsed = Url::parse(base_url).map_err(|_| invalid())?;
+    let exact_loopback = match parsed.host() {
+        Some(Host::Ipv4(address)) => address.octets() == [127, 0, 0, 1],
+        Some(Host::Ipv6(address)) => address.segments() == [0, 0, 0, 0, 0, 0, 0, 1],
+        _ => false,
+    };
+    if parsed.scheme() != "http"
+        || !exact_loopback
+        || parsed.port().is_none_or(|port| port == 0)
+        || !matches!(parsed.path(), "" | "/")
+        || !parsed.username().is_empty()
+        || parsed.password().is_some()
+        || parsed.query().is_some()
+        || parsed.fragment().is_some()
+    {
+        return Err(invalid());
+    }
+    Ok(parsed)
+}
+
 fn status_error(status: u16, rate_remaining: Option<&str>, retry_after: Option<&str>) -> AppError {
     match status {
         401 => AppError::Auth("the GitHub token is invalid".to_owned()),
@@ -323,9 +562,36 @@ fn status_error(status: u16, rate_remaining: Option<&str>, retry_after: Option<&
     }
 }
 
+fn release_status_error(
+    status: u16,
+    rate_remaining: Option<&str>,
+    retry_after: Option<&str>,
+    reset: Option<&str>,
+) -> AppError {
+    match status {
+        403 if rate_remaining == Some("0") || retry_after.is_some() => AppError::RateLimited {
+            reset: reset.map(str::to_owned),
+        },
+        401 | 403 => AppError::AccessRequired,
+        404 => AppError::NotFound,
+        429 => AppError::RateLimited {
+            reset: reset.map(str::to_owned),
+        },
+        500..=599 => AppError::Network(format!("GitHub responded with status {status}")),
+        code => AppError::Internal(format!("GitHub responded with status {code}")),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::{
+        io::{Read, Write},
+        net::TcpListener,
+        thread,
+        time::Duration,
+    };
+
+    use ureq::Agent;
 
     use super::{validate_base_url, GitHubClient, CONNECT_TIMEOUT, REQUEST_TIMEOUT};
     use crate::error::AppError;
@@ -354,5 +620,104 @@ mod tests {
             validate_base_url("https://user:secret@example.com"),
             Err(AppError::InvalidInput(_))
         ));
+    }
+
+    #[cfg(feature = "e2e")]
+    #[test]
+    fn e2e_origin_is_an_explicit_exact_loopback_authority() {
+        use super::validate_e2e_base_url;
+
+        for accepted in ["http://127.0.0.1:4321", "http://[::1]:4321/"] {
+            assert!(validate_e2e_base_url(accepted).is_ok(), "{accepted}");
+        }
+        let client = GitHubClient::for_e2e_loopback("http://127.0.0.1:4321").unwrap();
+        assert!(client.token.is_none());
+        assert!(client.agent.config().proxy().is_none());
+        for rejected in [
+            "http://localhost:4321",
+            "http://127.0.0.2:4321",
+            "http://0.0.0.0:4321",
+            "https://127.0.0.1:4321",
+            "http://127.0.0.1",
+            "http://127.0.0.1:0",
+            "http://user@127.0.0.1:4321",
+            "http://127.0.0.1:4321/api",
+            "http://127.0.0.1:4321/?query=1",
+            "http://127.0.0.1:4321/#fragment",
+        ] {
+            assert!(validate_e2e_base_url(rejected).is_err(), "{rejected}");
+        }
+    }
+
+    #[cfg(feature = "e2e")]
+    #[test]
+    fn e2e_release_listing_rejects_redirects_without_contacting_the_target() {
+        let target = TcpListener::bind("127.0.0.1:0").unwrap();
+        let target_address = target.local_addr().unwrap();
+        drop(target);
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let source_thread = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0_u8; 2048];
+            let _ = stream.read(&mut request).unwrap();
+            write!(
+                stream,
+                "HTTP/1.1 302 Found\r\nLocation: http://{target_address}/followed\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
+            )
+            .unwrap();
+        });
+        let client = GitHubClient::for_e2e_loopback(&format!("http://{address}")).unwrap();
+        let error = client
+            .get_release_body("/repos/e2e/repo/releases", 1024)
+            .unwrap_err();
+        assert!(matches!(error, AppError::Internal(_)));
+        source_thread.join().unwrap();
+    }
+
+    #[test]
+    fn release_metadata_body_limit_is_enforced_before_deserialization() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = Vec::new();
+            let mut chunk = [0_u8; 1024];
+            loop {
+                let read = stream.read(&mut chunk).unwrap();
+                if read == 0 {
+                    break;
+                }
+                request.extend_from_slice(&chunk[..read]);
+                if request.windows(4).any(|window| window == b"\r\n\r\n") {
+                    break;
+                }
+            }
+            let body = b"{\"payload\":\"too large\"}";
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: {}\r\n\r\n",
+                body.len()
+            )
+            .unwrap();
+            stream.write_all(body).unwrap();
+        });
+        let mut client =
+            GitHubClient::with_base_url("test-token".to_owned(), format!("http://{address}"))
+                .unwrap();
+        client.agent = Agent::new_with_config(
+            Agent::config_builder()
+                .proxy(None)
+                .http_status_as_error(false)
+                .build(),
+        );
+        let error = client
+            .get_release_metadata_body("/metadata", 4)
+            .unwrap_err();
+        assert!(
+            matches!(error, AppError::ResourceLimitExceeded(_)),
+            "expected an oversized-response error, got {error:?}"
+        );
+        server.join().unwrap();
     }
 }

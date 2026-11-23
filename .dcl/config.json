@@ -1,0 +1,37 @@
+{
+  "nombre": "tauri-rust",
+  "doc_check": {
+    "roadmap": "ROADMAP.md",
+    "tasks": "TASKS.md",
+    "archives": "ARCHIVES.md",
+    "planes": "docs/plan/*.md",
+    "verificaciones": "docs/verification/*.md",
+    "adrs": "docs/adr/*.md",
+    "primera_version_con_plantilla": 8
+  },
+  "manifiestos": [
+    {
+      "archivo": "package.json",
+      "tipo": "json",
+      "clave": "version"
+    },
+    {
+      "archivo": "Cargo.toml",
+      "tipo": "toml",
+      "clave": "workspace.package.version"
+    },
+    {
+      "archivo": "src-tauri/tauri.conf.json",
+      "tipo": "json",
+      "clave": "version"
+    }
+  ],
+  "comandos": {
+    "rapido": "npm test && npm run lint",
+    "completo": "npm test && cargo test --workspace",
+    "build": "npm run tauri build"
+  },
+  "changelog": "CHANGELOG.md",
+  "readme_latest": true,
+  "kit_version": "0.2"
+}

@@ -40,6 +40,27 @@ pub enum AppError {
     /// The operation would exceed an explicit resource budget.
     #[error("Resource limit exceeded: {0}")]
     ResourceLimitExceeded(String),
+    /// Another Git write currently holds the lock for this repository.
+    #[error("Repository is busy: {0}")]
+    RepositoryBusy(String),
+    /// A private release requires a GitHub token.
+    #[error("GitHub access is required to view these releases")]
+    AccessRequired,
+    /// GitHub's API rate limit has been reached.
+    #[error("GitHub API rate limit reached")]
+    RateLimited {
+        /// Unix timestamp in decimal seconds when GitHub's rate limit resets.
+        reset: Option<String>,
+    },
+    /// The remote service cannot currently be reached because the device is offline.
+    #[error("The device is offline")]
+    Offline,
+    /// The requested release or asset does not exist.
+    #[error("The requested GitHub resource was not found")]
+    NotFound,
+    /// No supported GitHub HTTPS remote is configured for releases.
+    #[error("This repository does not have a supported GitHub HTTPS remote")]
+    UnsupportedSource,
     /// The filesystem watcher is not available for this repository.
     #[error("Repository watcher is degraded: {0}")]
     WatchDegraded(String),
@@ -197,5 +218,24 @@ mod tests {
             AppError::from(keyring::Error::NoEntry),
             AppError::Auth(_)
         ));
+    }
+
+    #[test]
+    fn release_errors_serialize_as_additive_typed_kinds() {
+        assert_eq!(
+            serde_json::to_value(AppError::AccessRequired).unwrap(),
+            serde_json::json!({ "kind": "AccessRequired" })
+        );
+        assert_eq!(
+            serde_json::to_value(AppError::RateLimited {
+                reset: Some("123".to_owned()),
+            })
+            .unwrap(),
+            serde_json::json!({ "kind": "RateLimited", "message": { "reset": "123" } })
+        );
+        assert_eq!(
+            serde_json::to_value(AppError::UnsupportedSource).unwrap(),
+            serde_json::json!({ "kind": "UnsupportedSource" })
+        );
     }
 }

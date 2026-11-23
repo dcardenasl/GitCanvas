@@ -18,6 +18,7 @@ import {
 import { useWorktreeSnapshot } from "../../state/worktree";
 import { DiffStat } from "../DiffStat/DiffStat";
 import { useStashAnchors } from "../../state/stashes";
+import { useAuthorCommitIds, useSelectedAuthor } from "../../state/authors";
 
 const NO_EXCLUSIONS: readonly string[] = [];
 
@@ -31,6 +32,15 @@ const NO_EXCLUSIONS: readonly string[] = [];
 export function HistoryView({ history }: { readonly history: HistoryData }) {
   const { t } = useTranslation(["history", "common", "stash"]);
   const repository = useActiveRepository();
+  const root = repository?.path ?? null;
+  const { author } = useSelectedAuthor(root);
+  const authorCommits = useAuthorCommitIds(root, author);
+  const authorCommitIds = useMemo(
+    () => (author === null ? null : new Set(authorCommits.commitIds)),
+    [author, authorCommits.commitIds],
+  );
+  const authorCommitIdsComplete =
+    author !== null && authorCommits.isSuccess && !authorCommits.hasNextPage;
   const selection = useNavigation((navigation) => navigation.selection);
   const selectedCommitId = useNavigation(getSelectedCommitId);
 
@@ -224,6 +234,8 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
         commits={commits}
         commitIndexById={history.commitIndexById}
         selectedId={selectedCommitId}
+        authorCommitIds={authorCommitIds}
+        authorCommitIdsComplete={authorCommitIdsComplete}
         onSelect={selectCommit}
         maxLanes={history.maxLanes}
         onReachEnd={fetchNextPage}
@@ -242,6 +254,8 @@ export function HistoryView({ history }: { readonly history: HistoryData }) {
             window={window}
             maxLanes={history.maxLanes}
             selectedId={selectedCommitId}
+            authorCommitIds={authorCommitIds}
+            authorCommitIdsComplete={authorCommitIdsComplete}
           />
         )}
       />

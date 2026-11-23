@@ -12,7 +12,7 @@ el render SVG. El graph es el núcleo de valor: todo lo demás está subordinado
 ## Cómo retomar en frío
 
 1. Leer [`TASKS.md`](TASKS.md) → primera tarea sin marcar de la cola vigente.
-   El [roadmap de versiones](docs/plan/2026-10-19-roadmap-de-versiones.md) fija la
+   El [roadmap de versiones](ROADMAP.md) fija la
    secuencia: v0.6 historial por archivo y v0.7 stash de solo lectura implementados;
    v0.8 vista de imágenes planificada (IMG-1 es la próxima tarea); commits al final
    (objetivo v0.13). Consultar el plan específico de esa tarea antes del plan rector.
@@ -27,13 +27,17 @@ el render SVG. El graph es el núcleo de valor: todo lo demás está subordinado
 
 | Archivo | Qué contiene |
 |---|---|
-| `TASKS.md` | **Fuente de verdad de ejecución.** Qué falta, qué se hizo, qué se descubrió |
+| `TASKS.md` | **Fuente de verdad de ejecución.** Qué falta y qué se descubrió |
+| `ARCHIVES.md` | Registro de lo completado, con su evidencia, por versión |
 | `CONTEXT.md` | Contexto vigente de arquitectura, observación del repositorio y límites de mutación |
 | `docs/plans/2026-09-08-plan-de-implementacion.md` | Plan rector: fases, deltas, ledger de commits |
-| `docs/plan/2026-10-19-roadmap-de-versiones.md` | Approved release sequence: graph/sidebar first, commit creation last |
-| `docs/plan/2026-11-08-v0.7-implementacion.md` | Read-only stash decisions, planned contracts, bounds and ST task acceptance |
-| `docs/plan/2026-11-15-v0.8-implementacion.md` | Image viewer decisions, contract, bounds, 24-case matrix and IMG task acceptance (ADR 0010) |
-| `docs/plan/2026-10-08-plan-tres-funcionalidades.md` | Workspace and future commit creation contracts; delivery order superseded by roadmap |
+| `ROADMAP.md` | Orden y alcance de las versiones; se cambia solo con el protocolo y su registro de cambios |
+| `docs/protocolo-trabajo.md` | Cómo se llevan TASKS, ARCHIVES, planes, ADR, verificación y gates; lista única de cierre de versión |
+| `docs/protocolo-roadmap.md` | Cómo entran funcionalidades al roadmap, cómo se reordena y qué se actualiza al publicar |
+| `docs/plan/2026-11-08-v0.7-implementacion.md` | Decisiones del stash de solo lectura, contratos, límites y aceptación de las tareas ST |
+| `docs/plan/2026-11-15-v0.8-implementacion.md` | Decisiones del visor de imágenes, contrato, límites, matriz de 24 casos y aceptación de las tareas IMG (ADR 0010) |
+| `docs/plan/2026-11-16-v0.9-implementacion.md` | Decisiones de autores y releases, contrato, límites, matriz de 56 casos y aceptación de las tareas CR (ADR 0011 y 0012) |
+| `docs/plan/2026-10-08-plan-tres-funcionalidades.md` | Contratos del workspace y de la futura creación de commits; el orden de entrega lo sustituye el roadmap |
 | `docs/plan/2026-10-04-plan-de-endurecimiento.md` | Plan de endurecimiento H2 y sus criterios de verificación |
 | `docs/PLAN-DESARROLLO.md` | Plan de diseño original. El plan rector lo endurece en 10 puntos (D1–D10) |
 | `PRODUCT.md` | Propósito, plataforma, capacidades y límites del producto |
@@ -107,13 +111,20 @@ Es la **única** forma en que este proyecto llega a `main`:
 1. Auditar: último tag en `main`, `git log main..dev`, estado del CHANGELOG.
 2. Versión por SemVer (`feat` → minor, resto → patch; breaking pre-1.0 → minor).
    **Confirmar con David antes de seguir.**
-3. Renombrar `## [Unreleased]` a `## [X.Y.Z] — YYYY-MM-DD` y abrir un `[Unreleased]`
+3. Actualizar el README según [`docs/releasing.md`](docs/releasing.md#update-the-readme):
+   reemplazar la sección «Latest» y pasar la anterior a Features. Actualizar el roadmap según
+   el [protocolo](docs/protocolo-roadmap.md#al-publicar-una-versión): fila `Publicada`, revisar
+   las dos entregas siguientes y confirmar la próxima versión con David.
+4. Cerrar la versión según la [lista de cierre](docs/protocolo-trabajo.md#3-cierre-de-versión-una-sola-lista):
+   archivar su cola de `TASKS.md` en `ARCHIVES.md`, revisar los gates y dejar el ADR y la
+   verificación en su estado final.
+5. Renombrar `## [Unreleased]` a `## [X.Y.Z] — YYYY-MM-DD` y abrir un `[Unreleased]`
    vacío arriba.
-4. `chore: release vX.Y.Z` como **último commit de `dev`**, y push.
-5. `gh pr create --base main --head dev`. **Parar y esperar aprobación de David.**
-6. `gh pr merge <N> --merge` — nunca `--squash` ni `--rebase`.
-7. Tag `vX.Y.Z` **solo sobre `main`**, y push del tag.
-8. `release.yml` crea el GitHub Release extrayendo la sección del CHANGELOG.
+6. `chore: release vX.Y.Z` como **último commit de `dev`**, y push.
+7. `gh pr create --base main --head dev`. **Parar y esperar aprobación de David.**
+8. `gh pr merge <N> --merge` — nunca `--squash` ni `--rebase`.
+9. Tag `vX.Y.Z` **solo sobre `main`**, y push del tag.
+10. `release.yml` crea el GitHub Release extrayendo la sección del CHANGELOG.
    **Nunca `gh release create` a mano.** Si falta la sección `## [X.Y.Z]`, el workflow
    falla — no taggear sin ella.
 
@@ -162,9 +173,17 @@ Cada una está hecha para fallar el build, no para depender de que alguien se ac
 
 ## Convenciones de código
 
-- **Idioma:** la conversación con David es en español. **Código, comentarios, mensajes
-  de commit, CHANGELOG y docs técnicos del repo van en inglés.** `TASKS.md` y `docs/`
-  son la excepción: español.
+- **Idioma:** la conversación con David es en español. El idioma de cada documento lo
+  decide su audiencia, no su carpeta:
+  - **Inglés** — lo que lee el público o un contribuyente: código, comentarios, mensajes
+    de commit, CHANGELOG, `README.md`, `PRODUCT.md`, `CONTEXT.md`, `DESIGN.md`,
+    `ARCHITECTURE.md`, `docs/adr/`, `docs/releasing.md`, la guía de usuario `docs/v0.5.0.md`
+    y la interfaz base.
+  - **Español** — el trabajo interno de David: `TASKS.md`, `ARCHIVES.md`, `ROADMAP.md`,
+    los planes (`docs/plan/`, `docs/plans/`), las verificaciones (`docs/verification/`), los
+    protocolos (`docs/protocolo-*.md`), `docs/ASSET.md` y `docs/SNAPSHOT.md`.
+  - Un documento nuevo sigue esta regla desde su primera línea; el contenido existente
+    no se traduce por inercia.
 - **Idioma de la interfaz:** todo texto que ve el usuario sale de los catálogos de
   `src/i18n/locales/` (inglés base, español), nunca de un literal en el JSX; un test lo
   hace fallar. Los mensajes de error del backend son diagnósticos en inglés: se

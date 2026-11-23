@@ -232,7 +232,7 @@ pub fn pull_fast_forward(active: &ActiveRepo) -> Result<PullOutcome, AppError> {
     let mut remote = repo.find_remote(&remote_name)?;
     let mut fetch = FetchOptions::new();
     fetch.remote_callbacks(remote_callbacks());
-    fetch.download_tags(AutotagOption::All);
+    fetch.download_tags(AutotagOption::Auto);
     // The remote's configured refspecs, so the tracking ref the branch points
     // at is the one that gets updated — whatever the remote branch is called.
     remote

@@ -15,116 +15,25 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="GitCanvas 0.8: comparing a changed PNG side by side and with a slider, following it through the file history, then viewing an animated GIF, an SVG and a stashed image" width="860">
+  <img src="docs/assets/demo.gif" alt="GitCanvas showing a repository's branches and merges as colored lanes, selecting a commit and reading the diff of one of its files" width="860">
 </p>
 
-GitCanvas does one thing: it lets you **see the shape of a repository's history**.
-Open a local repository (or clone one from GitHub), scroll the branch graph, click any
-commit and read what it changed. It updates as your working tree changes.
+## What it is
+
+GitCanvas does one thing: it lets you **see the shape of a repository's history**. Open a
+local repository (or clone one from GitHub), scroll the branch graph, click any commit and
+read what it changed. It updates as your working tree changes.
+
+- **The graph is the product.** Every branch keeps its color and its lane, merges are drawn
+  without detours, and lanes never reorder as you load more history.
+- **Reading first.** Inspecting history never changes it. The few actions that do write
+  (checkout, fast-forward pull, push) are explicit, protect uncommitted work and never force.
+- **Small, fast and free.** Large repositories load 500 commits at a time, nothing is locked
+  behind payment and there is no telemetry.
 
 It is deliberately not a full Git client. If you want conflict resolution, interactive
 rebase or pull-request workflows, tools like GitKraken, Tower or Fork do far more.
-GitCanvas is the opposite trade: small, fast, free, and focused on reading history well.
-
-<p align="center">
-  <img src="docs/assets/screenshot.jpg" alt="GitCanvas showing the branch graph with a color per branch, a selected merge commit and its details" width="860">
-</p>
-
-## What's new in 0.8
-
-Images stop being "binary". When a commit, a file's history, your local changes or a stash
-touches a PNG, JPEG, GIF, WebP, BMP, ICO or SVG, GitCanvas shows the picture instead of a notice.
-
-- **Compare versions.** A modified image opens side by side, with a notice when its size changed,
-  or with a slider that reveals the saved version over the previous one. Fit it to the pane or
-  view it at real size.
-- **Every source.** The same viewer works in the commit inspector, the file history, the local
-  changes list and stashes, including the previous and the saved version of a stashed image.
-- **Animated GIFs and SVG.** Pause and resume a GIF at any time. An SVG can be read as text or
-  seen as an isolated image that never runs scripts.
-- **Bounded and read-only.** Images reuse the existing byte budgets; anything over them, and
-  every non-image binary, keeps the previous notice. Nothing is written to the repository.
-
-## What's new in 0.7
-
-Stashes become readable. GitCanvas lists them, shows where each one came from and lets you
-inspect what it saved, without applying, creating or deleting anything.
-
-<p align="center">
-  <img src="docs/assets/demo-stash.gif" alt="GitCanvas 0.7: opening a stash from its base commit in the graph, then switching between its all, staged, unstaged and untracked changes" width="860">
-</p>
-
-<p align="center">
-  <img src="docs/assets/screenshot-stash.jpg" alt="A stash open in GitCanvas: the diff of a saved file in the center and the stash's message, base branch and files in the inspector" width="860">
-</p>
-
-- **Stashes in the sidebar.** A collapsible **Stashes** section shows each entry's message,
-  recorded branch and date. The sidebar search also filters stashes by message and branch,
-  without changing which references shape the graph.
-- **Saved states, separated.** Switch between everything, staged, unstaged and untracked
-  changes. A file can appear in more than one view, because each one is a different comparison.
-- **Diff and full versions.** Open a saved file as a diff, or read its previous or saved
-  version, using the same bounded readers as the rest of the app.
-- **Markers in the graph.** When a stash's base commit is loaded, its row shows a compact
-  count. Open it to choose a stash and inspect it without moving the graph selection.
-- **Shared, live inventory.** Linked worktrees share the list, each tab keeps its own
-  inspection, and the list refreshes when another tool adds or removes a stash.
-
-Stash inspection never writes to Git. Applying, discarding and saving stashes are planned for
-a later release (see the [roadmap](docs/plan/2026-10-19-roadmap-de-versiones.md)).
-
-## What's new in 0.6
-
-<p align="center">
-  <img src="docs/assets/demo-file-history.gif" alt="GitCanvas 0.6: opening a file's history from a commit, reading the diff of each commit and moving through them without leaving the view" width="860">
-</p>
-
-**File history.** Open the history of a file from a commit's file list, the local changes
-list or a row menu. GitCanvas lists the commits that touched it, follows it through renames,
-shows the diff of each commit, and can show the version a file had before it was deleted.
-Arrow, Home, End and Page keys move between commits, and any commit can be located in the graph.
-
-## What's new in 0.5
-
-<p align="center">
-  <img src="docs/assets/demo-references.gif" alt="GitCanvas 0.5: searching the reference tree, hiding branches from the graph with the eye controls and using the quick actions" width="860">
-</p>
-
-The sidebar is now a reference explorer for repositories with many branches, tags and linked
-worktrees. Search the tree, fold groups and folders, and use the eye controls to choose which
-references shape the commit history. Those choices, along with the tree's expanded state, are
-saved per worktree and restored when you return.
-
-- **Reference filters.** Search branches and tags, include or hide a single reference or an
-  entire group, and restore the complete history with one action. The current `HEAD` can be
-  included independently.
-- **Linked worktrees.** See worktrees attached to the repository, refresh their status, and open
-  one in its existing project tab. A compact badge identifies branches already checked out in
-  another worktree.
-- **Signed in-app updates.** Preferences shows the exact installed version, checks GitHub Releases
-  for a signed update, and installs it with a restart. Network errors remain visible and can be
-  retried.
-
-The [0.5 user guide](docs/v0.5.0.md) explains these controls and what their saved settings affect.
-See the [changelog](CHANGELOG.md) for the complete release notes.
-
-## Branch identity (introduced in 0.4)
-
-The graph gets an identity: every branch keeps its color and its lane, and you decide how it looks.
-
-<table>
-  <tr>
-    <td width="50%"><img src="docs/assets/screenshot-branch-colors.jpg" alt="Choosing a named color for a branch from its menu"><br><sub><strong>Your color, per branch.</strong> Open a branch's menu and pick a named color; the graph updates at once and the choice survives restarts, independently for each worktree.</sub></td>
-    <td width="50%"><img src="docs/assets/screenshot-visual-main.jpg" alt="The release branch chosen as the visual main branch, drawn in the leftmost lane"><br><sub><strong>A visual main branch.</strong> Mark any branch as the main one and it takes the leftmost lane; the others arrange themselves around it.</sub></td>
-  </tr>
-  <tr>
-    <td colspan="2"><img src="docs/assets/screenshot-references.jpg" alt="Tags listed first on a commit and a +2 menu with the hidden reference names"><br><sub><strong>Readable reference labels.</strong> Tags come first, the color dot keeps a fixed size, long names truncate with an ellipsis, and whatever does not fit folds into a <code>+N</code> menu where each name can be copied.</sub></td>
-  </tr>
-</table>
-
-Also in 0.4: merges and shared-base branches use compact curves with no lane detours, colors stay
-stable as you load more pages, and obsolete history walks are released when references move.
-See the [changelog](CHANGELOG.md) for the full list.
+GitCanvas is the opposite trade: focused on reading history well.
 
 ## Features
 
@@ -153,6 +62,11 @@ See the [changelog](CHANGELOG.md) for the full list.
   commit and the version before a deletion.
 - **Stash inspection.** Browse, search and read stashes (all, staged, unstaged and untracked
   changes) in read-only form, with markers on their base commits in the graph.
+- **Author navigation.** Search repository authors, emphasize one author without moving
+  graph geometry, and navigate that author's commits across unloaded history pages.
+- **GitHub releases.** Read bounded release notes, compare release tags with local tags,
+  explicitly fetch a tag, and download a release asset with progress and cancellation.
+  Asset destinations are chosen in the native save dialog.
 - **Reference explorer and worktrees.** Search branches and tags in a folder tree, choose
   which references shape the history, and move between linked worktrees in their own tabs.
 - **Live local changes.** Staged, unstaged and new files show up as a working-tree row and
@@ -170,6 +84,17 @@ See the [changelog](CHANGELOG.md) for the full list.
 
 > The interface is available in English and Spanish. It follows the system language by
 > default and can be switched from the toolbar.
+
+## Latest: 0.9 — release inspection
+
+<p align="center">
+  <img src="docs/assets/demo-releases.gif" alt="GitCanvas showing a compact release list, its Markdown notes and downloadable assets" width="800">
+</p>
+
+Browse GitHub releases in the sidebar, read their Markdown notes in the central view and
+download assets with explicit progress and cancellation. External note links open in the
+system browser only after HTTPS validation. Earlier releases and the full list of changes
+are in the [changelog](CHANGELOG.md).
 
 ## Install
 
@@ -212,7 +137,7 @@ restructuring anything.
 
 ## Use
 
-Open a repository from the app with **Abrir repositorio**, or from a terminal the way a
+Open a repository from the app with **Open repository**, or from a terminal the way a
 Git client should behave:
 
 ```bash
@@ -259,6 +184,15 @@ Documented on purpose rather than discovered later:
 - Stashes are **read-only**: you can inspect them, but not create, apply or discard them
   from GitCanvas yet. Stashes do not appear as nodes in the graph, only as markers on
   their base commits.
+- GitHub releases and explicit tag fetching require an HTTPS GitHub remote. SSH remotes
+  and other providers are not supported in v0.9.
+- The v0.9 authors/releases flow has macOS/WebKit E2E coverage against a local synthetic
+  GitHub API and reviewed English/Spanish, light/dark screenshots. The installed macOS
+  0.9.0 candidate was also tested with the live v0.8.0 GitHub release, including its
+  Markdown link and saving/renaming a signed asset. Overwrite confirmation and real
+  save-dialog behavior on Linux and Windows remain unverified.
+- Use with a real screen reader (VoiceOver, NVDA, Orca) and the manual walkthroughs of v0.4
+  are **not verified**. Accepted on 2026-11-16, tracked as `A11Y-LECTOR` in `TASKS.md`.
 - Image reads share the existing 2 MiB initial and 32 MiB expanded byte limits and a
   40 megapixel metadata limit. SVG is displayed through an isolated image element without
   parsing or running markup; decoding depends on the system WebView. ICO dimensions use
@@ -316,16 +250,10 @@ The end-to-end suite is `npm run test:e2e:run`; Linux CI runs it under Xvfb, whi
 and Windows run with their native desktop environment. `npm run test:e2e` also builds the
 app before starting the suite.
 
-### Demo video tooling (maintainers only)
+### Demo video tooling
 
-`tools/demo/` generates the narrated walkthrough videos used to promote the app
-(`npm run record:demo`, `npm run record:demo:vertical`). It is intentionally excluded from
-the application's CI, lint and TypeScript checks, and **you do not need it to contribute**.
-It requires a sibling checkout of `bitacora-engine` at `../../bitacora-engine` (not part of
-this repository), `ffmpeg`/`ffprobe`, ImageMagick, and the `edge-tts` command (or
-`EDGE_TTS_COMMAND`); narration synthesis needs network access. Output goes to
-`../../bitacora-engine/registry/projects/gitcanvas-output/` unless `GITCANVAS_VIDEO_DIR` is
-set.
+`tools/demo/` builds the promo videos. It is maintainer-only, outside CI, and you do not need
+it to contribute.
 
 ## Contributing
 

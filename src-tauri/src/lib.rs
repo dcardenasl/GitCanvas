@@ -64,6 +64,8 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::repository::get_commits,
             commands::repository::get_commit,
             commands::repository::get_file_history,
+            commands::authors::get_author_catalog_chunk,
+            commands::authors::get_author_commit_ids,
             commands::stash::get_stashes,
             commands::stash::get_stash_anchors,
             commands::stash::get_stash_files,
@@ -90,6 +92,13 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::actions::checkout_branch,
             commands::actions::pull_fast_forward,
             commands::actions::push_current_branch,
+            commands::releases::get_releases,
+            commands::releases::get_cached_releases,
+            commands::releases::get_release_assets,
+            commands::releases::fetch_tag,
+            commands::releases::download_release_asset,
+            commands::releases::cancel_transfer,
+            commands::external_links::open_external_url,
             commands::watch::watch_repository,
             commands::menu::set_menu_labels,
             commands::watch::unwatch_repository,
@@ -100,7 +109,8 @@ fn specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
         .events(collect_events![
             commands::github::CloneProgressEvent,
             commands::menu::MenuActionEvent,
-            commands::watch::RepositoryChangedEvent
+            commands::watch::RepositoryChangedEvent,
+            commands::releases::ReleaseDownloadProgressEvent,
         ])
 }
 
@@ -159,6 +169,73 @@ fn report_early_startup_error(message: &str) {
     eprintln!("{message}");
 }
 
+#[cfg(feature = "e2e")]
+fn configure_e2e_release_transport(
+    data_dir: &std::path::Path,
+) -> Result<(Option<String>, Option<std::path::PathBuf>), Box<dyn std::error::Error>> {
+    let base_url = match std::env::var("GITCANVAS_E2E_API_BASE_URL") {
+        Ok(base_url) => base_url,
+        Err(std::env::VarError::NotPresent) => return Ok((None, None)),
+        Err(error) => {
+            return Err(format!("invalid E2E REST transport configuration: {error}").into())
+        }
+    };
+    if std::env::var_os(data_dir::DATA_DIR_ENV).is_none()
+        || !data_dir.join(".gitcanvas-e2e-owner").is_file()
+    {
+        return Err("E2E REST transport requires an owned temporary data directory".into());
+    }
+    let _validated = gitcanvas_core::github::api::GitHubClient::for_e2e_loopback(&base_url)?;
+    let download_dir = data_dir.join("e2e-downloads");
+    std::fs::create_dir_all(&download_dir)?;
+    Ok((Some(base_url), Some(download_dir)))
+}
+
+fn register_release_save_dialog(
+    app: &mut tauri::App<tauri::Wry>,
+    #[cfg(feature = "e2e")] e2e_download_dir: Option<std::path::PathBuf>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use tauri::Manager;
+
+    let save_dialog_parent = app
+        .get_webview_window("main")
+        .ok_or("main webview window is unavailable for release downloads")?;
+    let dialog_handle = app.handle().clone();
+    app.manage(commands::releases::SaveDialog(std::sync::Arc::new(
+        move |suggested_name| {
+            use tauri_plugin_dialog::DialogExt as _;
+            #[cfg(feature = "e2e")]
+            if let Some(directory) = &e2e_download_dir {
+                let suggested_path = std::path::Path::new(suggested_name);
+                if suggested_path.components().count() != 1
+                    || suggested_path.file_name().and_then(|name| name.to_str())
+                        != Some(suggested_name)
+                {
+                    return Err(gitcanvas_core::error::AppError::InvalidInput(
+                        "E2E download filename is invalid".into(),
+                    ));
+                }
+                return Ok(Some(directory.join(suggested_path)));
+            }
+            let Some(file_path) = dialog_handle
+                .dialog()
+                .file()
+                .set_parent(&save_dialog_parent)
+                .set_file_name(suggested_name)
+                .blocking_save_file()
+            else {
+                return Ok(None);
+            };
+            file_path.into_path().map(Some).map_err(|error| {
+                gitcanvas_core::error::AppError::InvalidInput(format!(
+                    "save dialog returned an unsupported path: {error}"
+                ))
+            })
+        },
+    )));
+    Ok(())
+}
+
 fn setup_app(
     app: &mut tauri::App<tauri::Wry>,
     builder: &tauri_specta::Builder<tauri::Wry>,
@@ -168,6 +245,10 @@ fn setup_app(
         std::env::var_os(data_dir::DATA_DIR_ENV),
         app.path().app_data_dir()?,
     )?;
+    #[cfg(feature = "e2e")]
+    let (e2e_api_base_url, e2e_download_dir) = configure_e2e_release_transport(&data_dir)?;
+    #[cfg(not(feature = "e2e"))]
+    let e2e_api_base_url = None;
     let guard = logging::initialize(&data_dir.join("logs"))?;
     app.manage(guard);
 
@@ -175,6 +256,15 @@ fn setup_app(
     // themselves stay free of `AppHandle`, which lets the typed builder collect
     // them without a runtime parameter.
     app.manage(commands::github::CacheRoot(data_dir.join("clones")));
+    app.manage(commands::releases::ReleaseDataRoot(data_dir.clone()));
+    app.manage(commands::releases::ReleaseApiBaseUrl(e2e_api_base_url));
+    app.manage(commands::releases::ActiveTransfers::default());
+    register_external_url_opener(app);
+    register_release_save_dialog(
+        app,
+        #[cfg(feature = "e2e")]
+        e2e_download_dir,
+    )?;
     app.manage(std::sync::Arc::new(
         gitcanvas_core::workspace::store::WorkspaceStore::new(data_dir),
     ));
@@ -202,6 +292,15 @@ fn setup_app(
             let _ = event.emit(&handle);
         },
     )));
+    app.manage(commands::releases::DownloadProgressEmitter(
+        std::sync::Arc::new({
+            let handle = app.handle().clone();
+            move |event: commands::releases::ReleaseDownloadProgressEvent| {
+                use tauri_specta::Event as _;
+                let _ = event.emit(&handle);
+            }
+        }),
+    ));
 
     // The menu bar exists only on macOS. Elsewhere the applier accepts the
     // labels and does nothing, so the interface asks the same way everywhere.
@@ -229,6 +328,25 @@ fn setup_app(
     warmup::open_panel();
     builder.mount_events(app);
     Ok(())
+}
+
+fn register_external_url_opener(app: &mut tauri::App<tauri::Wry>) {
+    use tauri::Manager as _;
+
+    let opener_handle = app.handle().clone();
+    app.manage(commands::external_links::ExternalUrlOpener::new(
+        move |url| {
+            use tauri_plugin_opener::OpenerExt as _;
+            opener_handle
+                .opener()
+                .open_url(url, None::<&str>)
+                .map_err(|error| {
+                    gitcanvas_core::error::AppError::Internal(format!(
+                        "could not open external URL: {error}"
+                    ))
+                })
+        },
+    ));
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -269,6 +387,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init());
     app_builder = app_builder
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build());
 
     // Only present in an `e2e` build. The released binary carries no WebDriver
@@ -344,6 +463,7 @@ mod tests {
             "core:app:allow-version",
             "core:event:default",
             "dialog:allow-open",
+            "dialog:allow-save",
             "core:window:allow-destroy",
             "process:allow-restart",
             "updater:default",
@@ -423,6 +543,21 @@ mod tests {
             source.contains(".plugin(tauri_plugin_dialog::init())"),
             "the dialog plugin must be registered on the builder"
         );
+    }
+
+    /// Release downloads keep the native save panel attached to the main window.
+    #[test]
+    fn the_release_save_dialog_is_parented_to_the_main_window() {
+        let source = include_str!("lib.rs");
+        assert!(source.contains("get_webview_window(\"main\")"));
+        assert!(source.contains(".set_parent(&save_dialog_parent)"));
+    }
+
+    #[test]
+    fn the_external_url_opener_plugin_and_command_are_registered() {
+        let source = include_str!("lib.rs");
+        assert!(source.contains(".plugin(tauri_plugin_opener::init())"));
+        assert!(source.contains("commands::external_links::open_external_url"));
     }
 
     /// Automatic updates must be registered in the same app builder that ships.

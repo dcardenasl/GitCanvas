@@ -1,0 +1,43 @@
+{
+  "tarea": "GitCanvas v0.9: validación documental del seguimiento local macOS ARM64",
+  "resultado": "aprobada",
+  "criterios": [
+    {
+      "id": "honestidad-de-la-reejecucion",
+      "paso": true,
+      "evidencia": "v0.9-macos-arm64-followup.md registra los resultados proporcionados: 104 archivos/986 pruebas frontend, cuatro pruebas Rust ignoradas, WDIO exit 0 y controles estáticos exitosos. Declara los warnings de limpieza WDIO y el bundle Vite de 564.88 kB. Esta validación documental no repitió esas suites."
+    },
+    {
+      "id": "build-e-instalacion",
+      "paso": true,
+      "evidencia": "El seguimiento distingue el primer build fallido por ausencia de TAURI_SIGNING_PRIVATE_KEY del segundo exitoso con createUpdaterArtifacts=false. Identifica arquitectura ARM64, versión 0.8.0, firma ad-hoc, hash coincidente, instalación, backup y smoke test; excluye notarización y artefacto de actualización firmado."
+    },
+    {
+      "id": "atribucion-de-qa",
+      "paso": true,
+      "evidencia": "v0.9-macos-arm64-followup-qa.md mantiene PARTIAL: separa las comprobaciones propias de arquitectura, hashes, identidad y codesign de las suites, build y smoke test recibidos como evidencia. El seguimiento principal reproduce correctamente esa limitación."
+    },
+    {
+      "id": "gates-y-alcance",
+      "paso": true,
+      "evidencia": "Ambos informes conservan abiertos A11Y-LECTOR y V09-VERIFY-CR15-DOWNLOAD-PLATFORMS; explican que CI y SaveDialog de prueba no verifican las interacciones manuales. No declaran v0.9 completa ni publicación. v0.9.md únicamente añade el enlace al seguimiento."
+    },
+    {
+      "id": "validacion-documental",
+      "paso": true,
+      "evidencia": "python3 .dcl/dcl.py doc-check: exit 0, 'doc-check: todo en orden'; git diff --check: exit 0 sin salida."
+    }
+  ],
+  "riesgos_detectados": [
+    {
+      "categoria": "otro",
+      "descripcion": "gate-report mantiene A11Y-LECTOR con 4 versiones y VENCIDO; se señala para revisión de David sin cerrar el gate. V09-VERIFY-CR15-DOWNLOAD-PLATFORMS permanece abierto con edad desconocida.",
+      "severidad": "media"
+    },
+    {
+      "categoria": "otro",
+      "descripcion": "La aprobación se limita a la honestidad documental. La reejecución completa, el build y el smoke test no fueron repetidos por este Validador ni por el QA citado; el informe identifica expresamente esa dependencia de evidencia proporcionada.",
+      "severidad": "baja"
+    }
+  ]
+}

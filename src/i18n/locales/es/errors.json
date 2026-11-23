@@ -6,6 +6,7 @@
     "show": "Detalles técnicos"
   },
   "kind": {
+    "AccessRequired": "Se requiere acceso a GitHub",
     "Auth": "Falló la autenticación",
     "Conflict": "La operación entra en conflicto con el estado actual",
     "Git": "Git no pudo completar la operación",
@@ -14,10 +15,15 @@
     "InvalidRepository": "No es un repositorio válido",
     "Io": "Falló una operación de archivos",
     "Network": "No se pudo completar la operación de red",
+    "NotFound": "No se encontró el recurso de GitHub solicitado",
+    "Offline": "El dispositivo está sin conexión",
     "PathOutsideRepository": "La ruta queda fuera del repositorio",
     "ResourceExhausted": "El sistema se quedó sin archivos abiertos",
     "ResourceLimitExceeded": "Se superó un límite de recursos",
+    "RateLimited": "GitHub está limitando las solicitudes temporalmente",
+    "RepositoryBusy": "Otra operación de Git está usando este repositorio",
     "StaleCursor": "El historial cambió mientras se leía",
+    "UnsupportedSource": "Este repositorio no usa un remoto GitHub compatible",
     "WatchDegraded": "La observación del repositorio está degradada",
     "WorktreeChanged": "Los cambios locales se modificaron mientras se leían",
     "WorktreeFileUnavailable": "El archivo local no está disponible"

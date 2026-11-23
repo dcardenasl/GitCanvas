@@ -172,7 +172,12 @@ function removeOwnedFixture(fixture: OwnedFixture): void {
     current?.repository === fixture.repository &&
     current.token === fixture.token
   ) {
-    fs.rmSync(fixture.repository, { recursive: true, force: true });
+    fs.rmSync(fixture.repository, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 200,
+    });
   }
 }
 
@@ -185,7 +190,8 @@ function createFixtureRepository(
     | "graph-performance"
     | "file-history"
     | "images"
-    | "stash",
+    | "stash"
+    | "authors-releases",
 ): OwnedFixture {
   const repository = fs.mkdtempSync(path.join(os.tmpdir(), "gitcanvas-e2e-"));
   const token = randomUUID();
@@ -323,19 +329,89 @@ function createFixtureRepository(
       return { repository: fs.realpathSync(repository), token };
     }
 
-    if (kind === "local-changes" || kind === "workspace") {
+    if (kind === "authors-releases") {
+      git(
+        "remote",
+        "add",
+        "origin",
+        "https://github.com/e2e-owner/e2e-repo.git",
+      );
+      const commitAs = (
+        name: string,
+        email: string,
+        message: string,
+        file: string,
+        content: string,
+      ) => {
+        fs.writeFileSync(path.join(repository, file), content);
+        git("add", file);
+        execFileSync(
+          "git",
+          [
+            "-C",
+            repository,
+            "-c",
+            `user.name=${name}`,
+            "-c",
+            `user.email=${email}`,
+            "commit",
+            "-m",
+            message,
+          ],
+          { stdio: "pipe" },
+        );
+      };
+
+      commitAs(
+        "Ada Lovelace",
+        "ada@example.test",
+        "Ada first",
+        "ada.txt",
+        "one\n",
+      );
+      commitAs(
+        "Grace Hopper",
+        "grace@example.test",
+        "Grace commit",
+        "grace.txt",
+        "two\n",
+      );
+      commitAs(
+        "Ada Lovelace",
+        "ada@example.test",
+        "Ada latest",
+        "ada.txt",
+        "three\n",
+      );
+      git("tag", "-a", "v1.0-local", "HEAD", "-m", "local release fixture");
+      return { repository: fs.realpathSync(repository), token };
+    }
+
+    if (kind === "local-changes") {
+      fs.writeFileSync(path.join(repository, "base.txt"), "base\n");
+      fs.writeFileSync(path.join(repository, "a.txt"), "one\n");
+      git("add", "base.txt", "a.txt");
+      git("commit", "-m", "base commit");
+
+      fs.writeFileSync(path.join(repository, "a.txt"), "one\ntwo\nthree\n");
+      fs.writeFileSync(path.join(repository, "untracked.txt"), "new\n");
+      fs.writeFileSync(
+        path.join(repository, "highlight.ts"),
+        "export const answer: number = 42;\n",
+      );
+      fs.writeFileSync(path.join(repository, "staged.txt"), "before\n");
+      git("add", "staged.txt");
+      return { repository: fs.realpathSync(repository), token };
+    }
+
+    if (kind === "workspace") {
       fs.writeFileSync(path.join(repository, "base.txt"), "base\n");
       git("add", "base.txt");
-      git(
-        "commit",
-        "-m",
-        kind === "workspace" ? "workspace alpha commit" : "base commit",
+      git("commit", "-m", "workspace alpha commit");
+      fs.writeFileSync(
+        path.join(repository, "alpha-local.txt"),
+        "alpha only\n",
       );
-      if (kind === "workspace")
-        fs.writeFileSync(
-          path.join(repository, "alpha-local.txt"),
-          "alpha only\n",
-        );
       return { repository: fs.realpathSync(repository), token };
     }
 
@@ -386,7 +462,8 @@ if (
   fixtureKind !== "graph-performance" &&
   fixtureKind !== "file-history" &&
   fixtureKind !== "images" &&
-  fixtureKind !== "stash"
+  fixtureKind !== "stash" &&
+  fixtureKind !== "authors-releases"
 ) {
   throw new Error(`Unsupported E2E fixture kind: ${fixtureKind}`);
 }
@@ -419,6 +496,7 @@ if (ownedFixture !== null) {
   process.env[FIXTURE_TOKEN_ENV] = ownedFixture.token;
 }
 export const e2eRepository = fixture;
+export const e2eApiBaseUrl = process.env.GITCANVAS_E2E_API_BASE_URL ?? null;
 
 // The default history fixture also has one real linked worktree. Create it only
 // in the launcher process and only for a repository this run owns; a supplied
@@ -508,6 +586,10 @@ export const e2eDataDir = path.join(
 );
 if (process.env.WDIO_WORKER_ID === undefined) {
   fs.rmSync(e2eDataDir, { recursive: true, force: true });
+  fs.mkdirSync(e2eDataDir, { recursive: true });
+  fs.writeFileSync(path.join(e2eDataDir, ".gitcanvas-e2e-owner"), "wdio\n", {
+    flag: "wx",
+  });
   if (secondFixture !== null) {
     const restoredRoot = e2eRepositoryRoot;
     fs.mkdirSync(e2eDataDir, { recursive: true });
@@ -580,6 +662,9 @@ export const config: WebdriverIO.Config = {
         env: {
           GITCANVAS_REPOSITORY: fixture,
           GITCANVAS_DATA_DIR: e2eDataDir,
+          ...(e2eApiBaseUrl === null
+            ? {}
+            : { GITCANVAS_E2E_API_BASE_URL: e2eApiBaseUrl }),
         },
       },
     ],

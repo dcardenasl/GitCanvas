@@ -1,5 +1,6 @@
 /** Typed application boundary over the generated Rust contract. */
 import { commands, events } from "../../bindings";
+import { errorMessage } from "../errors";
 import type {
   AppError,
   SaveWorkspaceRequest,
@@ -62,7 +63,7 @@ export class IpcError extends Error {
   readonly kind: AppError["kind"];
 
   constructor(error: AppError) {
-    super(error.message);
+    super(errorMessage(error));
     this.name = "IpcError";
     this.kind = error.kind;
   }
@@ -119,6 +120,9 @@ export const listGithubRepositories = () =>
 /** Clones a repository into the application cache. */
 export const cloneGithubRepository = (fullName: string) =>
   result(commands.cloneGithubRepository(fullName));
+/** Opens one user-selected HTTPS URL in the system browser through Rust validation. */
+export const openExternalUrl = (url: string) =>
+  result(commands.openExternalUrl(url));
 /** Subscribes to clone progress. Returns the unsubscribe function. */
 export const onCloneProgress = events.cloneProgressEvent.listen;
 

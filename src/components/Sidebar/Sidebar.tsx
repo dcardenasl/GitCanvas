@@ -1,4 +1,6 @@
 import { StashSection } from "../StashView/StashSection";
+import { AuthorPanel } from "../AuthorPanel";
+import { TagsReleasesPanel } from "../TagsReleasesPanel";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -108,6 +110,8 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
       "group:tags",
       "section:worktrees",
       "section:stashes",
+      "section:releases",
+      "section:authors",
     ]);
   };
   const search = useWorkspace((state) =>
@@ -511,6 +515,20 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
         collapsed={collapsed.has("section:stashes")}
         onCollapse={() => {
           toggleCollapsed("section:stashes");
+        }}
+      />
+      <TagsReleasesPanel
+        key={`${path ?? "no-repository"}:${hidden ? "hidden" : "visible"}`}
+        panelOpen={!hidden}
+        collapsed={collapsed.has("section:releases")}
+        onCollapse={() => {
+          toggleCollapsed("section:releases");
+        }}
+      />
+      <AuthorPanel
+        collapsed={collapsed.has("section:authors")}
+        onCollapse={() => {
+          toggleCollapsed("section:authors");
         }}
       />
       {palette !== null && (

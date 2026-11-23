@@ -23,6 +23,10 @@ thiserror.workspace = true
 ureq.workspace = true
 url.workspace = true
 
+[features]
+# Test-only native E2E transport. Published builds must not enable this.
+e2e = []
+
 [target.'cfg(windows)'.dependencies]
 same-file = "1"
 

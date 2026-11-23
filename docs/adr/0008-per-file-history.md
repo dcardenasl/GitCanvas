@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — 2026-11-01. Planned for the v0.6 delivery; not implemented yet.
+Accepted — 2026-11-01. Implemented and published in v0.6.0.
 
 ## Decision
 

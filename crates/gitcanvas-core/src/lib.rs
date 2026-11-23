@@ -20,10 +20,12 @@
 //! that means `tauri::async_runtime::spawn_blocking`.
 
 pub mod actions;
+pub mod authors;
 pub mod blob;
 pub mod commit_tree;
 pub mod diff;
 pub mod error;
+pub mod fetch;
 pub mod file_history;
 mod file_identity;
 pub mod github;
@@ -31,6 +33,7 @@ pub mod history;
 pub mod image;
 mod pagination;
 pub mod refs;
+pub mod releases;
 pub mod repository;
 pub mod retry;
 pub mod stash;
@@ -39,3 +42,4 @@ pub mod watch;
 pub mod workspace;
 pub mod worktree;
 pub mod worktrees;
+pub mod write_lock;

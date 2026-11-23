@@ -99,6 +99,55 @@ function withViewport(height: number): void {
 }
 
 describe("CommitTable", () => {
+  it("keeps every row and labels commits outside the selected author", () => {
+    withViewport(ROW_HEIGHT * 10);
+    const commits = makeCommits(3);
+    const selectedAuthorCommit = commits[1];
+    if (selectedAuthorCommit === undefined)
+      throw new Error("missing selected author fixture");
+
+    const { rerender } = render(
+      <CommitTable
+        commits={commits}
+        selectedId={null}
+        onSelect={() => undefined}
+        maxLanes={1}
+        authorCommitIds={new Set([selectedAuthorCommit.id])}
+      />,
+    );
+
+    const rows = screen.getAllByRole("row");
+    expect(rows).toHaveLength(3);
+    expect(rows[0]?.classList.contains("commit-row--author-dimmed")).toBe(
+      false,
+    );
+    expect(screen.queryByText("otro autor")).toBeNull();
+
+    rerender(
+      <CommitTable
+        commits={commits}
+        selectedId={null}
+        onSelect={() => undefined}
+        maxLanes={1}
+        authorCommitIds={new Set([selectedAuthorCommit.id])}
+        authorCommitIdsComplete
+      />,
+    );
+
+    const completedRows = screen.getAllByRole("row");
+    expect(completedRows).toHaveLength(3);
+    expect(
+      completedRows[0]?.classList.contains("commit-row--author-dimmed"),
+    ).toBe(true);
+    expect(
+      completedRows[1]?.classList.contains("commit-row--author-dimmed"),
+    ).toBe(false);
+    expect(completedRows[0]?.getAttribute("aria-label")).toContain(
+      "otro autor",
+    );
+    expect(screen.getAllByText("otro autor")).toHaveLength(2);
+  });
+
   it("opens the stash picker without selecting the commit and preserves graph semantics", async () => {
     withViewport(ROW_HEIGHT * 10);
     const onSelect = vi.fn();

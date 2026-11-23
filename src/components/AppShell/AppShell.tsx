@@ -23,6 +23,7 @@ import { useLiveRepository } from "../../state/liveRepository";
 import { Sidebar } from "../Sidebar";
 import { TabBar, useTabShortcuts } from "../TabBar";
 import { WorkingTreeDetailPanel } from "../WorkingTreeDetailPanel";
+import { ReleaseDetailView } from "../TagsReleasesPanel/ReleaseDetailView";
 import { useCommitMetadata } from "../../state/commitMetadata";
 import { useHistory } from "../../state/history";
 import { useCurrentBranch } from "../../state/refs";
@@ -66,7 +67,7 @@ const GitHubPicker = lazy(async () => {
 
 /** The application window: toolbar, navigation and history. */
 export function AppShell() {
-  const { t } = useTranslation(["shell", "common", "stash"]);
+  const { t } = useTranslation(["shell", "common", "stash", "releases"]);
   const repository = useActiveRepository();
   const verified = useWorkspace(
     (state) =>
@@ -89,6 +90,7 @@ export function AppShell() {
   const history = useHistory(readableRoot);
   const selectedFilePath = useNavigation(getSelectedFilePath);
   const stash = useNavigation((nav) => nav.stash);
+  const releaseView = useNavigation((nav) => nav.releaseView);
   const fileHistory = useNavigation((navigation) => navigation.fileHistory);
   const showGitHub = useWorkspace((state) => state.githubOpen);
   const setShowGitHub = useWorkspace((state) => state.setGitHubOpen);
@@ -349,7 +351,7 @@ export function AppShell() {
               {t("toolbar.branches")}
             </button>
           )}
-          {project !== null && !readingFile && (
+          {project !== null && !readingFile && releaseView === null && (
             <CommitSearch
               key={project.path}
               commits={history.commits}
@@ -432,7 +434,8 @@ export function AppShell() {
                 ? "0px"
                 : `${String(layout.sidebar)}px`,
               "--sidebar-divider": collapseSidebar ? "0px" : "auto",
-              "--inspector-width": `${String(layout.inspector)}px`,
+              "--inspector-width":
+                releaseView === null ? `${String(layout.inspector)}px` : "0px",
             } as React.CSSProperties
           }
         >
@@ -454,7 +457,12 @@ export function AppShell() {
             onResize={layout.setSidebar}
             hidden={collapseSidebar}
           />
-          <main className="app-shell__history" aria-label={t("history.label")}>
+          <main
+            className="app-shell__history"
+            aria-label={
+              releaseView === null ? t("history.label") : t("releases:title")
+            }
+          >
             <Suspense
               fallback={
                 <p className="state" role="status">
@@ -462,7 +470,12 @@ export function AppShell() {
                 </p>
               }
             >
-              {stash !== null ? (
+              {releaseView !== null ? (
+                <ReleaseDetailView
+                  repositoryPath={project.path}
+                  releaseId={releaseView.releaseId}
+                />
+              ) : stash !== null ? (
                 stash.center === "file" ? (
                   <StashFileView root={project.path} view={stash} />
                 ) : stash.center === "choose_file" ? (
@@ -503,8 +516,11 @@ export function AppShell() {
             max={layout.inspectorMax}
             grows="left"
             onResize={layout.setInspector}
+            hidden={releaseView !== null}
           />
-          {stash !== null ? (
+          {releaseView !== null ? (
+            <aside className="detail-panel" hidden aria-hidden="true" />
+          ) : stash !== null ? (
             <StashDetailPanel root={project.path} view={stash} />
           ) : selected === null && selectedCommitId !== null ? (
             <aside

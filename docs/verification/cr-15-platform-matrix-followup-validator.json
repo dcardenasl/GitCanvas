@@ -1,0 +1,33 @@
+{
+  "tarea": "GitCanvas v0.9: corrección de consistencia documental de la matriz",
+  "resultado": "aprobada",
+  "criterios": [
+    {
+      "id": "consistencia-del-estado-documental",
+      "paso": true,
+      "evidencia": "TASKS.md:8–14 declara PASS de la matriz automatizada Ubuntu/macOS/Windows y mantiene la verificación global parcial por lector, recorridos manuales y diálogo/renombrado real. Coincide con V09-VERIFY-PLATFORM-MATRIX y los informes de verificación."
+    },
+    {
+      "id": "gates-declarados-y-detectables",
+      "paso": true,
+      "evidencia": "gate-report lista A11Y-LECTOR y V09-VERIFY-CR15-DOWNLOAD-PLATFORMS. TASKS.md conserva ambos abiertos y distingue expresamente la matriz automatizada de las comprobaciones manuales."
+    },
+    {
+      "id": "controles-documentales",
+      "paso": true,
+      "evidencia": "doc-check: exit 0, 'doc-check: todo en orden'; git diff --check: exit 0 sin salida."
+    }
+  ],
+  "riesgos_detectados": [
+    {
+      "categoria": "otro",
+      "descripcion": "gate-report marca A11Y-LECTOR con 4 versiones y VENCIDO. Se señala para revisión de David, conservando la decisión documentada del 2026-11-16 de aceptarlo como no verificado; esta validación no cierra el gate.",
+      "severidad": "media"
+    },
+    {
+      "categoria": "otro",
+      "descripcion": "El gate de diálogo/renombrado real permanece abierto con edad desconocida. La aprobación corresponde únicamente al seguimiento documental y no declara cierre global ni autoriza merge o release.",
+      "severidad": "baja"
+    }
+  ]
+}

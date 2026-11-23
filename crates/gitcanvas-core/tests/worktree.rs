@@ -21,7 +21,7 @@ use gitcanvas_core::{
         WorktreeFileDiffRequest, WorktreeImageRequest, WorktreeSide, WorktreeSnapshotRequest,
     },
 };
-use support::Fixture;
+use support::{git, Fixture};
 
 fn clean_checkout(fixture: &Fixture, commit: git2::Oid) {
     fixture.repo.set_head("refs/heads/main").unwrap();
@@ -437,6 +437,47 @@ fn fingerprint_changes_when_worktree_metadata_changes() {
     let second = get_worktree_fingerprint(&repository).unwrap();
 
     assert_ne!(first.revision, second.revision);
+}
+
+#[test]
+fn fingerprint_changes_when_staged_content_is_updated() {
+    let fixture = Fixture::new();
+    let commit = fixture.commit_files("refs/heads/main", "initial", &[], 1_000, &[]);
+    clean_checkout(&fixture, commit);
+    let path = fixture.dir.path().join("staged.txt");
+    fs::write(&path, "before\n").unwrap();
+    git(&fixture, &["add", "--", "staged.txt"]);
+
+    let repository = active(&fixture);
+    let before = get_worktree_fingerprint(&repository).unwrap();
+    let before_diff = get_worktree_file_diff(
+        &repository,
+        &WorktreeFileDiffRequest {
+            side: WorktreeSide::Staged,
+            path: "staged.txt".into(),
+            expected_revision: Some(before.revision.clone()),
+            expand: false,
+        },
+    )
+    .unwrap();
+    assert!(before_diff.file.patch.unwrap().contains("before\n"));
+
+    fs::write(&path, "after\n").unwrap();
+    git(&fixture, &["add", "--", "staged.txt"]);
+
+    let after = get_worktree_fingerprint(&repository).unwrap();
+    assert_ne!(before.revision, after.revision);
+    let after_diff = get_worktree_file_diff(
+        &repository,
+        &WorktreeFileDiffRequest {
+            side: WorktreeSide::Staged,
+            path: "staged.txt".into(),
+            expected_revision: Some(after.revision),
+            expand: false,
+        },
+    )
+    .unwrap();
+    assert!(after_diff.file.patch.unwrap().contains("after\n"));
 }
 
 #[test]

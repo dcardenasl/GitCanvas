@@ -1,5 +1,62 @@
 import { $, browser, expect } from "@wdio/globals";
 
+export async function revealSidebarItem(selector: string): Promise<void> {
+  await browser.execute((targetSelector) => {
+    const sidebar = document.querySelector<HTMLElement>(".sidebar");
+    const target = document.querySelector<HTMLElement>(targetSelector);
+    if (sidebar === null || target === null) {
+      throw new Error(`sidebar item is missing: ${targetSelector}`);
+    }
+    const sidebarBounds = sidebar.getBoundingClientRect();
+    const targetBounds = target.getBoundingClientRect();
+    sidebar.scrollTop += targetBounds.top - sidebarBounds.top;
+  }, selector);
+  await browser.waitUntil(
+    async () =>
+      browser.execute((targetSelector) => {
+        const sidebar = document.querySelector<HTMLElement>(".sidebar");
+        const target = document.querySelector<HTMLElement>(targetSelector);
+        if (sidebar === null || target === null) return false;
+        const sidebarBounds = sidebar.getBoundingClientRect();
+        const targetBounds = target.getBoundingClientRect();
+        return (
+          targetBounds.top >= sidebarBounds.top &&
+          targetBounds.bottom <= sidebarBounds.bottom
+        );
+      }, selector),
+    {
+      timeout: 5_000,
+      timeoutMsg: `sidebar item did not enter view: ${selector}`,
+    },
+  );
+}
+
+/**
+ * Brings a context-menu item into the menu's own scroller before WebDriver
+ * clicks it. Only the menu scrolls: `scrollIntoView` would also scroll the
+ * sidebar, and the menu closes on any scroll outside itself.
+ */
+export async function revealContextMenuItem(label: string): Promise<void> {
+  await browser.execute((expectedLabel) => {
+    const item = Array.from(
+      document.querySelectorAll<HTMLElement>('.context-menu [role="menuitem"]'),
+    ).find(
+      (candidate) => candidate.textContent?.includes(expectedLabel) === true,
+    );
+    const menu = item?.closest<HTMLElement>(".context-menu");
+    if (item === undefined || menu === undefined || menu === null) {
+      throw new Error(`context-menu item did not appear: ${expectedLabel}`);
+    }
+    const menuBounds = menu.getBoundingClientRect();
+    const itemBounds = item.getBoundingClientRect();
+    if (itemBounds.bottom > menuBounds.bottom) {
+      menu.scrollTop += itemBounds.bottom - menuBounds.bottom;
+    } else if (itemBounds.top < menuBounds.top) {
+      menu.scrollTop -= menuBounds.top - itemBounds.top;
+    }
+  }, label);
+}
+
 interface DiagnosticWindow extends Window {
   __gitcanvasE2eEvents?: string[];
   __gitcanvasE2eRecorderInstalled?: boolean;
@@ -58,6 +115,18 @@ async function visibleMenus(): Promise<
   );
 }
 
+/**
+ * WebDriver implementations word a detached element differently: the W3C text
+ * is "stale element reference", while the WebKitGTK driver reports "Element is
+ * no longer attached to the DOM". Both mean the same thing here.
+ */
+function isStaleElementError(message: string): boolean {
+  return (
+    message.includes("stale element reference") ||
+    message.includes("no longer attached to the DOM")
+  );
+}
+
 /** Confirms the user-visible result when an action removes its own element. */
 export async function clickAndConfirm(
   selector: string,
@@ -70,8 +139,7 @@ export async function clickAndConfirm(
     await $(selector).click();
   } catch (error) {
     const shouldReportClickFailure =
-      !(error instanceof Error) ||
-      !error.message.includes("stale element reference");
+      !(error instanceof Error) || !isStaleElementError(error.message);
     if (shouldReportClickFailure) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new Error(
@@ -83,8 +151,22 @@ export async function clickAndConfirm(
   }
   try {
     await confirm();
+    return;
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
+    let diagnosticError: unknown = error;
+    if (staleClickError !== null && (await $(selector).isDisplayed())) {
+      try {
+        await $(selector).click();
+        await confirm();
+        return;
+      } catch (retryError) {
+        diagnosticError = retryError;
+      }
+    }
+    const detail =
+      diagnosticError instanceof Error
+        ? diagnosticError.message
+        : String(diagnosticError);
     throw new Error(
       `${detail}; click result: ${staleClickError ?? "completed"}; input trace: ${JSON.stringify(await interactionTrace())}; visible menus: ${JSON.stringify(await visibleMenus())}`,
       { cause: error },

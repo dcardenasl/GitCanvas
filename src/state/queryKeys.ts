@@ -105,6 +105,12 @@ export const queryKeys = {
     filePath: string | null,
     startCommitId: string | null,
   ) => ["file-history", repositoryPath, filePath, startCommitId] as const,
+  authorCatalog: (repositoryPath: string | null) =>
+    ["author-catalog", repositoryPath] as const,
+  authorCommits: (
+    repositoryPath: string | null,
+    author: { readonly name: string; readonly email: string } | null,
+  ) => ["author-commits", repositoryPath, author] as const,
   commitTree: (
     repositoryPath: string,
     commitId: string,

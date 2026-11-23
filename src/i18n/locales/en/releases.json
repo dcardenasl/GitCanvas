@@ -1,0 +1,69 @@
+{
+  "title": "Tags and releases",
+  "listLabel": "Tags and releases",
+  "loading": "Loading releases…",
+  "retryReleases": "Retry release list",
+  "retrying": "Retrying…",
+  "empty": "No published releases found.",
+  "latest": "Most recent",
+  "closeDetails": "Close details",
+  "published": "Published {{date}}",
+  "notesTitle": "Release notes",
+  "noNotes": "No release notes were provided.",
+  "openExternalLink": "Open in browser: {{url}}",
+  "openLinkFailed": "Could not open this link in your browser.",
+  "availabilityTitle": "Tag availability",
+  "unavailable": "This release is no longer in the current list.",
+  "availableLocally": "Available locally",
+  "availableToFetch": "Available to fetch",
+  "localTag": "Local tag",
+  "localStatusUnavailable": "Local status unavailable",
+  "prerelease": "Prerelease",
+  "localTagsUnavailable": "Local tags are unavailable; releases are still shown.",
+  "cached": "Showing saved release data from {{date}}",
+  "rateLimit": "GitHub rate limit resets at {{date}}.",
+  "truncated": "Only the first 1,000 releases are shown.",
+  "tag": {
+    "fetch": "Fetch {{tag}}",
+    "fetching": "Fetching tag…",
+    "result": {
+      "Fetched": "Fetched {{tag}} into the local repository.",
+      "AlreadyPresent": "{{tag}} already exists locally and matches GitHub.",
+      "Conflict": "{{tag}} differs locally and on GitHub; the local tag was not changed.",
+      "NotFoundOnRemote": "{{tag}} is no longer available on GitHub."
+    }
+  },
+  "assets": {
+    "show": "Show assets for {{tag}}",
+    "hide": "Hide assets for {{tag}}",
+    "title": "Release assets",
+    "loading": "Loading assets…",
+    "retry": "Retry asset list",
+    "retrying": "Retrying…",
+    "empty": "This release has no downloadable assets.",
+    "size": "{{bytes}} bytes",
+    "download": "Download",
+    "truncated": "Only the first 1,000 assets are shown."
+  },
+  "transfer": {
+    "starting": "Opening the save dialog…",
+    "downloading": "Downloading",
+    "completed": "Download complete",
+    "cancelled": "Download cancelled",
+    "failed": "Download failed",
+    "bytes": "{{downloaded}} of {{total}} bytes",
+    "progressLabel": "Download progress for {{asset}}",
+    "cancel": "Cancel download"
+  },
+  "access": {
+    "title": "GitHub access required",
+    "required": "Save a GitHub token to resume this action.",
+    "requiredNoPending": "Save a GitHub token, then retry the action explicitly.",
+    "downloadRetry": "Save a GitHub token, then choose Download again to select a save location.",
+    "tokenLabel": "Personal access token",
+    "save": "Save token",
+    "saving": "Verifying and saving…",
+    "retryDownload": "Access restored. Choose Download again to select a save location.",
+    "retryAction": "Access restored. Retry the previous request explicitly."
+  }
+}

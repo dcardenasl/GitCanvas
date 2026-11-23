@@ -123,6 +123,81 @@ describe("GraphCanvas", () => {
     ).toHaveLength(1);
   });
 
+  it("dims other authors without removing or moving graph geometry", () => {
+    const { rows, state } = layout(linear(5));
+    const graphWindow = {
+      startIndex: 0,
+      endIndex: 4,
+      totalHeight: 5 * ROW_HEIGHT,
+    };
+    const { container, rerender } = render(
+      <GraphCanvas
+        rows={rows}
+        window={graphWindow}
+        maxLanes={state.maxLanes}
+        selectedId={null}
+      />,
+    );
+    const geometry = () => ({
+      nodes: [...container.querySelectorAll("circle")].map((node) => [
+        node.getAttribute("cx"),
+        node.getAttribute("cy"),
+        node.getAttribute("r"),
+      ]),
+      paths: [...container.querySelectorAll("path.graph-canvas__edge")].map(
+        (path) => path.getAttribute("d"),
+      ),
+    });
+    const before = geometry();
+
+    rerender(
+      <GraphCanvas
+        rows={rows}
+        window={graphWindow}
+        maxLanes={state.maxLanes}
+        selectedId={null}
+        authorCommitIds={new Set(["c2"])}
+      />,
+    );
+
+    expect(geometry()).toEqual(before);
+    expect(
+      container.querySelectorAll(".graph-canvas__author-dimmed"),
+    ).toHaveLength(0);
+
+    rerender(
+      <GraphCanvas
+        rows={rows}
+        window={graphWindow}
+        maxLanes={state.maxLanes}
+        selectedId={null}
+        authorCommitIds={new Set(["c2"])}
+        authorCommitIdsComplete
+      />,
+    );
+
+    expect(geometry()).toEqual(before);
+    expect(container.querySelectorAll("circle")).toHaveLength(5);
+    expect(container.querySelectorAll("path.graph-canvas__edge")).toHaveLength(
+      before.paths.length,
+    );
+    expect(
+      container.querySelectorAll(
+        ".graph-canvas__node.graph-canvas__author-dimmed",
+      ),
+    ).toHaveLength(4);
+    expect(
+      container.querySelectorAll(
+        ".graph-canvas__edge.graph-canvas__author-dimmed",
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      container
+        .querySelector(".graph-canvas__node.graph-canvas__author-dimmed")
+        ?.getAttribute("stroke-dasharray"),
+    ).toBe("2 2");
+  });
+
   it("uses the lane palette for the active theme", () => {
     const { rows, state } = layout(linear(2));
     useThemePreferences.getState().setPreference("light");
