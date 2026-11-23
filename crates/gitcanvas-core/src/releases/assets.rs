@@ -271,16 +271,15 @@ fn validate_asset_url(
     e2e_origin: Option<&url::Url>,
 ) -> Result<(), AppError> {
     let (owner, name) = split_owner_name(owner_name)?;
-    let expected = match e2e_origin {
-        Some(origin) => format!(
-            "{}repos/{owner}/{name}/releases/assets/{asset_id}",
-            origin.as_str()
-        ),
-        None => format!("https://api.github.com/repos/{owner}/{name}/releases/assets/{asset_id}"),
-    };
     let url = url::Url::parse(raw)
         .map_err(|_| AppError::InvalidInput("invalid release asset API URL".to_owned()))?;
     let expected_origin = e2e_origin.map(url::Url::origin);
+    let path_valid = if e2e_origin.is_some() {
+        url.path() == expected_path(owner, name, asset_id)
+    } else {
+        url.path()
+            .eq_ignore_ascii_case(&expected_path(owner, name, asset_id))
+    };
     let origin_valid = match e2e_origin {
         Some(_) => {
             url.scheme() == "http" && expected_origin.is_some_and(|origin| url.origin() == origin)
@@ -291,8 +290,7 @@ fn validate_asset_url(
                 && url.port_or_known_default() == Some(443)
         }
     };
-    if raw != expected
-        || url.as_str() != expected
+    if !path_valid
         || !origin_valid
         || !url.username().is_empty()
         || url.password().is_some()
@@ -304,6 +302,10 @@ fn validate_asset_url(
         ));
     }
     Ok(())
+}
+
+fn expected_path(owner: &str, name: &str, asset_id: u64) -> String {
+    format!("/repos/{owner}/{name}/releases/assets/{asset_id}")
 }
 
 fn split_owner_name(owner_name: &str) -> Result<(&str, &str), AppError> {
@@ -620,6 +622,17 @@ mod tests {
                 "accepted invalid URL {raw}"
             );
         }
+    }
+
+    #[test]
+    fn github_asset_url_accepts_canonical_repository_casing() {
+        assert!(super::validate_asset_url(
+            "https://api.github.com/repos/dcardenasl/GitCanvas/releases/assets/753171749",
+            "dcardenasl/gitcanvas",
+            753_171_749,
+            None,
+        )
+        .is_ok());
     }
 
     #[cfg(feature = "e2e")]

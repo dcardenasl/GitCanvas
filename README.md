@@ -85,15 +85,15 @@ GitCanvas is the opposite trade: focused on reading history well.
 > The interface is available in English and Spanish. It follows the system language by
 > default and can be switched from the toolbar.
 
-## Latest: 0.8 — images in history
+## Latest: 0.9 — release inspection
 
 <p align="center">
-  <img src="docs/assets/demo-images.gif" alt="GitCanvas 0.8: comparing a changed PNG side by side and with a slider, following it through the file history, then viewing an animated GIF, an SVG and a stashed image" width="720">
+  <img src="docs/assets/demo-releases.gif" alt="GitCanvas showing a compact release list, its Markdown notes and downloadable assets" width="800">
 </p>
 
-Image files stop being "binary". Commits, file history, local changes and stashes show
-supported PNG, JPEG, GIF, WebP, BMP, ICO and SVG files, side by side or with a slider, and
-GIFs can be paused. Everything stays read-only. Earlier releases and the full list of changes
+Browse GitHub releases in the sidebar, read their Markdown notes in the central view and
+download assets with explicit progress and cancellation. External note links open in the
+system browser only after HTTPS validation. Earlier releases and the full list of changes
 are in the [changelog](CHANGELOG.md).
 
 ## Install
@@ -186,9 +186,11 @@ Documented on purpose rather than discovered later:
   their base commits.
 - GitHub releases and explicit tag fetching require an HTTPS GitHub remote. SSH remotes
   and other providers are not supported in v0.9.
-- The v0.9 native authors/releases E2E and its screenshot review are **not verified**;
-  download rename/overwrite behavior has not been checked on macOS, Linux and Windows.
-  The native build attempt ran out of disk space; no release-data E2E result is claimed.
+- The v0.9 authors/releases flow has macOS/WebKit E2E coverage against a local synthetic
+  GitHub API and reviewed English/Spanish, light/dark screenshots. The installed macOS
+  0.9.0 candidate was also tested with the live v0.8.0 GitHub release, including its
+  Markdown link and saving/renaming a signed asset. Overwrite confirmation and real
+  save-dialog behavior on Linux and Windows remain unverified.
 - Use with a real screen reader (VoiceOver, NVDA, Orca) and the manual walkthroughs of v0.4
   are **not verified**. Accepted on 2026-11-16, tracked as `A11Y-LECTOR` in `TASKS.md`.
 - Image reads share the existing 2 MiB initial and 32 MiB expanded byte limits and a

@@ -77,6 +77,18 @@ beforeEach(() => {
 });
 
 describe("AuthorPanel", () => {
+  it("can fold its content behind the shared sidebar section control", async () => {
+    const user = userEvent.setup();
+    const onCollapse = vi.fn();
+    mocks.selectedAuthor = AUTHOR;
+    render(<AuthorPanel collapsed={false} onCollapse={onCollapse} />);
+    const toggle = screen.getByRole("button", { name: "Autores" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    await user.click(toggle);
+    expect(onCollapse).toHaveBeenCalledOnce();
+    expect(mocks.selectedAuthor).toEqual(AUTHOR);
+  });
+
   it("searches authors by display name and email and selects the resolved identity", async () => {
     const user = userEvent.setup();
     render(<AuthorPanel />);
@@ -185,6 +197,10 @@ describe("AuthorPanel", () => {
     expect(previous.getAttribute("aria-keyshortcuts")).toBe("Alt+ArrowLeft");
     expect(next.getAttribute("aria-keyshortcuts")).toBe("Alt+ArrowRight");
 
+    await user.tab();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Autores" }),
+    );
     await user.tab();
     expect(document.activeElement).toBe(search);
     await user.tab();

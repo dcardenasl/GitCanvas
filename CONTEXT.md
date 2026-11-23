@@ -66,13 +66,15 @@ pages. See ADR 0011.
 
 GitHub release metadata is provider data, not Git data. A dedicated bounded REST resolver
 lists published releases and fresh asset metadata; asset URLs, sizes, digests and save
-destinations are resolved/selected in Rust, not supplied by the webview. Notes are inert
-text, release cache v1 is separate from the clone cache, and only explicit `fetch_tag`
-creates a local tag. `checkout`, `pull`, `push` and `fetch_tag` share the common-directory
-write lock; long release reads/downloads use the transfer gate, while cancellation bypasses
-it. GitHub releases and tags do not feed graph/history state. Only HTTPS GitHub remotes
-are supported for releases and tag fetching; SSH remotes and other providers remain out of
-scope. See ADR 0012 and `docs/verification/v0.9.md`.
+destinations are resolved/selected in Rust, not supplied by the webview. Bounded notes are
+plain text at IPC and render as Markdown; raw HTML and remote images stay inactive, while
+explicit HTTPS links open in the system browser only after native validation. Release cache
+v1 is separate from the clone cache, and only explicit `fetch_tag` creates a local tag.
+`checkout`, `pull`, `push` and `fetch_tag` share the common-directory write lock; long
+release reads/downloads use the transfer gate, while cancellation bypasses it. GitHub
+releases and tags do not feed graph/history state. Only HTTPS GitHub remotes are supported
+for releases and tag fetching; SSH remotes and other providers remain out of scope. See
+ADR 0012, ADR 0015 and `docs/verification/v0.9.md`.
 
 ## Workspace
 

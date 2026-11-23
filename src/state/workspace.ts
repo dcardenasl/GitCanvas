@@ -5,6 +5,7 @@ import {
   type StashView,
 } from "./stashNavigation";
 import type { StashEntry } from "../bindings";
+import { closeRelease, openRelease } from "./releaseNavigation";
 import { createGraphSlice } from "./workspaceStore/graphSlice";
 import { createReferenceFilterSlice } from "./workspaceStore/referenceFilterSlice";
 import { createReferenceTreeSlice } from "./workspaceStore/referenceTreeSlice";
@@ -98,6 +99,8 @@ export function useNavigation<T>(select: (navigation: Navigation) => T): T {
 
 /** Changes to one project's navigation, bound to that project. */
 export interface NavigationActions {
+  readonly openRelease: (releaseId: string) => void;
+  readonly closeRelease: () => void;
   readonly openStash: (entry: StashEntry) => void;
   readonly closeStash: () => void;
   readonly updateStash: (
@@ -147,6 +150,12 @@ export function navigationActionsFor(root: string | null): NavigationActions {
     if (root !== null) useWorkspace.getState().navigate(root, transition);
   };
   return {
+    openRelease: (releaseId) => {
+      apply(openRelease(releaseId));
+    },
+    closeRelease: () => {
+      apply(closeRelease);
+    },
     openStash: (entry) => {
       apply(openStash(entry));
     },

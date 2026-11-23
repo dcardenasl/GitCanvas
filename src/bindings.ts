@@ -140,6 +140,14 @@ export const commands = {
 	/**  Requests cancellation without waiting for any runtime gate. */
 	cancelTransfer: (path: string, transferId: string) => typedError<boolean, AppError>(__TAURI_INVOKE("cancel_transfer", { path, transferId })),
 	/**
+	 *  Opens a validated HTTPS URL in the operating system's default browser.
+	 *
+	 *  The caller must be an explicit user action. The URL is untrusted release
+	 *  content, so it is parsed and constrained again on the native side before it
+	 *  reaches the system opener.
+	 */
+	openExternalUrl: (url: string) => typedError<null, AppError>(__TAURI_INVOKE("open_external_url", { url })),
+	/**
 	 *  Starts watching a repository, replacing any previous watch.
 	 *
 	 *  Idempotent from the interface's point of view: calling it again for the

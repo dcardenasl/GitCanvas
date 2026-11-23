@@ -80,6 +80,28 @@ describe("author and release panels", () => {
         expect.stringContaining("Synthetic E2E release"),
       );
 
+      if (language === "en" && theme === "light") {
+        await $('[data-release-row="91001"]').click();
+        const detail = await $(".release-detail");
+        await detail.waitForDisplayed({ timeout: 20_000 });
+        await browser.waitUntil(
+          async () =>
+            (await detail.getText()).includes(
+              "Release notes from the local test server.",
+            ) && (await detail.getText()).includes("synthetic.txt"),
+          {
+            timeout: 20_000,
+            timeoutMsg: "central release notes and assets did not render",
+          },
+        );
+        const title = await $(".release-detail__title");
+        await browser.waitUntil(() => title.isFocused(), {
+          timeoutMsg: "opening a release should focus its central heading",
+        });
+        const titleOutline = await title.getCSSProperty("outline-style");
+        expect(titleOutline.value).not.toBe("none");
+      }
+
       const layout = await browser.execute(() => ({
         viewportWidth: window.innerWidth,
         documentWidth: document.documentElement.scrollWidth,
@@ -88,9 +110,82 @@ describe("author and release panels", () => {
 
       await scrollAuthorPanelIntoView();
       await browser.saveScreenshot(
-        path.join(os.tmpdir(), `gitcanvas-cr15-${language}-${theme}.png`),
+        path.join(os.tmpdir(), `gitcanvas-cr17-${language}-${theme}.png`),
       );
+
+      await browser.setWindowSize(1440, 900);
+      const habitualLayout = await browser.execute(() => ({
+        viewportWidth: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+      }));
+      expect(habitualLayout.viewportWidth).toBe(1440);
+      expect(habitualLayout.documentWidth).toBeLessThanOrEqual(
+        habitualLayout.viewportWidth,
+      );
+      await browser.saveScreenshot(
+        path.join(
+          os.tmpdir(),
+          `gitcanvas-cr17-${language}-${theme}-habitual.png`,
+        ),
+      );
+      await browser.setWindowSize(940, 600);
     }
+
+    await setAppearance("en", "light");
+    await browser.setWindowSize(1440, 900);
+    await browser.saveScreenshot(
+      path.join(os.tmpdir(), "gitcanvas-cr17-release-list-en-light.png"),
+    );
+    await $('[data-release-row="91001"]').click();
+    const detail = await $(".release-detail");
+    await detail.waitForDisplayed({ timeout: 20_000 });
+    await browser.setWindowSize(1440, 900);
+    await browser.waitUntil(
+      async () =>
+        (await detail.getText()).includes(
+          "Release notes from the local test server.",
+        ),
+      { timeoutMsg: "release notes did not render at the habitual size" },
+    );
+    await browser.saveScreenshot(
+      path.join(os.tmpdir(), "gitcanvas-cr17-release-detail-habitual.png"),
+    );
+
+    await $('[data-release-row="91003"]').click();
+    await browser.waitUntil(
+      async () =>
+        (await detail.getText()).includes(
+          "Notes from another release fixture.",
+        ),
+      { timeoutMsg: "the second release details did not replace the first" },
+    );
+    await $('[data-release-row="91001"]').click();
+    await browser.waitUntil(
+      async () =>
+        (await detail.getText()).includes(
+          "Release notes from the local test server.",
+        ) && (await detail.getText()).includes("synthetic.txt"),
+      { timeoutMsg: "returning to the first release restored stale details" },
+    );
+
+    await browser.keys(["Escape"]);
+    await browser.waitUntil(
+      async () => !(await $(".release-detail").isExisting()),
+    );
+    await expect($('[data-release-row="91001"]')).toBeFocused();
+
+    const releaseToggle = await $('[data-releases-toggle="true"]');
+    await releaseToggle.click();
+    await expect(releaseToggle).toHaveAttribute("aria-expanded", "false");
+    await releaseToggle.click();
+    await expect(releaseToggle).toHaveAttribute("aria-expanded", "true");
+
+    const authorToggle = await $(".author-panel .sidebar__section-toggle");
+    await authorToggle.scrollIntoView();
+    await authorToggle.click();
+    await expect(authorToggle).toHaveAttribute("aria-expanded", "false");
+    await authorToggle.click();
+    await expect(authorToggle).toHaveAttribute("aria-expanded", "true");
   });
 
   it("lists synthetic releases and discovers assets without credentials", async () => {
@@ -102,18 +197,21 @@ describe("author and release panels", () => {
     await setAppearance("en", "light");
     const panel = await $(".tags-releases-panel");
     await browser.waitUntil(
-      async () =>
-        (await panel.getText()).includes("Synthetic E2E release") &&
-        (await panel.getText()).includes(
-          "Release notes from the local test server.",
-        ),
+      async () => (await panel.getText()).includes("Synthetic E2E release"),
       { timeout: 20_000, timeoutMsg: "synthetic release did not load" },
     );
 
-    await $("button*=Show assets for v1.0.0").click();
+    await $('[data-release-row="91001"]').click();
+    const detail = await $(".release-detail");
     await browser.waitUntil(
-      async () => (await panel.getText()).includes("synthetic.txt"),
-      { timeout: 20_000, timeoutMsg: "synthetic release assets did not load" },
+      async () =>
+        (await detail.getText()).includes(
+          "Release notes from the local test server.",
+        ) && (await detail.getText()).includes("synthetic.txt"),
+      {
+        timeout: 20_000,
+        timeoutMsg: "central release details and assets did not load",
+      },
     );
 
     const response = await fetch(`${e2eApiBaseUrl}/_e2e/requests`);
@@ -156,11 +254,14 @@ describe("author and release panels", () => {
       ),
     ).toBe(true);
 
-    await $("button*=Download").click();
-    const transfer = await $(".tags-releases-panel__transfer");
+    await $(".release-detail button.button--primary").click();
+    const transfer = await $(".release-detail__transfer");
     await browser.waitUntil(
       async () => (await transfer.getText()).includes("Download complete"),
       { timeout: 20_000, timeoutMsg: "the synthetic asset did not complete" },
+    );
+    await browser.saveScreenshot(
+      path.join(os.tmpdir(), "gitcanvas-cr17-release-download-en-light.png"),
     );
     expect(
       fs.readFileSync(
@@ -183,6 +284,7 @@ describe("author and release panels", () => {
           request.path === "/repos/e2e-owner/e2e-repo/releases/assets/91002",
       ),
     ).toBe(true);
+    await $(".release-detail__close").click();
   });
 
   it("exposes author controls and focusable navigation buttons", async () => {

@@ -7,10 +7,14 @@
   color: var(--ink);
 }
 
-.author-panel__title {
-  margin: 0;
-  font-size: var(--font-size-body-wide);
-  font-weight: 700;
+.author-panel__content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.author-panel__content[hidden] {
+  display: none;
 }
 
 .author-panel__search-label {

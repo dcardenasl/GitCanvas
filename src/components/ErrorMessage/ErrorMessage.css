@@ -5,6 +5,13 @@
   max-inline-size: 100%;
 }
 
+.error-message__summary {
+  color: var(--danger);
+  font-size: var(--font-size-small-wide);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
 .error-message__toggle {
   color: var(--ink-muted);
   font-size: var(--font-size-small-wide);

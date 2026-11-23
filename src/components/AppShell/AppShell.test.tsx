@@ -40,6 +40,30 @@ vi.mock("@tauri-apps/api/webview", () => ({
   }),
 }));
 
+vi.mock("../../state/releases", () => ({
+  useReleases: () => ({
+    data: {
+      source: { github: { owner: "example", name: "repo" } },
+      entries: [],
+      truncated: false,
+      local_tags_available: true,
+      cached_at: null,
+      rate_limit_reset: null,
+    },
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  usePendingReleaseAction: () => null,
+}));
+vi.mock("../TagsReleasesPanel/ReleaseDetailView", () => ({
+  ReleaseDetailView: ({ releaseId }: { releaseId: string }) => (
+    <section aria-label="Release detail">Release {releaseId}</section>
+  ),
+}));
+
 vi.mock("../../lib/ipc", () => ({
   getStashAnchors: () =>
     Promise.resolve({ revision: "stash-revision", entries: [], unresolved: 0 }),
@@ -226,6 +250,35 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("AppShell layout", () => {
+  it("gives release inspection the center and hides the inspector without shifting the grid", async () => {
+    patchNavigation({
+      selection: { kind: "commit", commitId: COMMIT.id, filePath: null },
+      releaseView: { releaseId: "release-7" },
+    });
+    renderShell();
+
+    const main = await screen.findByRole("main", {
+      name: "Etiquetas y releases",
+    });
+    expect(within(main).getByText("Release release-7")).toBeTruthy();
+    expect(
+      screen.queryByRole("separator", { name: "Ancho del panel de detalle" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("searchbox", {
+        name: "Buscar en el historial cargado",
+      }),
+    ).toBeNull();
+    const grid = main.parentElement;
+    expect(grid?.children).toHaveLength(5);
+    expect(grid?.style.getPropertyValue("--inspector-width")).toBe("0px");
+    expect(activeNavigation().selection).toEqual({
+      kind: "commit",
+      commitId: COMMIT.id,
+      filePath: null,
+    });
+  });
+
   it("keeps the grid children matched to its columns with nothing selected", async () => {
     renderShell();
     await screen.findByRole("complementary", { name: "Cambios locales" });

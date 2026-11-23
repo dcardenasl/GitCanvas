@@ -135,6 +135,12 @@ const FORWARDS: [string, () => Promise<unknown>, string, unknown[]][] = [
     ["o/r"],
   ],
   [
+    "openExternalUrl",
+    () => ipc.openExternalUrl("https://github.com/example/project"),
+    "openExternalUrl",
+    ["https://github.com/example/project"],
+  ],
+  [
     "setMenuLabels",
     () =>
       ipc.setMenuLabels({

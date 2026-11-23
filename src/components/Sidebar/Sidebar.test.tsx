@@ -880,6 +880,19 @@ it("displays help popover with rules, search clear button, empty state, and opti
   // Group sections should now show collapsed indicator ▸
   const localToggle = screen.getByRole("button", { name: /^Local$/ });
   expect(localToggle.textContent).toContain("▸");
+  const releaseToggle = screen.getByRole("button", {
+    name: "Etiquetas y releases",
+  });
+  const authorToggle = screen.getByRole("button", { name: "Autores" });
+  expect(releaseToggle.getAttribute("aria-expanded")).toBe("false");
+  expect(authorToggle.getAttribute("aria-expanded")).toBe("false");
+  const collapsed = useWorkspace
+    .getState()
+    .referenceTreePreferences.find(
+      (preference) => preference.path === "/tmp/repo",
+    )?.collapsed;
+  expect(collapsed).toContain("section:releases");
+  expect(collapsed).toContain("section:authors");
 
   // Re-open options and expand all
   await userEvent.click(optionsBtn);
@@ -888,6 +901,15 @@ it("displays help popover with rules, search clear button, empty state, and opti
   });
   await userEvent.click(expandAllOption);
   expect(localToggle.textContent).toContain("▾");
+  expect(releaseToggle.getAttribute("aria-expanded")).toBe("true");
+  expect(authorToggle.getAttribute("aria-expanded")).toBe("true");
+  expect(
+    useWorkspace
+      .getState()
+      .referenceTreePreferences.find(
+        (preference) => preference.path === "/tmp/repo",
+      ),
+  ).toBeUndefined();
 });
 
 it("handles deep folder nesting and long branch names gracefully", async () => {

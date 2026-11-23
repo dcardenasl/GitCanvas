@@ -120,6 +120,9 @@ export const listGithubRepositories = () =>
 /** Clones a repository into the application cache. */
 export const cloneGithubRepository = (fullName: string) =>
   result(commands.cloneGithubRepository(fullName));
+/** Opens one user-selected HTTPS URL in the system browser through Rust validation. */
+export const openExternalUrl = (url: string) =>
+  result(commands.openExternalUrl(url));
 /** Subscribes to clone progress. Returns the unsubscribe function. */
 export const onCloneProgress = events.cloneProgressEvent.listen;
 

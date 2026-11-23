@@ -8,8 +8,8 @@
 | | |
 |---|---|
 | Estrategia aprobada | 2026-10-19, por David |
-| Última revisión | 2026-11-16 (publicada v0.8.0) |
-| Próxima entrega | v0.9 — contribuyentes y releases |
+| Última revisión | 2026-11-23 (preparación de release v0.9.0) |
+| Próxima entrega | v0.10 — múltiples proveedores |
 
 Este documento planifica: las funcionalidades futuras no están implementadas por él.
 
@@ -39,21 +39,29 @@ alcance aquí y mantener TASKS.md como fuente de ejecución. Cada entrega debe q
 | v0.6 | Historial por archivo | Publicada v0.6.0 | Entrada desde inspector/lista de archivos; commits que modificaron el archivo, diff y contenido histórico; seguimiento de renombrados cuando sea determinable, con límites explícitos. |
 | v0.7 | Stash de solo lectura | Publicada v0.7.0 | Listar los stashes en una sección plegable del panel izquierdo (mensaje, rama base, fecha) y ver su diff y contenido sin aplicar, descartar ni crear. Sin escrituras Git. El nodo de stash en el gráfico queda reservado. |
 | v0.8 | Vista de imágenes | Publicada v0.8.0 | Mostrar como imagen los archivos binarios de imagen en todos los visores de archivos (commit, historial por archivo, stash y cambios locales): formatos comunes, SVG sin ejecutar scripts, comparación anterior/guardada, dimensiones y tamaño. Solo lectura, con los presupuestos existentes. Los demás binarios siguen reportándose sin renderizar. |
-| v0.9 | Contribuyentes y releases | Planificada | Identidades con .mailmap, énfasis y navegación por autor; releases GitHub, notas, tag, adjuntos, caché sin conexión, recuperación de acceso y descargas explícitas. |
+| v0.9 | Contribuyentes y releases | Publicada v0.9.0 | Identidades con .mailmap, énfasis y navegación por autor; releases de GitHub en una lista compacta y su detalle central con notas y adjuntos, indicador del release estable más reciente, caché sin conexión, recuperación de acceso y descargas explícitas. Las etiquetas Git locales permanecen en Referencias. |
 | v0.10 | Múltiples proveedores | Planificada | Separar Git local de capacidades del proveedor; GitLab como primera ampliación; cuentas/servidores y credenciales aisladas. Bitbucket, Azure DevOps y servidores propios quedan para ampliaciones según necesidad. |
 | v0.11 | Crear y conectar repositorios | Planificada | Inicializar repositorios locales; crear remotos en proveedores compatibles; elegir cuenta/organización, nombre y visibilidad; conectar proyectos existentes y ofrecer primer push explícito. |
 | v0.12 | Escrituras locales seguras: stash y ramas | Planificada | Primero la base común de escrituras (exclusión por directorio Git común, recuperación, deshacer). Después, stash: guardar todos los cambios, aplicar, aplicar y quitar, descartar con deshacer. Luego crear, renombrar y eliminar ramas con protecciones; crear tags y gestionar remotos; fetch explícito y diferencias local/upstream. Ver [registro de alcance](#registro-de-cambios-de-alcance). |
 | v0.13 | Preparar archivos y crear commits | Planificada | Preparar/retirar archivos completos, título/descripción, borradores por proyecto, hooks y firma, recuperación de errores y actualización del gráfico. |
 
-## Última entrega publicada: v0.8 — vista de imágenes
+## Última entrega publicada: v0.9 — contribuyentes y releases
 
-Publicada como v0.8.0 el 2026-11-16. Añade lectura y comparación de imágenes en los
-cuatro lectores de archivos. Contrato, límites, matriz y evidencia están en el
-[plan v0.8](docs/plan/2026-11-15-v0.8-implementacion.md), [ADR 0010](docs/adr/0010-image-viewing.md)
-y [verificación](docs/verification/v0.8.md); sus gates externos siguen abiertos en
-`TASKS.md` (V08-VERIFY). La siguiente entrega planificada es v0.9. Detalle anterior de v0.7:
-[plan v0.7](docs/plan/2026-11-08-v0.7-implementacion.md) y
-[ADR 0009](docs/adr/0009-read-only-stash.md).
+v0.9.0 incorpora identidades/navegación por autor y consulta de releases de GitHub con
+notas Markdown, adjuntos y descarga explícita. La lista compacta abre un lector central;
+Autores/Releases se pliegan por raíz y el estable conocido más reciente recibe un chip.
+El cierre no declara verificados el lector real, el diálogo Linux/Windows, la confirmación de
+sobrescritura ni los gates de CR-17. Contrato y matriz están en el
+[plan v0.9](docs/plan/2026-11-16-v0.9-implementacion.md) y el [complemento CR-17](docs/plan/2026-11-23-v0.9-sidebar-release-inspection.md);
+arquitectura en [ADR 0011](docs/adr/0011-author-identities-and-catalog.md),
+[ADR 0012](docs/adr/0012-releases-tag-fetch-and-downloads.md),
+[ADR 0013](docs/adr/0013-release-asset-discovery-and-resolution.md) y
+[ADR 0015](docs/adr/0015-release-inspection-view.md); evidencia en
+[verificación v0.9](docs/verification/v0.9.md). La release está en preparación del PR/merge
+según el flujo DCL: [GitHub Release v0.9.0](https://github.com/dcardenasl/GitCanvas/releases/tag/v0.9.0).
+La siguiente entrega conserva el orden aprobado: v0.10, múltiples proveedores. Evidencia
+anterior: [v0.8](docs/verification/v0.8.md), [plan](docs/plan/2026-11-15-v0.8-implementacion.md)
+y [ADR 0010](docs/adr/0010-image-viewing.md).
 
 ## Entrega de referencia: v0.4 (plan histórico)
 
@@ -245,6 +253,31 @@ Sin versión ni implementación comprometida:
 - Preparación por líneas y amend: posteriores al flujo de commits por archivos.
 
 ## Registro de cambios de alcance
+
+### 2026-11-23 — Releases compactos con inspección central
+
+Pregunta: el panel lateral mostraba notas, acciones y adjuntos dentro de una lista densa,
+duplicaba etiquetas locales que ya aparecen en Referencias y no permitía plegar Autores.
+
+Decisión: **refinar v0.9 antes de publicarla** (petición explícita de David). Releases lista
+solo filas compactas; seleccionar una abre su detalle con notas y adjuntos en el área
+central. El release estable conocido más reciente recibe un chip. Autores y Releases usan
+el plegado durable por worktree ya existente. Las etiquetas locales siguen en Referencias.
+
+- **Por qué ahora.** Corrige la jerarquía observada en la interfaz de CR-14a antes de cerrar
+  y publicar la versión; reutiliza la consulta de releases, el discovery de adjuntos y la
+  navegación temporal ya presentes.
+- **Riesgo.** La nueva vista central debe preservar la selección Git subyacente, mantener
+  las notas como texto inerte y conservar las acciones explícitas y sus protecciones.
+- **Fuera de alcance.** No se trae una etiqueta ni se descarga un archivo al seleccionar;
+  el chip deriva la fecha máxima válida entre releases estables conocidos y no afirma la
+  designación oficial «Latest» de GitHub, que no está en el DTO actual.
+- **Renumeración.** Ninguna. Se añade CR-17 a la cola de v0.9; los manifiestos siguen sin
+  bump y el flujo de publicación no cambia.
+- **Actualización de cierre 2026-11-23.** El texto anterior registra la decisión al iniciar
+  CR-17. En el cierre para el release commit, los manifiestos ya están en 0.9.0; la cola
+  CR-0–CR-17 se archivó y los gates sin evidencia pasan a TASKS. La etiqueta/publicación
+  externa sigue el flujo DCL después de la aprobación y el merge del PR.
 
 ### 2026-11-09 — Stash: dónde van las escrituras
 

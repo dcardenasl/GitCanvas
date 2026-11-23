@@ -17,6 +17,8 @@ pub mod authors;
 
 pub mod diff;
 
+pub mod external_links;
+
 pub mod github;
 
 pub mod lifecycle;

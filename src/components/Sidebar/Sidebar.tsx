@@ -110,6 +110,8 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
       "group:tags",
       "section:worktrees",
       "section:stashes",
+      "section:releases",
+      "section:authors",
     ]);
   };
   const search = useWorkspace((state) =>
@@ -518,8 +520,17 @@ export function Sidebar({ hidden = false, onCheckout }: SidebarProps) {
       <TagsReleasesPanel
         key={`${path ?? "no-repository"}:${hidden ? "hidden" : "visible"}`}
         panelOpen={!hidden}
+        collapsed={collapsed.has("section:releases")}
+        onCollapse={() => {
+          toggleCollapsed("section:releases");
+        }}
       />
-      <AuthorPanel />
+      <AuthorPanel
+        collapsed={collapsed.has("section:authors")}
+        onCollapse={() => {
+          toggleCollapsed("section:authors");
+        }}
+      />
       {palette !== null && (
         <BranchColorPicker
           branch={palette.name}

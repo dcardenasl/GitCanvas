@@ -4,8 +4,17 @@ use serde_json::{json, Value};
 use tauri::test::{get_ipc_response, mock_builder, MockRuntime, INVOKE_KEY};
 
 pub(super) fn test_webview() -> tauri::WebviewWindow<MockRuntime> {
+    test_webview_with_external_opener(crate::commands::external_links::ExternalUrlOpener::new(
+        |_| Ok(()),
+    ))
+}
+
+fn test_webview_with_external_opener(
+    external_opener: crate::commands::external_links::ExternalUrlOpener,
+) -> tauri::WebviewWindow<MockRuntime> {
     let builder = super::specta_builder();
     let app = mock_builder()
+        .manage(external_opener)
         .manage(crate::commands::github::CacheRoot(
             std::env::temp_dir().join("gitcanvas-test-cache"),
         ))
@@ -124,6 +133,43 @@ fn release_commands_reject_an_unopened_repository_before_provider_or_dialog_work
         let error = invoke(&webview, command, body).unwrap_err();
         assert_eq!(error["kind"], "InvalidRepository", "{command}: {error}");
     }
+}
+
+#[test]
+fn external_link_command_validates_and_forwards_only_https_destinations() {
+    use std::sync::{Arc, Mutex};
+
+    let opened = Arc::new(Mutex::new(Vec::<String>::new()));
+    let captured = Arc::clone(&opened);
+    let webview = test_webview_with_external_opener(
+        crate::commands::external_links::ExternalUrlOpener::new(move |url| {
+            captured.lock().unwrap().push(url.to_owned());
+            Ok(())
+        }),
+    );
+
+    let result = invoke(
+        &webview,
+        "open_external_url",
+        json!({"url": "https://docs.example.test/path"}),
+    )
+    .unwrap();
+    assert_eq!(result, Value::Null);
+    assert_eq!(
+        *opened.lock().unwrap(),
+        vec!["https://docs.example.test/path"]
+    );
+
+    for url in [
+        "http://example.test",
+        "javascript:alert(1)",
+        "file:///etc/passwd",
+        "https://user:secret@example.test",
+    ] {
+        let error = invoke(&webview, "open_external_url", json!({"url": url})).unwrap_err();
+        assert_eq!(error["kind"], "InvalidInput", "{url}: {error}");
+    }
+    assert_eq!(opened.lock().unwrap().len(), 1);
 }
 
 #[test]

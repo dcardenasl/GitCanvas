@@ -76,8 +76,10 @@ never starts a download whose destination was not already chosen.
 repositories and 20 MiB, with a capture date and no secrets, separate from the clone cache.
 Eviction happens inside the cache module on write.
 
-**Notes.** Plain text only: no HTML, no remote images, no links opened from the app. Each
-note is cut at 256 KiB with a visible mark; a response is capped at 8 MiB.
+**Notes.** Release notes cross the IPC boundary as bounded plain text. Rendering is
+specified in [ADR 0015](0015-release-inspection-view.md); raw HTML and remote images do not
+become active content. Each note is cut at 256 KiB with a visible mark; a response is capped
+at 8 MiB.
 
 ## Consequences
 

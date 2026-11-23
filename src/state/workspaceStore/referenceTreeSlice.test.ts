@@ -16,16 +16,35 @@ beforeEach(() => {
 it("keeps collapsed reference nodes isolated by worktree and in the durable workspace", () => {
   useWorkspace
     .getState()
-    .setReferenceTreeCollapsed("/main", ["folder:remote:origin/feature"]);
-  useWorkspace.getState().setReferenceTreeCollapsed("/linked", ["group:tags"]);
+    .setReferenceTreeCollapsed("/main", [
+      "folder:remote:origin/feature",
+      "section:authors",
+    ]);
+  useWorkspace
+    .getState()
+    .setReferenceTreeCollapsed("/linked", ["group:tags", "section:releases"]);
 
   expect(useWorkspace.getState().referenceTreePreferences).toEqual([
-    { path: "/main", collapsed: ["folder:remote:origin/feature"] },
-    { path: "/linked", collapsed: ["group:tags"] },
+    {
+      path: "/main",
+      collapsed: ["folder:remote:origin/feature", "section:authors"],
+    },
+    { path: "/linked", collapsed: ["group:tags", "section:releases"] },
   ]);
   expect(
     workspaceRecord(useWorkspace.getState()).reference_tree_preferences,
   ).toEqual(useWorkspace.getState().referenceTreePreferences);
+
+  const savedWorkspace = workspaceRecord(useWorkspace.getState());
+  resetWorkspace();
+  useWorkspace.getState().restore(savedWorkspace);
+  expect(useWorkspace.getState().referenceTreePreferences).toEqual([
+    {
+      path: "/main",
+      collapsed: ["folder:remote:origin/feature", "section:authors"],
+    },
+    { path: "/linked", collapsed: ["group:tags", "section:releases"] },
+  ]);
 });
 
 it("removes empty preferences and refuses more worktrees than the backend limit", () => {

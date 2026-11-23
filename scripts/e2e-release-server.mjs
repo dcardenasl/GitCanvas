@@ -4,6 +4,7 @@ import http from "node:http";
 const owner = "e2e-owner";
 const repository = "e2e-repo";
 const releaseId = 91001;
+const alternateReleaseId = 91003;
 const assetId = 91002;
 const assetBytes = Buffer.from("synthetic release asset\n", "utf8");
 const digest = `sha256:${createHash("sha256").update(assetBytes).digest("hex")}`;
@@ -38,13 +39,36 @@ const server = http.createServer((request, response) => {
           prerelease: false,
           published_at: "2026-11-22T12:00:00Z",
         },
+        {
+          id: alternateReleaseId,
+          tag_name: "v0.9.0-preview",
+          name: "Another synthetic release",
+          body: "Notes from another release fixture.",
+          html_url: `https://github.com/${owner}/${repository}/releases/tag/v0.9.0-preview`,
+          draft: false,
+          prerelease: true,
+          published_at: "2026-11-21T12:00:00Z",
+        },
       ]),
     );
     return;
   }
-  if (url.pathname === `${prefix}/releases/${releaseId}`) {
+  if (
+    url.pathname === `${prefix}/releases/${releaseId}` ||
+    url.pathname === `${prefix}/releases/${alternateReleaseId}`
+  ) {
     response.writeHead(200, { "content-type": "application/json" });
-    response.end(JSON.stringify({ id: releaseId, draft: false }));
+    response.end(
+      JSON.stringify({
+        id: Number(url.pathname.split("/").at(-1)),
+        draft: false,
+      }),
+    );
+    return;
+  }
+  if (url.pathname === `${prefix}/releases/${alternateReleaseId}/assets`) {
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify([]));
     return;
   }
   if (url.pathname === `${prefix}/releases/${releaseId}/assets`) {

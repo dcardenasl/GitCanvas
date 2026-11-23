@@ -22,6 +22,10 @@ const COMMAND_GATE_EXCEPTIONS: &[(&str, &str)] = &[
         "cancel_transfer",
         "must set a cancellation flag without waiting behind active transfer permits",
     ),
+    (
+        "open_external_url",
+        "only validates a user-selected URL before delegating to the operating system browser",
+    ),
 ];
 
 fn command_sources() -> Vec<PathBuf> {
