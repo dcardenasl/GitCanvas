@@ -34,6 +34,20 @@ async function waitForMenuItem(label: string) {
 
 async function clickMenuItemByText(label: string) {
   const selector = `//button[@role="menuitem" and contains(normalize-space(.), "${label}")]`;
+  // WebDriver otherwise scrolls the nearest ancestor (the sidebar) to reach a
+  // menu item near the bottom of a long context menu. Scrolling the anchored
+  // sidebar dismisses that menu, so reveal the item inside its own scroller.
+  await browser.execute((itemLabel) => {
+    const item = Array.from(
+      document.querySelectorAll<HTMLButtonElement>(
+        '.context-menu button[role="menuitem"]',
+      ),
+    ).find((button) => button.textContent?.includes(itemLabel) === true);
+    if (item === undefined) {
+      throw new Error(`context-menu item did not appear: ${itemLabel}`);
+    }
+    item.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, label);
   await clickAndConfirm(selector, async () => {
     await expect($(".context-menu")).not.toExist();
   });
