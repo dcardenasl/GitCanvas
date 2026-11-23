@@ -5,39 +5,11 @@ import { $, browser, expect } from "@wdio/globals";
 import type { Workspace } from "../src/bindings";
 import { e2eDataDir, e2eRepository, e2eRepositoryRoot } from "../wdio.conf";
 import { waitForHistory } from "./history";
-import { clickAndConfirm, setReactSelectValue } from "./interactions";
-
-async function revealSidebarItem(selector: string) {
-  await browser.execute((targetSelector) => {
-    const sidebar = document.querySelector<HTMLElement>(".sidebar");
-    const target = document.querySelector<HTMLElement>(targetSelector);
-    if (sidebar === null || target === null) {
-      throw new Error(`sidebar item is missing: ${targetSelector}`);
-    }
-    const sidebarBounds = sidebar.getBoundingClientRect();
-    const targetBounds = target.getBoundingClientRect();
-    sidebar.scrollTop =
-      sidebar.scrollTop + targetBounds.top - sidebarBounds.top;
-  }, selector);
-  await browser.waitUntil(
-    async () =>
-      browser.execute((targetSelector) => {
-        const sidebar = document.querySelector<HTMLElement>(".sidebar");
-        const target = document.querySelector<HTMLElement>(targetSelector);
-        if (sidebar === null || target === null) return false;
-        const sidebarBounds = sidebar.getBoundingClientRect();
-        const targetBounds = target.getBoundingClientRect();
-        return (
-          targetBounds.top >= sidebarBounds.top &&
-          targetBounds.bottom <= sidebarBounds.bottom
-        );
-      }, selector),
-    {
-      timeout: 5_000,
-      timeoutMsg: `sidebar item did not enter view: ${selector}`,
-    },
-  );
-}
+import {
+  clickAndConfirm,
+  revealSidebarItem,
+  setReactSelectValue,
+} from "./interactions";
 
 async function waitForMenuItem(label: string) {
   await browser.waitUntil(
@@ -61,7 +33,7 @@ async function waitForMenuItem(label: string) {
 }
 
 async function clickMenuItemByText(label: string) {
-  const selector = `//button[@role="menuitem" and normalize-space(.)="${label}"]`;
+  const selector = `//button[@role="menuitem" and contains(normalize-space(.), "${label}")]`;
   await clickAndConfirm(selector, async () => {
     await expect($(".context-menu")).not.toExist();
   });

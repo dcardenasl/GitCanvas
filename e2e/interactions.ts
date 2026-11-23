@@ -1,5 +1,36 @@
 import { $, browser, expect } from "@wdio/globals";
 
+export async function revealSidebarItem(selector: string): Promise<void> {
+  await browser.execute((targetSelector) => {
+    const sidebar = document.querySelector<HTMLElement>(".sidebar");
+    const target = document.querySelector<HTMLElement>(targetSelector);
+    if (sidebar === null || target === null) {
+      throw new Error(`sidebar item is missing: ${targetSelector}`);
+    }
+    const sidebarBounds = sidebar.getBoundingClientRect();
+    const targetBounds = target.getBoundingClientRect();
+    sidebar.scrollTop += targetBounds.top - sidebarBounds.top;
+  }, selector);
+  await browser.waitUntil(
+    async () =>
+      browser.execute((targetSelector) => {
+        const sidebar = document.querySelector<HTMLElement>(".sidebar");
+        const target = document.querySelector<HTMLElement>(targetSelector);
+        if (sidebar === null || target === null) return false;
+        const sidebarBounds = sidebar.getBoundingClientRect();
+        const targetBounds = target.getBoundingClientRect();
+        return (
+          targetBounds.top >= sidebarBounds.top &&
+          targetBounds.bottom <= sidebarBounds.bottom
+        );
+      }, selector),
+    {
+      timeout: 5_000,
+      timeoutMsg: `sidebar item did not enter view: ${selector}`,
+    },
+  );
+}
+
 interface DiagnosticWindow extends Window {
   __gitcanvasE2eEvents?: string[];
   __gitcanvasE2eRecorderInstalled?: boolean;

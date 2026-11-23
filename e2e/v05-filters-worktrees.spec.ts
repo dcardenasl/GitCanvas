@@ -1,7 +1,11 @@
 import { $, $$, browser, expect } from "@wdio/globals";
 import { e2eRepositoryRoot } from "../wdio.conf";
 import { waitForHistory } from "./history";
-import { clickAndConfirm, setReactSelectValue } from "./interactions";
+import {
+  clickAndConfirm,
+  revealSidebarItem,
+  setReactSelectValue,
+} from "./interactions";
 
 describe("v0.5 reference filters and linked worktrees", () => {
   it("keeps the reference and worktree controls translated at minimum size", async () => {
@@ -150,6 +154,7 @@ describe("v0.5 reference filters and linked worktrees", () => {
       if (side === undefined) throw new Error("The side worktree is missing");
       return side.title;
     });
+    await revealSidebarItem('[aria-label="Acciones de side"]');
     await clickAndConfirm(
       '[aria-label="Acciones de side"]',
       async () =>
