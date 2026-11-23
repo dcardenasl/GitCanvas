@@ -143,7 +143,14 @@ jobs:
           $edgePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'
           if (-not (Test-Path $edgePath)) { throw "Microsoft Edge was not found at $edgePath" }
           $edgeVersion = [version](Get-Item $edgePath).VersionInfo.ProductVersion
-          $driverVersion = (Invoke-RestMethod "https://msedgedriver.microsoft.com/LATEST_RELEASE_$($edgeVersion.Major)_WINDOWS").Trim()
+          $versionPath = Join-Path $env:RUNNER_TEMP 'edgedriver-version.txt'
+          Invoke-WebRequest "https://msedgedriver.microsoft.com/LATEST_RELEASE_$($edgeVersion.Major)_WINDOWS" -OutFile $versionPath
+          # Microsoft serves this endpoint as UTF-16LE; decode it explicitly so
+          # PowerShell does not pass embedded null characters into the URL.
+          $driverVersion = (Get-Content -LiteralPath $versionPath -Raw -Encoding Unicode).Trim()
+          if ($driverVersion -notmatch '^\d+\.\d+\.\d+\.\d+$') {
+            throw "Microsoft returned an invalid Edge WebDriver version: $driverVersion"
+          }
           $archivePath = Join-Path $env:RUNNER_TEMP 'edgedriver.zip'
           $driverDirectory = Join-Path $env:RUNNER_TEMP 'edgedriver'
           New-Item -ItemType Directory -Force -Path $driverDirectory | Out-Null
