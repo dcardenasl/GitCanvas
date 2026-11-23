@@ -143,7 +143,7 @@ jobs:
           $edgePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'
           if (-not (Test-Path $edgePath)) { throw "Microsoft Edge was not found at $edgePath" }
           $edgeVersion = [version](Get-Item $edgePath).VersionInfo.ProductVersion
-          $driverVersion = Invoke-RestMethod "https://msedgedriver.microsoft.com/LATEST_RELEASE_$($edgeVersion.Major)"
+          $driverVersion = (Invoke-RestMethod "https://msedgedriver.microsoft.com/LATEST_RELEASE_$($edgeVersion.Major)_WINDOWS").Trim()
           $archivePath = Join-Path $env:RUNNER_TEMP 'edgedriver.zip'
           $driverDirectory = Join-Path $env:RUNNER_TEMP 'edgedriver'
           New-Item -ItemType Directory -Force -Path $driverDirectory | Out-Null

@@ -143,9 +143,14 @@ describe("file history", () => {
       await browser.saveScreenshot(
         path.join(os.tmpdir(), `gitcanvas-file-history-${theme}.png`),
       );
-      await (
-        await browser.$('//button[normalize-space()="Volver al gráfico"]')
-      ).click();
+      await clickAndConfirm(
+        '//button[normalize-space()="Volver al gráfico"]',
+        async () => {
+          await browser
+            .$(VIEW)
+            .waitForExist({ reverse: true, timeout: 20_000 });
+        },
+      );
     }
   });
 });
