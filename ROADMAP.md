@@ -39,15 +39,15 @@ alcance aquí y mantener TASKS.md como fuente de ejecución. Cada entrega debe q
 | v0.6 | Historial por archivo | Publicada v0.6.0 | Entrada desde inspector/lista de archivos; commits que modificaron el archivo, diff y contenido histórico; seguimiento de renombrados cuando sea determinable, con límites explícitos. |
 | v0.7 | Stash de solo lectura | Publicada v0.7.0 | Listar los stashes en una sección plegable del panel izquierdo (mensaje, rama base, fecha) y ver su diff y contenido sin aplicar, descartar ni crear. Sin escrituras Git. El nodo de stash en el gráfico queda reservado. |
 | v0.8 | Vista de imágenes | Publicada v0.8.0 | Mostrar como imagen los archivos binarios de imagen en todos los visores de archivos (commit, historial por archivo, stash y cambios locales): formatos comunes, SVG sin ejecutar scripts, comparación anterior/guardada, dimensiones y tamaño. Solo lectura, con los presupuestos existentes. Los demás binarios siguen reportándose sin renderizar. |
-| v0.9 | Contribuyentes y releases | Publicada v0.9.0 | Identidades con .mailmap, énfasis y navegación por autor; releases de GitHub en una lista compacta y su detalle central con notas y adjuntos, indicador del release estable más reciente, caché sin conexión, recuperación de acceso y descargas explícitas. Las etiquetas Git locales permanecen en Referencias. |
+| v0.9 | Contribuyentes y releases | Planificada | Candidata v0.9.0 implementada en PR #24 (abierta); merge, tag y publicación pendientes. Identidades con .mailmap, énfasis y navegación por autor; releases de GitHub en una lista compacta y su detalle central con notas y adjuntos, indicador del release estable más reciente, caché sin conexión, recuperación de acceso y descargas explícitas. Las etiquetas Git locales permanecen en Referencias. |
 | v0.10 | Múltiples proveedores | Planificada | Separar Git local de capacidades del proveedor; GitLab como primera ampliación; cuentas/servidores y credenciales aisladas. Bitbucket, Azure DevOps y servidores propios quedan para ampliaciones según necesidad. |
 | v0.11 | Crear y conectar repositorios | Planificada | Inicializar repositorios locales; crear remotos en proveedores compatibles; elegir cuenta/organización, nombre y visibilidad; conectar proyectos existentes y ofrecer primer push explícito. |
 | v0.12 | Escrituras locales seguras: stash y ramas | Planificada | Primero la base común de escrituras (exclusión por directorio Git común, recuperación, deshacer). Después, stash: guardar todos los cambios, aplicar, aplicar y quitar, descartar con deshacer. Luego crear, renombrar y eliminar ramas con protecciones; crear tags y gestionar remotos; fetch explícito y diferencias local/upstream. Ver [registro de alcance](#registro-de-cambios-de-alcance). |
 | v0.13 | Preparar archivos y crear commits | Planificada | Preparar/retirar archivos completos, título/descripción, borradores por proyecto, hooks y firma, recuperación de errores y actualización del gráfico. |
 
-## Última entrega publicada: v0.9 — contribuyentes y releases
+## Última entrega preparada/candidata: v0.9 — contribuyentes y releases
 
-v0.9.0 incorpora identidades/navegación por autor y consulta de releases de GitHub con
+La candidata v0.9.0 implementa identidades/navegación por autor y consulta de releases de GitHub con
 notas Markdown, adjuntos y descarga explícita. La lista compacta abre un lector central;
 Autores/Releases se pliegan por raíz y el estable conocido más reciente recibe un chip.
 El cierre no declara verificados el lector real, el diálogo Linux/Windows, la confirmación de
@@ -57,8 +57,7 @@ arquitectura en [ADR 0011](docs/adr/0011-author-identities-and-catalog.md),
 [ADR 0012](docs/adr/0012-releases-tag-fetch-and-downloads.md),
 [ADR 0013](docs/adr/0013-release-asset-discovery-and-resolution.md) y
 [ADR 0015](docs/adr/0015-release-inspection-view.md); evidencia en
-[verificación v0.9](docs/verification/v0.9.md). La release está en preparación del PR/merge
-según el flujo DCL: [GitHub Release v0.9.0](https://github.com/dcardenasl/GitCanvas/releases/tag/v0.9.0).
+[verificación v0.9](docs/verification/v0.9.md). La PR [#24](https://github.com/dcardenasl/GitCanvas/pull/24) está abierta. No existe merge, tag remoto v0.9.0 ni GitHub Release; los pasos de merge, tag y publicación siguen pendientes de autorización y del flujo DCL.
 La siguiente entrega conserva el orden aprobado: v0.10, múltiples proveedores. Evidencia
 anterior: [v0.8](docs/verification/v0.8.md), [plan](docs/plan/2026-11-15-v0.8-implementacion.md)
 y [ADR 0010](docs/adr/0010-image-viewing.md).

@@ -5,8 +5,7 @@
 > [`ARCHIVES.md`](ARCHIVES.md). Secuencia de versiones:
 > [roadmap](ROADMAP.md).
 
-**Estado al 2026-11-23:** v0.4–v0.9 preparadas/publicadas conforme al cierre documental de
-v0.9.0. La cola CR-0–CR-17 está archivada; la verificación y los límites restantes están
+**Estado al 2026-11-23:** v0.4–v0.8 publicadas; v0.9.0 preparada documentalmente en la PR #24, aún abierta y sin tag remoto ni GitHub Release. El Validador rechazó el cierre documental por desviación de secuencia y registros ADR/CR-17; los hallazgos y la aceptación de David de conservar la secuencia actual están en `docs/verification/v0.9.md`. La cola CR-0–CR-17 está archivada; la verificación y los límites restantes están
 en `ARCHIVES.md`. Siguen abiertos los gates de lector, diálogos/plataformas y las pruebas
 complementarias de CR-17. Próximo trabajo: planificar v0.10, múltiples proveedores,
 conservando el orden aprobado. Crear commits permanece al final de la secuencia (objetivo
@@ -18,9 +17,7 @@ crear tags ni publicar como parte de la implementación; los bumps son del flujo
 
 ## Siguiente paso
 
-Planificar v0.10, múltiples proveedores, manteniendo el orden aprobado del roadmap. Para la
-publicación de v0.9.0, seguir el commit/PR ya preparado y detenerse antes del merge para la
-aprobación de David. Los gates abiertos permanecen aquí y en Known limitations.
+Planificar v0.10, múltiples proveedores, manteniendo el orden aprobado del roadmap. La PR #24 de v0.9.0 permanece abierta; detenerse antes del merge para la aprobación de David. No hay tag remoto ni GitHub Release. Los gates abiertos permanecen aquí y en Known limitations.
 
 ## Gates abiertos y seguimiento histórico
 
@@ -30,35 +27,35 @@ Verificaciones que no se pudieron ejecutar o documentar; conservan su plan de or
 bloquean el desarrollo de v0.9.
 
 - [ ] **V09-VERIFY-CR15-DOWNLOAD-PLATFORMS — Diálogo y no sobrescritura por plataforma.**
-      Parcial: el bundle 0.9.0 consultó GitHub real y guardó/renombró un asset de v0.8.0 en
+      **Pendiente, sin evidencia:** Parcial: el bundle 0.9.0 consultó GitHub real y guardó/renombró un asset de v0.8.0 en
       macOS, con SHA-256 coincidente. Falta comprobar la confirmación de sobrescritura en
       macOS y probar destino/renombrado/no sobrescritura en Linux y Windows. La matriz
       automatizada pasó en Ubuntu, macOS y Windows, pero no cubre esos diálogos reales.
       Evidencia macOS: [`seguimiento ARM64`](docs/verification/v0.9-macos-arm64-followup.md).
 - [ ] **V09-VERIFY-CR17-LIVE-GITHUB — Smoke de la release publicada.**
-      La app 0.9.0 ya consultó GitHub real y abrió notas/Full Changelog de v0.8.0; también
+      **Pendiente, sin evidencia:** La app 0.9.0 ya consultó GitHub real y abrió notas/Full Changelog de v0.8.0; también
       descargó un asset y comprobó su SHA-256. Falta repetir la consulta desde la app contra
       la release v0.9.0 publicada, comprobar el chip estable, sus notas/adjuntos y verificar
       el SHA-256 de un asset. La release aún no está publicada, así que este gate no puede
       cerrarse antes del workflow posterior al merge.
 - [ ] **V09-VERIFY-CR17-UIR05-RESTART — Persistencia tras reinicio de la app.**
-      Cerrar y reabrir la app instalada después de plegar Autores y Releases en una raíz;
+      **Pendiente, sin evidencia:** Cerrar y reabrir la app instalada después de plegar Autores y Releases en una raíz;
       confirmar que cada preferencia se restaure solo para esa raíz y que la selección del
       autor/énfasis no se pierda. Serialización/restauración sí tiene cobertura automatizada;
       falta el smoke test del proceso instalado.
 - [ ] **V09-VERIFY-CR17-UIR08-FOCUS-SCROLL — Retorno interactivo de foco y scroll.**
-      Verificar abrir/cerrar detalle y retorno a la fila con teclado/clic, conservando scroll,
+      **Pendiente, sin evidencia:** Verificar abrir/cerrar detalle y retorno a la fila con teclado/clic, conservando scroll,
       en EN/ES × claro/oscuro a 940×600 y 1440×900. E2E ya acredita Escape y retorno de foco
       en un recorrido; las capturas acreditan estados visuales, no la matriz completa de
       interacción/scroll.
 - [ ] **V09-VERIFY-CR17-ASSET-RESOURCES — Descarga grande y recuperación de recursos.**
-      En la app instalada, descargar o cancelar un asset de 80 MiB o más del release v0.8.0
+      **Pendiente, sin evidencia:** En la app instalada, descargar o cancelar un asset de 80 MiB o más del release v0.8.0
       (por ejemplo `GitCanvas_0.8.0_amd64.AppImage`, 83,077,624 bytes) y confirmar que una
       consulta y una descarga pequeña posteriores siguen funcionando y no conservan recursos
       de la transferencia. Los límites y cancelación tienen tests con fixtures; este escenario
       nativo grande aún no se ejecutó.
 - [ ] **A11Y-LECTOR — Lector de pantalla real y recorridos manuales (aceptado sin verificar).**
-      Sin sesión real con VoiceOver, NVDA u Orca. Decisión de David del 2026-11-16: aceptar
+      **Pendiente, sin evidencia:** Sin sesión real con VoiceOver, NVDA u Orca. Decisión de David del 2026-11-16: aceptar
       como no verificado y documentarlo en Known limitations; no volver a pedir esta decisión.
       Los roles/estados automatizados no sustituyen una prueba con lector real.
 - [ ] **WS-17 — Conciliar verificación y publicación de v0.3.0 (seguimiento histórico).**

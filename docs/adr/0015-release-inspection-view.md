@@ -2,16 +2,7 @@
 
 ## Status
 
-Accepted and implemented — 2026-11-23. Records David's requested UI/UX refinement: list releases
-without descriptions in the sidebar, open their full content and attachments in
-the main pane, emphasize the latest release, and allow the Authors section to
-fold. This supplements [ADR 0012](0012-releases-tag-fetch-and-downloads.md) and
-[ADR 0013](0013-release-asset-discovery-and-resolution.md). It proposes replacing
-CR-D04's combined sidebar list and the presentation rule that releases never
-enter navigation state; their data, security and resource contracts remain in
-force. Implementation evidence is in the CR-17 plan and
-[`docs/verification/cr-17-qa.md`](../verification/cr-17-qa.md). This decision
-does not claim publication or verification on every supported platform.
+Accepted and implemented — 2026-11-23. Implemented in the v0.9.0 release candidate on `dev`; PR #24 is open. No merge, remote `v0.9.0` tag, or GitHub Release exists yet. The independent Validator rejected the closure record because the release commit is followed by six commits and the previous CR-17 commit reference was inaccurate; David accepts preserving this history because the PR contains the complete v0.9 delivery. This process decision does not alter the Validator verdict or approve the merge. Records David's requested UI/UX refinement: list releases without descriptions in the sidebar, open their full content and attachments in the main pane, emphasize the latest release, and allow the Authors section to fold. This supplements ADR 0012 and ADR 0013 and does not claim verification on every platform. Evidence and limits are in the CR-17 plan and [`docs/verification/cr-17-qa.md`](../verification/cr-17-qa.md).
 
 ## Context
 

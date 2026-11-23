@@ -8,7 +8,7 @@
 
 > Se regenera al archivar una versión; ver el [protocolo de trabajo](docs/protocolo-trabajo.md#2-archivesmd-lo-completado-con-su-evidencia).
 
-- [v0.9 — Contribuyentes y releases (CR-0–CR-17; publicada como v0.9.0)](#v09--contribuyentes-y-releases-cr-0cr-17-publicada-como-v090)
+- [v0.9 — Contribuyentes y releases (CR-0–CR-17; candidata v0.9.0)](#v09--contribuyentes-y-releases-cr-0cr-17-candidata-v090)
 - [Gates externos cerrados (2026-11-16)](#gates-externos-cerrados-2026-11-16)
 - [Colas cerradas movidas desde TASKS.md (2026-11-15)](#colas-cerradas-movidas-desde-tasksmd-2026-11-15)
   - [v0.8 — Vista de imágenes (IMG-0–IMG-8; publicada como v0.8.0)](#v08--vista-de-imágenes-img-0img-8-publicada-como-v080)
@@ -34,11 +34,11 @@
 - [✅ Fase I18N — Internacionalización (6/6)](#-fase-i18n--internacionalización-66)
 - [✅ Auditoría posterior a v0.2.0 (8/8)](#-auditoría-posterior-a-v020-88)
 
-### v0.9 — Contribuyentes y releases (CR-0–CR-17; publicada como v0.9.0)
+### v0.9 — Contribuyentes y releases (CR-0–CR-17; candidata v0.9.0)
 
 Plan: [v0.9](docs/plan/2026-11-16-v0.9-implementacion.md) y [complemento CR-17](docs/plan/2026-11-23-v0.9-sidebar-release-inspection.md).
 Arquitectura: [ADR 0011](docs/adr/0011-author-identities-and-catalog.md), [0012](docs/adr/0012-releases-tag-fetch-and-downloads.md), [0013](docs/adr/0013-release-asset-discovery-and-resolution.md) y [0015](docs/adr/0015-release-inspection-view.md).
-Evidencia: [verificación v0.9](docs/verification/v0.9.md), [QA CR-17](docs/verification/cr-17-qa.md), [seguimiento ARM64](docs/verification/v0.9-macos-arm64-followup.md). Release: [v0.9.0](https://github.com/dcardenasl/GitCanvas/releases/tag/v0.9.0), preparada para el flujo DCL posterior al merge.
+Evidencia: [verificación v0.9](docs/verification/v0.9.md), [QA CR-17](docs/verification/cr-17-qa.md), [QA final del candidato](docs/verification/v0.9-final-qa.md) y [seguimiento ARM64](docs/verification/v0.9-macos-arm64-followup.md). La PR #24 está abierta; aún no existe tag remoto v0.9.0 ni GitHub Release.
 
 Gates que permanecen abiertos en [`TASKS.md`](TASKS.md): `A11Y-LECTOR` (aceptado por David como no verificado); diálogo/renombrado/sobrescritura en plataformas en `V09-VERIFY-CR15-DOWNLOAD-PLATFORMS`; smokes de release publicada, reinicio de la app instalada, foco/scroll interactivo y descarga grande/recuperación de recursos (`V09-VERIFY-CR17-*`). Los E2E de CR-17 pasan 12 specs/36 tests contra API GitHub sintética. El smoke macOS adicional consultó GitHub real para v0.8.0, abrió Full Changelog y descargó el mismo asset con nombre original y renombrado; SHA-256 coincidente. La nueva release v0.9.0 no se ha comprobado en GitHub hasta que se publique.
 
@@ -98,7 +98,7 @@ Orden de ejecución: autores (CR-1–CR-6b), cerrojo (CR-7), fuente (CR-9a), tag
 
 Petición de David del 2026-11-23. [Plan ligero y matriz UIR-01–UIR-09](docs/plan/2026-11-23-v0.9-sidebar-release-inspection.md).
 
-- [x] **CR-17: Sidebar coherente y detalle central de releases.** Depende de CR-16. Casos UIR-01–UIR-09. Listar releases sin descripciones ni etiquetas locales duplicadas, abrir su detalle central con notas y adjuntos, marcar el estable más reciente conocido, plegar Autores/Releases con preferencias por raíz y probar el sidebar completo en EN/ES, claro/oscuro y ventana mínima. Mantener HTML e imágenes remotas inactivos; abrir enlaces HTTPS en el navegador del sistema solo por acción explícita y tras validación Rust; dejar otros esquemas inertes. Conservar navegación Git y acciones explícitas de fetch/descarga con recuperación de acceso. **Evidencia:** `docs/verification/cr-17-qa.md` (PARTIAL por límites externos documentados), 11 capturas en `docs/verification/evidence/v0.9-cr17/`, `npm run test:coverage` (108 archivos/999 tests), `cargo test --workspace`, typechecks/lint/formato/build, `cargo fmt`/Clippy/Cargo deny, E2E macOS/WebKit (12 specs/36 tests). Incluye A→B→A, Escape y retorno de foco. Seguimiento posterior: app 0.9.0 instalada, release real v0.8.0 consultado, enlace Markdown abierto y asset de GitHub descargado con nombre original y renombrado en macOS; hashes verificados. Detalle: [`v0.9-macos-arm64-followup.md`](docs/verification/v0.9-macos-arm64-followup.md). → `feat(sidebar): open compact releases in the central reader`
+- [x] **CR-17: Sidebar coherente y detalle central de releases.** Depende de CR-16. Casos UIR-01–UIR-09. Listar releases sin descripciones ni etiquetas locales duplicadas, abrir su detalle central con notas y adjuntos, marcar el estable más reciente conocido, plegar Autores/Releases con preferencias por raíz y probar el sidebar completo en EN/ES, claro/oscuro y ventana mínima. Mantener HTML e imágenes remotas inactivos; abrir enlaces HTTPS en el navegador del sistema solo por acción explícita y tras validación Rust; dejar otros esquemas inertes. Conservar navegación Git y acciones explícitas de fetch/descarga con recuperación de acceso. **Evidencia:** `docs/verification/cr-17-qa.md` (PARTIAL por límites externos documentados), 11 capturas en `docs/verification/evidence/v0.9-cr17/`, `npm run test:coverage` (108 archivos/999 tests), `cargo test --workspace`, typechecks/lint/formato/build, `cargo fmt`/Clippy/Cargo deny, E2E macOS/WebKit (12 specs/36 tests). Incluye A→B→A, Escape y retorno de foco. Seguimiento posterior: app 0.9.0 instalada, release real v0.8.0 consultado, enlace Markdown abierto y asset de GitHub descargado con nombre original y renombrado en macOS; hashes verificados. Detalle: [`v0.9-macos-arm64-followup.md`](docs/verification/v0.9-macos-arm64-followup.md). **Hallazgo de cierre:** el mensaje de commit esperado `feat(sidebar): open compact releases in the central reader` no existe; la implementación CR-17 está integrada en `326cf8f chore: release v0.9.0`. Ese commit no quedó como último en `dev`: le siguen seis commits de corrección (`0632320`, `9793b59`, `cc0eba3`, `6125610`, `1c2df2f`, `ad02cd9`). El Validador emitió `rechazada` por ambos defectos de secuencia/registro y por ADR sin estado de cierre. David acepta conservar el orden actual porque la PR incluye la entrega completa y esas correcciones quedan registradas como v0.9; esto acepta la desviación de proceso, no revoca el veredicto ni constituye aprobación técnica o de merge. → `326cf8f` (`chore: release v0.9.0`; CR-17 integrada)
 
 ### Gates v0.9 cerrados
 

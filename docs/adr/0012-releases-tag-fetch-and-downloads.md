@@ -2,12 +2,7 @@
 
 ## Status
 
-Accepted — 2026-11-22 (implemented; v0.9 not yet released). Reviewed by the Architect on
-2026-11-16. Decisions, bounds, acceptance matrix and task order are in the
-[v0.9 implementation plan](../plan/2026-11-16-v0.9-implementacion.md); verification
-evidence and open gates are in [`docs/verification/v0.9.md`](../verification/v0.9.md).
-David confirmed on 2026-11-16 the two changes to existing behavior: `pull` no longer
-fetches every tag, and `checkout`, `pull` and `push` take the per-directory write lock.
+Accepted and implemented — 2026-11-23. Implemented in the v0.9.0 release candidate on `dev`; PR #24 is open. No merge, remote `v0.9.0` tag, or GitHub Release exists yet. The independent Validator rejected the closure record because the release commit is followed by six commits and the previous CR-17 commit reference was inaccurate; David accepts preserving this history because the PR contains the complete v0.9 delivery. This process decision does not alter the Validator verdict or approve the merge. Reviewed by the Architect on 2026-11-16. Decisions, bounds, acceptance matrix and task order are in the [v0.9 implementation plan](../plan/2026-11-16-v0.9-implementacion.md); verification evidence and open gates are in [`docs/verification/v0.9.md`](../verification/v0.9.md). David confirmed on 2026-11-16 the two changes to existing behavior: `pull` no longer fetches every tag, and `checkout`, `pull` and `push` take the per-directory write lock.
 
 ## Context
 

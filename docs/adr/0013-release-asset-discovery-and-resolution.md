@@ -2,9 +2,7 @@
 
 ## Status
 
-Accepted — 2026-11-22. David chose a dedicated `get_release_assets` query for
-CR-12. This decision supplements ADR 0012 and CR-D24 with the ownership and
-bounds of that query; it does not replace their accepted gate assignments.
+Accepted and implemented — 2026-11-23. Implemented in the v0.9.0 release candidate on `dev`; PR #24 is open. No merge, remote `v0.9.0` tag, or GitHub Release exists yet. The independent Validator rejected the closure record because the release commit is followed by six commits and the previous CR-17 commit reference was inaccurate; David accepts preserving this history because the PR contains the complete v0.9 delivery. This process decision does not alter the Validator verdict or approve the merge. David chose a dedicated `get_release_assets` query for CR-12. This decision supplements ADR 0012 and CR-D24 with the ownership and bounds of that query; it does not replace their accepted gate assignments.
 
 ## Context
 
