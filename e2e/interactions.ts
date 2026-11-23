@@ -83,8 +83,22 @@ export async function clickAndConfirm(
   }
   try {
     await confirm();
+    return;
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
+    let diagnosticError: unknown = error;
+    if (staleClickError !== null && (await $(selector).isDisplayed())) {
+      try {
+        await $(selector).click();
+        await confirm();
+        return;
+      } catch (retryError) {
+        diagnosticError = retryError;
+      }
+    }
+    const detail =
+      diagnosticError instanceof Error
+        ? diagnosticError.message
+        : String(diagnosticError);
     throw new Error(
       `${detail}; click result: ${staleClickError ?? "completed"}; input trace: ${JSON.stringify(await interactionTrace())}; visible menus: ${JSON.stringify(await visibleMenus())}`,
       { cause: error },

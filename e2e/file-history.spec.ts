@@ -10,40 +10,38 @@ import { waitForHistory } from "./history";
 const VIEW = '//aside[@class="file-history"]';
 const DETAIL = '[aria-label="Detalle del commit"]';
 
-/** The graph row whose summary contains `summary`. Rows are announced as options. */
-function commitRow(summary: string) {
-  return browser.$(`//*[@role="row"][contains(., "${summary}")]`);
-}
-
 /**
  * Selects a commit and opens its file's history from the detail panel. A file
  * history replaces the graph, so an open one is closed first to reach the rows.
  */
 async function openFileHistory(summary: string, file: string): Promise<void> {
   if (await browser.$(VIEW).isExisting()) {
-    await (
-      await browser.$('//button[normalize-space()="Volver al gráfico"]')
-    ).click();
-    await browser.$(VIEW).waitForExist({ reverse: true, timeout: 20_000 });
+    await clickAndConfirm(
+      '//button[normalize-space()="Volver al gráfico"]',
+      async () => {
+        await browser.$(VIEW).waitForExist({ reverse: true, timeout: 20_000 });
+      },
+    );
   }
-  await (await commitRow(summary)).click();
-  const more = await browser.$(
-    `//*[@aria-label="Detalle del commit"]//button[@aria-label="Más acciones de ${file}"]`,
+  const moreSelector = `//*[@aria-label="Detalle del commit"]//button[@aria-label="Más acciones de ${file}"]`;
+  await clickAndConfirm(
+    `//*[@role="row"][contains(., "${summary}")]`,
+    async () => {
+      await browser.$(moreSelector).waitForDisplayed({ timeout: 20_000 });
+    },
   );
-  await more.waitForDisplayed({
-    timeout: 20_000,
-    timeoutMsg: `the actions for ${file} never appeared`,
+  const historySelector = `${VIEW}[@aria-label="Historial de ${file}"]`;
+  await clickAndConfirm(moreSelector, async () => {
+    await browser
+      .$('//*[@role="menuitem"][normalize-space()="Historial"]')
+      .waitForDisplayed({ timeout: 20_000 });
   });
-  await more.click();
-  await (
-    await browser.$('//*[@role="menuitem"][normalize-space()="Historial"]')
-  ).click();
-  await browser
-    .$(`${VIEW}[@aria-label="Historial de ${file}"]`)
-    .waitForDisplayed({
-      timeout: 20_000,
-      timeoutMsg: `the history of ${file} never opened`,
-    });
+  await clickAndConfirm(
+    '//*[@role="menuitem"][normalize-space()="Historial"]',
+    async () => {
+      await browser.$(historySelector).waitForDisplayed({ timeout: 20_000 });
+    },
+  );
 }
 
 /** The history rows as their visible text, in the order the engine returned them. */
@@ -104,17 +102,20 @@ describe("file history", () => {
   it("shows a picked commit's change and jumps to it in the graph", async () => {
     await openFileHistory("delete notes.txt", "notes.txt");
 
-    await (
-      await browser.$(`${VIEW}//button[contains(., "resolve notes conflict")]`)
-    ).click();
-    await (
-      await browser.$('//button[normalize-space()="Mostrar en el gráfico"]')
-    ).click();
-
-    await browser.waitUntil(async () => !(await browser.$(VIEW).isExisting()), {
-      timeout: 20_000,
-      timeoutMsg: "the file history never closed",
-    });
+    await clickAndConfirm(
+      `${VIEW}//button[contains(., "resolve notes conflict")]`,
+      async () => {
+        await browser
+          .$('//button[normalize-space()="Mostrar en el gráfico"]')
+          .waitForDisplayed({ timeout: 20_000 });
+      },
+    );
+    await clickAndConfirm(
+      '//button[normalize-space()="Mostrar en el gráfico"]',
+      async () => {
+        await browser.$(VIEW).waitForExist({ reverse: true, timeout: 20_000 });
+      },
+    );
     expect(await (await browser.$(DETAIL)).getText()).toContain(
       "resolve notes conflict",
     );
