@@ -31,7 +31,11 @@ export async function revealSidebarItem(selector: string): Promise<void> {
   );
 }
 
-/** Scroll a context-menu item inside its own scroller before WebDriver clicks it. */
+/**
+ * Brings a context-menu item into the menu's own scroller before WebDriver
+ * clicks it. Only the menu scrolls: `scrollIntoView` would also scroll the
+ * sidebar, and the menu closes on any scroll outside itself.
+ */
 export async function revealContextMenuItem(label: string): Promise<void> {
   await browser.execute((expectedLabel) => {
     const item = Array.from(
@@ -39,10 +43,17 @@ export async function revealContextMenuItem(label: string): Promise<void> {
     ).find(
       (candidate) => candidate.textContent?.includes(expectedLabel) === true,
     );
-    if (item === undefined) {
+    const menu = item?.closest<HTMLElement>(".context-menu");
+    if (item === undefined || menu === undefined || menu === null) {
       throw new Error(`context-menu item did not appear: ${expectedLabel}`);
     }
-    item.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const menuBounds = menu.getBoundingClientRect();
+    const itemBounds = item.getBoundingClientRect();
+    if (itemBounds.bottom > menuBounds.bottom) {
+      menu.scrollTop += itemBounds.bottom - menuBounds.bottom;
+    } else if (itemBounds.top < menuBounds.top) {
+      menu.scrollTop -= menuBounds.top - itemBounds.top;
+    }
   }, label);
 }
 
