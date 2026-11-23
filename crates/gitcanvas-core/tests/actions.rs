@@ -13,7 +13,7 @@ mod support;
 
 use std::{
     fs,
-    net::{TcpListener, TcpStream},
+    net::TcpListener,
     process::{Child, Command, Stdio},
     thread,
     time::Duration,
@@ -237,36 +237,49 @@ impl Drop for GitDaemon {
     reason = "Git is needed to expose a disposable bare fixture over smart transport"
 )]
 fn start_git_daemon(repository: &TempDir) -> (GitDaemon, String) {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let port = listener.local_addr().unwrap().port();
-    drop(listener);
-
+    // The port is picked by binding and releasing it, so another process can
+    // take it before the daemon binds. Readiness therefore means the daemon
+    // answers a real smart-transport request, not merely that the port accepts
+    // a TCP connection. A daemon that exits early gets a fresh port.
     let base = repository.path();
-    let child = Command::new("git")
-        .args([
-            "daemon",
-            "--reuseaddr",
-            "--export-all",
-            "--listen=127.0.0.1",
-            &format!("--port={port}"),
-            &format!("--base-path={}", base.to_str().unwrap()),
-        ])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .unwrap();
-    let mut daemon = GitDaemon(child);
-    for _ in 0..100 {
-        if TcpStream::connect(("127.0.0.1", port)).is_ok() {
-            return (daemon, format!("git://127.0.0.1:{port}/remote.git"));
+    for _ in 0..20 {
+        let port = TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
+        let child = Command::new("git")
+            .args([
+                "daemon",
+                "--reuseaddr",
+                "--export-all",
+                "--listen=127.0.0.1",
+                &format!("--port={port}"),
+                &format!("--base-path={}", base.to_str().unwrap()),
+            ])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        let mut daemon = GitDaemon(child);
+        let url = format!("git://127.0.0.1:{port}/remote.git");
+        for _ in 0..400 {
+            if daemon.0.try_wait().unwrap().is_some() {
+                break;
+            }
+            let served = Command::new("git")
+                .args(["ls-remote", &url])
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status()
+                .is_ok_and(|status| status.success());
+            if served {
+                return (daemon, url);
+            }
+            thread::sleep(Duration::from_millis(25));
         }
-        assert!(
-            daemon.0.try_wait().unwrap().is_none(),
-            "git daemon exited early"
-        );
-        thread::sleep(Duration::from_millis(10));
     }
-    panic!("git daemon did not listen before the test timeout");
+    panic!("git daemon did not serve the fixture before the test timeout");
 }
 
 fn checkout_force(repo: &Repository) {
