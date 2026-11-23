@@ -136,6 +136,24 @@ jobs:
         # Bundle the app for quality/E2E checks without producing that artifact.
         run: npm run tauri build -- --ci --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
+      - name: Install matching Edge WebDriver
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $edgePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'
+          if (-not (Test-Path $edgePath)) { throw "Microsoft Edge was not found at $edgePath" }
+          $edgeVersion = [version](Get-Item $edgePath).VersionInfo.ProductVersion
+          $driverVersion = Invoke-RestMethod "https://msedgedriver.microsoft.com/LATEST_RELEASE_$($edgeVersion.Major)"
+          $archivePath = Join-Path $env:RUNNER_TEMP 'edgedriver.zip'
+          $driverDirectory = Join-Path $env:RUNNER_TEMP 'edgedriver'
+          New-Item -ItemType Directory -Force -Path $driverDirectory | Out-Null
+          Invoke-WebRequest "https://msedgedriver.microsoft.com/$driverVersion/edgedriver_win64.zip" -OutFile $archivePath
+          Expand-Archive -LiteralPath $archivePath -DestinationPath $driverDirectory -Force
+          if (-not (Test-Path (Join-Path $driverDirectory 'msedgedriver.exe'))) {
+            throw 'The Edge WebDriver archive did not contain msedgedriver.exe'
+          }
+          Add-Content -Path $env:GITHUB_PATH -Value $driverDirectory
+
       # --- End to end ---
       #
       # Exercise the real app on every supported desktop OS. The suite launches

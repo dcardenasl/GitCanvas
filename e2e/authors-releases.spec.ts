@@ -64,6 +64,9 @@ describe("author and release panels", () => {
     const releasePanel = await $(".tags-releases-panel");
     await authorPanel.waitForDisplayed({ timeout: 20_000 });
     await browser.setWindowSize(940, 600);
+    const windowSize = await browser.getWindowSize();
+    expect(windowSize.width).toBe(940);
+    expect(windowSize.height).toBe(600);
 
     for (const [language, theme] of [
       ["en", "light"],
@@ -81,7 +84,6 @@ describe("author and release panels", () => {
         viewportWidth: window.innerWidth,
         documentWidth: document.documentElement.scrollWidth,
       }));
-      expect(layout.viewportWidth).toBe(940);
       expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
 
       await scrollAuthorPanelIntoView();
