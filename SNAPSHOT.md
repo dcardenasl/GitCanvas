@@ -9,7 +9,7 @@ v0.9.0 está publicada: PR #24 fusionado a `main` (`da54371`), tag anotado `v0.9
 
 ## Próximo paso
 
-Cuando David lo indique, abrir el PR `dev → main` con el skill `release` para validar `97748c7` y los fixes de e2e en CI, junto con la siguiente versión.
+Domingo: (1) corregir la fila v0.9 de `ROADMAP.md` (sigue como «Planificada» y PR abierta) y decidir con David si el PR `dev → main` se abre ya para validar `97748c7`; (2) planificar v0.10 (múltiples proveedores) con el skill `plan-version`, carril L, y confirmar el alcance con David: GitLab en solo lectura, gitlab.com, una cuenta por proveedor; (3) implementar v0.10 por tareas, con `implement-task` y `commit-flow`, y QA independiente antes del release. Repositorios, cuentas y credenciales ya están delimitados en el roadmap.
 
 ## Bloqueos
 
