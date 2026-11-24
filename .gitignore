@@ -30,6 +30,14 @@ docs/videos/*.mp4
 # Design-review tool output
 .impeccable/
 
+# Local agent role configs (not shared with the repository)
+.agents/
+.codex/
+
+# Local-only backups and heavy media kept outside version control
+install-backups/
+docs/media/
+
 # Understand-Anything knowledge graph and scratch data
 .ua/
 .understand-anything/
