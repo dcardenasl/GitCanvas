@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Release panel** — show the cache and rate-limit times of release data as readable dates instead of raw Unix timestamps.
+
 ## [0.9.0] — 2026-11-23
 
 ### Added

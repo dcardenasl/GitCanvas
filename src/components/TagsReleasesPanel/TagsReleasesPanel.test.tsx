@@ -110,7 +110,8 @@ describe("TagsReleasesPanel", () => {
     mocks.releases = {
       ...releaseList,
       truncated: true,
-      cached_at: "2026-11-23T10:00:00Z",
+      cached_at: "1795497990",
+      rate_limit_reset: "1795498021",
     };
     renderWithQueryClient(<TagsReleasesPanel />);
 

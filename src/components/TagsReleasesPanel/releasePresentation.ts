@@ -17,9 +17,12 @@ export function latestStableReleaseId(
   return latest?.id ?? null;
 }
 
-/** Formats release metadata dates using the active application locale. */
+/** Formats release metadata dates (ISO-8601 or Unix epoch seconds) using the active application locale. */
 export function formatReleaseDate(value: string, locale: string): string {
-  const date = new Date(value);
+  const trimmed = value.trim();
+  const date = /^\d+$/.test(trimmed)
+    ? new Date(Number(trimmed) * 1000)
+    : new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",

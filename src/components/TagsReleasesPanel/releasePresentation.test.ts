@@ -53,5 +53,15 @@ describe("release presentation", () => {
 
   it("keeps invalid publication dates readable rather than displaying Invalid Date", () => {
     expect(formatReleaseDate("not-a-date", "en")).toBe("not-a-date");
+    expect(formatReleaseDate("99999999999999999", "en")).toBe(
+      "99999999999999999",
+    );
+  });
+
+  it("formats Unix epoch seconds strings used by release cache and rate-limit metadata", () => {
+    const formatted = formatReleaseDate("1795497990", "en");
+    expect(formatted).not.toBe("1795497990");
+    expect(formatted).not.toContain("Invalid Date");
+    expect(formatted).toContain("2026");
   });
 });

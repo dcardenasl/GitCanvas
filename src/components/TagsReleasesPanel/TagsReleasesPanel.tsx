@@ -10,7 +10,10 @@ import { usePendingReleaseAction, useReleases } from "../../state/releases";
 import { errorKind } from "../../lib/errors";
 import { ErrorMessage } from "../ErrorMessage";
 import { ReleaseAccessForm } from "./ReleaseAccessForm";
-import { latestStableReleaseId } from "./releasePresentation";
+import {
+  formatReleaseDate,
+  latestStableReleaseId,
+} from "./releasePresentation";
 
 import "./TagsReleasesPanel.css";
 
@@ -92,10 +95,10 @@ export function TagsReleasesPanel({
           query.data?.cached_at !== undefined && (
             <p className="tags-releases-panel__notice" role="status">
               {t("cached", {
-                date: new Intl.DateTimeFormat(
+                date: formatReleaseDate(
+                  query.data.cached_at,
                   i18n.resolvedLanguage ?? i18n.language,
-                  { dateStyle: "medium", timeStyle: "short" },
-                ).format(new Date(query.data.cached_at)),
+                ),
               })}
             </p>
           )}
@@ -103,10 +106,10 @@ export function TagsReleasesPanel({
           query.data?.rate_limit_reset !== undefined && (
             <p className="tags-releases-panel__notice" role="status">
               {t("rateLimit", {
-                date: new Intl.DateTimeFormat(
+                date: formatReleaseDate(
+                  query.data.rate_limit_reset,
                   i18n.resolvedLanguage ?? i18n.language,
-                  { dateStyle: "medium", timeStyle: "short" },
-                ).format(new Date(query.data.rate_limit_reset)),
+                ),
               })}
             </p>
           )}
