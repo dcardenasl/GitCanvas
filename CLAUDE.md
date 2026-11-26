@@ -242,3 +242,7 @@ Leer, nunca modificar:
 - `~/Developer/PHP/ci4-platform/ci4-admin-starter` — el otro repo que GitCanvas tiene
   que saber abrir y dibujar.
 - `~/Developer/AGENTS.md` — convenciones del workspace completo.
+
+## Presupuesto de GitHub Actions
+
+Aplica el protocolo de [`docs/protocols/protocolo-minutos-actions.md`](docs/protocols/protocolo-minutos-actions.md): registra el consumo mensual, conserva la reserva de publicación, dirige Dependabot rutinario a `dev` y, si faltan minutos, continúa localmente con trabajo aprobado de versiones siguientes. No publiques sin los gates completos ni amplíes una versión congelada.
